@@ -12,7 +12,7 @@ pub struct MerkleSumTreeCircuit <F: Field> {
     pub path_indices: Vec<F>,
     pub assets_sum: F,
     pub root_hash: F,
-    _marker: PhantomData<F>
+    pub _marker: PhantomData<F>
 }
 
 impl <F:Field> Circuit<F> for MerkleSumTreeCircuit<F> {
