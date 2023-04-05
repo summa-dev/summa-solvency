@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use eth_types::Field;
 
 #[derive(Default)]
-struct MerkleSumTreeCircuit <F: Field> {
+pub struct MerkleSumTreeCircuit <F: Field> {
     pub leaf_hash: F,
     pub leaf_balance: F,
     pub path_element_hashes: Vec<F>,
