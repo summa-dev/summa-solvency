@@ -11,6 +11,10 @@ This library makes use of the [PSE Fork of Halo2](https://github.com/privacy-sca
 
 ## Chips
 
+- [Poseidon](#Poseidon)
+- [Less Than](#Less-Than)
+- [Merkle Sum Tree](#Merkle-Sum-Tree)
+
 ### Poseidon
 
 Helper chip that performs a Poseidon hash leveraging the gadget provided by the Halo2 Library.
