@@ -142,21 +142,30 @@ impl <F: Field> MerkleSumTreeChip<F> {
         leaf_hash: F,
         leaf_balance: F,
     ) -> Result<(AssignedCell<F, F>, AssignedCell<F, F>), Error> {
-        let leaf_hash_cell = layouter.assign_region(
+        let (leaf_hash_cell, leaf_balance_cell) = layouter.assign_region(
             || "assign leaf hash",
             |mut region| {
-                region.assign_advice(|| "leaf hash", self.config.advice[0], 0, || Value::known(leaf_hash))
-            },
-        )?;
 
-        let leaf_balance_cell = layouter.assign_region(
-            || "assign leaf balance",
-            |mut region| {
-                region.assign_advice(|| "leaf balance", self.config.advice[1], 0, || Value::known(leaf_balance))
+                let l = region.assign_advice(
+                    || "leaf hash", 
+                    self.config.advice[0], 
+                    0, 
+                    || Value::known(leaf_hash)
+                )?;
+
+                let r = region.assign_advice(
+                    || "leaf balance", 
+                    self.config.advice[1], 
+                    0, 
+                    || Value::known(leaf_balance)
+                )?;
+
+                Ok((l, r))
             },
         )?;
 
         Ok((leaf_hash_cell, leaf_balance_cell))
+
     }
 
     pub fn merkle_prove_layer(
@@ -342,7 +351,7 @@ impl <F: Field> MerkleSumTreeChip<F> {
         Ok(())
     }
 
-    // Enforce permutation check between input cell and instance column at row passed as input
+    // Enforce copy constraint check between input cell and instance column at row passed as input
     pub fn expose_public(
         &self,
         mut layouter: impl Layouter<F>,

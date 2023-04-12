@@ -29,7 +29,7 @@ The LessThan Chip Configuration contains:
 
 - 1 advice column `lt` that denotes the result of the comparison: 1 if `lhs < rhs` and 0 otherwise
 - An array of `diff` advice columns of length N_BYTES. It is basically the difference between `lhs` and `rhs` expressed in 8-bit chunks.
-- An field element `range` that denotes the range in which both `lhs` and `rhs` are expected to be. This is calculated as `2^N_BYTES * 8` where `N_BYTES` is the number of bytes that we want to use to represent the values `lhs` and `rhs`.
+- An field element `range` that denotes the range, expressed in bits, in which both `lhs` and `rhs` are expected to be. This is calculated as `2^N_BYTES * 8` where `N_BYTES` is the number of bytes that we want to use to represent the values `lhs` and `rhs`.
 
 The configure function takes as input the lhs and rhs virtual cells from a higher level chip and enforces the following gate:
 
