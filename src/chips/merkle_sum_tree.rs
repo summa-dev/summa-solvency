@@ -220,7 +220,6 @@ impl <F: Field> MerkleSumTreeChip<F> {
                     let mut r1_val = r1.value().map(|x| x.to_owned());
                     let mut r2_val = r2.value().map(|x| x.to_owned());
                 
-
                     self.config.sum_selector.enable(&mut region, 1)?;
 
                     // if index is 0 return (l1, l2, r1, r2) else return (r1, r2, l1, l2)

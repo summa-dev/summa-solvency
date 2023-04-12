@@ -49,7 +49,7 @@ impl <F:Field> Circuit<F> for MerkleSumTreeCircuit<F> {
     ) -> Result<(), Error> {
 
         let chip = MerkleSumTreeChip::construct(config);
-        let (leaf_hash, leaf_balance) = chip.assing_leaf_hash_and_balance(layouter.namespace(|| "assign leaf"), F::from(self.leaf_hash), F::from(self.leaf_balance))?;
+        let (leaf_hash, leaf_balance) = chip.assing_leaf_hash_and_balance(layouter.namespace(|| "assign leaf"), self.leaf_hash, self.leaf_balance)?;
 
         chip.expose_public(layouter.namespace(|| "public leaf hash"), &leaf_hash, 0)?;
         chip.expose_public(layouter.namespace(|| "public leaf balance"), &leaf_balance, 1)?;
@@ -99,35 +99,6 @@ mod tests {
     };
     use std::marker::PhantomData;
     use merkle_sum_tree_rust::{MerkleSumTree, MerkleProof};
-    
-    // const WIDTH: usize = 5;
-    // const RATE: usize = 4;
-    // const L: usize = 4;
-
-    // #[derive(Debug, Clone)]
-    // struct Node {
-    //     pub hash: Fp,
-    //     pub balance: Fp,
-    // }
-
-    // fn compute_merkle_sum_root(node: &Node,  elements: &Vec<Node>, indices: &Vec<Fp>) -> Node {
-    //     let k = elements.len();
-    //     let mut digest = node.clone();
-    //     let mut message: [Fp; 4];
-    //     for i in 0..k {
-    //         if indices[i] == 0.into() {
-    //             message = [digest.hash, digest.balance, elements[i].hash, elements[i].balance];
-    //         } else {
-    //             message = [elements[i].hash, elements[i].balance, digest.hash, digest.balance];
-    //         }
-
-    //         digest.hash = poseidon::Hash::<_, MySpec<Fp, WIDTH, RATE>, ConstantLength<L>, WIDTH, RATE>::init()
-    //             .hash(message);
-
-    //         digest.balance = digest.balance + elements[i].balance;
-    //     }
-    //     digest
-    // }
 
     fn instantiate_circuit(assets_sum: Fp) -> MerkleSumTreeCircuit<Fp>{
 
