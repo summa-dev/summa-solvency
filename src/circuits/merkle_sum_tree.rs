@@ -275,13 +275,11 @@ mod tests {
     fn print_merkle_sum_tree() {
         use plotters::prelude::*;
 
-        let (leaf, elements, indices, root) = build_merkle_tree();
+        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let assets_sum = Fp::from(200u64); // less than liabilities sum (400)
+        let user_balance = Fp::from(11888u64);
 
-        let public_input = vec![leaf.hash, leaf.balance, root.hash, assets_sum];
-
-        let circuit = instantiate_circuit(leaf, elements, indices, assets_sum);
+        let circuit = instantiate_circuit(assets_sum);
 
         let root =
             BitMapBackend::new("prints/merkle-sum-tree-layout.png", (1024, 3096)).into_drawing_area();
