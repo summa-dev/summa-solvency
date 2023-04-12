@@ -94,8 +94,9 @@ mod tests {
 
     use super::MerkleSumTreeCircuit;
     use halo2_proofs::{
-        dev::MockProver, 
+        dev::{MockProver, VerifyFailure, FailureLocation}, 
         halo2curves::bn256::{Fr as Fp},
+        plonk::{Any},
     };
     use std::marker::PhantomData;
     use merkle_sum_tree_rust::{MerkleSumTree, MerkleProof};
@@ -149,11 +150,13 @@ mod tests {
 
         let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
 
-        // invalid_prover.assert_satisfied();
+        let result = invalid_prover.verify();
 
-        // error => Err([Equality constraint not satisfied by cell (Column('Instance', 0 - ), outside any region, on row 2), Equality constraint not satisfied by cell (Column('Advice', 5 - ), in Region 17 ('permute state') at offset 36)])
-        // computed_hash (advice column[5]) != root.hash (instance column row 2)
-        assert!(invalid_prover.verify().is_err());
+        let error = result.unwrap_err();
+
+        let expected_error = "[Equality constraint not satisfied by cell (Column('Instance', 0 - ), outside any region, on row 2), Equality constraint not satisfied by cell (Column('Advice', 5 - ), in Region 16 ('permute state') at offset 36)]";
+
+        assert_eq!(format!("{:?}", error), expected_error);
     }
 
     #[test]
@@ -169,9 +172,12 @@ mod tests {
 
         let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
 
-        // error => Equality constraint not satisfied by cell (Column('Advice', 0 - ), in Region 2 ('merkle prove layer') at offset 0). Equality constraint not satisfied by cell (Column('Instance', 0 - ), outside any region, on row 0)
-        // leaf_hash (advice column[0]) != leaf.hash (instance column row 0)
-        assert!(invalid_prover.verify().is_err());
+        let result = invalid_prover.verify();
+
+        let error = result.unwrap_err();
+        let expected_error = "[Equality constraint not satisfied by cell (Column('Advice', 0 - ), in Region 1 ('merkle prove layer') at offset 0), Equality constraint not satisfied by cell (Column('Instance', 0 - ), outside any region, on row 0)]";
+
+        assert_eq!(format!("{:?}", error), expected_error);
 
     }
 
@@ -188,10 +194,12 @@ mod tests {
 
         let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
 
-        // error => Equality constraint not satisfied by cell (Column('Advice', 1 - ), in Region 2 ('merkle prove layer') at offset 0) Equality constraint not satisfied by cell (Column('Instance', 0 - ), outside any region, on row 1)
-        // leaf_balance (advice column[1]) != leaf.balance (instance column row 1)
-    
-        assert!(invalid_prover.verify().is_err());
+        let result = invalid_prover.verify();
+
+        let error = result.unwrap_err();
+        let expected_error = "[Equality constraint not satisfied by cell (Column('Advice', 1 - ), in Region 1 ('merkle prove layer') at offset 0), Equality constraint not satisfied by cell (Column('Instance', 0 - ), outside any region, on row 1)]";
+
+        assert_eq!(format!("{:?}", error), expected_error);
     }
 
     #[test]
@@ -287,5 +295,3 @@ mod tests {
             .unwrap();
     }
 }
-
-
