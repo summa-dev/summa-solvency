@@ -302,7 +302,6 @@ impl <F: Field> MerkleSumTreeChip<F> {
         &self,
         mut layouter: impl Layouter<F>,
         prev_computed_sum_cell: &AssignedCell<F, F>,
-        computed_sum: F
     ) -> Result<(), Error> {
 
         // Initiate chip config
@@ -313,7 +312,7 @@ impl <F: Field> MerkleSumTreeChip<F> {
             |mut region| {
 
                 // copy the computed sum to the cell in the first column
-                prev_computed_sum_cell.copy_advice(
+                let computed_sum_cell = prev_computed_sum_cell.copy_advice(
                     || "copy computed sum",
                     &mut region,
                     self.config.advice[0],
@@ -340,7 +339,19 @@ impl <F: Field> MerkleSumTreeChip<F> {
                 // enable lt seletor 
                 self.config.lt_selector.enable(&mut region, 0)?;
 
-                total_assets_cell.value().map(|total_assets| chip.assign(&mut region, 0, computed_sum, total_assets.to_owned()));
+                let mut total_assets = F::from(0);
+                let mut computed_sum = F::from(0);
+
+                total_assets_cell.value().map(|x| {
+                    total_assets = x.to_owned();
+                });
+
+                computed_sum_cell.value().map(|x| {
+                    computed_sum = x.to_owned();
+                });
+
+                chip.assign(&mut region, 0, computed_sum, total_assets)?;
+
 
                 Ok(())
             },

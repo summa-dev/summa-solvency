@@ -78,11 +78,8 @@ impl <F:Field> Circuit<F> for MerkleSumTreeCircuit<F> {
             )?;
         }
 
-        // compute the sum of the merkle sum tree as sum of the leaf balance and the sum of the path elements balances
-        let computed_sum = self.leaf_balance + self.path_element_balances.iter().fold(F::zero(), |acc, x| acc + x);
-
         // enforce computed sum to be less than the assets sum 
-        chip.enforce_less_than(layouter.namespace(|| "enforce less than"), &next_sum, computed_sum)?;
+        chip.enforce_less_than(layouter.namespace(|| "enforce less than"), &next_sum)?;
 
         chip.expose_public(layouter.namespace(|| "public root"), &next_hash, 2)?;
         Ok(())
