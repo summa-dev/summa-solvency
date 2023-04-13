@@ -122,31 +122,29 @@ mod tests {
 
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let user_balance = Fp::from(11888u64);
-
         let circuit = instantiate_circuit(assets_sum);
 
-        let public_input = vec![circuit.leaf_hash, user_balance, circuit.root_hash, assets_sum];
+        let public_input = vec![circuit.leaf_hash, circuit.leaf_balance, circuit.root_hash, circuit.assets_sum];
 
-        let valid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
+        let valid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
 
         valid_prover.assert_satisfied();
 
     }
 
+    // Passing an invalid root hash in the instance column should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_root_hash() {
 
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let user_balance = Fp::from(11888u64);
-
         let circuit = instantiate_circuit(assets_sum);
 
-        let public_input = vec![circuit.leaf_hash, user_balance, Fp::from(1000u64), assets_sum];
+        let invalid_root_hash = Fp::from(1000u64);
 
-        let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
+        let public_input = vec![circuit.leaf_hash, circuit.leaf_balance, invalid_root_hash, circuit.assets_sum];
 
+        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -162,18 +160,47 @@ mod tests {
 
     }
 
+    // Passing an invalid leaf hash as input for the witness generation should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
-    fn test_invalid_leaf_hash() {
+    fn test_invalid_leaf_hash_as_witness() {
 
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let user_balance = Fp::from(11888u64);
+        let mut circuit = instantiate_circuit(assets_sum);
+
+        // invalidate leaf hash
+        circuit.leaf_hash = Fp::from(1000u64);
+
+        let public_input = vec![circuit.leaf_hash, circuit.leaf_balance, circuit.root_hash, circuit.assets_sum];
+
+        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation { column: (Any::Instance, 0).into(), location: FailureLocation::OutsideRegion { row: 2 } },
+                VerifyFailure::Permutation { column: (Any::advice(), 5).into(), location: FailureLocation::InRegion {
+                    region: (16, "permute state").into(),
+                    offset: 36
+                    }
+                }
+            ])
+        );
+    }
+
+    // Passing an invalid leaf hash in the instance column should fail the permutation check between the (valid) leaf hash added as part of the witness and the instance column leaf hash
+    #[test]
+    fn test_invalid_leaf_hash_as_instance() {
+
+        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
         let circuit = instantiate_circuit(assets_sum);
 
-        let public_input = vec![Fp::from(1000u64), user_balance, circuit.root_hash, assets_sum];
+        // add invalid leaf hash in the instance column
+        let invalid_leaf_hash = Fp::from(1000u64);
 
-        let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
+        let public_input = vec![invalid_leaf_hash, circuit.leaf_balance, circuit.root_hash, circuit.assets_sum];
+
+        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -188,29 +215,9 @@ mod tests {
         );
     }
 
+    // Passing an invalid leaf balance as input for the witness generation should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
-    fn test_invalid_leaf_balance() {
-
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
-
-        let invalid_user_balance = Fp::from(11887u64);
-
-        let circuit = instantiate_circuit(assets_sum);
-
-        let public_input = vec![circuit.leaf_hash, invalid_user_balance, circuit.root_hash, assets_sum];
-
-        let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
-
-        let result = invalid_prover.verify();
-
-        let error = result.unwrap_err();
-        let expected_error = "[Equality constraint not satisfied by cell (Column('Advice', 1 - ), in Region 1 ('merkle prove layer') at offset 0), Equality constraint not satisfied by cell (Column('Instance', 0 - ), outside any region, on row 1)]";
-
-        assert_eq!(format!("{:?}", error), expected_error);
-    }
-
-    #[test]
-    fn test_non_binary_index() {
+    fn test_invalid_leaf_balance_as_witness() {
 
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
@@ -218,11 +225,68 @@ mod tests {
 
         let mut circuit = instantiate_circuit(assets_sum);
 
-        circuit.path_indices[0] = Fp::from(2);
+        // invalid leaf balance
+        circuit.leaf_hash = Fp::from(1000u64);
 
         let public_input = vec![circuit.leaf_hash, user_balance, circuit.root_hash, assets_sum];
 
-        let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation { column: (Any::Instance, 0).into(), location: FailureLocation::OutsideRegion { row: 2 } },
+                VerifyFailure::Permutation { column: (Any::advice(), 5).into(), location: FailureLocation::InRegion {
+                    region: (16, "permute state").into(),
+                    offset: 36
+                    }
+                }
+            ])
+        );
+    }
+    
+
+    // Passing an invalid leaf balance in the instance column should fail the permutation check between the (valid) leaf balance added as part of the witness and the instance column leaf balance
+    #[test]
+    fn test_invalid_leaf_balance_as_instance() {
+
+        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+
+        let circuit = instantiate_circuit(assets_sum);
+
+        // add invalid leaf balance in the instance column
+        let invalid_leaf_balance = Fp::from(1000u64);
+
+        let public_input = vec![circuit.leaf_hash, invalid_leaf_balance, circuit.root_hash, circuit.assets_sum];
+
+        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation { column: (Any::advice(), 1).into(), location: FailureLocation::InRegion {
+                    region: (1, "merkle prove layer").into(),
+                    offset: 0
+                    }
+                },
+                VerifyFailure::Permutation { column: (Any::Instance, 0).into(), location: FailureLocation::OutsideRegion { row: 1 } },
+            ])
+        );
+    }
+
+    // Passing a non binary index should fail the bool constraint check, the two swap constraints and the permutation check between the computed root hash and the instance column root hash
+    #[test]
+    fn test_non_binary_index() {
+
+        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+
+        let mut circuit = instantiate_circuit(assets_sum);
+
+        // invalidate path index inside the circuit
+        circuit.path_indices[0] = Fp::from(2);
+
+        let public_input = vec![circuit.leaf_hash, circuit.leaf_balance, circuit.root_hash, circuit.assets_sum];
+
+        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -275,21 +339,20 @@ mod tests {
         );
     }
 
+    // Swapping the indices should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_swapping_index() {
 
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
-
-        let user_balance = Fp::from(11888u64);
 
         let mut circuit = instantiate_circuit(assets_sum);
 
         // swap indices
         circuit.path_indices[0] = Fp::from(1);
 
-        let public_input = vec![circuit.leaf_hash, user_balance, circuit.root_hash, assets_sum];
+        let public_input = vec![circuit.leaf_hash, circuit.leaf_balance, circuit.root_hash, circuit.assets_sum];
 
-        let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -304,18 +367,17 @@ mod tests {
         );
     }
 
+    // Passing an assets sum that is less than the liabilities sum should fail the lessThan constraint check
     #[test]
     fn test_is_not_less_than() {
 
         let less_than_assets_sum = Fp::from(556861u64); // less than liabilities sum (556862)
 
-        let user_balance = Fp::from(11888u64);
-
         let circuit = instantiate_circuit(less_than_assets_sum);
 
-        let public_input = vec![circuit.leaf_hash, user_balance, circuit.root_hash, less_than_assets_sum];
+        let public_input = vec![circuit.leaf_hash, circuit.leaf_balance, circuit.root_hash, circuit.assets_sum];
 
-        let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -328,6 +390,7 @@ mod tests {
                 },
                 cell_values: vec![
                     (((Any::advice(), 2).into(), 0).into(), "1".to_string()),
+                    // The zero means that is not less than
                     (((Any::advice(), 11).into(), 0).into(), "0".to_string())
                     ]
             }
