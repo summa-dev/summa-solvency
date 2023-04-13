@@ -219,7 +219,8 @@ impl <F: Field> MerkleSumTreeChip<F> {
                     let mut l2_val = l2.value().map(|x| x.to_owned());
                     let mut r1_val = r1.value().map(|x| x.to_owned());
                     let mut r2_val = r2.value().map(|x| x.to_owned());
-                
+
+                    // Row 1
                     self.config.sum_selector.enable(&mut region, 1)?;
 
                     // if index is 0 return (l1, l2, r1, r2) else return (r1, r2, l1, l2)
@@ -339,19 +340,11 @@ impl <F: Field> MerkleSumTreeChip<F> {
                 // enable lt seletor 
                 self.config.lt_selector.enable(&mut region, 0)?;
 
-                let mut total_assets = F::from(0);
-                let mut computed_sum = F::from(0);
-
-                total_assets_cell.value().map(|x| {
-                    total_assets = x.to_owned();
+                total_assets_cell.value().zip(computed_sum_cell.value()).map(|(total_assets, computed_sum)| {
+                    if let Err(e) = chip.assign(&mut region, 0, computed_sum.to_owned(), total_assets.to_owned()){
+                        println!("Error: {:?}", e);
+                    };
                 });
-
-                computed_sum_cell.value().map(|x| {
-                    computed_sum = x.to_owned();
-                });
-
-                chip.assign(&mut region, 0, computed_sum, total_assets)?;
-
 
                 Ok(())
             },
