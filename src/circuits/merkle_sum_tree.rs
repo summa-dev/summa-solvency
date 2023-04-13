@@ -82,7 +82,7 @@ impl <F:Field> Circuit<F> for MerkleSumTreeCircuit<F> {
         let computed_sum = self.leaf_balance + self.path_element_balances.iter().fold(F::zero(), |acc, x| acc + x);
 
         // enforce computed sum to be less than the assets sum 
-        chip.enforce_less_than(layouter.namespace(|| "enforce less than"), &next_sum, computed_sum, self.assets_sum)?;
+        chip.enforce_less_than(layouter.namespace(|| "enforce less than"), &next_sum, computed_sum)?;
 
         chip.expose_public(layouter.namespace(|| "public root"), &next_hash, 2)?;
         Ok(())
@@ -94,9 +94,8 @@ mod tests {
 
     use super::MerkleSumTreeCircuit;
     use halo2_proofs::{
-        dev::{MockProver, VerifyFailure, FailureLocation}, 
+        dev::{MockProver}, 
         halo2curves::bn256::{Fr as Fp},
-        plonk::{Any},
     };
     use std::marker::PhantomData;
     use merkle_sum_tree_rust::{MerkleSumTree, MerkleProof};
@@ -289,7 +288,7 @@ mod tests {
             .unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
-            .render(8, &circuit, &root)
+            .render(10, &circuit, &root)
             .unwrap();
     }
 }
