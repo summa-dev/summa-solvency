@@ -91,8 +91,9 @@ mod tests {
 
     use super::MerkleSumTreeCircuit;
     use halo2_proofs::{
-        dev::{MockProver}, 
+        dev::{MockProver, FailureLocation, VerifyFailure}, 
         halo2curves::bn256::{Fr as Fp},
+        plonk::{Any}
     };
     use std::marker::PhantomData;
     use merkle_sum_tree_rust::{MerkleSumTree, MerkleProof};
@@ -146,13 +147,19 @@ mod tests {
 
         let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
 
-        let result = invalid_prover.verify();
 
-        let error = result.unwrap_err();
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation { column: (Any::Instance, 0).into(), location: FailureLocation::OutsideRegion { row: 2 } },
+                VerifyFailure::Permutation { column: (Any::advice(), 5).into(), location: FailureLocation::InRegion {
+                    region: (16, "permute state").into(),
+                    offset: 36
+                    }
+                }
+            ])
+        );
 
-        let expected_error = "[Equality constraint not satisfied by cell (Column('Instance', 0 - ), outside any region, on row 2), Equality constraint not satisfied by cell (Column('Advice', 5 - ), in Region 16 ('permute state') at offset 36)]";
-
-        assert_eq!(format!("{:?}", error), expected_error);
     }
 
     #[test]
@@ -168,13 +175,17 @@ mod tests {
 
         let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
 
-        let result = invalid_prover.verify();
-
-        let error = result.unwrap_err();
-        let expected_error = "[Equality constraint not satisfied by cell (Column('Advice', 0 - ), in Region 1 ('merkle prove layer') at offset 0), Equality constraint not satisfied by cell (Column('Instance', 0 - ), outside any region, on row 0)]";
-
-        assert_eq!(format!("{:?}", error), expected_error);
-
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation { column: (Any::advice(), 0).into(), location: FailureLocation::InRegion {
+                    region: (1, "merkle prove layer").into(),
+                    offset: 0
+                    }
+                },
+                VerifyFailure::Permutation { column: (Any::Instance, 0).into(), location: FailureLocation::OutsideRegion { row: 0 } },
+            ])
+        );
     }
 
     #[test]
@@ -213,9 +224,55 @@ mod tests {
 
         let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
 
-        // error: constraint not satisfied 'bool constraint'
-        // error: constraint not satisfied 'swap constraint'
-        assert!(invalid_prover.verify().is_err());
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+            VerifyFailure::ConstraintNotSatisfied {
+                constraint: ((0, "bool constraint").into(), 0, "").into(),
+                location: FailureLocation::InRegion {
+                    region: (1, "merkle prove layer").into(),
+                    offset: 0
+                },
+                cell_values: vec![
+                    (((Any::advice(), 4).into(), 0).into(), "0x2".to_string()),
+                    ]
+            },
+            VerifyFailure::ConstraintNotSatisfied {
+                constraint: ((1, "swap constraint").into(), 0, "").into(),
+                location: FailureLocation::InRegion {
+                    region: (1, "merkle prove layer").into(),
+                    offset: 0
+                },
+                cell_values: vec![
+                    (((Any::advice(), 0).into(), 0).into(), "0x221a31fb6a7dfe98cfeca9b0a78061056f42f31f5d5719cfbc5c8110e38ed0b0".to_string()),
+                    (((Any::advice(), 0).into(), 1).into(), "0x17063e69d8505e34b85820ae85ed171e8a44f82aefdcceec66397495e3286b6a".to_string()),
+                    (((Any::advice(), 2).into(), 0).into(), "0x17063e69d8505e34b85820ae85ed171e8a44f82aefdcceec66397495e3286b6a".to_string()),
+                    (((Any::advice(), 2).into(), 1).into(), "0x221a31fb6a7dfe98cfeca9b0a78061056f42f31f5d5719cfbc5c8110e38ed0b0".to_string()),
+                    (((Any::advice(), 4).into(), 0).into(), "0x2".to_string()),
+                    ]
+            },
+            VerifyFailure::ConstraintNotSatisfied {
+                constraint: ((1, "swap constraint").into(), 1, "").into(),
+                location: FailureLocation::InRegion {
+                    region: (1, "merkle prove layer").into(),
+                    offset: 0
+                },
+                cell_values: vec![
+                    (((Any::advice(), 1).into(), 0).into(), "0x2e70".to_string()),
+                    (((Any::advice(), 1).into(), 1).into(), "0x108ef".to_string()),
+                    (((Any::advice(), 3).into(), 0).into(), "0x108ef".to_string()),
+                    (((Any::advice(), 3).into(), 1).into(), "0x2e70".to_string()),
+                    (((Any::advice(), 4).into(), 0).into(), "0x2".to_string()),
+                    ]
+            }, 
+            VerifyFailure::Permutation { column: (Any::Instance, 0).into(), location: FailureLocation::OutsideRegion { row: 2 } },
+            VerifyFailure::Permutation { column: (Any::advice(), 5).into(), location: FailureLocation::InRegion {
+                region: (16, "permute state").into(),
+                offset: 36
+                }
+            }
+            ])
+        );
     }
 
     #[test]
@@ -233,9 +290,18 @@ mod tests {
         let public_input = vec![circuit.leaf_hash, user_balance, circuit.root_hash, assets_sum];
 
         let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
-        // error => Err([Equality constraint not satisfied by cell (Column('Instance', 0 - ), outside any region, on row 2), Equality constraint not satisfied by cell (Column('Advice', 5 - ), in Region 26 ('permute state') at offset 36)])
-        // computed_hash (advice column[5]) != root.hash (instance column row 2)
-        assert!(invalid_prover.verify().is_err());
+
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation { column: (Any::Instance, 0).into(), location: FailureLocation::OutsideRegion { row: 2 } },
+                VerifyFailure::Permutation { column: (Any::advice(), 5).into(), location: FailureLocation::InRegion {
+                    region: (16, "permute state").into(),
+                    offset: 36
+                    }
+                }
+            ])
+        );
     }
 
     #[test]
@@ -251,18 +317,23 @@ mod tests {
 
         let invalid_prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
 
-        // error: constraint not satisfied
-        //   Cell layout in region 'enforce sum to be less than total assets':
-        //     | Offset | A2 | A11|
-        //     +--------+----+----+
-        //     |    0   | x0 | x1 | <--{ Gate 'verifies that `check` from current config equal to is_lt from LtChip ' applied here
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::ConstraintNotSatisfied {
+                constraint: ((7, "verifies that `check` from current config equal to is_lt from LtChip").into(), 0, "").into(),
+                location: FailureLocation::InRegion {
+                    region: (17, "enforce sum to be less than total assets").into(),
+                    offset: 0
+                },
+                cell_values: vec![
+                    (((Any::advice(), 2).into(), 0).into(), "1".to_string()),
+                    (((Any::advice(), 11).into(), 0).into(), "0".to_string())
+                    ]
+            }
+            ])
+        );
 
-        //   Constraint '':
-        //     ((S10 * (1 - S10)) * (0x2 - S10)) * (x1 - x0) = 0
-
-        //   Assigned cell values:
-        //     x0 = 1
-        //     x1 = 0
         assert!(invalid_prover.verify().is_err());
     }
 
@@ -273,19 +344,17 @@ mod tests {
 
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let user_balance = Fp::from(11888u64);
-
         let circuit = instantiate_circuit(assets_sum);
 
         let root =
-            BitMapBackend::new("prints/merkle-sum-tree-layout.png", (1024, 3096)).into_drawing_area();
+            BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384)).into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root
             .titled("Merkle Sum Tree Layout", ("sans-serif", 60))
             .unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
-            .render(10, &circuit, &root)
+            .render(8, &circuit, &root)
             .unwrap();
     }
 }

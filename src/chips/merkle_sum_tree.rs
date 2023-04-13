@@ -124,7 +124,7 @@ impl <F: Field> MerkleSumTreeChip<F> {
             lt_config
         };
 
-        meta.create_gate("verifies that `check` from current config equal to is_lt from LtChip ", |meta| {
+        meta.create_gate("verifies that `check` from current config equal to is_lt from LtChip", |meta| {
             let q_enable = meta.query_selector(lt_selector);
 
             let check = meta.query_advice(col_c, Rotation::cur());
