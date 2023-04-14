@@ -92,11 +92,18 @@ mod tests {
     use super::MerkleSumTreeCircuit;
     use halo2_proofs::{
         dev::{MockProver, FailureLocation, VerifyFailure}, 
-        halo2curves::bn256::{Fr as Fp},
-        plonk::{Any}
+        halo2curves::bn256::{Fr as Fp, Bn256},
+        plonk::{Any, keygen_pk, keygen_vk},
+        poly::{
+            kzg::{
+                commitment::{ParamsKZG},
+            },
+        },
     };
     use std::marker::PhantomData;
     use merkle_sum_tree_rust::{MerkleSumTree, MerkleProof};
+    use super::super::utils::{full_prover, full_verifier};
+    use rand::rngs::OsRng;
 
     fn instantiate_circuit(assets_sum: Fp) -> MerkleSumTreeCircuit<Fp>{
 
@@ -117,6 +124,19 @@ mod tests {
 
     }
 
+    fn instantiate_empty_circuit() -> MerkleSumTreeCircuit<Fp>{
+        MerkleSumTreeCircuit {
+            leaf_hash: Fp::zero(),
+            leaf_balance: Fp::zero(),
+            path_element_hashes: vec![Fp::zero(); 4],
+            path_element_balances: vec![Fp::zero(); 4],
+            path_indices: vec![Fp::zero(); 4],
+            assets_sum : Fp::zero(),
+            root_hash: Fp::zero(),
+            _marker: PhantomData,
+        }
+    }
+
     #[test]
     fn test_valid_merkle_sum_tree() {
 
@@ -132,6 +152,35 @@ mod tests {
 
     }
 
+    #[test]
+    fn test_valid_merkle_sum_tree_with_full_prover() {
+
+        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+
+        let circuit = instantiate_empty_circuit();
+
+        // we generate a universal trusted setup of our own for testing
+        let params = ParamsKZG::<Bn256>::setup(8, OsRng);
+
+        // we generate the verification key and the proving key
+        // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
+        // Note: the dimension of the circuit used to generate the keys must be the same as the dimension of the circuit used to generate the proof
+        // In this case, the dimension are represented by the heigth of the merkle tree
+        let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
+        let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
+
+        // Only now we can instantiate the circuit with the actual inputs
+        let circuit = instantiate_circuit(assets_sum);
+
+        let public_input = vec![circuit.leaf_hash, circuit.leaf_balance, circuit.root_hash, circuit.assets_sum];
+
+        // Generate the proof
+        let proof = full_prover(&params, &pk, circuit, &public_input);
+
+        // verify the proof to be true
+        assert!(full_verifier(&params, &vk, proof, &public_input));
+    }
+
     // Passing an invalid root hash in the instance column should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_root_hash() {
@@ -144,7 +193,7 @@ mod tests {
 
         let public_input = vec![circuit.leaf_hash, circuit.leaf_balance, invalid_root_hash, circuit.assets_sum];
 
-        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -157,6 +206,36 @@ mod tests {
                 }
             ])
         );
+
+    }
+
+    #[test]
+    fn test_invalid_root_hash_with_full_prover() {
+
+        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+
+        let circuit = instantiate_empty_circuit();
+
+        // we generate a universal trusted setup of our own for testing
+        let params = ParamsKZG::<Bn256>::setup(8, OsRng);
+
+        // we generate the verification key and the proving key
+        // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
+        let vk = keygen_vk(&params, &circuit).expect("vk should not fail");
+        let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk should not fail");
+
+        // Only now we can instantiate the circuit with the actual inputs
+        let circuit = instantiate_circuit(assets_sum);
+
+        let invalid_root_hash = Fp::from(1000u64);
+
+        let public_input = vec![circuit.leaf_hash, circuit.leaf_balance, invalid_root_hash, circuit.assets_sum];
+
+        // Generate the proof
+        let proof = full_prover(&params, &pk, circuit, &public_input);
+
+        // verify the proof to be false
+        assert!(!full_verifier(&params, &vk, proof, &public_input));
 
     }
 
