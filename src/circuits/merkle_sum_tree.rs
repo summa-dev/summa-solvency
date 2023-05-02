@@ -1,4 +1,4 @@
-use super::super::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
+use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use halo2_proofs::{circuit::*, plonk::*};
 use std::marker::PhantomData;
 use eth_types::Field;

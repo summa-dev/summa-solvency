@@ -1,5 +1,5 @@
-use super::poseidon::hash::{PoseidonChip, PoseidonConfig};
-use super::poseidon::spec::MySpec;
+use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
+use crate::chips::poseidon::spec::MySpec;
 use halo2_proofs::{circuit::*,plonk::*, poly::Rotation};
 use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
 use eth_types::Field;
