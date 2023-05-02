@@ -101,7 +101,7 @@ mod tests {
         },
     };
     use std::marker::PhantomData;
-    use merkle_sum_tree_rust::{MerkleSumTree, MerkleProof};
+    use crate::merkle_sum_tree::{MerkleSumTree, MerkleProof};
     use super::super::utils::{full_prover, full_verifier};
     use rand::rngs::OsRng;
 

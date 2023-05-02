@@ -13,8 +13,10 @@ halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", 
 halo2_gadgets = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_02_02"}
 eth-types = { git = "https://github.com/privacy-scaling-explorations/zkevm-circuits"}
 gadgets = { git = "https://github.com/privacy-scaling-explorations/zkevm-circuits"}
-merkle-sum-tree-rust = { git = "https://github.com/summa-dev/merkle-sum-tree-rust"}
 plotters = { version = "0.3.4", optional = true }
 rand = "0.8"
 ark-std = { version = "0.3.0", features = ["print-trace"] }
 tabbycat = { version = "0.1", features = ["attributes"], optional = true }
+csv = "1.1"
+serde = { version = "1.0", features = ["derive"] }
+hex = "0.4.3"

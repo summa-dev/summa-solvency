@@ -447,13 +447,15 @@ name = "circuits-halo2"
 version = "0.1.0"
 dependencies = [
  "ark-std",
+ "csv",
  "eth-types",
  "gadgets",
  "halo2_gadgets",
  "halo2_proofs",
- "merkle-sum-tree-rust",
+ "hex",
  "plotters",
  "rand",
+ "serde",
  "tabbycat",
 ]
 
@@ -1389,18 +1391,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "halo2-experiments"
-version = "0.1.0"
-source = "git+https://github.com/summa-dev/halo2-experiments?branch=merkle-sum-tree#6986429861b2d9abc1357ebe10189b782a9f53f0"
-dependencies = [
- "eth-types",
- "gadgets",
- "halo2_gadgets",
- "halo2_proofs",
- "rand",
-]
-
-[[package]]
 name = "halo2_gadgets"
 version = "0.2.0"
 source = "git+https://github.com/privacy-scaling-explorations/halo2?tag=v2023_02_02#0a8646b78286a13d320759b1c585262d6536dce4"
@@ -1792,19 +1782,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d61c719bcfbcf5d62b3a09efa6088de8c54bc0bfcd3ea7ae39fcc186108b8de1"
 dependencies = [
  "autocfg",
-]
-
-[[package]]
-name = "merkle-sum-tree-rust"
-version = "0.1.0"
-source = "git+https://github.com/summa-dev/merkle-sum-tree-rust#2e3914ad3441aeaa6d323f2c14600cdd52b04aee"
-dependencies = [
- "csv",
- "halo2-experiments",
- "halo2_gadgets",
- "halo2_proofs",
- "hex",
- "serde",
 ]
 
 [[package]]
