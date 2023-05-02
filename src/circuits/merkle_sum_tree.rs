@@ -107,7 +107,7 @@ mod tests {
 
     fn instantiate_circuit(assets_sum: Fp) -> MerkleSumTreeCircuit<Fp>{
 
-        let merkle_sum_tree= MerkleSumTree::new("csv_entries/entry_16.csv").unwrap();
+        let merkle_sum_tree= MerkleSumTree::new("src/circuits/csv_entries/entry_16.csv").unwrap();
 
         let proof: MerkleProof = merkle_sum_tree.generate_proof(0).unwrap();
 
