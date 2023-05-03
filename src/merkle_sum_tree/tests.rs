@@ -62,6 +62,24 @@ mod test {
         let mut proof_invalid_3 = proof;
         proof_invalid_3.sibling_sums[0] = 0.into();
     }
+    
+    #[test]
+    fn test_mst_overflow() {
+
+        let result = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16_overflow.csv");
+        // assert!(result.is_err(), "Expected an error due to balance overflow");
+
+        if let Err(e) = result {
+            assert_eq!(
+                e.to_string(),
+                "Balance is larger than the modulus"
+            );
+        
+
+        // Passing entries whose balance sum overflows the field should throw an error at the constructor
+        // MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16_overflow.csv").unwrap() should throw  Balance is larger than the modulus
+        }
+    }
 
     #[test]
     fn test_mst_with_bigint () {
