@@ -1,5 +1,4 @@
 use halo2_proofs::halo2curves::bn256::{Fr as Fp};
-
 use crate::merkle_sum_tree::utils::{big_intify_username, poseidon, big_int_to_fp};
 use crate::merkle_sum_tree::Node;
 use num_bigint::{BigInt};

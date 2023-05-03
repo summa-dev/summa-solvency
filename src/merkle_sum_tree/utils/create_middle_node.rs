@@ -1,4 +1,4 @@
-use super::hash::poseidon;
+use crate::merkle_sum_tree::utils::hash::poseidon;
 use crate::merkle_sum_tree::Node;
 
 pub fn create_middle_node(child_l: &Node, child_r: &Node) -> Node {

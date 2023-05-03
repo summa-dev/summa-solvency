@@ -1,4 +1,4 @@
-use super::create_middle_node::create_middle_node;
+use crate::merkle_sum_tree::utils::create_middle_node::create_middle_node;
 use crate::merkle_sum_tree::{Entry, Node};
 use halo2_proofs::halo2curves::bn256::{Fr as Fp};
 

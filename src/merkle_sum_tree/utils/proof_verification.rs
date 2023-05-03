@@ -1,5 +1,7 @@
-use super::create_middle_node::create_middle_node;
-use crate::merkle_sum_tree::utils::{big_int_to_fp};
+use crate::merkle_sum_tree::utils::{
+    create_middle_node::create_middle_node,
+    big_int_to_fp,
+};
 use crate::merkle_sum_tree::{MerkleProof, Node};
 
 pub fn verify_proof(proof: &MerkleProof) -> bool {
