@@ -1,4 +1,5 @@
 use crate::merkle_sum_tree::Entry;
+use num_bigint::BigInt;
 use serde::Deserialize;
 use std::error::Error;
 use std::fs::File;
@@ -7,7 +8,7 @@ use std::path::Path;
 #[derive(Debug, Deserialize)]
 struct CsvEntry {
     username: String,
-    balance: u64,
+    balance: String,
 }
 
 pub fn parse_csv_to_entries<P: AsRef<Path>>(path: P) -> Result<Vec<Entry>, Box<dyn Error>> {
@@ -17,7 +18,8 @@ pub fn parse_csv_to_entries<P: AsRef<Path>>(path: P) -> Result<Vec<Entry>, Box<d
 
     for result in rdr.deserialize() {
         let record: CsvEntry = result?;
-        let entry = Entry::new(record.username, record.balance)?;
+        let balance_big_int = BigInt::parse_bytes(record.balance.as_bytes(), 10).unwrap();
+        let entry = Entry::new(record.username, balance_big_int)?;
 
         entries.push(entry);
     }

@@ -1,3 +1,4 @@
+use num_bigint::BigInt;
 use crate::merkle_sum_tree::utils::{
     build_merkle_tree_from_entries, create_proof, index_of, parse_csv_to_entries, verify_proof,
 };
@@ -32,7 +33,6 @@ impl MerkleSumTree {
         })
     }
 
-    // Getter methods
     pub fn root(&self) -> &Node {
         &self.root
     }
@@ -49,7 +49,7 @@ impl MerkleSumTree {
         &self.entries
     }
 
-    pub fn index_of(&self, username: &str, balance: u64) -> Option<usize> {
+    pub fn index_of(&self, username: &str, balance: BigInt) -> Option<usize> {
         index_of(username, balance, &self.nodes)
     }
 
@@ -61,5 +61,4 @@ impl MerkleSumTree {
         verify_proof(proof)
     }
 
-    // Implement the rest of the methods
 }

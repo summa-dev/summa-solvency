@@ -1,6 +1,8 @@
+use num_bigint::BigInt;
+
 use crate::merkle_sum_tree::{Entry, Node};
 
-pub fn index_of(username: &str, balance: u64, nodes: &[Vec<Node>]) -> Option<usize> {
+pub fn index_of(username: &str, balance: BigInt, nodes: &[Vec<Node>]) -> Option<usize> {
     let entry = Entry::new(username.to_string(), balance).unwrap();
     let leaf = entry.compute_leaf();
     let leaf_hash = leaf.hash;

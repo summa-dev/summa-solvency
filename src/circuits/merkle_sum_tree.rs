@@ -101,7 +101,7 @@ mod tests {
         },
     };
     use std::marker::PhantomData;
-    use crate::merkle_sum_tree::{MerkleSumTree, MerkleProof};
+    use crate::merkle_sum_tree::{MerkleSumTree, MerkleProof, big_int_to_fp};
     use super::super::utils::{full_prover, full_verifier};
     use rand::rngs::OsRng;
 
@@ -113,7 +113,7 @@ mod tests {
 
         MerkleSumTreeCircuit {
             leaf_hash: proof.entry.compute_leaf().hash,
-            leaf_balance: Fp::from(proof.entry.balance()),
+            leaf_balance: big_int_to_fp(proof.entry.balance()),
             path_element_hashes: proof.sibling_hashes,
             path_element_balances: proof.sibling_sums,
             path_indices: proof.path_indices,

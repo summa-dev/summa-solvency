@@ -453,6 +453,7 @@ dependencies = [
  "halo2_gadgets",
  "halo2_proofs",
  "hex",
+ "num-bigint",
  "plotters",
  "rand",
  "serde",

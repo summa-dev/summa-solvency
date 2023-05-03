@@ -1,12 +1,10 @@
-// proof_verification.rs
-
 use super::create_middle_node::create_middle_node;
+use crate::merkle_sum_tree::utils::{big_int_to_fp};
 use crate::merkle_sum_tree::{MerkleProof, Node};
-use halo2_proofs::halo2curves::bn256::{Fr as Fp};
 
 pub fn verify_proof(proof: &MerkleProof) -> bool {
     let mut node = proof.entry.compute_leaf();
-    let mut balance = Fp::from(proof.entry.balance());
+    let mut balance = big_int_to_fp(proof.entry.balance());
 
     for i in 0..proof.sibling_hashes.len() {
         let sibling_node = Node {
