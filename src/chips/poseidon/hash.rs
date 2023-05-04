@@ -32,8 +32,13 @@ pub struct PoseidonChip<
     _marker: PhantomData<S>,
 }
 
-impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize, const L: usize>
-    PoseidonChip<F, S, WIDTH, RATE, L>
+impl<
+        F: FieldExt,
+        S: Spec<F, WIDTH, RATE>,
+        const WIDTH: usize,
+        const RATE: usize,
+        const L: usize,
+    > PoseidonChip<F, S, WIDTH, RATE, L>
 {
     pub fn construct(config: PoseidonConfig<F, WIDTH, RATE, L>) -> Self {
         Self {
@@ -64,9 +69,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
             rc_b.try_into().unwrap(),
         );
 
-        PoseidonConfig {
-            pow5_config,
-        }
+        PoseidonConfig { pow5_config }
     }
 
     // L is the number of inputs to the hash function
@@ -77,7 +80,6 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
         mut layouter: impl Layouter<F>,
         input_cells: [AssignedCell<F, F>; L],
     ) -> Result<AssignedCell<F, F>, Error> {
-
         let pow5_chip = Pow5Chip::construct(self.config.pow5_config.clone());
 
         // initialize the hasher
@@ -87,5 +89,4 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
         )?;
         hasher.hash(layouter.namespace(|| "hash"), input_cells)
     }
-
 }

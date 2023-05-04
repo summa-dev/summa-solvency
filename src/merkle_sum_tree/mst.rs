@@ -1,8 +1,8 @@
-use num_bigint::BigInt;
 use crate::merkle_sum_tree::utils::{
     build_merkle_tree_from_entries, create_proof, index_of, parse_csv_to_entries, verify_proof,
 };
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
+use num_bigint::BigInt;
 
 pub struct MerkleSumTree {
     root: Node,
@@ -60,5 +60,4 @@ impl MerkleSumTree {
     pub fn verify_proof(&self, proof: &MerkleProof) -> bool {
         verify_proof(proof)
     }
-
 }

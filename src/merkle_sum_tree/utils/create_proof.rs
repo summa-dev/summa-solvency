@@ -1,5 +1,5 @@
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
-use halo2_proofs::halo2curves::bn256::{Fr as Fp};
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
 pub fn create_proof(
     index: usize,

@@ -30,8 +30,7 @@ pub fn parse_csv_to_entries<P: AsRef<Path>>(path: P) -> Result<Vec<Entry>, Box<d
     const MODULUS_STR: &str = "30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001";
 
     // throw error if balance is larger than the modulus
-    if balance_acc >= BigInt::parse_bytes(MODULUS_STR.as_bytes(), 16).unwrap()
-    {
+    if balance_acc >= BigInt::parse_bytes(MODULUS_STR.as_bytes(), 16).unwrap() {
         return Err("Balance is larger than the modulus".into());
     }
 

@@ -1,5 +1,5 @@
 use halo2_gadgets::poseidon::primitives::*;
-use halo2_proofs::{arithmetic::FieldExt};
+use halo2_proofs::arithmetic::FieldExt;
 use std::marker::PhantomData;
 
 // P128Pow5T3 is the default Spec provided by the Halo2 Gadget => https://github.com/privacy-scaling-explorations/halo2/blob/main/halo2_gadgets/src/poseidon/primitives/p128pow5t3.rs#L13
@@ -9,11 +9,13 @@ use std::marker::PhantomData;
 // Because of that we need to define a new Spec
 // MySpec struct allows us to define the parameters of the Poseidon hash function WIDTH and RATE
 #[derive(Debug, Clone, Copy)]
-pub struct MySpec<F: FieldExt, const WIDTH: usize, const RATE: usize>{
-    _marker: PhantomData<F>
+pub struct MySpec<F: FieldExt, const WIDTH: usize, const RATE: usize> {
+    _marker: PhantomData<F>,
 }
 
-impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Spec<F, WIDTH, RATE> for MySpec<F, WIDTH, RATE> {
+impl<F: FieldExt, const WIDTH: usize, const RATE: usize> Spec<F, WIDTH, RATE>
+    for MySpec<F, WIDTH, RATE>
+{
     fn full_rounds() -> usize {
         8
     }

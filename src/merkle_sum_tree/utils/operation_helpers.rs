@@ -1,5 +1,5 @@
+use halo2_proofs::halo2curves::{bn256::Fr as Fp, group::ff::PrimeField};
 use num_bigint::{BigInt, Sign};
-use halo2_proofs::halo2curves::{bn256::{Fr as Fp}, group::ff::PrimeField};
 
 // Return a BigUint representation of the username
 pub fn big_intify_username(username: &str) -> BigInt {

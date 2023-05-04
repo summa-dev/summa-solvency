@@ -1,10 +1,10 @@
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
+use eth_types::Field;
 use halo2_proofs::{circuit::*, plonk::*};
 use std::marker::PhantomData;
-use eth_types::Field;
 
 #[derive(Default)]
-pub struct MerkleSumTreeCircuit <F: Field> {
+pub struct MerkleSumTreeCircuit<F: Field> {
     pub leaf_hash: F,
     pub leaf_balance: F,
     pub path_element_hashes: Vec<F>,
@@ -12,11 +12,10 @@ pub struct MerkleSumTreeCircuit <F: Field> {
     pub path_indices: Vec<F>,
     pub assets_sum: F,
     pub root_hash: F,
-    pub _marker: PhantomData<F>
+    pub _marker: PhantomData<F>,
 }
 
-impl <F:Field> Circuit<F> for MerkleSumTreeCircuit<F> {
-
+impl<F: Field> Circuit<F> for MerkleSumTreeCircuit<F> {
     type Config = MerkleSumTreeConfig<F>;
     type FloorPlanner = SimpleFloorPlanner;
 
@@ -25,7 +24,6 @@ impl <F:Field> Circuit<F> for MerkleSumTreeCircuit<F> {
     }
 
     fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
-
         // config columns for the merkle tree chip
         let col_a = meta.advice_column();
         let col_b = meta.advice_column();
@@ -35,11 +33,7 @@ impl <F:Field> Circuit<F> for MerkleSumTreeCircuit<F> {
 
         let instance = meta.instance_column();
 
-        MerkleSumTreeChip::configure(
-            meta,
-            [col_a, col_b, col_c, col_d, col_e],
-            instance,
-        )
+        MerkleSumTreeChip::configure(meta, [col_a, col_b, col_c, col_d, col_e], instance)
     }
 
     fn synthesize(
@@ -47,12 +41,19 @@ impl <F:Field> Circuit<F> for MerkleSumTreeCircuit<F> {
         config: Self::Config,
         mut layouter: impl Layouter<F>,
     ) -> Result<(), Error> {
-
         let chip = MerkleSumTreeChip::construct(config);
-        let (leaf_hash, leaf_balance) = chip.assing_leaf_hash_and_balance(layouter.namespace(|| "assign leaf"), self.leaf_hash, self.leaf_balance)?;
+        let (leaf_hash, leaf_balance) = chip.assing_leaf_hash_and_balance(
+            layouter.namespace(|| "assign leaf"),
+            self.leaf_hash,
+            self.leaf_balance,
+        )?;
 
         chip.expose_public(layouter.namespace(|| "public leaf hash"), &leaf_hash, 0)?;
-        chip.expose_public(layouter.namespace(|| "public leaf balance"), &leaf_balance, 1)?;
+        chip.expose_public(
+            layouter.namespace(|| "public leaf balance"),
+            &leaf_balance,
+            1,
+        )?;
 
         // apply it for level 0 of the merkle tree
         // node cells passed as inputs are the leaf_hash cell and the leaf_balance cell
@@ -78,7 +79,7 @@ impl <F:Field> Circuit<F> for MerkleSumTreeCircuit<F> {
             )?;
         }
 
-        // enforce computed sum to be less than the assets sum 
+        // enforce computed sum to be less than the assets sum
         chip.enforce_less_than(layouter.namespace(|| "enforce less than"), &next_sum)?;
 
         chip.expose_public(layouter.namespace(|| "public root"), &next_hash, 2)?;

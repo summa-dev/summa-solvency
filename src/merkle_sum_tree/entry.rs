@@ -1,7 +1,7 @@
-use halo2_proofs::halo2curves::bn256::{Fr as Fp};
-use crate::merkle_sum_tree::utils::{big_intify_username, poseidon, big_int_to_fp};
+use crate::merkle_sum_tree::utils::{big_int_to_fp, big_intify_username, poseidon};
 use crate::merkle_sum_tree::Node;
-use num_bigint::{BigInt};
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use num_bigint::BigInt;
 
 #[derive(Default, Clone, Debug)]
 pub struct Entry {
@@ -11,9 +11,7 @@ pub struct Entry {
 }
 
 impl Entry {
-
     pub fn new(username: String, balance: BigInt) -> Result<Self, &'static str> {
-
         Ok(Entry {
             username_to_big_int: big_intify_username(&username),
             balance,
@@ -28,7 +26,6 @@ impl Entry {
                 big_int_to_fp(&self.balance),
                 Fp::from(0),
                 Fp::from(0),
-            
             ),
             balance: big_int_to_fp(&self.balance),
         }

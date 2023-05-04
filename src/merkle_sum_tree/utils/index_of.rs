@@ -1,5 +1,5 @@
-use num_bigint::BigInt;
 use crate::merkle_sum_tree::{Entry, Node};
+use num_bigint::BigInt;
 
 pub fn index_of(username: &str, balance: BigInt, nodes: &[Vec<Node>]) -> Option<usize> {
     let entry = Entry::new(username.to_string(), balance).unwrap();
