@@ -9,8 +9,8 @@ edition = "2021"
 dev-graph = ["halo2_proofs/dev-graph", "plotters"]
 
 [dependencies]
-halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_02_02"}
-halo2_gadgets = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_02_02"}
+halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_04_20"}
+halo2_gadgets = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_04_20"}
 gadgets = { git = "https://github.com/privacy-scaling-explorations/zkevm-circuits"}
 plotters = { version = "0.3.4", optional = true }
 rand = "0.8"

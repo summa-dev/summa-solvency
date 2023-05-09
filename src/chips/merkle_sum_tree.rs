@@ -307,6 +307,8 @@ impl MerkleSumTreeChip {
         // Initiate chip config
         let chip = LtChip::construct(self.config.lt_config);
 
+        chip.load(&mut layouter)?;
+
         layouter.assign_region(
             || "enforce sum to be less than total assets",
             |mut region| {

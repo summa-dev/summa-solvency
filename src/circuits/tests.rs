@@ -54,7 +54,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let valid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        let valid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
 
         valid_prover.assert_satisfied();
     }
@@ -77,7 +77,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let valid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        let valid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
 
         valid_prover.assert_satisfied();
     }
@@ -89,7 +89,7 @@ mod test {
         let circuit = instantiate_empty_circuit();
 
         // we generate a universal trusted setup of our own for testing
-        let params = ParamsKZG::<Bn256>::setup(8, OsRng);
+        let params = ParamsKZG::<Bn256>::setup(9, OsRng);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -158,7 +158,7 @@ mod test {
         let circuit = instantiate_empty_circuit();
 
         // we generate a universal trusted setup of our own for testing
-        let params = ParamsKZG::<Bn256>::setup(8, OsRng);
+        let params = ParamsKZG::<Bn256>::setup(9, OsRng);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -201,7 +201,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
@@ -237,7 +237,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -276,7 +276,7 @@ mod test {
             assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
@@ -312,7 +312,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -349,7 +349,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -438,7 +438,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -473,7 +473,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(8, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -489,7 +489,7 @@ mod test {
                 )
                     .into(),
                 location: FailureLocation::InRegion {
-                    region: (17, "enforce sum to be less than total assets").into(),
+                    region: (18, "enforce sum to be less than total assets").into(),
                     offset: 0
                 },
                 cell_values: vec![
