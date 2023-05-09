@@ -7,7 +7,7 @@ This library makes use of the [PSE Fork of Halo2](https://github.com/privacy-sca
 ## Usage
 
 `cargo build`
-`cargo test -- --nocapture`
+`cargo test --features dev-graph -- --nocapture`
 
 ## Chips
 
