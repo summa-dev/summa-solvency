@@ -1,29 +1,27 @@
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
-use eth_types::Field;
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*};
-use std::marker::PhantomData;
 
 #[derive(Default)]
-pub struct MerkleSumTreeCircuit<F: Field> {
-    pub leaf_hash: F,
-    pub leaf_balance: F,
-    pub path_element_hashes: Vec<F>,
-    pub path_element_balances: Vec<F>,
-    pub path_indices: Vec<F>,
-    pub assets_sum: F,
-    pub root_hash: F,
-    pub _marker: PhantomData<F>,
+pub struct MerkleSumTreeCircuit {
+    pub leaf_hash: Fp,
+    pub leaf_balance: Fp,
+    pub path_element_hashes: Vec<Fp>,
+    pub path_element_balances: Vec<Fp>,
+    pub path_indices: Vec<Fp>,
+    pub assets_sum: Fp,
+    pub root_hash: Fp,
 }
 
-impl<F: Field> Circuit<F> for MerkleSumTreeCircuit<F> {
-    type Config = MerkleSumTreeConfig<F>;
+impl Circuit<Fp> for MerkleSumTreeCircuit {
+    type Config = MerkleSumTreeConfig;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
         Self::default()
     }
 
-    fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+    fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
         // config columns for the merkle tree chip
         let col_a = meta.advice_column();
         let col_b = meta.advice_column();
@@ -39,7 +37,7 @@ impl<F: Field> Circuit<F> for MerkleSumTreeCircuit<F> {
     fn synthesize(
         &self,
         config: Self::Config,
-        mut layouter: impl Layouter<F>,
+        mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
         let chip = MerkleSumTreeChip::construct(config);
         let (leaf_hash, leaf_balance) = chip.assing_leaf_hash_and_balance(

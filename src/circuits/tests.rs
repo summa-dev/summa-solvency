@@ -12,9 +12,8 @@ mod test {
     };
     use num_bigint::ToBigInt;
     use rand::rngs::OsRng;
-    use std::marker::PhantomData;
 
-    fn instantiate_circuit(assets_sum: Fp, path: &str) -> MerkleSumTreeCircuit<Fp> {
+    fn instantiate_circuit(assets_sum: Fp, path: &str) -> MerkleSumTreeCircuit {
         let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
 
         let proof: MerkleProof = merkle_sum_tree.generate_proof(0).unwrap();
@@ -27,11 +26,10 @@ mod test {
             path_indices: proof.path_indices,
             assets_sum,
             root_hash: proof.root_hash,
-            _marker: PhantomData,
         }
     }
 
-    fn instantiate_empty_circuit() -> MerkleSumTreeCircuit<Fp> {
+    fn instantiate_empty_circuit() -> MerkleSumTreeCircuit {
         MerkleSumTreeCircuit {
             leaf_hash: Fp::zero(),
             leaf_balance: Fp::zero(),
@@ -40,7 +38,6 @@ mod test {
             path_indices: vec![Fp::zero(); 4],
             assets_sum: Fp::zero(),
             root_hash: Fp::zero(),
-            _marker: PhantomData,
         }
     }
 
@@ -147,7 +144,7 @@ mod test {
                     column: (Any::advice(), 5).into(),
                     location: FailureLocation::InRegion {
                         region: (16, "permute state").into(),
-                        offset: 36
+                        offset: 38
                     }
                 }
             ])
@@ -216,7 +213,7 @@ mod test {
                     column: (Any::advice(), 5).into(),
                     location: FailureLocation::InRegion {
                         region: (16, "permute state").into(),
-                        offset: 36
+                        offset: 38
                     }
                 }
             ])
@@ -291,7 +288,7 @@ mod test {
                     column: (Any::advice(), 5).into(),
                     location: FailureLocation::InRegion {
                         region: (16, "permute state").into(),
-                        offset: 36
+                        offset: 38
                     }
                 }
             ])
@@ -374,22 +371,22 @@ mod test {
                     cell_values: vec![
                         (
                             ((Any::advice(), 0).into(), 0).into(),
-                            "0x221a31fb6a7dfe98cfeca9b0a78061056f42f31f5d5719cfbc5c8110e38ed0b0"
+                            "0x14b2e288bf66ce6fe38eb889a4f4c4e5c00e71b3b96caa9018bdf36c280a6be0"
                                 .to_string()
                         ),
                         (
                             ((Any::advice(), 0).into(), 1).into(),
-                            "0x17063e69d8505e34b85820ae85ed171e8a44f82aefdcceec66397495e3286b6a"
+                            "0xb92ac29c673ed3f380acdca783f2e6a9f62f27522cffd1a0a28bc952a7a755"
                                 .to_string()
                         ),
                         (
                             ((Any::advice(), 2).into(), 0).into(),
-                            "0x17063e69d8505e34b85820ae85ed171e8a44f82aefdcceec66397495e3286b6a"
+                            "0xb92ac29c673ed3f380acdca783f2e6a9f62f27522cffd1a0a28bc952a7a755"
                                 .to_string()
                         ),
                         (
                             ((Any::advice(), 2).into(), 1).into(),
-                            "0x221a31fb6a7dfe98cfeca9b0a78061056f42f31f5d5719cfbc5c8110e38ed0b0"
+                            "0x14b2e288bf66ce6fe38eb889a4f4c4e5c00e71b3b96caa9018bdf36c280a6be0"
                                 .to_string()
                         ),
                         (((Any::advice(), 4).into(), 0).into(), "0x2".to_string()),
@@ -417,7 +414,7 @@ mod test {
                     column: (Any::advice(), 5).into(),
                     location: FailureLocation::InRegion {
                         region: (16, "permute state").into(),
-                        offset: 36
+                        offset: 38
                     }
                 }
             ])
@@ -454,7 +451,7 @@ mod test {
                     column: (Any::advice(), 5).into(),
                     location: FailureLocation::InRegion {
                         region: (16, "permute state").into(),
-                        offset: 36
+                        offset: 38
                     }
                 }
             ])

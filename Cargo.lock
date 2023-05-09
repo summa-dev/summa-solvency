@@ -448,7 +448,6 @@ version = "0.1.0"
 dependencies = [
  "ark-std",
  "csv",
- "eth-types",
  "gadgets",
  "halo2_gadgets",
  "halo2_proofs",
