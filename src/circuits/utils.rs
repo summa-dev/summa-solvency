@@ -2,7 +2,7 @@ use crate::circuits::merkle_sum_tree::MerkleSumTreeCircuit;
 use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof};
 use ark_std::{end_timer, start_timer};
 use crate::circuits::merkle_sum_tree::MerkleSumTreeCircuit;
-use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof, MerkleSumTree};
+use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof};
 use halo2_proofs::{
     halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
     plonk::{create_proof, verify_proof, Circuit, ProvingKey, VerifyingKey},
@@ -78,10 +78,7 @@ pub fn generate_setup_params(levels: usize) -> ParamsKZG<Bn256> {
     }
 }
 
-pub fn instantiate_circuit(assets_sum: Fp, path: &str) -> MerkleSumTreeCircuit {
-    let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
-
-    let proof: MerkleProof = merkle_sum_tree.generate_proof(0).unwrap();
+pub fn instantiate_circuit(assets_sum: Fp, proof: MerkleProof) -> MerkleSumTreeCircuit {
 
     MerkleSumTreeCircuit {
         leaf_hash: proof.entry.compute_leaf().hash,
