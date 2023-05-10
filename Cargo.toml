@@ -20,3 +20,10 @@ csv = "1.1"
 serde = { version = "1.0", features = ["derive"] }
 hex = "0.4.3"
 num-bigint = "0.4"
+
+[dev-dependencies]
+criterion= "0.3"
+
+[[bench]]
+name = "full_solvency_flow"
+harness = false
