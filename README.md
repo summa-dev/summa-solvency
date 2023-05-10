@@ -1,4 +1,4 @@
-# Circuits - Halo2
+# Summa Solvency
 
 This repository contains the Halo2 circuit implementation for the Proof of Solvency protocol. 
 
