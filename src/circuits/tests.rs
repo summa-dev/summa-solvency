@@ -1,9 +1,8 @@
 #[cfg(test)]
 mod test {
 
-    use crate::circuits::merkle_sum_tree::MerkleSumTreeCircuit;
-    use crate::circuits::utils::{full_prover, full_verifier};
-    use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof, MerkleSumTree};
+    use crate::circuits::utils::{full_prover, full_verifier, instantiate_circuit, instantiate_empty_circuit};
+    use crate::merkle_sum_tree::{big_int_to_fp};
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
         halo2curves::bn256::{Bn256, Fr as Fp},
@@ -12,34 +11,6 @@ mod test {
     };
     use num_bigint::ToBigInt;
     use rand::rngs::OsRng;
-
-    fn instantiate_circuit(assets_sum: Fp, path: &str) -> MerkleSumTreeCircuit {
-        let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
-
-        let proof: MerkleProof = merkle_sum_tree.generate_proof(0).unwrap();
-
-        MerkleSumTreeCircuit {
-            leaf_hash: proof.entry.compute_leaf().hash,
-            leaf_balance: big_int_to_fp(proof.entry.balance()),
-            path_element_hashes: proof.sibling_hashes,
-            path_element_balances: proof.sibling_sums,
-            path_indices: proof.path_indices,
-            assets_sum,
-            root_hash: proof.root_hash,
-        }
-    }
-
-    fn instantiate_empty_circuit() -> MerkleSumTreeCircuit {
-        MerkleSumTreeCircuit {
-            leaf_hash: Fp::zero(),
-            leaf_balance: Fp::zero(),
-            path_element_hashes: vec![Fp::zero(); 4],
-            path_element_balances: vec![Fp::zero(); 4],
-            path_indices: vec![Fp::zero(); 4],
-            assets_sum: Fp::zero(),
-            root_hash: Fp::zero(),
-        }
-    }
 
     #[test]
     fn test_valid_merkle_sum_tree() {
@@ -86,14 +57,16 @@ mod test {
     fn test_valid_merkle_sum_tree_with_full_prover() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = instantiate_empty_circuit();
+        let levels = 4;
+
+        let circuit = instantiate_empty_circuit(levels);
 
         // we generate a universal trusted setup of our own for testing
         let params = ParamsKZG::<Bn256>::setup(9, OsRng);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
-        // Note: the dimension of the circuit used to generate the keys must be the same as the dimension of the circuit used to generate the proof
+        // Note: the dimension of the empty circuit used to generate the keys must be the same as the dimension of the circuit used to generate the proof
         // In this case, the dimension are represented by the heigth of the merkle tree
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
@@ -155,7 +128,9 @@ mod test {
     fn test_invalid_root_hash_with_full_prover() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = instantiate_empty_circuit();
+        let levels = 4;
+
+        let circuit = instantiate_empty_circuit(levels);
 
         // we generate a universal trusted setup of our own for testing
         let params = ParamsKZG::<Bn256>::setup(9, OsRng);
