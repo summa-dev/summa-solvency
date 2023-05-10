@@ -17,24 +17,25 @@ mod test {
 
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let user_index = 0;
+        // loop over each index and generate a proof for each one
+        for user_index in 0..16 {
+            let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
-        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+            let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
 
-        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+            let circuit = instantiate_circuit(assets_sum, mt_proof);
 
-        let circuit = instantiate_circuit(assets_sum, mt_proof);
+            let public_input = vec![
+                circuit.leaf_hash,
+                circuit.leaf_balance,
+                circuit.root_hash,
+                circuit.assets_sum,
+            ];
 
-        let public_input = vec![
-            circuit.leaf_hash,
-            circuit.leaf_balance,
-            circuit.root_hash,
-            circuit.assets_sum,
-        ];
+            let valid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
 
-        let valid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
-
-        valid_prover.assert_satisfied();
+            valid_prover.assert_satisfied();
+        }
     }
 
     #[test]
