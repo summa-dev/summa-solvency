@@ -3,6 +3,7 @@ use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof};
 use ark_std::{end_timer, start_timer};
 use crate::circuits::merkle_sum_tree::MerkleSumTreeCircuit;
 use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof};
+use ark_std::{end_timer, start_timer};
 use halo2_proofs::{
     halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
     plonk::{create_proof, verify_proof, Circuit, ProvingKey, VerifyingKey},
@@ -79,7 +80,6 @@ pub fn generate_setup_params(levels: usize) -> ParamsKZG<Bn256> {
 }
 
 pub fn instantiate_circuit(assets_sum: Fp, proof: MerkleProof) -> MerkleSumTreeCircuit {
-
     MerkleSumTreeCircuit {
         leaf_hash: proof.entry.compute_leaf().hash,
         leaf_balance: big_int_to_fp(proof.entry.balance()),
@@ -100,6 +100,29 @@ pub fn instantiate_empty_circuit(levels: usize) -> MerkleSumTreeCircuit {
         path_indices: vec![Fp::zero(); levels],
         assets_sum: Fp::zero(),
         root_hash: Fp::zero(),
+    }
+}
+
+pub fn generate_setup_params(levels: usize) -> ParamsKZG<Bn256> {
+    // 2^k is the number of rows for the circuit. We choos 27 levels as upper bound for the merkle sum tree
+    let k = match levels {
+        4..=11 => 9,
+        12..=23 => 10,
+        24..=27 => 11,
+        _ => 0,
+    };
+
+    let ptau_path = format!("ptau/hermez-raw-{}", k);
+
+    let metadata = std::fs::metadata(ptau_path.clone());
+    
+    if metadata.is_err() {
+        println!("ptau file not found, generating a trusted setup of our own. If needed, download the ptau from https://github.com/han0110/halo2-kzg-srs");
+        ParamsKZG::<Bn256>::setup(k, OsRng)
+    } else {
+        println!("ptau file found");
+        let mut params_fs = File::open(ptau_path).expect("couldn't load params");
+        ParamsKZG::<Bn256>::read(&mut params_fs).expect("Failed to read params")
     }
 }
 
