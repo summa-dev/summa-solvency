@@ -13,15 +13,15 @@ use halo2_proofs::{
 };
 use std::convert::TryInto;
 
+const MIN_POWER: u32 = 4;
 const MAX_POWER: u32 = 27;
 const SAMPLE_SIZE: usize = 10;
 
 fn build_mstree_benchmark(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    for i in 4..=MAX_POWER {
-        let num_entries = 2usize.pow(i);
-        let csv_file = format!("src/merkle_sum_tree/csv/entry_{}.csv", num_entries);
+    for i in MIN_POWER..=MAX_POWER {
+        let csv_file = format!("benches/csv/entry_2_{}.csv", i);
 
         let bench_name = format!("build merkle sum tree for 2 power of {} entries", i);
         criterion.bench_function(&bench_name, |b| {
@@ -35,7 +35,7 @@ fn build_mstree_benchmark(_c: &mut Criterion) {
 fn verification_key_gen_benchmark(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    for i in 4..=MAX_POWER {
+    for i in MIN_POWER..=MAX_POWER {
         let params: ParamsKZG<Bn256> = generate_setup_params(i.try_into().unwrap());
 
         let bench_name = format!("gen verification key for 2 power of {} entries", i);
@@ -51,7 +51,7 @@ fn verification_key_gen_benchmark(_c: &mut Criterion) {
 fn proving_key_gen_benchmark(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    for i in 4..=MAX_POWER {
+    for i in MIN_POWER..=MAX_POWER {
         let params: ParamsKZG<Bn256> = generate_setup_params(i.try_into().unwrap());
 
         let vk = keygen_vk(&params, &instantiate_empty_circuit(i.try_into().unwrap()))
@@ -73,7 +73,7 @@ fn proving_key_gen_benchmark(_c: &mut Criterion) {
 fn generate_zk_proof_benchmark(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    for i in 4..=MAX_POWER {
+    for i in MIN_POWER..=MAX_POWER {
         let circuit = instantiate_empty_circuit(i.try_into().unwrap());
 
         let params: ParamsKZG<Bn256> = generate_setup_params(i.try_into().unwrap());
@@ -81,8 +81,7 @@ fn generate_zk_proof_benchmark(_c: &mut Criterion) {
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
-        let num_entries = 2usize.pow(i);
-        let csv_file = format!("src/merkle_sum_tree/csv/entry_{}.csv", num_entries);
+        let csv_file = format!("benches/csv/entry_2_{}.csv", i);
 
         let merkle_sum_tree = MerkleSumTree::new(&csv_file).unwrap();
 
@@ -114,7 +113,7 @@ fn generate_zk_proof_benchmark(_c: &mut Criterion) {
 fn verify_zk_proof_benchmark(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    for i in 4..=MAX_POWER {
+    for i in MIN_POWER..=MAX_POWER {
         let circuit = instantiate_empty_circuit(i.try_into().unwrap());
 
         let params: ParamsKZG<Bn256> = generate_setup_params(i.try_into().unwrap());
@@ -122,8 +121,7 @@ fn verify_zk_proof_benchmark(_c: &mut Criterion) {
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
-        let num_entries = 2usize.pow(i);
-        let csv_file = format!("src/merkle_sum_tree/csv/entry_{}.csv", num_entries);
+        let csv_file = format!("benches/csv/entry_2_{}.csv", i);
 
         let merkle_sum_tree = MerkleSumTree::new(&csv_file).unwrap();
 

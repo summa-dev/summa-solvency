@@ -112,3 +112,29 @@ Furthermore, the chip contains four permutation check:
 - Verfies that the `leaf_balance` is equal to the `leaf_balance` passed as (public) value to the instance column
 - Verifies that the last `computed_hash` is equal to the (expected) `root` of the tree which is passed as (public) value to the instance column
 - Verifies that the last `computed_sum` is equal to the (expected) `balance_sum` of the tree which is passed as (public) value to the instance column
+
+## Benchmarking 
+
+The benchmarking included the following areas:
+
+- Merkle Sum Tree Generation 
+- Verification Key Gen
+- Proving Key Gen
+- ZK Proof Generation
+- ZK Proof Verification
+
+In order to run the benchmarking, we provide a set of dummy `username, balance` entries formatted in csv files. The csv files can be downloaded as follows 
+
+``` 
+cd benches/csv
+wget https://csv-files-summa.s3.eu-west-1.amazonaws.com/csv/csv_files.zip
+unzip csv_files.zip
+```
+
+The csv folder will contain files named as `entry_2_4.csv` to `entry_2_27.csv`. 2^4 or 2^27 is the number of entries in the file that will be used to feed the merkle sum tree and, eventually, the zk prover.
+
+To run the benches 
+
+`cargo bench` 
+
+Note that by default the function will run the benchmarking for all the csv files from the power of 2 until the power of 27. You can change the range of the benchmarking by changing the `MIN_POWER` and `MAX_POWER` constants inside the `benches/full_solvency_flow.rs` file.
