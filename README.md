@@ -113,7 +113,11 @@ Furthermore, the chip contains four permutation check:
 - Verifies that the last `computed_hash` is equal to the (expected) `root` of the tree which is passed as (public) value to the instance column
 - Verifies that the last `computed_sum` is equal to the (expected) `balance_sum` of the tree which is passed as (public) value to the instance column
 
-## Benchmarking 
+### Powers of Tau Trusted Setup 
+
+In order to test the circuits with a real trusted setup, we need to download the powers of tau files. The powers of tau files can be downloaded from https://github.com/han0110/halo2-kzg-srs and placed in a `ptau` folder. For example, by adding `hermez-raw-9` to the `ptau` folder, the circuit tests will take it as a setup to generate the parameters -> see `generate_setup_params` in [utils](./src/circuits/utils.rs). If no `ptau` folder is found, the tests will generate a new setup from a randomly generated value. This latter approach is not recommended for production.
+
+### Benchmarking 
 
 The benchmarking included the following areas:
 
