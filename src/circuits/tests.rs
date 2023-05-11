@@ -1,20 +1,19 @@
 #[cfg(test)]
 mod test {
 
-    use crate::circuits::utils::{full_prover, full_verifier, instantiate_circuit, instantiate_empty_circuit};
+    use crate::circuits::utils::{
+        full_prover, full_verifier, generate_setup_params, instantiate_circuit,
+        instantiate_empty_circuit,
+    };
     use crate::merkle_sum_tree::{MerkleProof, MerkleSumTree};
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
-        halo2curves::bn256::{Bn256, Fr as Fp},
+        halo2curves::bn256::Fr as Fp,
         plonk::{keygen_pk, keygen_vk, Any},
-        poly::kzg::commitment::ParamsKZG,
     };
-    use rand::rngs::OsRng;
-
 
     #[test]
     fn test_valid_merkle_sum_tree() {
-
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         // loop over each index and generate a proof for each one
@@ -43,7 +42,8 @@ mod test {
         // Same as above but now the entries contain a balance that is greater than 64 bits
         // liabilities sum is 18446744073710096590
 
-        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16_bigints.csv").unwrap();
+        let merkle_sum_tree =
+            MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16_bigints.csv").unwrap();
 
         let user_index = 0;
 
@@ -67,7 +67,6 @@ mod test {
 
     #[test]
     fn test_valid_merkle_sum_tree_with_full_prover() {
-
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         let levels = 4;
@@ -75,7 +74,7 @@ mod test {
         let circuit = instantiate_empty_circuit(levels);
 
         // we generate a universal trusted setup of our own for testing
-        let params = ParamsKZG::<Bn256>::setup(9, OsRng);
+        let params = generate_setup_params(levels);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -110,7 +109,6 @@ mod test {
     // Passing an invalid root hash in the instance column should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_root_hash() {
-
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         let user_index = 0;
@@ -152,7 +150,6 @@ mod test {
 
     #[test]
     fn test_invalid_root_hash_with_full_prover() {
-
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         let levels = 4;
@@ -160,7 +157,7 @@ mod test {
         let circuit = instantiate_empty_circuit(levels);
 
         // we generate a universal trusted setup of our own for testing
-        let params = ParamsKZG::<Bn256>::setup(9, OsRng);
+        let params = generate_setup_params(levels);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -195,7 +192,6 @@ mod test {
     // Passing an invalid leaf hash as input for the witness generation should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_leaf_hash_as_witness() {
-
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         let user_index = 0;
@@ -238,7 +234,6 @@ mod test {
     // Passing an invalid leaf hash in the instance column should fail the permutation check between the (valid) leaf hash added as part of the witness and the instance column leaf hash
     #[test]
     fn test_invalid_leaf_hash_as_instance() {
-
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         let user_index = 0;
@@ -281,7 +276,6 @@ mod test {
     // Passing an invalid leaf balance as input for the witness generation should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_leaf_balance_as_witness() {
-
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         let user_index = 0;
@@ -326,9 +320,8 @@ mod test {
     // Passing an invalid leaf balance in the instance column should fail the permutation check between the (valid) leaf balance added as part of the witness and the instance column leaf balance
     #[test]
     fn test_invalid_leaf_balance_as_instance() {
-
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
-        
+
         let user_index = 0;
 
         let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
@@ -370,7 +363,6 @@ mod test {
     // Passing a non binary index should fail the bool constraint check, the two swap constraints and the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_non_binary_index() {
-
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         let user_index = 0;
@@ -466,7 +458,6 @@ mod test {
     // Swapping the indices should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_swapping_index() {
-
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         let user_index = 0;
@@ -509,7 +500,6 @@ mod test {
     // Passing an assets sum that is less than the liabilities sum should fail the lessThan constraint check
     #[test]
     fn test_is_not_less_than() {
-
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         let user_index = 0;
