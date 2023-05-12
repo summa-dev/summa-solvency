@@ -1,6 +1,8 @@
 use crate::merkle_sum_tree::utils::create_middle_node::create_middle_node;
 use crate::merkle_sum_tree::{Entry, Node};
+use ark_std::{end_timer, start_timer};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use std::thread;
 
 pub fn build_merkle_tree_from_entries(
     entries: &[Entry],
@@ -19,22 +21,59 @@ pub fn build_merkle_tree_from_entries(
         depth + 1
     ];
 
-    // Compute the leaves
-    for (i, entry) in entries.iter().enumerate() {
-        tree[0][i] = entry.compute_leaf();
+    let pf_time = start_timer!(|| "compute leaves");
+
+    // Compute the leaves in parallel
+    let mut handles = vec![];
+    let chunk_size = (entries.len() + num_cpus::get() - 1) / num_cpus::get();
+    for chunk in entries.chunks(chunk_size) {
+        let chunk = chunk.to_vec();
+        handles.push(thread::spawn(move || {
+            chunk
+                .into_iter()
+                .map(|entry| entry.compute_leaf())
+                .collect::<Vec<_>>()
+        }));
     }
+
+    let mut index = 0;
+    for handle in handles {
+        let result = handle.join().unwrap();
+        for leaf in result {
+            tree[0][index] = leaf;
+            index += 1;
+        }
+    }
+
+    end_timer!(pf_time);
 
     // Compute the inner nodes
     for level in 1..=depth {
         let nodes_in_level = (n + (1 << level) - 1) / (1 << level);
-        for i in 0..nodes_in_level {
-            tree[level][i] =
-                create_middle_node(&tree[level - 1][2 * i], &tree[level - 1][2 * i + 1]);
+        let mut handles = vec![];
+        let chunk_size = (nodes_in_level + num_cpus::get() - 1) / num_cpus::get();
+        let pf_time = start_timer!(|| "compute middle level");
 
-            // let left_child = tree[level - 1][2 * i].hash;
-            // let right_child = tree[level - 1][2 * i + 1].hash;
-            // tree[level][i].hash = poseidon(left_child, right_child);
+        for chunk in tree[level - 1].chunks(chunk_size * 2) {
+            let chunk = chunk.to_vec();
+            handles.push(thread::spawn(move || {
+                chunk
+                    .chunks(2)
+                    .map(|pair| create_middle_node(&pair[0], &pair[1]))
+                    .collect::<Vec<_>>()
+            }));
         }
+
+        let mut index = 0;
+        for handle in handles {
+            let result = handle.join().unwrap();
+            for node in result {
+                tree[level][index] = node;
+                index += 1;
+            }
+        }
+
+        end_timer!(pf_time);
     }
 
     let root = tree[depth][0].clone();

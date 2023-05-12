@@ -460,6 +460,7 @@ dependencies = [
  "halo2_proofs",
  "hex",
  "num-bigint",
+ "num_cpus",
  "plotters",
  "rand",
  "serde",
