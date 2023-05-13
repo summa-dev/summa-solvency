@@ -47,12 +47,15 @@ pub fn build_merkle_tree_from_entries(
 
     end_timer!(pf_time);
 
-    // If the level is within the last {parallelization_threshold} levels, compute the nodes sequentially
-    // otherwise, compute the nodes in parallel
     for level in 1..=depth {
         let nodes_in_level = (n + (1 << level) - 1) / (1 << level);
 
-        let parallelization_threshold = depth - 5;
+        // compute parallelization until {parallelization_threshold} level
+        // if parallelization_threshold is set to depth, then no parallelization
+        // if parallelization_threshold is set to 0, then all levels are parallelized (until level 0)
+        // if depth is smaller than 5, disable parallelization
+        // otherwise, only parallelize the initial 5 levels
+        let parallelization_threshold = if depth < 5 { depth } else { depth - 5 };
 
         if level > depth - parallelization_threshold {
             let pf_time = start_timer!(|| "compute middle level sequentially");
