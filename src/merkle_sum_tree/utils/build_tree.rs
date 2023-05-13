@@ -52,10 +52,11 @@ pub fn build_merkle_tree_from_entries(
     for level in 1..=depth {
         let nodes_in_level = (n + (1 << level) - 1) / (1 << level);
 
-        let parallelization_threshold = num_cpus::get();
+        let parallelization_threshold = depth - 5;
 
         if level > depth - parallelization_threshold {
-            let pf_time = start_timer!(|| "compute middle level");
+            let pf_time = start_timer!(|| "compute middle level sequentially");
+            print!("{} ", depth - level);
 
             for i in 0..nodes_in_level {
                 tree[level][i] =
@@ -67,7 +68,8 @@ pub fn build_merkle_tree_from_entries(
         } else {
             let mut handles = vec![];
             let chunk_size = (nodes_in_level + num_cpus::get() - 1) / num_cpus::get();
-            let pf_time = start_timer!(|| "compute middle level");
+            let pf_time = start_timer!(|| "compute middle level in parallel");
+            print!("{} ", depth - level);
 
             for chunk in tree[level - 1].chunks(chunk_size * 2) {
                 let chunk = chunk.to_vec();
