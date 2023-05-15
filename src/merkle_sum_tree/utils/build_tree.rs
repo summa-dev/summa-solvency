@@ -10,16 +10,31 @@ pub fn build_merkle_tree_from_entries(
     nodes: &mut Vec<Vec<Node>>,
 ) -> Result<Node, Box<dyn std::error::Error>> {
     let n = entries.len();
-    let mut tree = vec![
-        vec![
+
+    print!("Building merkle tree with {} leaves and {} depth", n, depth);
+
+    let mut tree: Vec<Vec<Node>> = Vec::with_capacity(depth + 1);
+
+    tree.push(vec![
+        Node {
+            hash: Fp::from(0),
+            balance: Fp::from(0)
+        };
+        n
+    ]);
+
+    for _ in 1..=depth {
+        let previous_level = tree.last().unwrap();
+        let nodes_in_level = (previous_level.len() + 1) / 2;
+
+        tree.push(vec![
             Node {
                 hash: Fp::from(0),
                 balance: Fp::from(0)
             };
-            n
-        ];
-        depth + 1
-    ];
+            nodes_in_level
+        ]);
+    }
 
     let pf_time = start_timer!(|| "compute leaves");
 
