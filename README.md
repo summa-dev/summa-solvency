@@ -130,7 +130,9 @@ The benchmarking included the following areas:
 In order to run the benchmarking, we provide a set of dummy `username, balance` entries formatted in csv files. The csv files can be downloaded as follows 
 
 ``` 
-cd benches/csv
+cd benches
+mkdir csv
+cd csv 
 wget https://csv-files-summa.s3.eu-west-1.amazonaws.com/csv/csv_files.zip
 unzip csv_files.zip
 ```
