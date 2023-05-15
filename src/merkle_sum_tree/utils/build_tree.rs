@@ -11,7 +11,7 @@ pub fn build_merkle_tree_from_entries(
 ) -> Result<Node, Box<dyn std::error::Error>> {
     let n = entries.len();
 
-    print!("Building merkle tree with {} leaves and {} depth", n, depth);
+    let tree_building = start_timer!(|| "build merkle tree");
 
     let mut tree: Vec<Vec<Node>> = Vec::with_capacity(depth + 1);
 
@@ -36,7 +36,7 @@ pub fn build_merkle_tree_from_entries(
         ]);
     }
 
-    let pf_time = start_timer!(|| "compute leaves");
+    let leaves_building = start_timer!(|| "compute leaves");
 
     // Compute the leaves in parallel
     let mut handles = vec![];
@@ -60,15 +60,15 @@ pub fn build_merkle_tree_from_entries(
         }
     }
 
-    end_timer!(pf_time);
+    end_timer!(leaves_building);
 
     for level in 1..=depth {
         let nodes_in_level = (n + (1 << level) - 1) / (1 << level);
 
         let mut handles = vec![];
         let chunk_size = (nodes_in_level + num_cpus::get() - 1) / num_cpus::get();
-        let pf_time = start_timer!(|| "compute middle level in parallel");
-        print!("level {} ", level);
+        let middle_level_building = start_timer!(|| "compute middle level in parallel");
+        print!("{} ", level);
 
         for chunk in tree[level - 1].chunks(chunk_size * 2) {
             let chunk = chunk.to_vec();
@@ -89,8 +89,10 @@ pub fn build_merkle_tree_from_entries(
             }
         }
 
-        end_timer!(pf_time);
+        end_timer!(middle_level_building);
     }
+
+    end_timer!(tree_building);
 
     let root = tree[depth][0].clone();
     *nodes = tree;
