@@ -1,6 +1,5 @@
-use crate::merkle_sum_tree::utils::{big_int_to_fp, big_intify_username, poseidon};
+use crate::merkle_sum_tree::utils::{big_int_to_fp, big_intify_username, poseidon_2};
 use crate::merkle_sum_tree::Node;
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use num_bigint::BigInt;
 
 #[derive(Clone, Debug)]
@@ -21,7 +20,7 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
 
     pub fn compute_leaf(&self) -> Node<N_ASSETS> {
         Node {
-            hash: poseidon(
+            hash: poseidon_2(
                 big_int_to_fp(&self.username_to_big_int),
                 self.balances
                     .iter()
