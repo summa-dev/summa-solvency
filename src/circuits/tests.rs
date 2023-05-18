@@ -405,22 +405,22 @@ mod test {
                     cell_values: vec![
                         (
                             ((Any::advice(), 0).into(), 0).into(),
-                            "0x14b2e288bf66ce6fe38eb889a4f4c4e5c00e71b3b96caa9018bdf36c280a6be0"
+                            "0x165246ea70fa45df377dbef638dde3a60fdcf50ff589fe2bab5e7ed85f775d1c"
                                 .to_string()
                         ),
                         (
                             ((Any::advice(), 0).into(), 1).into(),
-                            "0xb92ac29c673ed3f380acdca783f2e6a9f62f27522cffd1a0a28bc952a7a755"
+                            "0xebd20b8e03ee41532233438e3581591d1b06664154f1952192c0641f9936a1f"
                                 .to_string()
                         ),
                         (
                             ((Any::advice(), 2).into(), 0).into(),
-                            "0xb92ac29c673ed3f380acdca783f2e6a9f62f27522cffd1a0a28bc952a7a755"
+                            "0xebd20b8e03ee41532233438e3581591d1b06664154f1952192c0641f9936a1f"
                                 .to_string()
                         ),
                         (
                             ((Any::advice(), 2).into(), 1).into(),
-                            "0x14b2e288bf66ce6fe38eb889a4f4c4e5c00e71b3b96caa9018bdf36c280a6be0"
+                            "0x165246ea70fa45df377dbef638dde3a60fdcf50ff589fe2bab5e7ed85f775d1c"
                                 .to_string()
                         ),
                         (((Any::advice(), 4).into(), 0).into(), "0x2".to_string()),
