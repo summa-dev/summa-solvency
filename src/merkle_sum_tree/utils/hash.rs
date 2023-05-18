@@ -1,4 +1,4 @@
-use crate::chips::poseidon::spec::MySpec;
+use crate::chips::poseidon::spec::Spec4;
 use halo2_gadgets::poseidon::primitives::{self as poseidon, ConstantLength};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
@@ -7,5 +7,5 @@ pub fn poseidon(l1: Fp, l2: Fp, r1: Fp, r2: Fp) -> Fp {
     const RATE: usize = 4;
     const L: usize = 4;
 
-    poseidon::Hash::<Fp, MySpec, ConstantLength<L>, WIDTH, RATE>::init().hash([l1, l2, r1, r2])
+    poseidon::Hash::<Fp, Spec4, ConstantLength<L>, WIDTH, RATE>::init().hash([l1, l2, r1, r2])
 }
