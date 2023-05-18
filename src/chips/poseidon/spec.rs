@@ -7,11 +7,11 @@ use halo2_proofs::arithmetic::Field;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
 #[derive(Debug, Clone, Copy)]
-pub struct MySpec;
+pub struct Spec4;
 
 pub(crate) type Mds<Fp, const T: usize> = [[Fp; T]; T];
 
-impl Spec<Fp, 5, 4> for MySpec {
+impl Spec<Fp, 5, 4> for Spec4 {
     fn full_rounds() -> usize {
         8
     }
