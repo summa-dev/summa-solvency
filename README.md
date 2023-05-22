@@ -73,7 +73,7 @@ For the level 0 of the tree:
 
 | a                | b                     | c               |    d              |   e        |  bool_selector | swap_selector |  sum_selector | lt_selector
 | --               | -                     | --              |   ---             |  ---       |    --          | ---           |  ---          | ---
-| leaf_hash        | leaf_balance          | element_hash    |element_balance    | index      |        1       | 1             |  0            | 0
+| leaf_hash        | leaf_balance          | element_hash    |element_balance    | index      |     1          | 1             |  0            | 0
 | input_left_hash  | input_left_balance    | input_right_hash|input_right_balance|computed_sum|     0          | 0             |  1            | 0
 
 At row 0, we assign the leaf_hash, the leaf_balance, the element_hash (from `path_element_hashes`), the element_balance (from `path_element_balances`) and the bit (from `path_indices`). At this row we turn on `bool_selector` and `swap_selector`.
@@ -81,13 +81,13 @@ At row 0, we assign the leaf_hash, the leaf_balance, the element_hash (from `pat
 At row 1, we assign the input_left_hash, the input_right_balance, the input_right_hash, the input_right_balance and the digest. 
 At this row we activate the `poseidon_chip` and call the `hash` function on that by passing as input cells `[input_left_hash, input_left_balance, input_right_hash, input_right_balance]`. This function will return the assigned cell containing the `computed_hash`.
 
-The chip contains 4 custom gates: 
+The chip contains 5 custom gates: 
 
-- If the `bool_selector` is on, checks that the value inside the c column is either 0 or 1
+- If the `bool_selector` is on, checks that the value inside the e column is either 0 or 1
 - If the `swap_selector` is on, checks that the swap on the next row is performed correctly according to the `bit`
 - If the `sum_selector` is on, checks that the sum between the `input_left_balance` and the `input_right_balance` is equal to the `computed_sum`
-- If the `lt_selector` is on activates the lt chip and verifies the `check` from the current config is equal to the `lt` from the lt chip. Note that the `check` of the chip is set to constant 1.
-- checks that the `computed_hash` is equal to the hash of the `input_left_hash`, the `input_left_balance`, the `input_right_hash` and the `input_right_balance`. This hashing is enabled by the `poseidon_chip`.
+- If the `lt_selector` is on, checks that the value in column e is less than a value passed as part of the instance column.
+- Checks that the `computed_hash` is equal to the hash of the `input_left_hash`, the `input_left_balance`, the `input_right_hash` and the `input_right_balance`. This hashing is enabled by the `poseidon_chip`.
 
 For the other levels of the tree:
 
