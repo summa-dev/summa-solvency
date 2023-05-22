@@ -94,11 +94,11 @@ At this row we activate the `poseidon_chip` and call the `hash` function on that
 
 The chip contains 4 custom gates:
 
-- If the `bool_selector` is on, checks that the value inside the c column is either 0 or 1
+- If the `bool_selector` is on, checks that the value inside the e column is either 0 or 1
 - If the `swap_selector` is on, checks that the swap on the next row is performed correctly according to the `bit`
 - If the `sum_selector` is on, checks that the sum between the `input_left_balance` and the `input_right_balance` is equal to the `computed_sum`
-- If the `lt_selector` is on activates the lt chip and verifies the `check` from the current config is equal to the `lt` from the lt chip. Note that the `check` of the chip is set to constant 1.
-- checks that the `computed_hash` is equal to the hash of the `input_left_hash`, the `input_left_balance`, the `input_right_hash` and the `input_right_balance`. This hashing is enabled by the `poseidon_chip`.
+- If the `lt_selector` is on, checks that the value in column e is less than a value passed as part of the instance column.
+- Checks that the `computed_hash` is equal to the hash of the `input_left_hash`, the `input_left_balance`, the `input_right_hash` and the `input_right_balance`. This hashing is enabled by the `poseidon_chip`.
 
 For the other levels of the tree:
 
