@@ -11,12 +11,12 @@ const NUMBER_OF_LIMBS: usize = 4;
 
 #[derive(Default, Clone)]
 pub struct EcdsaVerifyCircuit<E: CurveAffine> {
-    public_key: Value<E>,
-    signature: Value<(E::Scalar, E::Scalar)>,
-    msg_hash: Value<E::Scalar>,
+    pub public_key: Value<E>,
+    pub signature: Value<(E::Scalar, E::Scalar)>,
+    pub msg_hash: Value<E::Scalar>,
 
-    aux_generator: E,
-    window_size: usize,
+    pub aux_generator: E,
+    pub window_size: usize,
 }
 
 impl<E: CurveAffine> Circuit<Fp> for EcdsaVerifyCircuit<E> {
