@@ -3,23 +3,28 @@ use ecc::integer::{IntegerInstructions, Range};
 use ecc::maingate::{MainGate, RangeChip, RangeInstructions, RegionCtx};
 use ecc::GeneralEccChip;
 use ecdsa::ecdsa::{AssignedEcdsaSig, AssignedPublicKey, EcdsaChip, EcdsaConfig};
-use halo2_proofs::halo2curves::{bn256::Fr as Fp, CurveAffine};
+use halo2_proofs::halo2curves::{
+    bn256::Fr as Fp, secp256k1::Secp256k1Affine as Secp256k1, CurveAffine,
+};
 use halo2_proofs::{circuit::*, plonk::*};
 
 const BIT_LEN_LIMB: usize = 68;
 const NUMBER_OF_LIMBS: usize = 4;
 
 #[derive(Default, Clone)]
-pub struct EcdsaVerifyCircuit<E: CurveAffine> {
-    pub public_key: Value<E>,
-    pub signature: Value<(E::Scalar, E::Scalar)>,
-    pub msg_hash: Value<E::Scalar>,
+pub struct EcdsaVerifyCircuit {
+    pub public_key: Value<Secp256k1>,
+    pub signature: Value<(
+        <Secp256k1 as CurveAffine>::ScalarExt,
+        <Secp256k1 as CurveAffine>::ScalarExt,
+    )>,
+    pub msg_hash: Value<<Secp256k1 as CurveAffine>::ScalarExt>,
 
-    pub aux_generator: E,
+    pub aux_generator: Secp256k1,
     pub window_size: usize,
 }
 
-impl<E: CurveAffine> Circuit<Fp> for EcdsaVerifyCircuit<E> {
+impl Circuit<Fp> for EcdsaVerifyCircuit {
     type Config = EcdsaConfig;
     type FloorPlanner = SimpleFloorPlanner;
 
@@ -28,7 +33,8 @@ impl<E: CurveAffine> Circuit<Fp> for EcdsaVerifyCircuit<E> {
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        let (rns_base, rns_scalar) = GeneralEccChip::<E, Fp, NUMBER_OF_LIMBS, BIT_LEN_LIMB>::rns();
+        let (rns_base, rns_scalar) =
+            GeneralEccChip::<Secp256k1, Fp, NUMBER_OF_LIMBS, BIT_LEN_LIMB>::rns();
         let main_gate_config = MainGate::<Fp>::configure(meta);
         let mut overflow_bit_lens: Vec<usize> = vec![];
         overflow_bit_lens.extend(rns_base.overflow_lengths());
@@ -50,8 +56,9 @@ impl<E: CurveAffine> Circuit<Fp> for EcdsaVerifyCircuit<E> {
         config: Self::Config,
         mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
-        let mut ecc_chip =
-            GeneralEccChip::<E, Fp, NUMBER_OF_LIMBS, BIT_LEN_LIMB>::new(config.ecc_chip_config());
+        let mut ecc_chip = GeneralEccChip::<Secp256k1, Fp, NUMBER_OF_LIMBS, BIT_LEN_LIMB>::new(
+            config.ecc_chip_config(),
+        );
 
         layouter.assign_region(
             || "assign aux values",
