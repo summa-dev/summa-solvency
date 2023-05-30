@@ -3,7 +3,7 @@ mod test {
 
     use crate::circuits::merkle_sum_tree::MerkleSumTreeCircuit;
     use crate::circuits::utils::{full_prover, full_verifier};
-    use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof, MerkleSumTree};
+    use crate::merkle_sum_tree::big_int_to_fp;
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
         halo2curves::bn256::{Bn256, Fr as Fp},
@@ -13,39 +13,14 @@ mod test {
     use num_bigint::ToBigInt;
     use rand::rngs::OsRng;
 
-    fn instantiate_circuit(assets_sum: Fp, path: &str) -> MerkleSumTreeCircuit {
-        let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
-
-        let proof: MerkleProof = merkle_sum_tree.generate_proof(0).unwrap();
-
-        MerkleSumTreeCircuit {
-            leaf_hash: proof.entry.compute_leaf().hash,
-            leaf_balance: big_int_to_fp(proof.entry.balance()),
-            path_element_hashes: proof.sibling_hashes,
-            path_element_balances: proof.sibling_sums,
-            path_indices: proof.path_indices,
-            assets_sum,
-            root_hash: proof.root_hash,
-        }
-    }
-
-    fn instantiate_empty_circuit() -> MerkleSumTreeCircuit {
-        MerkleSumTreeCircuit {
-            leaf_hash: Fp::zero(),
-            leaf_balance: Fp::zero(),
-            path_element_hashes: vec![Fp::zero(); 4],
-            path_element_balances: vec![Fp::zero(); 4],
-            path_indices: vec![Fp::zero(); 4],
-            assets_sum: Fp::zero(),
-            root_hash: Fp::zero(),
-        }
-    }
-
     #[test]
     fn test_valid_merkle_sum_tree() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         let public_input = vec![
             circuit.leaf_hash,
@@ -68,7 +43,10 @@ mod test {
 
         let assets_sum = big_int_to_fp(&assets_sum_big_int);
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         let public_input = vec![
             circuit.leaf_hash,
@@ -86,7 +64,7 @@ mod test {
     fn test_valid_merkle_sum_tree_with_full_prover() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = instantiate_empty_circuit();
+        let circuit = MerkleSumTreeCircuit::build_empty();
 
         // we generate a universal trusted setup of our own for testing
         let params = ParamsKZG::<Bn256>::setup(9, OsRng);
@@ -99,7 +77,10 @@ mod test {
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         let public_input = vec![
             circuit.leaf_hash,
@@ -120,7 +101,10 @@ mod test {
     fn test_invalid_root_hash() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         let invalid_root_hash = Fp::from(1000u64);
 
@@ -155,7 +139,7 @@ mod test {
     fn test_invalid_root_hash_with_full_prover() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = instantiate_empty_circuit();
+        let circuit = MerkleSumTreeCircuit::build_empty();
 
         // we generate a universal trusted setup of our own for testing
         let params = ParamsKZG::<Bn256>::setup(9, OsRng);
@@ -166,7 +150,10 @@ mod test {
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         let invalid_root_hash = Fp::from(1000u64);
 
@@ -189,7 +176,10 @@ mod test {
     fn test_invalid_leaf_hash_as_witness() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let mut circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let mut circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         // invalidate leaf hash
         circuit.leaf_hash = Fp::from(1000u64);
@@ -225,7 +215,10 @@ mod test {
     fn test_invalid_leaf_hash_as_instance() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         // add invalid leaf hash in the instance column
         let invalid_leaf_hash = Fp::from(1000u64);
@@ -264,7 +257,10 @@ mod test {
 
         let user_balance = Fp::from(11888u64);
 
-        let mut circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let mut circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         // invalid leaf balance
         circuit.leaf_hash = Fp::from(1000u64);
@@ -300,7 +296,10 @@ mod test {
     fn test_invalid_leaf_balance_as_instance() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         // add invalid leaf balance in the instance column
         let invalid_leaf_balance = Fp::from(1000u64);
@@ -337,7 +336,10 @@ mod test {
     fn test_non_binary_index() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let mut circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let mut circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         // invalidate path index inside the circuit
         circuit.path_indices[0] = Fp::from(2);
@@ -382,7 +384,10 @@ mod test {
     fn test_swapping_index() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let mut circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let mut circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         // swap indices
         circuit.path_indices[0] = Fp::from(1);
@@ -419,8 +424,10 @@ mod test {
     fn test_is_not_less_than() {
         let less_than_assets_sum = Fp::from(556861u64); // less than liabilities sum (556862)
 
-        let circuit =
-            instantiate_circuit(less_than_assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+            less_than_assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
 
         let public_input = vec![
             circuit.leaf_hash,
@@ -468,96 +475,95 @@ mod test {
         secp256k1::Secp256k1Affine as Secp256k1,
     };
 
-    #[test]
-    fn test_ecdsa_verifier() {
-        fn mod_n(x: <Secp256k1 as CurveAffine>::Base) -> <Secp256k1 as CurveAffine>::ScalarExt {
-            let x_big = fe_to_big(x);
-            big_to_fe(x_big)
-        }
-
-        fn run() {
-            // g is the generator point of the curve. In this case the secp256k1 curve. This lives in the prime field of the curve.
-            let g = Secp256k1::generator();
-
-            // Generate a key pair
-            // sk is the secret key (random 256-bit number) and it is a random scalar that is defined over the finite field of scalars.
-            // A scalar is simply an integer that we use to multiply a point on the elliptic curve. Scalars live in the order of the group generated by generator point g.
-            // Note that the scalar field is different from the prime field of the curve.
-            let sk = <Secp256k1 as CurveAffine>::ScalarExt::random(OsRng);
-
-            // public_key is the public key and it is a point (x, y) on the elliptic curve. This lives in the prime field of the curve.
-            let public_key = (g * sk).to_affine();
-
-            // Generate a valid signature
-            // Suppose `m_hash` is the message hash
-            let msg_hash = <Secp256k1 as CurveAffine>::ScalarExt::random(OsRng);
-
-            // Draw arandomness
-            // k is also a scalar living in the order of the group generated by generator point g.
-            let k = <Secp256k1 as CurveAffine>::ScalarExt::random(OsRng);
-            let k_inv = k.invert().unwrap();
-
-            // Calculate `r`
-            let r_point = (g * k).to_affine().coordinates().unwrap();
-            let x = r_point.x();
-
-            // perform r mod n to ensure that r is a valid scalar
-            let r = mod_n(*x);
-
-            // Calculate `s`
-            let s = k_inv * (msg_hash + (r * sk));
-
-            // Sanity check. Ensure we construct a valid signature. So lets verify it
-            {
-                let s_inv = s.invert().unwrap();
-                let u_1 = msg_hash * s_inv;
-                let u_2 = r * s_inv;
-                let r_point = ((g * u_1) + (public_key * u_2))
-                    .to_affine()
-                    .coordinates()
-                    .unwrap();
-                let x_candidate = r_point.x();
-                let r_candidate = mod_n(*x_candidate);
-                assert_eq!(r, r_candidate);
-            }
-
-            let aux_generator = <Secp256k1 as CurveAffine>::CurveExt::random(OsRng).to_affine();
-            let circuit = EcdsaVerifyCircuit {
-                public_key: Value::known(public_key),
-                signature: Value::known((r, s)),
-                msg_hash: Value::known(msg_hash),
-                aux_generator,
-                window_size: 4,
-            };
-
-            let instance = vec![vec![]];
-
-            let valid_prover = MockProver::run(18, &circuit, instance).unwrap();
-
-            valid_prover.assert_satisfied();
-        }
-
-        run();
+    fn mod_n(x: <Secp256k1 as CurveAffine>::Base) -> <Secp256k1 as CurveAffine>::ScalarExt {
+        let x_big = fe_to_big(x);
+        big_to_fe(x_big)
     }
 
-    #[cfg(feature = "dev-graph")]
     #[test]
-    fn print_merkle_sum_tree() {
-        use plotters::prelude::*;
+    fn test_ecdsa_valid_verifier() {
+        // g is the generator point of the curve. In this case the secp256k1 curve. This lives in the prime field of the curve.
+        let g = Secp256k1::generator();
 
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        // Generate a key pair
+        // sk is the secret key (random 256-bit number) and it is a random scalar that is defined over the finite field of scalars.
+        // A scalar is simply an integer that we use to multiply a point on the elliptic curve. Scalars live in the order of the group generated by generator point g.
+        // Note that the scalar field is different from the prime field of the curve.
+        let sk = <Secp256k1 as CurveAffine>::ScalarExt::random(OsRng);
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        // public_key is the public key and it is a point (x, y) on the elliptic curve. This lives in the prime field of the curve.
+        let public_key = (g * sk).to_affine();
 
-        let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384))
-            .into_drawing_area();
-        root.fill(&WHITE).unwrap();
-        let root = root
-            .titled("Merkle Sum Tree Layout", ("sans-serif", 60))
-            .unwrap();
+        // Generate a valid signature
+        // Suppose `m_hash` is the message hash
+        let msg_hash = <Secp256k1 as CurveAffine>::ScalarExt::random(OsRng);
 
-        halo2_proofs::dev::CircuitLayout::default()
-            .render(8, &circuit, &root)
-            .unwrap();
+        // Draw arandomness
+        // k is also a scalar living in the order of the group generated by generator point g.
+        let k = <Secp256k1 as CurveAffine>::ScalarExt::random(OsRng);
+        let k_inv = k.invert().unwrap();
+
+        // Calculate `r`
+        let r_point = (g * k).to_affine().coordinates().unwrap();
+        let x = r_point.x();
+
+        // perform r mod n to ensure that r is a valid scalar
+        let r = mod_n(*x);
+
+        // Calculate `s`
+        let s = k_inv * (msg_hash + (r * sk));
+
+        // Sanity check. Ensure we construct a valid signature. So lets verify it
+        {
+            let s_inv = s.invert().unwrap();
+            let u_1 = msg_hash * s_inv;
+            let u_2 = r * s_inv;
+            let r_point = ((g * u_1) + (public_key * u_2))
+                .to_affine()
+                .coordinates()
+                .unwrap();
+            let x_candidate = r_point.x();
+            let r_candidate = mod_n(*x_candidate);
+            assert_eq!(r, r_candidate);
+        }
+
+        let aux_generator = <Secp256k1 as CurveAffine>::CurveExt::random(OsRng).to_affine();
+        let circuit = EcdsaVerifyCircuit {
+            public_key: Value::known(public_key),
+            signature: Value::known((r, s)),
+            msg_hash: Value::known(msg_hash),
+            aux_generator,
+            window_size: 4,
+        };
+
+        let instance = vec![vec![]];
+
+        let valid_prover = MockProver::run(18, &circuit, instance).unwrap();
+
+        valid_prover.assert_satisfied();
     }
+}
+
+#[cfg(feature = "dev-graph")]
+#[test]
+fn print_merkle_sum_tree() {
+    use plotters::prelude::*;
+
+    let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+
+    let circuit = MerkleSumTreeCircuit::build_from_assets_and_path(
+        assets_sum,
+        "src/merkle_sum_tree/csv/entry_16.csv",
+    );
+
+    let root =
+        BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384)).into_drawing_area();
+    root.fill(&WHITE).unwrap();
+    let root = root
+        .titled("Merkle Sum Tree Layout", ("sans-serif", 60))
+        .unwrap();
+
+    halo2_proofs::dev::CircuitLayout::default()
+        .render(8, &circuit, &root)
+        .unwrap();
 }

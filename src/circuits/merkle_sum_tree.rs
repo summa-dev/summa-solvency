@@ -1,4 +1,5 @@
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
+use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof, MerkleSumTree};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*};
 
@@ -11,6 +12,36 @@ pub struct MerkleSumTreeCircuit {
     pub path_indices: Vec<Fp>,
     pub assets_sum: Fp,
     pub root_hash: Fp,
+}
+
+impl MerkleSumTreeCircuit {
+    pub fn build_empty() -> Self {
+        Self {
+            leaf_hash: Fp::zero(),
+            leaf_balance: Fp::zero(),
+            path_element_hashes: vec![Fp::zero(); 4],
+            path_element_balances: vec![Fp::zero(); 4],
+            path_indices: vec![Fp::zero(); 4],
+            assets_sum: Fp::zero(),
+            root_hash: Fp::zero(),
+        }
+    }
+
+    pub fn build_from_assets_and_path(assets_sum: Fp, path: &str) -> Self {
+        let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
+
+        let proof: MerkleProof = merkle_sum_tree.generate_proof(0).unwrap();
+
+        Self {
+            leaf_hash: proof.entry.compute_leaf().hash,
+            leaf_balance: big_int_to_fp(proof.entry.balance()),
+            path_element_hashes: proof.sibling_hashes,
+            path_element_balances: proof.sibling_sums,
+            path_indices: proof.path_indices,
+            assets_sum,
+            root_hash: proof.root_hash,
+        }
+    }
 }
 
 impl Circuit<Fp> for MerkleSumTreeCircuit {
