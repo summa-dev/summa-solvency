@@ -1,24 +1,24 @@
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::circuit::*;
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use num_bigint::BigUint;
 
 fn parse_hex(hex_asm: &str) -> Vec<u8> {
-  let mut hex_bytes = hex_asm
-      .as_bytes()
-      .iter()
-      .filter_map(|b| match b {
-          b'0'..=b'9' => Some(b - b'0'),
-          b'a'..=b'f' => Some(b - b'a' + 10),
-          b'A'..=b'F' => Some(b - b'A' + 10),
-          _ => None,
-      })
-      .fuse();
+    let mut hex_bytes = hex_asm
+        .as_bytes()
+        .iter()
+        .filter_map(|b| match b {
+            b'0'..=b'9' => Some(b - b'0'),
+            b'a'..=b'f' => Some(b - b'a' + 10),
+            b'A'..=b'F' => Some(b - b'A' + 10),
+            _ => None,
+        })
+        .fuse();
 
-  let mut bytes = Vec::new();
-  while let (Some(h), Some(l)) = (hex_bytes.next(), hex_bytes.next()) {
-      bytes.push(h << 4 | l)
-  }
-  bytes
+    let mut bytes = Vec::new();
+    while let (Some(h), Some(l)) = (hex_bytes.next(), hex_bytes.next()) {
+        bytes.push(h << 4 | l)
+    }
+    bytes
 }
 
 pub fn value_f_to_big_uint(v: Value<Fp>) -> BigUint {
@@ -31,11 +31,7 @@ pub fn value_f_to_big_uint(v: Value<Fp>) -> BigUint {
     BigUint::from_bytes_be(parse_hex(splited_sum_str).as_slice())
 }
 
-pub fn decompose_bigint_to_ubits(
-    e: &BigUint,
-    number_of_limbs: usize,
-    bit_len: usize,
-) -> Vec<Fp> {
+pub fn decompose_bigint_to_ubits(e: &BigUint, number_of_limbs: usize, bit_len: usize) -> Vec<Fp> {
     debug_assert!(bit_len <= 64);
 
     let mut e = e.iter_u64_digits();

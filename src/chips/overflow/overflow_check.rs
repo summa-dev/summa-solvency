@@ -19,40 +19,40 @@ pub struct OverflowChip<const MAX_BITS: u8, const ACC_COLS: usize> {
 
 impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS> {
     pub fn construct(config: OverflowCheckConfig<MAX_BITS, ACC_COLS>) -> Self {
-        Self {
-            config,
-        }
+        Self { config }
     }
 
-    pub fn configure(
-        meta: &mut ConstraintSystem<Fp>,
-    ) -> OverflowCheckConfig<MAX_BITS, ACC_COLS> {
+    pub fn configure(meta: &mut ConstraintSystem<Fp>) -> OverflowCheckConfig<MAX_BITS, ACC_COLS> {
         let selector = meta.selector();
         let range = meta.fixed_column();
         let a = meta.advice_column();
         let decomposed_values = [(); ACC_COLS].map(|_| meta.advice_column());
 
-        meta.create_gate("equality check between decomposed_value and value", |meta| {
-            let s_doc = meta.query_selector(selector);
+        meta.create_gate(
+            "equality check between decomposed_value and value",
+            |meta| {
+                let s_doc = meta.query_selector(selector);
 
-            let value = meta.query_advice(a, Rotation::cur());
+                let value = meta.query_advice(a, Rotation::cur());
 
-            let decomposed_value_vec = (0..ACC_COLS)
-                .map(|i: usize| meta.query_advice(decomposed_values[i], Rotation::cur()))
-                .collect::<Vec<_>>();
+                let decomposed_value_vec = (0..ACC_COLS)
+                    .map(|i: usize| meta.query_advice(decomposed_values[i], Rotation::cur()))
+                    .collect::<Vec<_>>();
 
-            let decomposed_value_sum =
-                (0..=ACC_COLS - 2).fold(decomposed_value_vec[ACC_COLS - 1].clone(), |acc, i| {
-                    let mut shift_chunk = Fp::one();
-                    for _ in 1..(ACC_COLS - i) {
-                        shift_chunk *= Fp::from(1 << MAX_BITS);
-                    }
-                    acc + (decomposed_value_vec[i].clone()
-                        * Expression::Constant(shift_chunk))
-                });
+                let decomposed_value_sum = (0..=ACC_COLS - 2).fold(
+                    decomposed_value_vec[ACC_COLS - 1].clone(),
+                    |acc, i| {
+                        let mut shift_chunk = Fp::one();
+                        for _ in 1..(ACC_COLS - i) {
+                            shift_chunk *= Fp::from(1 << MAX_BITS);
+                        }
+                        acc + (decomposed_value_vec[i].clone() * Expression::Constant(shift_chunk))
+                    },
+                );
 
-            vec![s_doc.clone() * (decomposed_value_sum - value)]
-        });
+                vec![s_doc.clone() * (decomposed_value_sum - value)]
+            },
+        );
 
         meta.annotate_lookup_any_column(range, || "LOOKUP_MAXBITS_RANGE");
 

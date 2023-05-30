@@ -1,7 +1,7 @@
 use halo2_proofs::{circuit::*, plonk::*};
 
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
 #[derive(Default)]
 struct OverflowCheckCircuit<const MAX_BITS: u8, const ACC_COLS: usize> {
@@ -9,7 +9,9 @@ struct OverflowCheckCircuit<const MAX_BITS: u8, const ACC_COLS: usize> {
     pub b: Value<Fp>,
 }
 
-impl<const MAX_BITS: u8, const ACC_COLS: usize> Circuit<Fp> for OverflowCheckCircuit<MAX_BITS, ACC_COLS> {
+impl<const MAX_BITS: u8, const ACC_COLS: usize> Circuit<Fp>
+    for OverflowCheckCircuit<MAX_BITS, ACC_COLS>
+{
     type Config = OverflowCheckConfig<MAX_BITS, ACC_COLS>;
     type FloorPlanner = SimpleFloorPlanner;
 
@@ -18,9 +20,7 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> Circuit<Fp> for OverflowCheckCir
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        OverflowChip::configure(
-            meta,
-        )
+        OverflowChip::configure(meta)
     }
 
     fn synthesize(
@@ -49,8 +49,10 @@ mod tests {
     use super::OverflowCheckCircuit;
     use halo2_proofs::{
         circuit::Value,
-        plonk::Any, 
-        dev::{FailureLocation, MockProver, VerifyFailure}, halo2curves::{bn256::Fr as Fp}};
+        dev::{FailureLocation, MockProver, VerifyFailure},
+        halo2curves::bn256::Fr as Fp,
+        plonk::Any,
+    };
 
     #[test]
     fn test_none_overflow_16bits_case() {
@@ -77,7 +79,12 @@ mod tests {
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![VerifyFailure::ConstraintNotSatisfied {
-                constraint: ((0, "equality check between decomposed_value and value").into(), 0, "").into(),
+                constraint: (
+                    (0, "equality check between decomposed_value and value").into(),
+                    0,
+                    ""
+                )
+                    .into(),
                 location: FailureLocation::InRegion {
                     region: (3, "assign decomposed values").into(),
                     offset: 0
@@ -106,7 +113,12 @@ mod tests {
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![VerifyFailure::ConstraintNotSatisfied {
-                constraint: ((0, "equality check between decomposed_value and value").into(), 0, "").into(),
+                constraint: (
+                    (0, "equality check between decomposed_value and value").into(),
+                    0,
+                    ""
+                )
+                    .into(),
                 location: FailureLocation::InRegion {
                     region: (1, "assign decomposed values").into(),
                     offset: 0
