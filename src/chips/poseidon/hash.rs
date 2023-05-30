@@ -7,7 +7,8 @@ is already implemented in halo2_gadgets, there is no wrapper chip that makes it 
 // compared to `hash_with_instance` this version doesn't use any instance column.
 
 use halo2_gadgets::poseidon::{primitives::*, Hash, Pow5Chip, Pow5Config};
-use halo2_proofs::{arithmetic::FieldExt, circuit::*, plonk::*};
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use halo2_proofs::{circuit::*, plonk::*};
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
@@ -15,27 +16,26 @@ use std::marker::PhantomData;
 // WIDTH, RATE and L are const generics for the struct, which represent the width, rate, and number of inputs for the Poseidon hash function, respectively.
 // This means they are values that are known at compile time and can be used to specialize the implementation of the struct.
 // The actual chip provided by halo2_gadgets is added to the parent Chip.
-pub struct PoseidonConfig<F: FieldExt, const WIDTH: usize, const RATE: usize, const L: usize> {
-    pow5_config: Pow5Config<F, WIDTH, RATE>,
+pub struct PoseidonConfig<const WIDTH: usize, const RATE: usize, const L: usize> {
+    pow5_config: Pow5Config<Fp, WIDTH, RATE>,
 }
 
 #[derive(Debug, Clone)]
 
 pub struct PoseidonChip<
-    F: FieldExt,
-    S: Spec<F, WIDTH, RATE>,
+    S: Spec<Fp, WIDTH, RATE>,
     const WIDTH: usize,
     const RATE: usize,
     const L: usize,
 > {
-    config: PoseidonConfig<F, WIDTH, RATE, L>,
+    config: PoseidonConfig<WIDTH, RATE, L>,
     _marker: PhantomData<S>,
 }
 
-impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize, const L: usize>
-    PoseidonChip<F, S, WIDTH, RATE, L>
+impl<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize, const L: usize>
+    PoseidonChip<S, WIDTH, RATE, L>
 {
-    pub fn construct(config: PoseidonConfig<F, WIDTH, RATE, L>) -> Self {
+    pub fn construct(config: PoseidonConfig<WIDTH, RATE, L>) -> Self {
         Self {
             config,
             _marker: PhantomData,
@@ -44,9 +44,9 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
 
     // Configuration of the PoseidonChip
     pub fn configure(
-        meta: &mut ConstraintSystem<F>,
+        meta: &mut ConstraintSystem<Fp>,
         hash_inputs: Vec<Column<Advice>>,
-    ) -> PoseidonConfig<F, WIDTH, RATE, L> {
+    ) -> PoseidonConfig<WIDTH, RATE, L> {
         let partial_sbox = meta.advice_column();
         let rc_a = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
         let rc_b = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
@@ -64,9 +64,7 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
             rc_b.try_into().unwrap(),
         );
 
-        PoseidonConfig {
-            pow5_config,
-        }
+        PoseidonConfig { pow5_config }
     }
 
     // L is the number of inputs to the hash function
@@ -74,10 +72,9 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
     // It uses the pow5_chip to compute the hash
     pub fn hash(
         &self,
-        mut layouter: impl Layouter<F>,
-        input_cells: [AssignedCell<F, F>; L],
-    ) -> Result<AssignedCell<F, F>, Error> {
-
+        mut layouter: impl Layouter<Fp>,
+        input_cells: [AssignedCell<Fp, Fp>; L],
+    ) -> Result<AssignedCell<Fp, Fp>, Error> {
         let pow5_chip = Pow5Chip::construct(self.config.pow5_config.clone());
 
         // initialize the hasher
@@ -87,5 +84,4 @@ impl<F: FieldExt, S: Spec<F, WIDTH, RATE>, const WIDTH: usize, const RATE: usize
         )?;
         hasher.hash(layouter.namespace(|| "hash"), input_cells)
     }
-
 }
