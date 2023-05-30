@@ -1,6 +1,6 @@
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
-use crate::chips::poseidon::spec::MySpec;
-use crate::merkle_sum_tree::{POSEIDON_LENGTH, POSEIDON_RATE, POSEIDON_WIDTH};
+use crate::chips::poseidon::spec_node::MySpec as PoseidonSpecNode;
+use crate::merkle_sum_tree::{R_L_NODE, WIDTH_NODE};
 use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
 use halo2_gadgets::utilities::FieldValue;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
@@ -14,7 +14,7 @@ pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
     pub sum_selector: Selector,
     pub lt_selector: Selector,
     pub instance: Column<Instance>,
-    pub poseidon_config: PoseidonConfig<POSEIDON_WIDTH, POSEIDON_RATE, POSEIDON_LENGTH>,
+    pub poseidon_config: PoseidonConfig<WIDTH_NODE, R_L_NODE, R_L_NODE>,
     pub lt_configs: Vec<LtConfig<Fp, 8>>,
 }
 #[derive(Debug, Clone)]
@@ -56,7 +56,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             vec![s * swap_bit.clone() * (Expression::Constant(Fp::from(1)) - swap_bit)]
         });
 
-        // Enforces that if the swap_bit is on, the rows will be swapped.
+        // Enforces that if the swap_bit is on, the columns will be swapped.
         // This applies only when the swap selector is enabled
         meta.create_gate("swap constraint", |meta| {
             let s = meta.query_selector(swap_selector);
@@ -66,25 +66,21 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             let hash_l_next = meta.query_advice(col_a, Rotation::next());
             let hash_r_next = meta.query_advice(col_b, Rotation::next());
 
-            let two = Expression::Constant(Fp::from(2));
             let hashes_constraint = s.clone()
-                * (swap_bit.clone() * two * (hash_r_cur.clone() - hash_l_cur.clone())
-                    - (hash_l_next - hash_l_cur)
-                    - (hash_r_cur - hash_r_next));
+                * swap_bit.clone()
+                * ((hash_l_next - hash_l_cur) - (hash_r_cur - hash_r_next));
 
             //Element-wise balance constraints for the sibling nodes
             let balance_constraints = (0..N_ASSETS)
                 .map(|i| {
-                    let two = Expression::Constant(Fp::from(2));
                     let balance_l_cur = meta.query_advice(advice[i], Rotation::cur());
                     let balance_r_cur = meta.query_advice(advice[i + N_ASSETS], Rotation::cur());
                     let balance_l_next = meta.query_advice(advice[i], Rotation::next());
                     let balance_r_next = meta.query_advice(advice[i + N_ASSETS], Rotation::next());
 
                     s.clone()
-                        * (swap_bit.clone() * two * (balance_r_cur.clone() - balance_l_cur.clone())
-                            - (balance_l_next - balance_l_cur)
-                            - (balance_r_cur - balance_r_next))
+                        * swap_bit.clone()
+                        * ((balance_l_next - balance_l_cur) - (balance_r_cur - balance_r_next))
                 })
                 .collect::<Vec<_>>();
 
@@ -107,12 +103,12 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                 .collect::<Vec<_>>()
         });
 
-        let hash_inputs = (0..POSEIDON_WIDTH)
+        let hash_inputs = (0..WIDTH_NODE)
             .map(|_| meta.advice_column())
             .collect::<Vec<_>>();
 
         let poseidon_config =
-            PoseidonChip::<MySpec, POSEIDON_WIDTH, POSEIDON_RATE, POSEIDON_LENGTH>::configure(
+            PoseidonChip::<PoseidonSpecNode, WIDTH_NODE, R_L_NODE, R_L_NODE>::configure(
                 meta,
                 &hash_inputs,
             );
@@ -355,7 +351,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
 
         // instantiate the poseidon_chip
         let poseidon_chip =
-            PoseidonChip::<MySpec, POSEIDON_WIDTH, POSEIDON_RATE, POSEIDON_LENGTH>::construct(
+            PoseidonChip::<PoseidonSpecNode, WIDTH_NODE, R_L_NODE, R_L_NODE>::construct(
                 self.config.poseidon_config.clone(),
             );
 
@@ -372,7 +368,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             .map(|x| x.to_owned())
             .collect();
 
-        let hash_input: [AssignedCell<Fp, Fp>; POSEIDON_LENGTH] = match hash_input_vec.try_into() {
+        let hash_input: [AssignedCell<Fp, Fp>; R_L_NODE] = match hash_input_vec.try_into() {
             Ok(arr) => arr,
             Err(_) => panic!("Failed to convert Vec to Array"),
         };

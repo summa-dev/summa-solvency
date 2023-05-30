@@ -13,7 +13,7 @@ use summa_solvency::{
     merkle_sum_tree::{MerkleSumTree, MST_WIDTH, N_ASSETS},
 };
 
-const MIN_POWER: u32 = 4;
+const MIN_POWER: u32 = 5;
 const MAX_POWER: u32 = 27;
 const SAMPLE_SIZE: usize = 10;
 

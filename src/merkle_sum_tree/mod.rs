@@ -3,13 +3,14 @@ mod mst;
 mod params;
 mod tests;
 mod utils;
-
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
+
 pub use params::MST_WIDTH;
 pub use params::N_ASSETS;
-pub use params::POSEIDON_LENGTH;
-pub use params::POSEIDON_RATE;
-pub use params::POSEIDON_WIDTH;
+pub use params::R_L_ENTRY;
+pub use params::R_L_NODE;
+pub use params::WIDTH_ENTRY;
+pub use params::WIDTH_NODE;
 
 #[derive(Clone, Debug)]
 pub struct MerkleProof<const N_ASSETS: usize> {

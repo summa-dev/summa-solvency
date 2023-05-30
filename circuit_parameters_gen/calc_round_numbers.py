@@ -118,22 +118,3 @@ def get_parameters(prime, t, alpha, M, security_margin):
         prime, t, alpha, M, security_margin
     )
     return t, M, alpha, security_margin, R_F, R_P, min_sbox_cost, min_size_cost
-
-
-# Call the function and store the results in variables
-# t, M, alpha, security_margin, R_F, R_P, min_sbox_cost, min_size_cost = get_parameters(p, t, 5, M, True)
-
-
-# Pasta (either p or q will give the same results)
-# p = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
-
-# x^5 for Pasta F_p, width 3
-# t = 7
-# M = 128
-
-# print("--- x^5 WITH security margin ---")
-# print_parameters(p, t, 5, M, True)
-
-# We don't care about this option.
-# print("--- x^5 WITHOUT security margin ---")
-# print_parameters(p, t, 5, M, False)

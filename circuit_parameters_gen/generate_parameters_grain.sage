@@ -356,8 +356,8 @@ def print_linear_layer(M, n, t, rust=False, file_name="./../src/chips/poseidon/p
     print_matrix(invert_matrix(M), t, rust=rust, file_name=file_name)
     
 def main(args):
-    if len(args) < 6:
-        print("Usage: sage generate_parameters_grain.sage <field> <s_box> <field_size> <num_cells> <R_F> <R_P> (<prime_number_hex>) [--rust]")
+    if len(args) < 7:
+        print("Usage: sage generate_parameters_grain.sage <field> <s_box> <field_size> <num_cells> <R_F> <R_P> (<prime_number_hex>) <filename> [--rust]")
         print("field = 1 for GF(p)")
         print("s_box = 0 for x^alpha, s_box = 1 for x^(-1)")
         return
@@ -384,6 +384,7 @@ def main(args):
 
     F = GF(PRIME_NUMBER)
 
+    file_name = args[0]
     rust = '--rust' in args
 
     # Init
@@ -391,11 +392,11 @@ def main(args):
 
     # Round constants
     round_constants = generate_constants(FIELD, FIELD_SIZE, NUM_CELLS, R_F_FIXED, R_P_FIXED, PRIME_NUMBER)
-    print_round_constants(round_constants, FIELD_SIZE, NUM_CELLS, FIELD, rust=rust)
+    print_round_constants(round_constants, FIELD_SIZE, NUM_CELLS, FIELD, rust=rust, file_name=file_name)
 
     # Matrix
     linear_layer = generate_matrix(FIELD, FIELD_SIZE, NUM_CELLS)
-    print_linear_layer(linear_layer, FIELD_SIZE, NUM_CELLS, rust=rust)
+    print_linear_layer(linear_layer, FIELD_SIZE, NUM_CELLS, rust=rust, file_name=file_name)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
