@@ -1,22 +1,29 @@
 mod entry;
 mod mst;
+mod params;
 mod tests;
 mod utils;
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
-#[derive(Default, Clone, Debug)]
-pub struct MerkleProof {
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
+pub use params::MST_WIDTH;
+pub use params::N_ASSETS;
+pub use params::POSEIDON_LENGTH;
+pub use params::POSEIDON_RATE;
+pub use params::POSEIDON_WIDTH;
+
+#[derive(Clone, Debug)]
+pub struct MerkleProof<const N_ASSETS: usize> {
     pub root_hash: Fp,
-    pub entry: Entry,
+    pub entry: Entry<N_ASSETS>,
     pub sibling_hashes: Vec<Fp>,
-    pub sibling_sums: Vec<Fp>,
+    pub sibling_sums: Vec<[Fp; N_ASSETS]>,
     pub path_indices: Vec<Fp>,
 }
 
-#[derive(Default, Clone, Debug)]
-pub struct Node {
+#[derive(Clone, Debug)]
+pub struct Node<const N_ASSETS: usize> {
     pub hash: Fp,
-    pub balance: Fp,
+    pub balances: [Fp; N_ASSETS],
 }
 
 pub use entry::Entry;

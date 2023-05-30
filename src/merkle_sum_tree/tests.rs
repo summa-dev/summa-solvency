@@ -2,13 +2,14 @@
 mod test {
 
     use crate::merkle_sum_tree::utils::big_int_to_fp;
-    use crate::merkle_sum_tree::{Entry, MerkleSumTree};
+    use crate::merkle_sum_tree::{Entry, MerkleSumTree, N_ASSETS};
     use num_bigint::{BigInt, ToBigInt};
 
     #[test]
     fn test_mst() {
         // create new merkle tree
-        let merkle_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+        let merkle_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         // get root
         let root = merkle_tree.root();
@@ -16,7 +17,7 @@ mod test {
         // expect root hash to be different than 0
         assert!(root.hash != 0.into());
         // expect balance to match the sum of all entries
-        assert!(root.balance == 556862.into());
+        assert!(root.balances == [556862.into()]);
         // expect depth to be 4
         assert!(*merkle_tree.depth() == 4_usize);
 
@@ -28,21 +29,22 @@ mod test {
 
         // Should generate different root hashes when changing the entry order
         let merkle_tree_2 =
-            MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16_switched_order.csv").unwrap();
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16_switched_order.csv")
+                .unwrap();
         assert_ne!(root.hash, merkle_tree_2.root().hash);
 
         // the balance total should be the same
-        assert_eq!(root.balance, merkle_tree_2.root().balance);
+        assert_eq!(root.balances, merkle_tree_2.root().balances);
 
         // should retrun the index of an entry that exist in the tree
         assert_eq!(
-            merkle_tree.index_of("AtwIxZHo", 35479.to_bigint().unwrap()),
+            merkle_tree.index_of("AtwIxZHo", [35479.to_bigint().unwrap()]),
             Some(15)
         );
 
         // shouldn't retrun the index of an entry that doesn't exist in the tree
         assert_eq!(
-            merkle_tree.index_of("AtwHHHHo", 35478.to_bigint().unwrap()),
+            merkle_tree.index_of("AtwHHHHo", [35478.to_bigint().unwrap()]),
             None
         );
 
@@ -58,7 +60,7 @@ mod test {
         // shouldn't verify a proof with a wrong entry
         let mut proof_invalid_1 = proof.clone();
         proof_invalid_1.entry =
-            Entry::new("AtwIxZHo".to_string(), 35479.to_bigint().unwrap()).unwrap();
+            Entry::new("AtwIxZHo".to_string(), [35479.to_bigint().unwrap()]).unwrap();
         assert!(!merkle_tree.verify_proof(&proof_invalid_1));
 
         // shouldn't verify a proof with a wrong root hash
@@ -68,12 +70,13 @@ mod test {
 
         // shouldn't verify a proof with a wrong computed balance
         let mut proof_invalid_3 = proof;
-        proof_invalid_3.sibling_sums[0] = 0.into();
+        proof_invalid_3.sibling_sums[0] = [0.into()];
     }
 
     #[test]
     fn test_mst_overflow() {
-        let result = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16_overflow.csv");
+        let result =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16_overflow.csv");
         // assert!(result.is_err(), "Expected an error due to balance overflow");
 
         if let Err(e) = result {
@@ -88,7 +91,7 @@ mod test {
     fn test_mst_with_bigint() {
         // create new merkle tree with entries that have balances greater than 2^64
         let merkle_tree =
-            MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16_bigints.csv").unwrap();
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16_bigints.csv").unwrap();
 
         // get root
         let root = merkle_tree.root();
@@ -104,7 +107,7 @@ mod test {
             bytes
         };
 
-        let root_balance = root.balance.to_bytes();
+        let root_balance = root.balances[0].to_bytes();
 
         assert_eq!(root_balance.to_vec(), exp_balance);
 

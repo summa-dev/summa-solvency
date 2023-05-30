@@ -1,13 +1,24 @@
-# Summa Solvency
+# Circuits - Halo2
 
-This repository contains the Halo2 circuit implementation for the Proof of Solvency protocol. 
+This repository contains the Halo2 circuit implementation for the Proof of Solvency protocol.
 
 This library makes use of the [PSE Fork of Halo2](https://github.com/privacy-scaling-explorations/halo2).
 
 ## Usage
 
-`cargo build`
-`cargo test --features dev-graph -- --nocapture`
+If [circuit parameters](src/merkle_sum_tree/params.rs) do not satisfy your needs, modify the [generator script](circuit_parameters_gen/generate_params.py) accordingly and then run it by executing
+
+```
+cd circuit_parameters_gen/
+python3 generate_params.py
+```
+
+To build and test the circuit, execute
+
+```
+cargo build
+cargo test --features dev-graph -- --nocapture
+```
 
 ## Chips
 
@@ -25,7 +36,7 @@ This LessThan Chip is imported from the [ZK-evm circuits gadgets](https://github
 
 #### Configuration
 
-The LessThan Chip Configuration contains: 
+The LessThan Chip Configuration contains:
 
 - 1 advice column `lt` that denotes the result of the comparison: 1 if `lhs < rhs` and 0 otherwise
 - An array of `diff` advice columns of length N_BYTES. It is basically the difference between `lhs` and `rhs` expressed in 8-bit chunks.
@@ -57,7 +68,7 @@ The [`less_than_v2` circuit](./src/circuits/less_than_v2.rs) contains the instru
 
 Lastly, let's consider a case where lhs lies outside the range. For example `lhs = 1` and `rhs = 257` and N_BYTES is 1. Diff is a single advice column but it can't represent the value 256 in 8 bits!
 
-### Merkle Sum Tree 
+### Merkle Sum Tree
 
 This chip is the parent chip that makes use of the LessThan Chip and the Poseidon Chip.
 
@@ -71,17 +82,17 @@ A level inside the tree consists of the following region inside the chip:
 
 For the level 0 of the tree:
 
-| a                | b                     | c               |    d              |   e        |  bool_selector | swap_selector |  sum_selector | lt_selector
-| --               | -                     | --              |   ---             |  ---       |    --          | ---           |  ---          | ---
-| leaf_hash        | leaf_balance          | element_hash    |element_balance    | index      |        1       | 1             |  0            | 0
-| input_left_hash  | input_left_balance    | input_right_hash|input_right_balance|computed_sum|     0          | 0             |  1            | 0
+| a               | b                  | c                | d                   | e            | bool_selector | swap_selector | sum_selector | lt_selector |
+| --------------- | ------------------ | ---------------- | ------------------- | ------------ | ------------- | ------------- | ------------ | ----------- |
+| leaf_hash       | leaf_balance       | element_hash     | element_balance     | index        | 1             | 1             | 0            | 0           |
+| input_left_hash | input_left_balance | input_right_hash | input_right_balance | computed_sum | 0             | 0             | 1            | 0           |
 
 At row 0, we assign the leaf_hash, the leaf_balance, the element_hash (from `path_element_hashes`), the element_balance (from `path_element_balances`) and the bit (from `path_indices`). At this row we turn on `bool_selector` and `swap_selector`.
 
-At row 1, we assign the input_left_hash, the input_right_balance, the input_right_hash, the input_right_balance and the digest. 
+At row 1, we assign the input_left_hash, the input_right_balance, the input_right_hash, the input_right_balance and the digest.
 At this row we activate the `poseidon_chip` and call the `hash` function on that by passing as input cells `[input_left_hash, input_left_balance, input_right_hash, input_right_balance]`. This function will return the assigned cell containing the `computed_hash`.
 
-The chip contains 4 custom gates: 
+The chip contains 4 custom gates:
 
 - If the `bool_selector` is on, checks that the value inside the c column is either 0 or 1
 - If the `swap_selector` is on, checks that the swap on the next row is performed correctly according to the `bit`
@@ -91,18 +102,18 @@ The chip contains 4 custom gates:
 
 For the other levels of the tree:
 
-| a                         | b                       | c              |    d              |   e         | bool_selector | swap_selector | sum_selector | lt_selector 
-| --                        | -                       | --             |   ---             |  ---        |  --           | ---           |  ---         | ---
-| computed_hash_prev_level  | computed_sum_prev_level | element_hash   |element_balance    | index       |      1        | 1             |  0           | 0
-| input_left_hash           | input_left_balance      |input_right_hash|input_right_balance|computed_sum |     0         | 0             |  1           | 0 
+| a                        | b                       | c                | d                   | e            | bool_selector | swap_selector | sum_selector | lt_selector |
+| ------------------------ | ----------------------- | ---------------- | ------------------- | ------------ | ------------- | ------------- | ------------ | ----------- |
+| computed_hash_prev_level | computed_sum_prev_level | element_hash     | element_balance     | index        | 1             | 1             | 0            | 0           |
+| input_left_hash          | input_left_balance      | input_right_hash | input_right_balance | computed_sum | 0             | 0             | 1            | 0           |
 
 When moving to the next level of the tree, the `computed_hash_prev_level` is copied from the `computed_hash` of the previous level. While the `computed_sum_prev_level` is copied from the `computed_sum` at the previous level.
 
 After the last level of the tree is being computed:
 
-| a                         | b                       | c              |    d              |   e         | bool_selector | swap_selector | sum_selector | lt_selector
-| --                        | -                       | --             |   ---             |  ---        |  --           | ---           |  ---         | ---
-| computed_sum              | total_assets            | check (=1)     |              -    | -           |      0        | 0             |  0           | 1
+| a            | b            | c          | d   | e   | bool_selector | swap_selector | sum_selector | lt_selector |
+| ------------ | ------------ | ---------- | --- | --- | ------------- | ------------- | ------------ | ----------- |
+| computed_sum | total_assets | check (=1) | -   | -   | 0             | 0             | 0            | 1           |
 
 It copies the computed sum from the previous row. It also copies the `total_assets` from the instance. It sets the check to be equal to 1. By enabling the lt_selector, it activates the lt chip and verifies that the `computed_sum` is less than `total_assets`
 
@@ -112,3 +123,38 @@ Furthermore, the chip contains four permutation check:
 - Verfies that the `leaf_balance` is equal to the `leaf_balance` passed as (public) value to the instance column
 - Verifies that the last `computed_hash` is equal to the (expected) `root` of the tree which is passed as (public) value to the instance column
 - Verifies that the last `computed_sum` is equal to the (expected) `balance_sum` of the tree which is passed as (public) value to the instance column
+
+### Powers of Tau Trusted Setup
+
+In order to test the circuits with a real trusted setup, we need to download the powers of tau files. The powers of tau files can be downloaded from https://github.com/han0110/halo2-kzg-srs and placed in a `ptau` folder. For example, by adding `hermez-raw-9` to the `ptau` folder, the circuit tests will take it as a setup to generate the parameters -> see `generate_setup_params` in [utils](./src/circuits/utils.rs). If no `ptau` folder is found, the tests will generate a new setup from a randomly generated value. This latter approach is not recommended for production.
+
+### Benchmarking
+
+The benchmarking included the following areas:
+
+- Merkle Sum Tree Generation
+- Verification Key Gen
+- Proving Key Gen
+- ZK Proof Generation
+- ZK Proof Verification
+
+In order to run the benchmarking, we provide a set of dummy `username, balance` entries formatted in csv files. The csv files can be downloaded as follows
+
+```
+
+cd benches
+mkdir csv
+cd csv
+wget https://csv-files-summa.s3.eu-west-1.amazonaws.com/csv/csv_files.zip
+unzip csv_files.zip
+
+```
+
+The csv folder will contain files named as `entry_2_4.csv` to `entry_2_27.csv`. 2^4 or 2^27 is the number of entries in the file that will be used to feed the merkle sum tree and, eventually, the zk prover.
+
+To run the benches
+
+`cargo bench`
+
+Note that by default the function will run the benchmarking for all the csv files from the power of 2 until the power of 27. You can change the range of the benchmarking by changing the `MIN_POWER` and `MAX_POWER` constants inside the `benches/full_solvency_flow.rs` file.
+

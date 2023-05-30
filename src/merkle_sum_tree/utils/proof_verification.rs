@@ -1,14 +1,22 @@
 use crate::merkle_sum_tree::utils::{big_int_to_fp, create_middle_node::create_middle_node};
 use crate::merkle_sum_tree::{MerkleProof, Node};
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
-pub fn verify_proof(proof: &MerkleProof) -> bool {
+pub fn verify_proof<const N_ASSETS: usize>(proof: &MerkleProof<N_ASSETS>) -> bool {
     let mut node = proof.entry.compute_leaf();
-    let mut balance = big_int_to_fp(proof.entry.balance());
+    let mut balances: [Fp; N_ASSETS] = proof
+        .entry
+        .balances()
+        .iter()
+        .map(big_int_to_fp)
+        .collect::<Vec<Fp>>()
+        .try_into()
+        .unwrap();
 
     for i in 0..proof.sibling_hashes.len() {
         let sibling_node = Node {
             hash: proof.sibling_hashes[i],
-            balance: proof.sibling_sums[i],
+            balances: proof.sibling_sums[i],
         };
 
         if proof.path_indices[i] == 0.into() {
@@ -17,8 +25,10 @@ pub fn verify_proof(proof: &MerkleProof) -> bool {
             node = create_middle_node(&sibling_node, &node);
         }
 
-        balance += sibling_node.balance;
+        for (balance, sibling_balance) in balances.iter_mut().zip(sibling_node.balances.iter()) {
+            *balance += sibling_balance;
+        }
     }
 
-    proof.root_hash == node.hash && balance == node.balance
+    proof.root_hash == node.hash && balances == node.balances
 }
