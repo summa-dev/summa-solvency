@@ -11,8 +11,8 @@ dev-graph = ["halo2_proofs/dev-graph", "plotters"]
 [dependencies]
 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_04_20"}
 halo2_gadgets = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_04_20"}
-ecdsa = { git = "https://github.com/enricobottazzi/halo2wrong"}
-ecc = { git = "https://github.com/enricobottazzi/halo2wrong"}
+ecdsa = { git = "https://github.com/privacy-scaling-explorations/halo2wrong"}
+ecc = { git = "https://github.com/privacy-scaling-explorations/halo2wrong"}
 gadgets = { git = "https://github.com/privacy-scaling-explorations/zkevm-circuits"}
 plotters = { version = "0.3.4", optional = true }
 rand = "0.8"

@@ -925,7 +925,7 @@ dependencies = [
 [[package]]
 name = "ecc"
 version = "0.1.0"
-source = "git+https://github.com/enricobottazzi/halo2wrong#04915fbefa58a8676d41fbc7885c6788e04e16d2"
+source = "git+https://github.com/privacy-scaling-explorations/halo2wrong#b3c53719afb449482f7b96b99f94b2cb150ee594"
 dependencies = [
  "integer",
  "num-bigint",
@@ -938,7 +938,7 @@ dependencies = [
 [[package]]
 name = "ecdsa"
 version = "0.1.0"
-source = "git+https://github.com/enricobottazzi/halo2wrong#04915fbefa58a8676d41fbc7885c6788e04e16d2"
+source = "git+https://github.com/privacy-scaling-explorations/halo2wrong#b3c53719afb449482f7b96b99f94b2cb150ee594"
 dependencies = [
  "ecc",
  "num-bigint",
@@ -1428,7 +1428,7 @@ dependencies = [
 [[package]]
 name = "halo2wrong"
 version = "0.1.0"
-source = "git+https://github.com/enricobottazzi/halo2wrong#04915fbefa58a8676d41fbc7885c6788e04e16d2"
+source = "git+https://github.com/privacy-scaling-explorations/halo2wrong#b3c53719afb449482f7b96b99f94b2cb150ee594"
 dependencies = [
  "halo2_proofs",
  "num-bigint",
@@ -1609,7 +1609,7 @@ dependencies = [
 [[package]]
 name = "integer"
 version = "0.1.0"
-source = "git+https://github.com/enricobottazzi/halo2wrong#04915fbefa58a8676d41fbc7885c6788e04e16d2"
+source = "git+https://github.com/privacy-scaling-explorations/halo2wrong#b3c53719afb449482f7b96b99f94b2cb150ee594"
 dependencies = [
  "maingate",
  "num-bigint",
@@ -1753,7 +1753,7 @@ checksum = "518ef76f2f87365916b142844c16d8fefd85039bc5699050210a7778ee1cd1de"
 [[package]]
 name = "maingate"
 version = "0.1.0"
-source = "git+https://github.com/enricobottazzi/halo2wrong#04915fbefa58a8676d41fbc7885c6788e04e16d2"
+source = "git+https://github.com/privacy-scaling-explorations/halo2wrong#b3c53719afb449482f7b96b99f94b2cb150ee594"
 dependencies = [
  "halo2wrong",
  "num-bigint",
