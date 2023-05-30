@@ -4,9 +4,13 @@ use ecc::maingate::{MainGate, RangeChip, RangeInstructions, RegionCtx};
 use ecc::GeneralEccChip;
 use ecdsa::ecdsa::{AssignedEcdsaSig, AssignedPublicKey, EcdsaChip, EcdsaConfig};
 use halo2_proofs::halo2curves::{
-    bn256::Fr as Fp, secp256k1::Secp256k1Affine as Secp256k1, CurveAffine,
+    bn256::Fr as Fp,
+    group::{Curve, Group},
+    secp256k1::Secp256k1Affine as Secp256k1,
+    CurveAffine,
 };
 use halo2_proofs::{circuit::*, plonk::*};
+use rand::rngs::OsRng;
 
 const BIT_LEN_LIMB: usize = 68;
 const NUMBER_OF_LIMBS: usize = 4;
@@ -22,6 +26,25 @@ pub struct EcdsaVerifyCircuit {
 
     pub aux_generator: Secp256k1,
     pub window_size: usize,
+}
+
+impl EcdsaVerifyCircuit {
+    pub fn init(
+        public_key: Secp256k1,
+        r: <Secp256k1 as CurveAffine>::ScalarExt,
+        s: <Secp256k1 as CurveAffine>::ScalarExt,
+        msg_hash: <Secp256k1 as CurveAffine>::ScalarExt,
+    ) -> Self {
+        let aux_generator = <Secp256k1 as CurveAffine>::CurveExt::random(OsRng).to_affine();
+
+        Self {
+            public_key: Value::known(public_key),
+            signature: Value::known((r, s)),
+            msg_hash: Value::known(msg_hash),
+            aux_generator,
+            window_size: 4,
+        }
+    }
 }
 
 impl Circuit<Fp> for EcdsaVerifyCircuit {
