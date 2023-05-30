@@ -32,7 +32,7 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
         let a = meta.advice_column();
         let decomposed_values = [(); ACC_COLS].map(|_| meta.advice_column());
 
-        meta.create_gate("equality check between decomposed value and value", |meta| {
+        meta.create_gate("equality check between decomposed_value and value", |meta| {
             let s_doc = meta.query_selector(selector);
 
             let value = meta.query_advice(a, Rotation::cur());
@@ -43,10 +43,12 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
 
             let decomposed_value_sum =
                 (0..=ACC_COLS - 2).fold(decomposed_value_vec[ACC_COLS - 1].clone(), |acc, i| {
+                    let mut shift_chunk = Fp::one();
+                    for _ in 1..(ACC_COLS - i) {
+                        shift_chunk *= Fp::from(1 << MAX_BITS);
+                    }
                     acc + (decomposed_value_vec[i].clone()
-                        * Expression::Constant(Fp::from(
-                            1 << (MAX_BITS as usize * ((ACC_COLS - 1) - i)),
-                        )))
+                        * Expression::Constant(shift_chunk))
                 });
 
             vec![s_doc.clone() * (decomposed_value_sum - value)]
@@ -87,8 +89,8 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
                 // Just used helper function for decomposing. In other halo2 application used functions based on Field.
                 let decomposed_values = decompose_bigint_to_ubits(
                     &value_f_to_big_uint(update_value),
-                    MAX_BITS as usize,
                     ACC_COLS,
+                    MAX_BITS as usize,
                 ) as Vec<Fp>;
 
                 // Note that, decomposed result is little edian. So, we need to reverse it.
