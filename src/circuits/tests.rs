@@ -469,7 +469,9 @@ mod test {
     use crate::circuits::ecdsa::EcdsaVerifyCircuit;
     use ecc::maingate::{big_to_fe, fe_to_big};
     use halo2_proofs::arithmetic::{CurveAffine, Field};
-    use halo2_proofs::halo2curves::{group::Curve, secp256k1::Secp256k1Affine as Secp256k1};
+    use halo2_proofs::halo2curves::{
+        ff::PrimeField, group::Curve, secp256k1::Secp256k1Affine as Secp256k1,
+    };
 
     fn mod_n(x: <Secp256k1 as CurveAffine>::Base) -> <Secp256k1 as CurveAffine>::ScalarExt {
         let x_big = fe_to_big(x);
@@ -515,6 +517,46 @@ mod test {
             let r_candidate = mod_n(*x_candidate);
             assert_eq!(r, r_candidate);
         }
+
+        let instance = vec![vec![]];
+
+        let circuit = EcdsaVerifyCircuit::init(public_key, r, s, msg_hash);
+
+        let valid_prover = MockProver::run(18, &circuit, instance).unwrap();
+
+        valid_prover.assert_satisfied();
+    }
+
+    // signature input obtained from an actual signer => https://gist.github.com/enricobottazzi/58c52754cabd8dd8e7ee9ed5d7591814
+    #[test]
+    fn test_ecdsa_no_random() {
+        let secret_key = <Secp256k1 as CurveAffine>::ScalarExt::from_repr([
+            154, 213, 29, 179, 82, 32, 97, 124, 125, 25, 241, 239, 17, 36, 119, 73, 209, 25, 253,
+            111, 255, 254, 166, 249, 243, 69, 250, 217, 23, 156, 1, 61,
+        ])
+        .unwrap();
+
+        let g = Secp256k1::generator();
+
+        let public_key = (g * secret_key).to_affine();
+
+        let r = <Secp256k1 as CurveAffine>::ScalarExt::from_repr([
+            239, 76, 20, 99, 168, 118, 101, 14, 199, 216, 110, 228, 253, 132, 166, 78, 13, 120, 59,
+            128, 32, 197, 192, 196, 58, 157, 69, 172, 73, 244, 76, 202,
+        ])
+        .unwrap();
+
+        let s = <Secp256k1 as CurveAffine>::ScalarExt::from_repr([
+            68, 27, 200, 44, 31, 175, 180, 124, 55, 112, 24, 91, 32, 136, 237, 17, 71, 137, 28,
+            120, 126, 52, 175, 114, 197, 239, 156, 80, 112, 115, 237, 79,
+        ])
+        .unwrap();
+
+        let msg_hash = <Secp256k1 as CurveAffine>::ScalarExt::from_repr([
+            115, 139, 142, 103, 234, 97, 224, 87, 102, 70, 65, 216, 226, 136, 248, 62, 44, 36, 172,
+            170, 253, 70, 103, 220, 126, 83, 27, 233, 159, 149, 214, 28,
+        ])
+        .unwrap();
 
         let instance = vec![vec![]];
 
