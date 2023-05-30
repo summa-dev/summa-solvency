@@ -15,7 +15,7 @@ pub struct MerkleSumTreeCircuit {
 }
 
 impl MerkleSumTreeCircuit {
-    pub fn build_empty() -> Self {
+    pub fn init_empty() -> Self {
         Self {
             leaf_hash: Fp::zero(),
             leaf_balance: Fp::zero(),
@@ -27,7 +27,7 @@ impl MerkleSumTreeCircuit {
         }
     }
 
-    pub fn build_from_assets_and_path(assets_sum: Fp, path: &str) -> Self {
+    pub fn init_from_assets_and_path(assets_sum: Fp, path: &str) -> Self {
         let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
 
         let proof: MerkleProof = merkle_sum_tree.generate_proof(0).unwrap();
