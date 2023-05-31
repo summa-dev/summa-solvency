@@ -20,6 +20,7 @@ mod test {
         let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         let public_input = vec![
@@ -46,6 +47,7 @@ mod test {
         let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         let public_input = vec![
@@ -80,6 +82,7 @@ mod test {
         let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         let public_input = vec![
@@ -104,6 +107,7 @@ mod test {
         let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         let invalid_root_hash = Fp::from(1000u64);
@@ -153,6 +157,7 @@ mod test {
         let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         let invalid_root_hash = Fp::from(1000u64);
@@ -179,6 +184,7 @@ mod test {
         let mut circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         // invalidate leaf hash
@@ -218,6 +224,7 @@ mod test {
         let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         // add invalid leaf hash in the instance column
@@ -260,6 +267,7 @@ mod test {
         let mut circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         // invalid leaf balance
@@ -299,6 +307,7 @@ mod test {
         let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         // add invalid leaf balance in the instance column
@@ -339,6 +348,7 @@ mod test {
         let mut circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         // invalidate path index inside the circuit
@@ -387,6 +397,7 @@ mod test {
         let mut circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         // swap indices
@@ -427,6 +438,7 @@ mod test {
         let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
             less_than_assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
         );
 
         let public_input = vec![

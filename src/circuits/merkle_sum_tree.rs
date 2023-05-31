@@ -27,10 +27,10 @@ impl MerkleSumTreeCircuit {
         }
     }
 
-    pub fn init_from_assets_and_path(assets_sum: Fp, path: &str) -> Self {
+    pub fn init_from_assets_and_path(assets_sum: Fp, path: &str, user_index: usize) -> Self {
         let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
 
-        let proof: MerkleProof = merkle_sum_tree.generate_proof(0).unwrap();
+        let proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
         Self {
             leaf_hash: proof.entry.compute_leaf().hash,
