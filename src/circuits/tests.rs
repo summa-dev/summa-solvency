@@ -66,7 +66,7 @@ mod test {
     fn test_valid_merkle_sum_tree_with_full_prover() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = MerkleSumTreeCircuit::init_empty();
+        let circuit = MerkleSumTreeCircuit::init_empty(4);
 
         // we generate a universal trusted setup of our own for testing
         let params = ParamsKZG::<Bn256>::setup(9, OsRng);
@@ -143,7 +143,7 @@ mod test {
     fn test_invalid_root_hash_with_full_prover() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = MerkleSumTreeCircuit::init_empty();
+        let circuit = MerkleSumTreeCircuit::init_empty(4);
 
         // we generate a universal trusted setup of our own for testing
         let params = ParamsKZG::<Bn256>::setup(9, OsRng);

@@ -15,13 +15,13 @@ pub struct MerkleSumTreeCircuit {
 }
 
 impl MerkleSumTreeCircuit {
-    pub fn init_empty() -> Self {
+    pub fn init_empty(levels: usize) -> Self {
         Self {
             leaf_hash: Fp::zero(),
             leaf_balance: Fp::zero(),
-            path_element_hashes: vec![Fp::zero(); 4],
-            path_element_balances: vec![Fp::zero(); 4],
-            path_indices: vec![Fp::zero(); 4],
+            path_element_hashes: vec![Fp::zero(); levels],
+            path_element_balances: vec![Fp::zero(); levels],
+            path_indices: vec![Fp::zero(); levels],
             assets_sum: Fp::zero(),
             root_hash: Fp::zero(),
         }
