@@ -555,35 +555,39 @@ mod test {
     }
 
     // signature input obtained from an actual signer => https://gist.github.com/enricobottazzi/58c52754cabd8dd8e7ee9ed5d7591814
+    const SECRET_KEY: [u8; 32] = [
+        154, 213, 29, 179, 82, 32, 97, 124, 125, 25, 241, 239, 17, 36, 119, 73, 209, 25, 253, 111,
+        255, 254, 166, 249, 243, 69, 250, 217, 23, 156, 1, 61,
+    ];
+
+    const R: [u8; 32] = [
+        239, 76, 20, 99, 168, 118, 101, 14, 199, 216, 110, 228, 253, 132, 166, 78, 13, 120, 59,
+        128, 32, 197, 192, 196, 58, 157, 69, 172, 73, 244, 76, 202,
+    ];
+
+    const S: [u8; 32] = [
+        68, 27, 200, 44, 31, 175, 180, 124, 55, 112, 24, 91, 32, 136, 237, 17, 71, 137, 28, 120,
+        126, 52, 175, 114, 197, 239, 156, 80, 112, 115, 237, 79,
+    ];
+
+    const MSG_HASH: [u8; 32] = [
+        115, 139, 142, 103, 234, 97, 224, 87, 102, 70, 65, 216, 226, 136, 248, 62, 44, 36, 172,
+        170, 253, 70, 103, 220, 126, 83, 27, 233, 159, 149, 214, 28,
+    ];
+
     #[test]
-    fn test_ecdsa_no_random() {
-        let secret_key = <Secp256k1 as CurveAffine>::ScalarExt::from_repr([
-            154, 213, 29, 179, 82, 32, 97, 124, 125, 25, 241, 239, 17, 36, 119, 73, 209, 25, 253,
-            111, 255, 254, 166, 249, 243, 69, 250, 217, 23, 156, 1, 61,
-        ])
-        .unwrap();
+    fn test_ecdsa_no_random_valid() {
+        let secret_key = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(SECRET_KEY).unwrap();
 
         let g = Secp256k1::generator();
 
         let public_key = (g * secret_key).to_affine();
 
-        let r = <Secp256k1 as CurveAffine>::ScalarExt::from_repr([
-            239, 76, 20, 99, 168, 118, 101, 14, 199, 216, 110, 228, 253, 132, 166, 78, 13, 120, 59,
-            128, 32, 197, 192, 196, 58, 157, 69, 172, 73, 244, 76, 202,
-        ])
-        .unwrap();
+        let r = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(R).unwrap();
 
-        let s = <Secp256k1 as CurveAffine>::ScalarExt::from_repr([
-            68, 27, 200, 44, 31, 175, 180, 124, 55, 112, 24, 91, 32, 136, 237, 17, 71, 137, 28,
-            120, 126, 52, 175, 114, 197, 239, 156, 80, 112, 115, 237, 79,
-        ])
-        .unwrap();
+        let s = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(S).unwrap();
 
-        let msg_hash = <Secp256k1 as CurveAffine>::ScalarExt::from_repr([
-            115, 139, 142, 103, 234, 97, 224, 87, 102, 70, 65, 216, 226, 136, 248, 62, 44, 36, 172,
-            170, 253, 70, 103, 220, 126, 83, 27, 233, 159, 149, 214, 28,
-        ])
-        .unwrap();
+        let msg_hash = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(MSG_HASH).unwrap();
 
         let limbs_x = decompose(public_key.x, 4, 68)
             .iter()
@@ -607,6 +611,178 @@ mod test {
         let valid_prover = MockProver::run(18, &circuit, instance).unwrap();
 
         valid_prover.assert_satisfied();
+    }
+
+    #[test]
+    fn test_ecdsa_no_random_invalid_signature() {
+        let secret_key = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(SECRET_KEY).unwrap();
+
+        let g = Secp256k1::generator();
+
+        let public_key = (g * secret_key).to_affine();
+
+        let r = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(R).unwrap();
+
+        let invalid_s = <Secp256k1 as CurveAffine>::ScalarExt::from_repr([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0,
+        ])
+        .unwrap();
+
+        let msg_hash = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(MSG_HASH).unwrap();
+
+        let limbs_x = decompose(public_key.x, 4, 68)
+            .iter()
+            .map(|x| big_to_fe(fe_to_big(*x)))
+            .collect::<Vec<Fp>>();
+
+        let limbs_y = decompose(public_key.y, 4, 68)
+            .iter()
+            .map(|y| big_to_fe(fe_to_big(*y)))
+            .collect::<Vec<Fp>>();
+
+        // merge limbs_x and limbs_y into a single vector
+        let mut pub_input = vec![];
+        pub_input.extend(limbs_x);
+        pub_input.extend(limbs_y);
+
+        let instance = vec![vec![], pub_input];
+
+        let circuit = EcdsaVerifyCircuit::init(public_key, r, invalid_s, msg_hash);
+
+        let invalid_prover = MockProver::run(18, &circuit, instance).unwrap();
+
+        assert!(invalid_prover.verify().is_err());
+    }
+
+    #[test]
+    fn test_ecdsa_no_random_invalid_pub_input() {
+        let secret_key = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(SECRET_KEY).unwrap();
+
+        let g = Secp256k1::generator();
+
+        let public_key = (g * secret_key).to_affine();
+
+        let r = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(R).unwrap();
+
+        let s = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(S).unwrap();
+
+        let msg_hash = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(MSG_HASH).unwrap();
+
+        // let's use the generator g as public key added to the instance column. It should fail because this is not the public key used to sign the message
+        let limbs_x = decompose(g.x, 4, 68)
+            .iter()
+            .map(|x| big_to_fe(fe_to_big(*x)))
+            .collect::<Vec<Fp>>();
+
+        let limbs_y = decompose(g.y, 4, 68)
+            .iter()
+            .map(|y| big_to_fe(fe_to_big(*y)))
+            .collect::<Vec<Fp>>();
+
+        let mut invalid_pub_input = vec![];
+        invalid_pub_input.extend(limbs_x);
+        invalid_pub_input.extend(limbs_y);
+
+        let instance = vec![vec![], invalid_pub_input];
+
+        let circuit = EcdsaVerifyCircuit::init(public_key, r, s, msg_hash);
+
+        let invalid_prover = MockProver::run(18, &circuit, instance).unwrap();
+
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 4).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "ecdsa verify region").into(),
+                        offset: 10
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 4).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "ecdsa verify region").into(),
+                        offset: 11
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 4).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "ecdsa verify region").into(),
+                        offset: 12
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 4).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "ecdsa verify region").into(),
+                        offset: 13
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 4).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "ecdsa verify region").into(),
+                        offset: 15
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 4).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "ecdsa verify region").into(),
+                        offset: 16
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 4).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "ecdsa verify region").into(),
+                        offset: 17
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 4).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "ecdsa verify region").into(),
+                        offset: 18
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 0 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 1 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 2 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 3 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 4 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 5 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 6 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 7 }
+                },
+            ])
+        );
     }
 
     #[cfg(feature = "dev-graph")]
