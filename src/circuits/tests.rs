@@ -467,7 +467,7 @@ mod test {
     }
 
     use crate::circuits::ecdsa::EcdsaVerifyCircuit;
-    use ecc::maingate::{big_to_fe, fe_to_big};
+    use ecc::maingate::{big_to_fe, decompose, fe_to_big};
     use halo2_proofs::arithmetic::{CurveAffine, Field};
     use halo2_proofs::halo2curves::{
         ff::PrimeField, group::Curve, secp256k1::Secp256k1Affine as Secp256k1,
@@ -518,7 +518,22 @@ mod test {
             assert_eq!(r, r_candidate);
         }
 
-        let instance = vec![vec![]];
+        let limbs_x = decompose(public_key.x, 4, 68)
+            .iter()
+            .map(|x| big_to_fe(fe_to_big(*x)))
+            .collect::<Vec<Fp>>();
+
+        let limbs_y = decompose(public_key.y, 4, 68)
+            .iter()
+            .map(|y| big_to_fe(fe_to_big(*y)))
+            .collect::<Vec<Fp>>();
+
+        // merge limbs_x and limbs_y into a single vector
+        let mut pub_input = vec![];
+        pub_input.extend(limbs_x);
+        pub_input.extend(limbs_y);
+
+        let instance = vec![vec![], pub_input];
 
         let circuit = EcdsaVerifyCircuit::init(public_key, r, s, msg_hash);
 
@@ -558,7 +573,22 @@ mod test {
         ])
         .unwrap();
 
-        let instance = vec![vec![]];
+        let limbs_x = decompose(public_key.x, 4, 68)
+            .iter()
+            .map(|x| big_to_fe(fe_to_big(*x)))
+            .collect::<Vec<Fp>>();
+
+        let limbs_y = decompose(public_key.y, 4, 68)
+            .iter()
+            .map(|y| big_to_fe(fe_to_big(*y)))
+            .collect::<Vec<Fp>>();
+
+        // merge limbs_x and limbs_y into a single vector
+        let mut pub_input = vec![];
+        pub_input.extend(limbs_x);
+        pub_input.extend(limbs_y);
+
+        let instance = vec![vec![], pub_input];
 
         let circuit = EcdsaVerifyCircuit::init(public_key, r, s, msg_hash);
 

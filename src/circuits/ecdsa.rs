@@ -15,6 +15,31 @@ use rand::rngs::OsRng;
 const BIT_LEN_LIMB: usize = 68;
 const NUMBER_OF_LIMBS: usize = 4;
 
+#[derive(Debug, Clone)]
+pub struct EcdsaConfigWithInstance {
+    pub ecdsa_config: EcdsaConfig,
+    pub instance: Column<Instance>,
+}
+
+impl EcdsaConfigWithInstance {
+    pub fn expose_limbs_to_public(
+        &self,
+        mut layouter: impl Layouter<Fp>,
+        pk_x_limbs: Vec<AssignedCell<Fp, Fp>>,
+        pk_y_limbs: Vec<AssignedCell<Fp, Fp>>,
+        x_row_start: usize,
+        y_row_start: usize,
+    ) -> Result<(), Error> {
+        // loop over pk_x_limbs and pk_y_limbs and expose them to instance column
+        for i in 0..4 {
+            layouter.constrain_instance(pk_x_limbs[i].cell(), self.instance, x_row_start + i)?;
+            layouter.constrain_instance(pk_y_limbs[i].cell(), self.instance, y_row_start + i)?;
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Default, Clone)]
 pub struct EcdsaVerifyCircuit {
     pub public_key: Value<Secp256k1>,
@@ -48,7 +73,7 @@ impl EcdsaVerifyCircuit {
 }
 
 impl Circuit<Fp> for EcdsaVerifyCircuit {
-    type Config = EcdsaConfig;
+    type Config = EcdsaConfigWithInstance;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -71,7 +96,16 @@ impl Circuit<Fp> for EcdsaVerifyCircuit {
             overflow_bit_lens,
         );
 
-        EcdsaConfig::new(range_config, main_gate_config)
+        let instance = meta.instance_column();
+
+        meta.enable_equality(instance);
+
+        let ecdsa_config = EcdsaConfig::new(range_config, main_gate_config);
+
+        EcdsaConfigWithInstance {
+            ecdsa_config,
+            instance,
+        }
     }
 
     fn synthesize(
@@ -80,7 +114,7 @@ impl Circuit<Fp> for EcdsaVerifyCircuit {
         mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
         let mut ecc_chip = GeneralEccChip::<Secp256k1, Fp, NUMBER_OF_LIMBS, BIT_LEN_LIMB>::new(
-            config.ecc_chip_config(),
+            config.ecdsa_config.ecc_chip_config(),
         );
 
         layouter.assign_region(
@@ -98,7 +132,7 @@ impl Circuit<Fp> for EcdsaVerifyCircuit {
         let ecdsa_chip = EcdsaChip::new(ecc_chip.clone());
         let scalar_chip = ecc_chip.scalar_field_chip();
 
-        layouter.assign_region(
+        let (pk_x_limbs, pk_y_limbs) = layouter.assign_region(
             || "ecdsa verify region",
             |region| {
                 let offset = 0;
@@ -118,15 +152,41 @@ impl Circuit<Fp> for EcdsaVerifyCircuit {
                 };
 
                 let pk_in_circuit = ecc_chip.assign_point(ctx, self.public_key)?;
+
+                let x_clone = pk_in_circuit.x();
+                let y_clone = pk_in_circuit.y();
+
+                let pk_x_limbs: Vec<AssignedCell<Fp, Fp>> = x_clone
+                    .limbs()
+                    .iter()
+                    .map(|limb| limb.as_ref().clone())
+                    .collect();
+
+                let pk_y_limbs: Vec<AssignedCell<Fp, Fp>> = y_clone
+                    .limbs()
+                    .iter()
+                    .map(|limb| limb.as_ref().clone())
+                    .collect();
+
                 let pk_assigned = AssignedPublicKey {
                     point: pk_in_circuit,
                 };
                 let msg_hash = scalar_chip.assign_integer(ctx, msg_hash, Range::Remainder)?;
-                ecdsa_chip.verify(ctx, &sig, &pk_assigned, &msg_hash)
+                ecdsa_chip.verify(ctx, &sig, &pk_assigned, &msg_hash)?;
+
+                Ok((pk_x_limbs, pk_y_limbs))
             },
         )?;
 
-        let range_chip = RangeChip::<Fp>::new(config.range_config);
+        config.expose_limbs_to_public(
+            layouter.namespace(|| "expose pub key to public"),
+            pk_x_limbs,
+            pk_y_limbs,
+            0,
+            4,
+        )?;
+
+        let range_chip = RangeChip::<Fp>::new(config.ecdsa_config.range_config);
         range_chip.load_table(&mut layouter)?;
 
         Ok(())
