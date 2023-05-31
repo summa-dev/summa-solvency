@@ -1,10 +1,3 @@
-use circuits_halo2::{
-    circuits::utils::{
-        full_prover, full_verifier, generate_setup_params, instantiate_circuit,
-        instantiate_empty_circuit,
-    },
-    merkle_sum_tree::MerkleSumTree,
-};
 use criterion::{criterion_group, criterion_main, Criterion};
 use halo2_proofs::{
     halo2curves::bn256::{Bn256, Fr as Fp},
@@ -12,6 +5,13 @@ use halo2_proofs::{
     poly::kzg::commitment::ParamsKZG,
 };
 use std::convert::TryInto;
+use summa_solvency::{
+    circuits::utils::{
+        full_prover, full_verifier, generate_setup_params, instantiate_circuit,
+        instantiate_empty_circuit,
+    },
+    merkle_sum_tree::MerkleSumTree,
+};
 
 const MIN_POWER: u32 = 4;
 const MAX_POWER: u32 = 27;
