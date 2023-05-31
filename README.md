@@ -1,4 +1,4 @@
-# Circuits - Halo2
+# Summa Solvency
 
 This repository contains the Halo2 circuit implementation for the Proof of Solvency protocol. 
 
@@ -137,7 +137,7 @@ wget https://csv-files-summa.s3.eu-west-1.amazonaws.com/csv/csv_files.zip
 unzip csv_files.zip
 ```
 
-The csv folder will contain files named as `entry_2_4.csv` to `entry_2_27.csv`. 2^4 or 2^27 is the number of entries in the file that will be used to feed the merkle sum tree and, eventually, the zk prover.
+The csv folder will contain files named as `entry_2_5.csv` to `entry_2_27.csv`. 2^5 or 2^27 is the number of entries in the file that will be used to feed the merkle sum tree and, eventually, the zk prover.
 
 To run the benches 
 
