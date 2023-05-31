@@ -608,28 +608,29 @@ mod test {
 
         valid_prover.assert_satisfied();
     }
-}
 
-#[cfg(feature = "dev-graph")]
-#[test]
-fn print_merkle_sum_tree() {
-    use plotters::prelude::*;
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_merkle_sum_tree() {
+        use plotters::prelude::*;
 
-    let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-    let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
-        assets_sum,
-        "src/merkle_sum_tree/csv/entry_16.csv",
-    );
+        let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
+        );
 
-    let root =
-        BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384)).into_drawing_area();
-    root.fill(&WHITE).unwrap();
-    let root = root
-        .titled("Merkle Sum Tree Layout", ("sans-serif", 60))
-        .unwrap();
+        let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384))
+            .into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root
+            .titled("Merkle Sum Tree Layout", ("sans-serif", 60))
+            .unwrap();
 
-    halo2_proofs::dev::CircuitLayout::default()
-        .render(8, &circuit, &root)
-        .unwrap();
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(8, &circuit, &root)
+            .unwrap();
+    }
 }
