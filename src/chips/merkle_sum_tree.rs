@@ -80,13 +80,8 @@ impl MerkleSumTreeChip {
             let r2 = meta.query_advice(col_d, Rotation::next());
 
             vec![
-                s.clone()
-                    * (e.clone() * Expression::Constant(Fp::from(2)) * (c.clone() - a.clone())
-                        - (l1 - a)
-                        - (c - r1)),
-                s * (e * Expression::Constant(Fp::from(2)) * (d.clone() - b.clone())
-                    - (l2 - b)
-                    - (d - r2)),
+                s.clone() * e.clone() * ((l1 - a) - (c - r1)),
+                s * e * ((l2 - b) - (d - r2)),
             ]
         });
 

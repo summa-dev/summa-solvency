@@ -360,7 +360,7 @@ mod test {
         );
     }
 
-    // Passing a non binary index should fail the bool constraint check, the two swap constraints and the permutation check between the computed root hash and the instance column root hash
+    // Passing a non binary index should fail the bool constraint check and the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_non_binary_index() {
         let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
@@ -395,50 +395,6 @@ mod test {
                         offset: 0
                     },
                     cell_values: vec![(((Any::advice(), 4).into(), 0).into(), "0x2".to_string()),]
-                },
-                VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((1, "swap constraint").into(), 0, "").into(),
-                    location: FailureLocation::InRegion {
-                        region: (1, "merkle prove layer").into(),
-                        offset: 0
-                    },
-                    cell_values: vec![
-                        (
-                            ((Any::advice(), 0).into(), 0).into(),
-                            "0x14b2e288bf66ce6fe38eb889a4f4c4e5c00e71b3b96caa9018bdf36c280a6be0"
-                                .to_string()
-                        ),
-                        (
-                            ((Any::advice(), 0).into(), 1).into(),
-                            "0xb92ac29c673ed3f380acdca783f2e6a9f62f27522cffd1a0a28bc952a7a755"
-                                .to_string()
-                        ),
-                        (
-                            ((Any::advice(), 2).into(), 0).into(),
-                            "0xb92ac29c673ed3f380acdca783f2e6a9f62f27522cffd1a0a28bc952a7a755"
-                                .to_string()
-                        ),
-                        (
-                            ((Any::advice(), 2).into(), 1).into(),
-                            "0x14b2e288bf66ce6fe38eb889a4f4c4e5c00e71b3b96caa9018bdf36c280a6be0"
-                                .to_string()
-                        ),
-                        (((Any::advice(), 4).into(), 0).into(), "0x2".to_string()),
-                    ]
-                },
-                VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((1, "swap constraint").into(), 1, "").into(),
-                    location: FailureLocation::InRegion {
-                        region: (1, "merkle prove layer").into(),
-                        offset: 0
-                    },
-                    cell_values: vec![
-                        (((Any::advice(), 1).into(), 0).into(), "0x2e70".to_string()),
-                        (((Any::advice(), 1).into(), 1).into(), "0x108ef".to_string()),
-                        (((Any::advice(), 3).into(), 0).into(), "0x108ef".to_string()),
-                        (((Any::advice(), 3).into(), 1).into(), "0x2e70".to_string()),
-                        (((Any::advice(), 4).into(), 0).into(), "0x2".to_string()),
-                    ]
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
