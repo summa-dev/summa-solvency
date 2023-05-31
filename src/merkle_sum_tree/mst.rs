@@ -12,14 +12,17 @@ pub struct MerkleSumTree {
 }
 
 impl MerkleSumTree {
-    pub const MAX_DEPTH: usize = 32;
+    pub const MAX_DEPTH: usize = 27;
 
     pub fn new(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let entries = parse_csv_to_entries(path)?;
         let depth = (entries.len() as f64).log2().ceil() as usize;
 
         if !(1..=Self::MAX_DEPTH).contains(&depth) {
-            return Err("The tree depth must be between 1 and 32".into());
+            return Err(
+                "The tree depth must be between 1 and 27, namely it can support 2^27 users at max"
+                    .into(),
+            );
         }
 
         let mut nodes = vec![];

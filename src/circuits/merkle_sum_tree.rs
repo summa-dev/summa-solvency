@@ -2,7 +2,7 @@ use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*};
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct MerkleSumTreeCircuit {
     pub leaf_hash: Fp,
     pub leaf_balance: Fp,

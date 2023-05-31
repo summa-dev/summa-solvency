@@ -1,62 +1,40 @@
 #[cfg(test)]
 mod test {
 
-    use crate::circuits::merkle_sum_tree::MerkleSumTreeCircuit;
-    use crate::circuits::utils::{full_prover, full_verifier};
-    use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof, MerkleSumTree};
+    use crate::circuits::utils::{
+        full_prover, full_verifier, generate_setup_params, instantiate_circuit,
+        instantiate_empty_circuit,
+    };
+    use crate::merkle_sum_tree::{MerkleProof, MerkleSumTree};
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
-        halo2curves::bn256::{Bn256, Fr as Fp},
+        halo2curves::bn256::Fr as Fp,
         plonk::{keygen_pk, keygen_vk, Any},
-        poly::kzg::commitment::ParamsKZG,
     };
-    use num_bigint::ToBigInt;
-    use rand::rngs::OsRng;
-
-    fn instantiate_circuit(assets_sum: Fp, path: &str) -> MerkleSumTreeCircuit {
-        let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
-
-        let proof: MerkleProof = merkle_sum_tree.generate_proof(0).unwrap();
-
-        MerkleSumTreeCircuit {
-            leaf_hash: proof.entry.compute_leaf().hash,
-            leaf_balance: big_int_to_fp(proof.entry.balance()),
-            path_element_hashes: proof.sibling_hashes,
-            path_element_balances: proof.sibling_sums,
-            path_indices: proof.path_indices,
-            assets_sum,
-            root_hash: proof.root_hash,
-        }
-    }
-
-    fn instantiate_empty_circuit() -> MerkleSumTreeCircuit {
-        MerkleSumTreeCircuit {
-            leaf_hash: Fp::zero(),
-            leaf_balance: Fp::zero(),
-            path_element_hashes: vec![Fp::zero(); 4],
-            path_element_balances: vec![Fp::zero(); 4],
-            path_indices: vec![Fp::zero(); 4],
-            assets_sum: Fp::zero(),
-            root_hash: Fp::zero(),
-        }
-    }
 
     #[test]
     fn test_valid_merkle_sum_tree() {
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        // loop over each index and generate a proof for each one
+        for user_index in 0..16 {
+            let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
-        let public_input = vec![
-            circuit.leaf_hash,
-            circuit.leaf_balance,
-            circuit.root_hash,
-            circuit.assets_sum,
-        ];
+            let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
 
-        let valid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+            let circuit = instantiate_circuit(assets_sum, mt_proof);
 
-        valid_prover.assert_satisfied();
+            let public_input = vec![
+                circuit.leaf_hash,
+                circuit.leaf_balance,
+                circuit.root_hash,
+                circuit.assets_sum,
+            ];
+
+            let valid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+
+            valid_prover.assert_satisfied();
+        }
     }
 
     #[test]
@@ -64,11 +42,16 @@ mod test {
         // Same as above but now the entries contain a balance that is greater than 64 bits
         // liabilities sum is 18446744073710096590
 
-        let assets_sum_big_int = 18446744073710096591_u128.to_bigint().unwrap(); // greater than liabilities sum
+        let merkle_sum_tree =
+            MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16_bigints.csv").unwrap();
 
-        let assets_sum = big_int_to_fp(&assets_sum_big_int);
+        let user_index = 0;
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let circuit = instantiate_circuit(assets_sum, mt_proof);
 
         let public_input = vec![
             circuit.leaf_hash,
@@ -84,22 +67,30 @@ mod test {
 
     #[test]
     fn test_valid_merkle_sum_tree_with_full_prover() {
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let circuit = instantiate_empty_circuit();
+        let levels = 4;
+
+        let circuit = instantiate_empty_circuit(levels);
 
         // we generate a universal trusted setup of our own for testing
-        let params = ParamsKZG::<Bn256>::setup(9, OsRng);
+        let params = generate_setup_params(levels);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
-        // Note: the dimension of the circuit used to generate the keys must be the same as the dimension of the circuit used to generate the proof
+        // Note: the dimension of the empty circuit used to generate the keys must be the same as the dimension of the circuit used to generate the proof
         // In this case, the dimension are represented by the heigth of the merkle tree
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let user_index = 0;
+
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let circuit = instantiate_circuit(assets_sum, mt_proof);
 
         let public_input = vec![
             circuit.leaf_hash,
@@ -118,9 +109,15 @@ mod test {
     // Passing an invalid root hash in the instance column should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_root_hash() {
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let user_index = 0;
+
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let circuit = instantiate_circuit(assets_sum, mt_proof);
 
         let invalid_root_hash = Fp::from(1000u64);
 
@@ -153,12 +150,14 @@ mod test {
 
     #[test]
     fn test_invalid_root_hash_with_full_prover() {
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let circuit = instantiate_empty_circuit();
+        let levels = 4;
+
+        let circuit = instantiate_empty_circuit(levels);
 
         // we generate a universal trusted setup of our own for testing
-        let params = ParamsKZG::<Bn256>::setup(9, OsRng);
+        let params = generate_setup_params(levels);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -166,7 +165,13 @@ mod test {
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let user_index = 0;
+
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let circuit = instantiate_circuit(assets_sum, mt_proof);
 
         let invalid_root_hash = Fp::from(1000u64);
 
@@ -187,9 +192,15 @@ mod test {
     // Passing an invalid leaf hash as input for the witness generation should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_leaf_hash_as_witness() {
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let mut circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let user_index = 0;
+
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let mut circuit = instantiate_circuit(assets_sum, mt_proof);
 
         // invalidate leaf hash
         circuit.leaf_hash = Fp::from(1000u64);
@@ -223,10 +234,15 @@ mod test {
     // Passing an invalid leaf hash in the instance column should fail the permutation check between the (valid) leaf hash added as part of the witness and the instance column leaf hash
     #[test]
     fn test_invalid_leaf_hash_as_instance() {
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let user_index = 0;
 
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let circuit = instantiate_circuit(assets_sum, mt_proof);
         // add invalid leaf hash in the instance column
         let invalid_leaf_hash = Fp::from(1000u64);
 
@@ -260,11 +276,17 @@ mod test {
     // Passing an invalid leaf balance as input for the witness generation should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_leaf_balance_as_witness() {
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        let user_index = 0;
+
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let mut circuit = instantiate_circuit(assets_sum, mt_proof);
 
         let user_balance = Fp::from(11888u64);
-
-        let mut circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
 
         // invalid leaf balance
         circuit.leaf_hash = Fp::from(1000u64);
@@ -298,9 +320,15 @@ mod test {
     // Passing an invalid leaf balance in the instance column should fail the permutation check between the (valid) leaf balance added as part of the witness and the instance column leaf balance
     #[test]
     fn test_invalid_leaf_balance_as_instance() {
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let user_index = 0;
+
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let circuit = instantiate_circuit(assets_sum, mt_proof);
 
         // add invalid leaf balance in the instance column
         let invalid_leaf_balance = Fp::from(1000u64);
@@ -335,9 +363,15 @@ mod test {
     // Passing a non binary index should fail the bool constraint check and the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_non_binary_index() {
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let mut circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let user_index = 0;
+
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let mut circuit = instantiate_circuit(assets_sum, mt_proof);
 
         // invalidate path index inside the circuit
         circuit.path_indices[0] = Fp::from(2);
@@ -380,10 +414,15 @@ mod test {
     // Swapping the indices should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_swapping_index() {
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let mut circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let user_index = 0;
 
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let mut circuit = instantiate_circuit(assets_sum, mt_proof);
         // swap indices
         circuit.path_indices[0] = Fp::from(1);
 
@@ -417,10 +456,15 @@ mod test {
     // Passing an assets sum that is less than the liabilities sum should fail the lessThan constraint check
     #[test]
     fn test_is_not_less_than() {
-        let less_than_assets_sum = Fp::from(556861u64); // less than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let circuit =
-            instantiate_circuit(less_than_assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let user_index = 0;
+
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let less_than_assets_sum = merkle_sum_tree.root().balance - Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let circuit = instantiate_circuit(less_than_assets_sum, mt_proof);
 
         let public_input = vec![
             circuit.leaf_hash,
@@ -464,9 +508,15 @@ mod test {
     fn print_merkle_sum_tree() {
         use plotters::prelude::*;
 
-        let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
+        let merkle_sum_tree = MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let circuit = instantiate_circuit(assets_sum, "src/merkle_sum_tree/csv/entry_16.csv");
+        let user_index = 0;
+
+        let mt_proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1
+
+        let mut circuit = instantiate_circuit(assets_sum, mt_proof);
 
         let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384))
             .into_drawing_area();
