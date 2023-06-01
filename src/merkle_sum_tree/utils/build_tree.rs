@@ -87,7 +87,6 @@ fn build_middle_level<const N_ASSETS: usize>(
     let mut handles = vec![];
     let chunk_size = (nodes_in_level + num_cpus::get() - 1) / num_cpus::get();
     let middle_level_building = start_timer!(|| "compute middle level in parallel");
-    print!("{} ", level);
 
     for chunk in tree[level - 1].chunks(chunk_size * 2) {
         let chunk = chunk.to_vec();
