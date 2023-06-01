@@ -4,21 +4,21 @@ use ark_std::{end_timer, start_timer};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use std::thread;
 
-pub fn build_merkle_tree_from_entries(
-    entries: &[Entry],
+pub fn build_merkle_tree_from_entries<const N_ASSETS: usize>(
+    entries: &[Entry<N_ASSETS>],
     depth: usize,
-    nodes: &mut Vec<Vec<Node>>,
-) -> Result<Node, Box<dyn std::error::Error>> {
+    nodes: &mut Vec<Vec<Node<N_ASSETS>>>,
+) -> Result<Node<N_ASSETS>, Box<dyn std::error::Error>> {
     let n = entries.len();
 
     let tree_building = start_timer!(|| "build merkle tree");
 
-    let mut tree: Vec<Vec<Node>> = Vec::with_capacity(depth + 1);
+    let mut tree: Vec<Vec<Node<N_ASSETS>>> = Vec::with_capacity(depth + 1);
 
     tree.push(vec![
         Node {
             hash: Fp::from(0),
-            balance: Fp::from(0)
+            balances: [Fp::from(0); N_ASSETS]
         };
         n
     ]);
@@ -30,7 +30,7 @@ pub fn build_merkle_tree_from_entries(
         tree.push(vec![
             Node {
                 hash: Fp::from(0),
-                balance: Fp::from(0)
+                balances: [Fp::from(0); N_ASSETS]
             };
             nodes_in_level
         ]);
@@ -48,7 +48,10 @@ pub fn build_merkle_tree_from_entries(
     Ok(root)
 }
 
-fn build_leaves_level(entries: &[Entry], tree:  &mut [Vec<Node>]) {
+fn build_leaves_level<const N_ASSETS: usize>(
+    entries: &[Entry<N_ASSETS>],
+    tree: &mut [Vec<Node<N_ASSETS>>],
+) {
     let leaves_building = start_timer!(|| "compute leaves");
     // Compute the leaves in parallel
     let mut handles = vec![];
@@ -74,7 +77,11 @@ fn build_leaves_level(entries: &[Entry], tree:  &mut [Vec<Node>]) {
     end_timer!(leaves_building);
 }
 
-fn build_middle_level(level: usize, tree: &mut [Vec<Node>], n: usize) {
+fn build_middle_level<const N_ASSETS: usize>(
+    level: usize,
+    tree: &mut [Vec<Node<N_ASSETS>>],
+    n: usize,
+) {
     let nodes_in_level = (n + (1 << level) - 1) / (1 << level);
 
     let mut handles = vec![];

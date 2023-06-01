@@ -4,14 +4,14 @@ use crate::merkle_sum_tree::utils::{
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use num_bigint::BigInt;
 
-pub struct MerkleSumTree {
-    root: Node,
-    nodes: Vec<Vec<Node>>,
+pub struct MerkleSumTree<const N_ASSETS: usize> {
+    root: Node<N_ASSETS>,
+    nodes: Vec<Vec<Node<N_ASSETS>>>,
     depth: usize,
-    entries: Vec<Entry>,
+    entries: Vec<Entry<N_ASSETS>>,
 }
 
-impl MerkleSumTree {
+impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
     pub const MAX_DEPTH: usize = 27;
 
     pub fn new(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
@@ -36,7 +36,7 @@ impl MerkleSumTree {
         })
     }
 
-    pub fn root(&self) -> &Node {
+    pub fn root(&self) -> &Node<N_ASSETS> {
         &self.root
     }
 
@@ -44,23 +44,23 @@ impl MerkleSumTree {
         &self.depth
     }
 
-    pub fn leaves(&self) -> &[Node] {
+    pub fn leaves(&self) -> &[Node<N_ASSETS>] {
         &self.nodes[0]
     }
 
-    pub fn entries(&self) -> &[Entry] {
+    pub fn entries(&self) -> &[Entry<N_ASSETS>] {
         &self.entries
     }
 
-    pub fn index_of(&self, username: &str, balance: BigInt) -> Option<usize> {
-        index_of(username, balance, &self.nodes)
+    pub fn index_of(&self, username: &str, balances: [BigInt; N_ASSETS]) -> Option<usize> {
+        index_of(username, balances, &self.nodes)
     }
 
-    pub fn generate_proof(&self, index: usize) -> Result<MerkleProof, &'static str> {
+    pub fn generate_proof(&self, index: usize) -> Result<MerkleProof<N_ASSETS>, &'static str> {
         create_proof(index, &self.entries, self.depth, &self.nodes, &self.root)
     }
 
-    pub fn verify_proof(&self, proof: &MerkleProof) -> bool {
+    pub fn verify_proof(&self, proof: &MerkleProof<N_ASSETS>) -> bool {
         verify_proof(proof)
     }
 }
