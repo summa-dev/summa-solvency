@@ -1,5 +1,5 @@
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
-use crate::chips::poseidon::spec::MySpec;
+use crate::chips::poseidon::spec::Spec4;
 use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
@@ -96,7 +96,7 @@ impl MerkleSumTreeChip {
 
         let hash_inputs = (0..WIDTH).map(|_| meta.advice_column()).collect::<Vec<_>>();
 
-        let poseidon_config = PoseidonChip::<MySpec, WIDTH, RATE, L>::configure(meta, hash_inputs);
+        let poseidon_config = PoseidonChip::<Spec4, WIDTH, RATE, L>::configure(meta, hash_inputs);
 
         // configure lt chip
         let lt_config = LtChip::configure(
@@ -279,7 +279,7 @@ impl MerkleSumTreeChip {
 
         // instantiate the poseidon_chip
         let poseidon_chip =
-            PoseidonChip::<MySpec, WIDTH, RATE, L>::construct(self.config.poseidon_config.clone());
+            PoseidonChip::<Spec4, WIDTH, RATE, L>::construct(self.config.poseidon_config.clone());
 
         // The hash function inside the poseidon_chip performs the following action
         // 1. Copy the left and right cells from the previous row
