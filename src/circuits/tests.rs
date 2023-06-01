@@ -809,4 +809,47 @@ mod test {
             .render(8, &circuit, &root)
             .unwrap();
     }
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_ecdsa() {
+        use plotters::prelude::*;
+
+        let secret_key = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(SECRET_KEY).unwrap();
+
+        let g = Secp256k1::generator();
+
+        let public_key = (g * secret_key).to_affine();
+
+        let r = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(R).unwrap();
+
+        let s = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(S).unwrap();
+
+        let msg_hash = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(MSG_HASH).unwrap();
+
+        let limbs_x = decompose(public_key.x, 4, 68)
+            .iter()
+            .map(|x| big_to_fe(fe_to_big(*x)))
+            .collect::<Vec<Fp>>();
+
+        let limbs_y = decompose(public_key.y, 4, 68)
+            .iter()
+            .map(|y| big_to_fe(fe_to_big(*y)))
+            .collect::<Vec<Fp>>();
+
+        // merge limbs_x and limbs_y into a single vector
+        let mut pub_input = vec![];
+        pub_input.extend(limbs_x);
+        pub_input.extend(limbs_y);
+
+        let circuit = EcdsaVerifyCircuit::init(public_key, r, s, msg_hash);
+
+        let root = BitMapBackend::new("prints/ecdsa-layout.png", (2048, 16384)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root.titled("ECDSA Layout", ("sans-serif", 60)).unwrap();
+
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(18, &circuit, &root)
+            .unwrap();
+    }
 }
