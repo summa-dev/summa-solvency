@@ -1,9 +1,12 @@
+use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::spec::Spec4;
 use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
 
+const ACC_COLS: usize = 21;
+const MAX_BITS: u8 = 12;
 const WIDTH: usize = 5;
 const RATE: usize = 4;
 const L: usize = 4;
@@ -17,6 +20,7 @@ pub struct MerkleSumTreeConfig {
     pub lt_selector: Selector,
     pub instance: Column<Instance>,
     pub poseidon_config: PoseidonConfig<WIDTH, RATE, L>,
+    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, ACC_COLS>,
     pub lt_config: LtConfig<Fp, 8>,
 }
 #[derive(Debug, Clone)]
@@ -85,6 +89,9 @@ impl MerkleSumTreeChip {
             ]
         });
 
+        // configure overflow chip
+        let overflow_check_config = OverflowChip::configure(meta);
+
         // Enforces that input_left_balance + input_right_balance = computed_sum
         meta.create_gate("sum constraint", |meta| {
             let s = meta.query_selector(sum_selector);
@@ -114,6 +121,7 @@ impl MerkleSumTreeChip {
             lt_selector,
             instance,
             poseidon_config,
+            overflow_check_config,
             lt_config,
         };
 
@@ -287,7 +295,29 @@ impl MerkleSumTreeChip {
         // 3. Constrain the digest to be equal to the hash of the left and right values
         let computed_hash = poseidon_chip.hash(
             layouter.namespace(|| "hash four child nodes"),
-            [left_hash, left_balance, right_hash, right_balance],
+            [
+                left_hash,
+                left_balance.clone(),
+                right_hash,
+                right_balance.clone(),
+            ],
+        )?;
+
+        // Initiate the overflow check chip
+        let overflow_chip = OverflowChip::construct(self.config.overflow_check_config.clone());
+
+        // Each balance cell is constrained to be less than the maximum limit
+        overflow_chip.assign(
+            layouter.namespace(|| "overflow check left balance"),
+            left_balance.value().map(|x| x.to_owned()),
+        )?;
+        overflow_chip.assign(
+            layouter.namespace(|| "overflow check right balance"),
+            right_balance.value().map(|x| x.to_owned()),
+        )?;
+        overflow_chip.assign(
+            layouter.namespace(|| "overflow check computed sum"),
+            computed_sum_cell.value().map(|x| x.to_owned()),
         )?;
 
         Ok((computed_hash, computed_sum_cell))

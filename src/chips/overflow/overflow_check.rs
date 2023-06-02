@@ -1,4 +1,4 @@
-use crate::chips::overflow::utils::{decompose_bigint_to_ubits, value_f_to_big_uint};
+use crate::chips::overflow::utils::*;
 
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
@@ -87,8 +87,8 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
                 region.assign_advice(|| "assign value", self.config.a, 0, || update_value)?;
 
                 // Just used helper function for decomposing. In other halo2 application used functions based on Field.
-                let decomposed_values = decompose_bigint_to_ubits(
-                    &value_f_to_big_uint(update_value),
+                let decomposed_values: Vec<Fp> = decompose_bigint_to_ubits(
+                    &value_fp_to_big_uint(update_value),
                     ACC_COLS,
                     MAX_BITS as usize,
                 ) as Vec<Fp>;
