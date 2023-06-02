@@ -2,35 +2,19 @@ use halo2_proofs::circuit::*;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use num_bigint::BigUint;
 
-fn parse_hex(hex_asm: &str) -> Vec<u8> {
-    let mut hex_bytes = hex_asm
-        .as_bytes()
-        .iter()
-        .filter_map(|b| match b {
-            b'0'..=b'9' => Some(b - b'0'),
-            b'a'..=b'f' => Some(b - b'a' + 10),
-            b'A'..=b'F' => Some(b - b'A' + 10),
-            _ => None,
-        })
-        .fuse();
-
-    let mut bytes = Vec::new();
-    while let (Some(h), Some(l)) = (hex_bytes.next(), hex_bytes.next()) {
-        bytes.push(h << 4 | l)
-    }
-    bytes
+fn fp_to_big_uint(f: Fp) -> BigUint {
+    BigUint::from_bytes_le(f.to_bytes().as_slice())
 }
 
-pub fn value_f_to_big_uint(v: Value<Fp>) -> BigUint {
-    let mut sum = Fp::zero();
-    v.as_ref().map(|f| sum = sum.add(f));
+pub fn value_fp_to_big_uint(v: Value<Fp>) -> BigUint {
+    let mut inner_value = Fp::zero();
+    v.as_ref().map(|f| inner_value = inner_value.add(f));
 
-    let sum_str = format!("{:?}", sum);
-    let (_, splited_sum_str) = sum_str.split_at(2); // remove '0x'
-
-    BigUint::from_bytes_be(parse_hex(splited_sum_str).as_slice())
+    fp_to_big_uint(inner_value)
 }
 
+// the `bit_len` is related with size of range check table
+// the `number_of_limbs` is related with the number of advice column
 pub fn decompose_bigint_to_ubits(e: &BigUint, number_of_limbs: usize, bit_len: usize) -> Vec<Fp> {
     debug_assert!(bit_len <= 64);
 
@@ -55,11 +39,104 @@ pub fn decompose_bigint_to_ubits(e: &BigUint, number_of_limbs: usize, bit_len: u
             core::cmp::Ordering::Less => {
                 let mut limb = u64_digit;
                 u64_digit = e.next().unwrap_or(0);
-                limb |= (u64_digit & ((1 << (bit_len - rem)) - 1)) << rem; // *
+                limb |= (u64_digit & ((1 << (bit_len - rem)) - 1)) << rem;
                 u64_digit >>= bit_len - rem;
                 rem += 64 - bit_len;
                 Fp::from(limb)
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    // use halo2_proofs::halo2curves::ff::{PrimeField};
+
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn decompose_modulus() {
+        // bn254 modulus, r = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
+        let max_minus_one = Fp::from_raw([
+            0x43e1f593ef000000,
+            0x2833e84879b97091,
+            0xb85045b68181585d,
+            0x30644e72e131a029,
+        ]);
+
+        let biguint_max = fp_to_big_uint(max_minus_one);
+        let decomposed_max = decompose_bigint_to_ubits(&biguint_max, 22, 12);
+
+        let expected_values = [
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "0x00000000000000000000000000000000000000000000000000000000000003ef",
+            "0x0000000000000000000000000000000000000000000000000000000000000f59",
+            "0x00000000000000000000000000000000000000000000000000000000000003e1",
+            "0x0000000000000000000000000000000000000000000000000000000000000914",
+            "0x0000000000000000000000000000000000000000000000000000000000000970",
+            "0x000000000000000000000000000000000000000000000000000000000000079b",
+            "0x0000000000000000000000000000000000000000000000000000000000000848",
+            "0x000000000000000000000000000000000000000000000000000000000000033e",
+            "0x0000000000000000000000000000000000000000000000000000000000000d28",
+            "0x0000000000000000000000000000000000000000000000000000000000000585",
+            "0x0000000000000000000000000000000000000000000000000000000000000181",
+            "0x0000000000000000000000000000000000000000000000000000000000000b68",
+            "0x0000000000000000000000000000000000000000000000000000000000000045",
+            "0x0000000000000000000000000000000000000000000000000000000000000b85",
+            "0x0000000000000000000000000000000000000000000000000000000000000029",
+            "0x000000000000000000000000000000000000000000000000000000000000031a",
+            "0x00000000000000000000000000000000000000000000000000000000000002e1",
+            "0x00000000000000000000000000000000000000000000000000000000000004e7",
+            "0x0000000000000000000000000000000000000000000000000000000000000064",
+            "0x0000000000000000000000000000000000000000000000000000000000000003",
+        ];
+
+        for (i, &expected) in expected_values.iter().enumerate() {
+            assert_eq!(format!("{:?}", decomposed_max[i]), expected);
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn decompose_250bits() {
+        // 1 << 251 = 0x800000000000000000000000000000000000000000000000000000000000000
+        //       -1 = 0x7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        let max_u250 = Fp::from_raw([
+            0xffffffffffffffff,
+            0xffffffffffffffff,
+            0xffffffffffffffff,
+            0x07ffffffffffffff,
+        ]);
+
+        let biguint_max_u250 = fp_to_big_uint(max_u250);
+        let decomposed = decompose_bigint_to_ubits(&biguint_max_u250, 10, 25);
+
+        let expected = "0x0000000000000000000000000000000000000000000000000000000001ffffff";
+        for value in decomposed.iter() {
+            assert_eq!(format!("{:?}", value), expected);
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn decompose_251bits() {
+        // 1 << 252 = 0x1000000000000000000000000000000000000000000000000000000000000000
+        //      - 1 = 0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        let max_u251 = Fp::from_raw([
+            0xffffffffffffffff,
+            0xffffffffffffffff,
+            0xffffffffffffffff,
+            0x0fffffffffffffff,
+        ]);
+
+        let biguint_max_u251 = fp_to_big_uint(max_u251);
+        let decomposed = decompose_bigint_to_ubits(&biguint_max_u251, 21, 12);
+
+        let expected = "0x0000000000000000000000000000000000000000000000000000000000000fff";
+        for value in decomposed.iter() {
+            assert_eq!(format!("{:?}", value), expected);
+        }
+    }
 }
