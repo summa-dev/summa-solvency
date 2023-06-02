@@ -5,8 +5,8 @@ use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
 
-const ACC_COLS: usize = 21;
-const MAX_BITS: u8 = 12;
+const ACC_COLS: usize = 31;
+const MAX_BITS: u8 = 8;
 const WIDTH: usize = 5;
 const RATE: usize = 4;
 const L: usize = 4;
