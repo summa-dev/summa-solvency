@@ -4,6 +4,14 @@ This repository contains the Halo2 circuit implementation for the Proof of Solve
 
 This library makes use of the [PSE Fork of Halo2](https://github.com/privacy-scaling-explorations/halo2).
 
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0, ([LICENSE-APACHE](./LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](./LICENSE-MIT) or http://opensource.org/licenses/MIT)
+at your option.
+
 ## Usage
 
 `cargo build`
