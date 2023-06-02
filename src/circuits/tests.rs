@@ -31,7 +31,7 @@ mod test {
                 circuit.assets_sum,
             ];
 
-            let valid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+            let valid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
 
             valid_prover.assert_satisfied();
         }
@@ -60,7 +60,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let valid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+        let valid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
 
         valid_prover.assert_satisfied();
     }
@@ -128,7 +128,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -138,9 +138,9 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 2 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 5).into(),
+                    column: (Any::advice(), 37).into(),
                     location: FailureLocation::InRegion {
-                        region: (16, "permute state").into(),
+                        region: (28, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -212,7 +212,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
@@ -221,9 +221,9 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 2 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 5).into(),
+                    column: (Any::advice(), 37).into(),
                     location: FailureLocation::InRegion {
-                        region: (16, "permute state").into(),
+                        region: (28, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -253,7 +253,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -298,7 +298,7 @@ mod test {
             assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
@@ -307,9 +307,9 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 2 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 5).into(),
+                    column: (Any::advice(), 37).into(),
                     location: FailureLocation::InRegion {
-                        region: (16, "permute state").into(),
+                        region: (28, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -340,7 +340,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -383,7 +383,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -401,9 +401,9 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 2 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 5).into(),
+                    column: (Any::advice(), 37).into(),
                     location: FailureLocation::InRegion {
-                        region: (16, "permute state").into(),
+                        region: (28, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -433,7 +433,7 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -443,9 +443,9 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 2 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 5).into(),
+                    column: (Any::advice(), 37).into(),
                     location: FailureLocation::InRegion {
-                        region: (16, "permute state").into(),
+                        region: (28, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -473,14 +473,14 @@ mod test {
             circuit.assets_sum,
         ];
 
-        let invalid_prover = MockProver::run(9, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![VerifyFailure::ConstraintNotSatisfied {
                 constraint: (
                     (
-                        7,
+                        8,
                         "verifies that `check` from current config equal to is_lt from LtChip"
                     )
                         .into(),
@@ -489,13 +489,13 @@ mod test {
                 )
                     .into(),
                 location: FailureLocation::InRegion {
-                    region: (18, "enforce sum to be less than total assets").into(),
+                    region: (34, "enforce sum to be less than total assets").into(),
                     offset: 0
                 },
                 cell_values: vec![
                     (((Any::advice(), 2).into(), 0).into(), "1".to_string()),
                     // The zero means that is not less than
-                    (((Any::advice(), 11).into(), 0).into(), "0".to_string())
+                    (((Any::advice(), 43).into(), 0).into(), "0".to_string())
                 ]
             }])
         );
