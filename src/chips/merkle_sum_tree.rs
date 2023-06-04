@@ -2,7 +2,6 @@ use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::spec_node::MySpec as PoseidonSpecNode;
 use crate::merkle_sum_tree::{R_L_NODE, WIDTH_NODE};
 use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
-use halo2_gadgets::utilities::FieldValue as fv;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
 
@@ -319,11 +318,8 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                     })
                     .collect::<Result<Vec<_>, _>>()?;
 
-                //Computing the left and right balances sum, element-wise:
-                let computed_sums = l2_vals
-                    .iter()
-                    .zip(r2_vals.iter())
-                    .map(|(a, b)| fv::value(a) + fv::value(b));
+                // Computing the left and right balances sum, element-wise:
+                let computed_sums = l2_vals.iter().zip(r2_vals.iter()).map(|(a, b)| *a + b);
 
                 // Now we can assign the sum results to the computed_sums cells.
                 let computed_sum_cells = computed_sums
