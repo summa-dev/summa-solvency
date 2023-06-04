@@ -2,7 +2,6 @@ use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::spec_node::MySpec as PoseidonSpecNode;
 use crate::merkle_sum_tree::{R_L_NODE, WIDTH_NODE};
 use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
-use halo2_gadgets::utilities::FieldValue;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
 
