@@ -23,18 +23,18 @@ pub fn instantiate_circuit<const MST_WIDTH: usize, const N_ASSETS: usize>(
     assets_sum: [Fp; N_ASSETS],
     proof: MerkleProof<N_ASSETS>,
 ) -> MerkleSumTreeCircuit<MST_WIDTH, N_ASSETS> {
+    let mut converted_balances: [Fp; N_ASSETS] = [Fp::default(); N_ASSETS];
+
+    for (index, balance) in proof.entry.balances().iter().enumerate() {
+        converted_balances[index] = big_int_to_fp(balance);
+    }
     MerkleSumTreeCircuit {
         leaf_hash: proof.entry.compute_leaf().hash,
-        leaf_balances: proof
-            .entry
-            .balances()
-            .iter()
-            .map(big_int_to_fp)
-            .collect::<Vec<_>>(),
+        leaf_balances: converted_balances,
         path_element_hashes: proof.sibling_hashes,
         path_element_balances: proof.sibling_sums,
         path_indices: proof.path_indices,
-        assets_sum: assets_sum.to_vec(),
+        assets_sum,
         root_hash: proof.root_hash,
     }
 }
@@ -44,11 +44,11 @@ pub fn instantiate_empty_circuit<const MST_WIDTH: usize, const N_ASSETS: usize>(
 ) -> MerkleSumTreeCircuit<MST_WIDTH, N_ASSETS> {
     MerkleSumTreeCircuit {
         leaf_hash: Fp::zero(),
-        leaf_balances: Vec::new(),
+        leaf_balances: [Fp::zero(); N_ASSETS],
         path_element_hashes: vec![Fp::zero(); levels],
         path_element_balances: vec![[Fp::zero(); N_ASSETS]; levels],
         path_indices: vec![Fp::zero(); levels],
-        assets_sum: vec![Fp::zero(); N_ASSETS],
+        assets_sum: [Fp::zero(); N_ASSETS],
         root_hash: Fp::zero(),
     }
 }
