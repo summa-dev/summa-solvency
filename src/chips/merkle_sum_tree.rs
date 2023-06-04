@@ -19,7 +19,7 @@ pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
     pub lt_selector: Selector,
     pub instance: Column<Instance>,
     pub poseidon_config: PoseidonConfig<WIDTH, RATE, L>,
-    pub lt_configs: Vec<LtConfig<Fp, 8>>,
+    pub lt_config: LtConfig<Fp, 8>,
 }
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeChip<const MST_WIDTH: usize, const N_ASSETS: usize> {
@@ -117,16 +117,13 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                 &advice_columns_poseidon_chip,
             );
 
-        // configure lt chips
-        let mut lt_configs = Vec::with_capacity(N_ASSETS);
-        for i in 0..N_ASSETS {
-            lt_configs.push(LtChip::configure(
-                meta,
-                |meta| meta.query_selector(lt_selector),
-                |meta| meta.query_advice(advice[i], Rotation::cur()),
-                |meta| meta.query_advice(advice[i + N_ASSETS], Rotation::cur()),
-            ));
-        }
+        // configure lt chip
+        let lt_config = LtChip::configure(
+            meta,
+            |meta| meta.query_selector(lt_selector),
+            |meta| meta.query_advice(advice[0], Rotation::cur()),
+            |meta: &mut VirtualCells<Fp>| meta.query_advice(advice[1], Rotation::cur()),
+        );
 
         let config = MerkleSumTreeConfig::<MST_WIDTH> {
             advice,
@@ -136,19 +133,17 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             lt_selector,
             instance,
             poseidon_config,
-            lt_configs,
+            lt_config,
         };
 
         meta.create_gate(
             "verifies that `check` from current config equal to is_lt from LtChip",
             |meta| {
-                (0..N_ASSETS)
-                    .map(|i| {
-                        let q_enable = meta.query_selector(lt_selector);
-                        let check = meta.query_advice(col_c, Rotation::cur());
-                        q_enable * (config.lt_configs[i].is_lt(meta, None) - check)
-                    })
-                    .collect::<Vec<_>>()
+                let q_enable = meta.query_selector(lt_selector);
+
+                let check = meta.query_advice(advice[2], Rotation::cur());
+
+                vec![q_enable * (config.lt_config.is_lt(meta, None) - check)]
             },
         );
 
@@ -391,63 +386,51 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         mut layouter: impl Layouter<Fp>,
         prev_computed_sum_cells: &[AssignedCell<Fp, Fp>],
     ) -> Result<(), Error> {
-        // Initiate chip config
-        let chips: Vec<LtChip<Fp, 8>> = (0..N_ASSETS)
-            .map(|i| LtChip::construct(self.config.lt_configs[i]))
-            .collect();
+        // Initiate lt chip
+        let chip = LtChip::construct(self.config.lt_config);
 
-        for chip in chips.iter() {
-            chip.load(&mut layouter)?;
-        }
+        // load lookup table
+        chip.load(&mut layouter)?;
 
-        layouter.assign_region(
-            || "enforce sum to be less than total assets",
-            |mut region| {
-                // First, copy the computed sums
-                let computed_sum_cells = prev_computed_sum_cells
-                    .iter()
-                    .enumerate()
-                    .map(|(i, x)| {
-                        x.copy_advice(
-                            || "copy computed sum",
-                            &mut region,
-                            self.config.advice[i],
-                            0,
-                        )
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
+        for (i, prev_computed_sum_cell) in prev_computed_sum_cells.iter().enumerate() {
+            layouter.assign_region(
+                || "enforce sum to be less than total assets",
+                |mut region| {
+                    // First, copy the computed sum
+                    let computed_sum_cell = prev_computed_sum_cell.copy_advice(
+                        || "copy computed sum",
+                        &mut region,
+                        self.config.advice[0],
+                        i,
+                    )?;
 
-                //Next, copy the total assets from instance columns
-                let total_assets_cells: Vec<AssignedCell<Fp, Fp>> = (0..N_ASSETS)
-                    .map(|i| {
-                        region.assign_advice_from_instance(
-                            || "copy total assets",
-                            self.config.instance,
-                            3 + i,
-                            self.config.advice[N_ASSETS + i],
-                            0,
-                        )
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
+                    //Next, copy the total assets from instance columns
+                    let total_assets_cell = region.assign_advice_from_instance(
+                        || "copy total assets",
+                        self.config.instance,
+                        3 + i,
+                        self.config.advice[1],
+                        i,
+                    )?;
 
-                // set check to be equal to 1
-                region.assign_advice(
-                    || "check",
-                    //"Column c" from the spec
-                    self.config.advice[self.config.advice.len() - 1],
-                    0,
-                    || Value::known(Fp::from(1)),
-                )?;
+                    // set check to be equal to 1
+                    region.assign_advice(
+                        || "check",
+                        //"Column c" from the spec
+                        self.config.advice[2],
+                        i,
+                        || Value::known(Fp::from(1)),
+                    )?;
 
-                // enable lt seletor
-                self.config.lt_selector.enable(&mut region, 0)?;
-                //Assign total assets and computed sum cells to the chip:
-                for i in 0..N_ASSETS {
-                    total_assets_cells[i]
+                    // enable lt seletor
+                    self.config.lt_selector.enable(&mut region, 0)?;
+
+                    //Assign total assets and computed sum cells to the chip:
+                    total_assets_cell
                         .value()
-                        .zip(computed_sum_cells[i].value())
+                        .zip(computed_sum_cell.value())
                         .map(|(total_assets, computed_sum)| {
-                            if let Err(e) = chips[i].assign(
+                            if let Err(e) = chip.assign(
                                 &mut region,
                                 0,
                                 computed_sum.to_owned(),
@@ -456,11 +439,11 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                                 println!("Error: {:?}", e);
                             };
                         });
-                }
 
-                Ok(())
-            },
-        )?;
+                    Ok(())
+                },
+            )?;
+        }
 
         Ok(())
     }
