@@ -6,6 +6,10 @@ use halo2_gadgets::utilities::FieldValue;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
 
+const WIDTH: usize = WIDTH_NODE;
+const RATE: usize = R_L_NODE;
+const L: usize = R_L_NODE;
+
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
     pub advice: [Column<Advice>; MST_WIDTH],
@@ -14,7 +18,7 @@ pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
     pub sum_selector: Selector,
     pub lt_selector: Selector,
     pub instance: Column<Instance>,
-    pub poseidon_config: PoseidonConfig<WIDTH_NODE, R_L_NODE, R_L_NODE>,
+    pub poseidon_config: PoseidonConfig<WIDTH, RATE, L>,
     pub lt_configs: Vec<LtConfig<Fp, 8>>,
 }
 #[derive(Debug, Clone)]
@@ -103,14 +107,14 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                 .collect::<Vec<_>>()
         });
 
-        let hash_inputs = (0..WIDTH_NODE)
+        let advice_columns_poseidon_chip = (0..WIDTH_NODE)
             .map(|_| meta.advice_column())
             .collect::<Vec<_>>();
 
         let poseidon_config =
             PoseidonChip::<PoseidonSpecNode, WIDTH_NODE, R_L_NODE, R_L_NODE>::configure(
                 meta,
-                &hash_inputs,
+                &advice_columns_poseidon_chip,
             );
 
         // configure lt chips
@@ -373,8 +377,10 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             Err(_) => panic!("Failed to convert Vec to Array"),
         };
 
-        let computed_hash =
-            poseidon_chip.hash(layouter.namespace(|| "hash four child nodes"), hash_input)?;
+        let computed_hash = poseidon_chip.hash(
+            layouter.namespace(|| format!("hash {} child nodes", 2 * (1 + N_ASSETS))),
+            hash_input,
+        )?;
 
         Ok((computed_hash, computed_sum_cells))
     }
