@@ -48,7 +48,7 @@ pub fn build_merkle_tree_from_entries(
     Ok(root)
 }
 
-fn build_leaves_level(entries: &[Entry], tree:  &mut [Vec<Node>]) {
+fn build_leaves_level(entries: &[Entry], tree: &mut [Vec<Node>]) {
     let leaves_building = start_timer!(|| "compute leaves");
     // Compute the leaves in parallel
     let mut handles = vec![];

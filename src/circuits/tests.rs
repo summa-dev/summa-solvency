@@ -138,7 +138,7 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 2 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 37).into(),
+                    column: (Any::advice(), 38).into(),
                     location: FailureLocation::InRegion {
                         region: (28, "permute state").into(),
                         offset: 38
@@ -221,7 +221,7 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 2 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 37).into(),
+                    column: (Any::advice(), 38).into(),
                     location: FailureLocation::InRegion {
                         region: (28, "permute state").into(),
                         offset: 38
@@ -307,7 +307,7 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 2 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 37).into(),
+                    column: (Any::advice(), 38).into(),
                     location: FailureLocation::InRegion {
                         region: (28, "permute state").into(),
                         offset: 38
@@ -401,7 +401,7 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 2 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 37).into(),
+                    column: (Any::advice(), 38).into(),
                     location: FailureLocation::InRegion {
                         region: (28, "permute state").into(),
                         offset: 38
@@ -443,7 +443,7 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 2 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 37).into(),
+                    column: (Any::advice(), 38).into(),
                     location: FailureLocation::InRegion {
                         region: (28, "permute state").into(),
                         offset: 38
