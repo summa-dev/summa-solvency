@@ -140,7 +140,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 38).into(),
                     location: FailureLocation::InRegion {
-                        region: (28, "permute state").into(),
+                        region: (25, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -223,7 +223,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 38).into(),
                     location: FailureLocation::InRegion {
-                        region: (28, "permute state").into(),
+                        region: (25, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -309,7 +309,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 38).into(),
                     location: FailureLocation::InRegion {
-                        region: (28, "permute state").into(),
+                        region: (25, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -403,7 +403,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 38).into(),
                     location: FailureLocation::InRegion {
-                        region: (28, "permute state").into(),
+                        region: (25, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -445,7 +445,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 38).into(),
                     location: FailureLocation::InRegion {
-                        region: (28, "permute state").into(),
+                        region: (25, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -489,7 +489,7 @@ mod test {
                 )
                     .into(),
                 location: FailureLocation::InRegion {
-                    region: (34, "enforce sum to be less than total assets").into(),
+                    region: (30, "enforce sum to be less than total assets").into(),
                     offset: 0
                 },
                 cell_values: vec![

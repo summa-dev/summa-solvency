@@ -180,7 +180,7 @@ mod tests {
         };
         let invalid_prover = MockProver::run(k, &circuit, vec![]).unwrap();
 
-        fn gen_errors(region_num: usize, fisrt_advice: &str, last_advice: &str) -> VerifyFailure {
+        fn gen_errors(region_num: usize, first_advice: &str, last_advice: &str) -> VerifyFailure {
             VerifyFailure::ConstraintNotSatisfied {
                 constraint: (
                     (0, "equality check between decomposed_value and value").into(),
@@ -195,7 +195,7 @@ mod tests {
                 cell_values: vec![
                     (
                         ((Any::advice(), 0).into(), 0).into(),
-                        fisrt_advice.to_string(),
+                        first_advice.to_string(),
                     ),
                     (((Any::advice(), 1).into(), 0).into(), "0xff".to_string()),
                     (((Any::advice(), 2).into(), 0).into(), "0xff".to_string()),

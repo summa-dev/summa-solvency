@@ -315,10 +315,6 @@ impl MerkleSumTreeChip {
             layouter.namespace(|| "overflow check right balance"),
             right_balance.value().map(|x| x.to_owned()),
         )?;
-        overflow_chip.assign(
-            layouter.namespace(|| "overflow check computed sum"),
-            computed_sum_cell.value().map(|x| x.to_owned()),
-        )?;
 
         Ok((computed_hash, computed_sum_cell))
     }
