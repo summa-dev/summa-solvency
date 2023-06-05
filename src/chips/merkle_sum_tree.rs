@@ -101,9 +101,7 @@ impl MerkleSumTreeChip {
             vec![s * (left_balance + right_balance - computed_sum)]
         });
 
-        let hash_inputs = (0..WIDTH).map(|_| meta.advice_column()).collect::<Vec<_>>();
-
-        let poseidon_config = PoseidonChip::<Spec4, WIDTH, RATE, L>::configure(meta, hash_inputs);
+        let poseidon_config = PoseidonChip::<Spec4, WIDTH, RATE, L>::configure(meta);
 
         // configure lt chip
         let lt_config = LtChip::configure(
