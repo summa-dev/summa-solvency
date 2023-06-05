@@ -13,11 +13,13 @@ mod test {
     use num_bigint::ToBigInt;
     use rand::rngs::OsRng;
 
+    const LEVELS: usize = 4;
+
     #[test]
     fn test_valid_merkle_sum_tree() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -44,7 +46,7 @@ mod test {
 
         let assets_sum = big_int_to_fp(&assets_sum_big_int);
 
-        let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -66,7 +68,7 @@ mod test {
     fn test_valid_merkle_sum_tree_with_full_prover() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = MerkleSumTreeCircuit::init_empty(4);
+        let circuit = MerkleSumTreeCircuit::<LEVELS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
         let params = ParamsKZG::<Bn256>::setup(9, OsRng);
@@ -79,7 +81,7 @@ mod test {
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -104,7 +106,7 @@ mod test {
     fn test_invalid_root_hash() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -143,7 +145,7 @@ mod test {
     fn test_invalid_root_hash_with_full_prover() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = MerkleSumTreeCircuit::init_empty(4);
+        let circuit = MerkleSumTreeCircuit::<LEVELS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
         let params = ParamsKZG::<Bn256>::setup(9, OsRng);
@@ -154,7 +156,7 @@ mod test {
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -181,7 +183,7 @@ mod test {
     fn test_invalid_leaf_hash_as_witness() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let mut circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let mut circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -221,7 +223,7 @@ mod test {
     fn test_invalid_leaf_hash_as_instance() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -264,7 +266,7 @@ mod test {
 
         let user_balance = Fp::from(11888u64);
 
-        let mut circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let mut circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -304,7 +306,7 @@ mod test {
     fn test_invalid_leaf_balance_as_instance() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -345,7 +347,7 @@ mod test {
     fn test_non_binary_index() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let mut circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let mut circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -394,7 +396,7 @@ mod test {
     fn test_swapping_index() {
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let mut circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let mut circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -435,7 +437,7 @@ mod test {
     fn test_is_not_less_than() {
         let less_than_assets_sum = Fp::from(556861u64); // less than liabilities sum (556862)
 
-        let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             less_than_assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
@@ -792,13 +794,13 @@ mod test {
 
         let assets_sum = Fp::from(556863u64); // greater than liabilities sum (556862)
 
-        let circuit = MerkleSumTreeCircuit::init_from_assets_and_path(
+        let circuit = MerkleSumTreeCircuit::<LEVELS>::init_from_assets_and_path(
             assets_sum,
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
 
-        let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384))
+        let root = BitMapBackend::new("prints/merkle-sum-tree-layout-2.png", (2048, 16384))
             .into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root

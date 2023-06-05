@@ -3,8 +3,8 @@ use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof, MerkleSumTree};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*};
 
-#[derive(Default, Clone)]
-pub struct MerkleSumTreeCircuit {
+#[derive(Clone)]
+pub struct MerkleSumTreeCircuit<const LEVELS: usize> {
     pub leaf_hash: Fp,
     pub leaf_balance: Fp,
     pub path_element_hashes: Vec<Fp>,
@@ -14,14 +14,14 @@ pub struct MerkleSumTreeCircuit {
     pub root_hash: Fp,
 }
 
-impl MerkleSumTreeCircuit {
-    pub fn init_empty(levels: usize) -> Self {
+impl<const LEVELS: usize> MerkleSumTreeCircuit<LEVELS> {
+    pub fn init_empty() -> Self {
         Self {
             leaf_hash: Fp::zero(),
             leaf_balance: Fp::zero(),
-            path_element_hashes: vec![Fp::zero(); levels],
-            path_element_balances: vec![Fp::zero(); levels],
-            path_indices: vec![Fp::zero(); levels],
+            path_element_hashes: vec![Fp::zero(); LEVELS],
+            path_element_balances: vec![Fp::zero(); LEVELS],
+            path_indices: vec![Fp::zero(); LEVELS],
             assets_sum: Fp::zero(),
             root_hash: Fp::zero(),
         }
@@ -31,6 +31,10 @@ impl MerkleSumTreeCircuit {
         let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
 
         let proof: MerkleProof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        assert_eq!(proof.path_indices.len(), LEVELS);
+        assert_eq!(proof.sibling_hashes.len(), LEVELS);
+        assert_eq!(proof.sibling_sums.len(), LEVELS);
 
         Self {
             leaf_hash: proof.entry.compute_leaf().hash,
@@ -44,12 +48,12 @@ impl MerkleSumTreeCircuit {
     }
 }
 
-impl Circuit<Fp> for MerkleSumTreeCircuit {
+impl<const LEVELS: usize> Circuit<Fp> for MerkleSumTreeCircuit<LEVELS> {
     type Config = MerkleSumTreeConfig;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
-        Self::default()
+        Self::init_empty()
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
