@@ -40,6 +40,9 @@ impl MerkleSumTreeChip {
         let col_d = advice[3];
         let col_e = advice[4];
 
+        let constants = meta.fixed_column();
+        meta.enable_constant(constants);
+
         // create selectors
         let bool_selector = meta.selector();
         let swap_selector = meta.selector();
@@ -324,12 +327,11 @@ impl MerkleSumTreeChip {
                     0,
                 )?;
 
-                // set check to be equal to 1
-                region.assign_advice(
+                region.assign_advice_from_constant(
                     || "check",
                     self.config.advice[2],
                     0,
-                    || Value::known(Fp::from(1)),
+                    Fp::from(1),
                 )?;
 
                 // enable lt seletor
