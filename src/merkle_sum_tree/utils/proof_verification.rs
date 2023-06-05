@@ -4,14 +4,12 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
 pub fn verify_proof<const N_ASSETS: usize>(proof: &MerkleProof<N_ASSETS>) -> bool {
     let mut node = proof.entry.compute_leaf();
-    let mut balances: [Fp; N_ASSETS] = proof
+    let mut balances = proof
         .entry
         .balances()
         .iter()
         .map(big_int_to_fp)
-        .collect::<Vec<Fp>>()
-        .try_into()
-        .unwrap();
+        .collect::<Vec<Fp>>();
 
     for i in 0..proof.sibling_hashes.len() {
         let sibling_node = Node {

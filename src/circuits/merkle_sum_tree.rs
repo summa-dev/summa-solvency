@@ -2,14 +2,14 @@ use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*};
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct MerkleSumTreeCircuit<const MST_WIDTH: usize, const N_ASSETS: usize> {
     pub leaf_hash: Fp,
-    pub leaf_balances: [Fp; N_ASSETS],
+    pub leaf_balances: Vec<Fp>,
     pub path_element_hashes: Vec<Fp>,
     pub path_element_balances: Vec<[Fp; N_ASSETS]>,
     pub path_indices: Vec<Fp>,
-    pub assets_sum: [Fp; N_ASSETS],
+    pub assets_sum: Vec<Fp>,
     pub root_hash: Fp,
 }
 
@@ -20,15 +20,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> Circuit<Fp>
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
-        MerkleSumTreeCircuit::<MST_WIDTH, N_ASSETS> {
-            leaf_hash: self.leaf_hash,
-            leaf_balances: self.leaf_balances,
-            path_element_hashes: vec![Fp::zero(); self.path_element_hashes.len()],
-            path_element_balances: vec![[Fp::zero(); N_ASSETS]; self.path_element_balances.len()],
-            path_indices: vec![Fp::zero(); self.path_indices.len()],
-            assets_sum: [Fp::zero(); N_ASSETS],
-            root_hash: Fp::zero(),
-        }
+        Self::default()
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
