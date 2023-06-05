@@ -31,14 +31,10 @@ impl MerkleSumTreeChip {
 
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
-        advice: [Column<Advice>; 5],
         instance: Column<Instance>,
     ) -> MerkleSumTreeConfig {
-        let col_a = advice[0];
-        let col_b = advice[1];
-        let col_c = advice[2];
-        let col_d = advice[3];
-        let col_e = advice[4];
+        // create 5 advice columns
+        let advice = [(); 5].map(|_| meta.advice_column());
 
         let constants = meta.fixed_column();
         meta.enable_constant(constants);
@@ -49,16 +45,16 @@ impl MerkleSumTreeChip {
         let sum_selector = meta.selector();
         let lt_selector = meta.selector();
 
-        // enable equality for leaf_hash copy constraint with instance column (col_a)
-        // enable equality for balance_hash copy constraint with instance column (col_b)
-        // enable equality for copying left_hash, left_balance, right_hash, right_balance into poseidon_chip (col_a, col_b, col_c, col_d)
-        // enable equality for computed_sum copy constraint with instance column (col_e)
-        meta.enable_equality(col_a);
-        meta.enable_equality(col_b);
-        meta.enable_equality(col_c);
-        meta.enable_equality(col_d);
-        meta.enable_equality(col_e);
+        // enable equality for all advice columns
+        advice.iter().for_each(|col| meta.enable_equality(*col));
         meta.enable_equality(instance);
+
+        // name advice[0] as col_a and advice[1] as col_b
+        let col_a = advice[0];
+        let col_b = advice[1];
+        let col_c = advice[2];
+        let col_d = advice[3];
+        let col_e = advice[4];
 
         // Enforces that e is either a 0 or 1 when the bool selector is enabled
         // s * e * (1 - e) = 0
@@ -120,16 +116,13 @@ impl MerkleSumTreeChip {
             lt_config,
         };
 
-        meta.create_gate(
-            "is_lt is 1",
-            |meta| {
-                let q_enable = meta.query_selector(lt_selector);
+        meta.create_gate("is_lt is 1", |meta| {
+            let q_enable = meta.query_selector(lt_selector);
 
-                let check = meta.query_advice(col_c, Rotation::cur());
+            let check = meta.query_advice(col_c, Rotation::cur());
 
-                vec![q_enable * (config.lt_config.is_lt(meta, None) - check)]
-            },
-        );
+            vec![q_enable * (config.lt_config.is_lt(meta, None) - check)]
+        });
 
         config
     }

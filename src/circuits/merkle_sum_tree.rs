@@ -22,16 +22,9 @@ impl Circuit<Fp> for MerkleSumTreeCircuit {
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        // config columns for the merkle tree chip
-        let col_a = meta.advice_column();
-        let col_b = meta.advice_column();
-        let col_c = meta.advice_column();
-        let col_d = meta.advice_column();
-        let col_e = meta.advice_column();
-
         let instance = meta.instance_column();
 
-        MerkleSumTreeChip::configure(meta, [col_a, col_b, col_c, col_d, col_e], instance)
+        MerkleSumTreeChip::configure(meta, instance)
     }
 
     fn synthesize(
