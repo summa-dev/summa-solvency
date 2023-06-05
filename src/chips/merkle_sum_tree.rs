@@ -121,7 +121,7 @@ impl MerkleSumTreeChip {
         };
 
         meta.create_gate(
-            "verifies that `check` from current config equal to is_lt from LtChip",
+            "is_lt is 1",
             |meta| {
                 let q_enable = meta.query_selector(lt_selector);
 
