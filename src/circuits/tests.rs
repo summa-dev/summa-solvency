@@ -547,7 +547,7 @@ mod test {
         pub_input.extend(limbs_x);
         pub_input.extend(limbs_y);
 
-        let instance = vec![vec![], pub_input];
+        let instance = vec![pub_input];
 
         let circuit = EcdsaVerifyCircuit::init(public_key, r, s, msg_hash);
 
@@ -606,7 +606,7 @@ mod test {
         pub_input.extend(limbs_x);
         pub_input.extend(limbs_y);
 
-        let instance = vec![vec![], pub_input];
+        let instance = vec![pub_input];
 
         let circuit = EcdsaVerifyCircuit::init(public_key, r, s, msg_hash);
 
@@ -648,7 +648,7 @@ mod test {
         pub_input.extend(limbs_x);
         pub_input.extend(limbs_y);
 
-        let instance = vec![vec![], pub_input];
+        let instance = vec![pub_input];
 
         let circuit = EcdsaVerifyCircuit::init(public_key, r, invalid_s, msg_hash);
 
@@ -686,7 +686,7 @@ mod test {
         invalid_pub_input.extend(limbs_x);
         invalid_pub_input.extend(limbs_y);
 
-        let instance = vec![vec![], invalid_pub_input];
+        let instance = vec![invalid_pub_input];
 
         let circuit = EcdsaVerifyCircuit::init(public_key, r, s, msg_hash);
 
@@ -752,35 +752,35 @@ mod test {
                     }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 1).into(),
+                    column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 0 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 1).into(),
+                    column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 1).into(),
+                    column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 2 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 1).into(),
+                    column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 3 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 1).into(),
+                    column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 4 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 1).into(),
+                    column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 5 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 1).into(),
+                    column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 6 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 1).into(),
+                    column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 7 }
                 },
             ])

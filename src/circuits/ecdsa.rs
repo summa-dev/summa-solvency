@@ -18,7 +18,6 @@ const NUMBER_OF_LIMBS: usize = 4;
 #[derive(Debug, Clone)]
 pub struct EcdsaConfigWithInstance {
     pub ecdsa_config: EcdsaConfig,
-    pub instance: Column<Instance>,
 }
 
 impl EcdsaConfigWithInstance {
@@ -32,8 +31,16 @@ impl EcdsaConfigWithInstance {
     ) -> Result<(), Error> {
         // loop over pk_x_limbs and pk_y_limbs and expose them to instance column
         for i in 0..4 {
-            layouter.constrain_instance(pk_x_limbs[i].cell(), self.instance, x_row_start + i)?;
-            layouter.constrain_instance(pk_y_limbs[i].cell(), self.instance, y_row_start + i)?;
+            layouter.constrain_instance(
+                pk_x_limbs[i].cell(),
+                self.ecdsa_config.main_gate_config.instance,
+                x_row_start + i,
+            )?;
+            layouter.constrain_instance(
+                pk_y_limbs[i].cell(),
+                self.ecdsa_config.main_gate_config.instance,
+                y_row_start + i,
+            )?;
         }
 
         Ok(())
@@ -96,16 +103,9 @@ impl Circuit<Fp> for EcdsaVerifyCircuit {
             overflow_bit_lens,
         );
 
-        let instance = meta.instance_column();
-
-        meta.enable_equality(instance);
-
         let ecdsa_config = EcdsaConfig::new(range_config, main_gate_config);
 
-        EcdsaConfigWithInstance {
-            ecdsa_config,
-            instance,
-        }
+        EcdsaConfigWithInstance { ecdsa_config }
     }
 
     fn synthesize(
