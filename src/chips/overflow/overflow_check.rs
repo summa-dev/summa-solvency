@@ -39,14 +39,36 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
                     .map(|i: usize| meta.query_advice(decomposed_values[i], Rotation::cur()))
                     .collect::<Vec<_>>();
 
+                // multiplier by position of accumulator column
+                // e.g. for ACC_COLS = 3, multiplier = [2^(2*MAX_BITS), 2^MAX_BITS, 1]
+                let multiplier = |pos: usize| {
+                    let mut shift_chunk = Fp::one();
+                    for _ in 1..pos {
+                        shift_chunk *= Fp::from(1 << MAX_BITS);
+                    }
+                    Expression::Constant(shift_chunk)
+                };
+
+                // We are performing an important calculation here to check for overflow in finite field numbers.
+                // A single range table is utilized which applies `1 << 8` to decompose the columns for range checking.
+                //
+                // Consider the example where ACC_COLS = 3, the decomposed values would be represented as follows:
+                //
+                // |     | a_0 (value) | a_1  | a_2  | a_3  |
+                // |-----|-------------|------|------|------|
+                // |  x  | 0xffffff    | 0xff | 0xff | 0xff |
+                //
+                // Here, each column `a_n` represents a decomposed value.
+                // So, decomposed_value_sum would be calculated as a_0 * 2^16 + a_1 * 2^8 + a_2 * 1.
+                //
+                // During the iteration process in fold, the following would be the values of `acc`:
+                // iteration 0: acc = decomposed_value_vec[1] * ( 1 << 8 ) + decomposed_value_vec[2]
+                // iteration 1: acc = decomposed_value_vec[0] * ( 1 << 16 ) + decomposed_value_vec[1] * ( 1 << 8 ) + decomposed_value_vec[2]
                 let decomposed_value_sum = (0..=ACC_COLS - 2).fold(
                     decomposed_value_vec[ACC_COLS - 1].clone(),
                     |acc, i| {
-                        let mut shift_chunk = Fp::one();
-                        for _ in 1..(ACC_COLS - i) {
-                            shift_chunk *= Fp::from(1 << MAX_BITS);
-                        }
-                        acc + (decomposed_value_vec[i].clone() * Expression::Constant(shift_chunk))
+                        let cursor = ACC_COLS - i;
+                        acc + (decomposed_value_vec[i].clone() * multiplier(cursor))
                     },
                 );
 
