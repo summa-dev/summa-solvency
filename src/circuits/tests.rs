@@ -484,7 +484,6 @@ mod test {
                     offset: 0
                 },
                 cell_values: vec![
-                    (((Any::advice(), 2).into(), 0).into(), "1".to_string()),
                     // The zero means that is not less than
                     (((Any::advice(), 11).into(), 0).into(), "0".to_string())
                 ]

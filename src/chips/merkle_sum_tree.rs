@@ -36,9 +36,6 @@ impl MerkleSumTreeChip {
         // create 5 advice columns
         let advice = [(); 5].map(|_| meta.advice_column());
 
-        let constants = meta.fixed_column();
-        meta.enable_constant(constants);
-
         // create selectors
         let bool_selector = meta.selector();
         let swap_selector = meta.selector();
@@ -119,9 +116,9 @@ impl MerkleSumTreeChip {
         meta.create_gate("is_lt is 1", |meta| {
             let q_enable = meta.query_selector(lt_selector);
 
-            let check = meta.query_advice(col_c, Rotation::cur());
-
-            vec![q_enable * (config.lt_config.is_lt(meta, None) - check)]
+            vec![
+                q_enable * (config.lt_config.is_lt(meta, None) - Expression::Constant(Fp::from(1))),
+            ]
         });
 
         config
@@ -318,13 +315,6 @@ impl MerkleSumTreeChip {
                     3,
                     self.config.advice[1],
                     0,
-                )?;
-
-                region.assign_advice_from_constant(
-                    || "check",
-                    self.config.advice[2],
-                    0,
-                    Fp::from(1),
                 )?;
 
                 // enable lt seletor
