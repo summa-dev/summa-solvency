@@ -56,15 +56,16 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
                 //
                 // |     | a_0 (value) | a_1  | a_2  | a_3  |
                 // |-----|-------------|------|------|------|
-                // |  x  | 0xffffff    | 0xff | 0xff | 0xff |
+                // |  x  | 0x1f2f3f    | 0x1f | 0x2f | 0x3f |
                 //
                 // Here, each column `a_n` represents a decomposed value.
-                // So, decomposed_value_sum would be calculated as a_0 * 2^16 + a_1 * 2^8 + a_2 * 1.
+                // So, decomposed_value_sum would be calculated as a_1 * 2^16 + a_2 * 2^8 + a_3 * 1.
                 //
                 // During the iteration process in fold, the following would be the values of `acc`:
                 // iteration 0: acc = decomposed_value_vec[1] * ( 1 << 8 ) + decomposed_value_vec[2]
                 // iteration 1: acc = decomposed_value_vec[0] * ( 1 << 16 ) + decomposed_value_vec[1] * ( 1 << 8 ) + decomposed_value_vec[2]
                 let decomposed_value_sum = (0..=ACC_COLS - 2).fold(
+                    // decomposed value at right-most advice columnis is least significant byte
                     decomposed_value_vec[ACC_COLS - 1].clone(),
                     |acc, i| {
                         let cursor = ACC_COLS - i;
