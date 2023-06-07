@@ -2,19 +2,21 @@ use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*};
 
-#[derive(Default, Clone)]
-pub struct MerkleSumTreeCircuit {
+#[derive(Clone, Default)]
+pub struct MerkleSumTreeCircuit<const MST_WIDTH: usize, const N_ASSETS: usize> {
     pub leaf_hash: Fp,
-    pub leaf_balance: Fp,
+    pub leaf_balances: Vec<Fp>,
     pub path_element_hashes: Vec<Fp>,
-    pub path_element_balances: Vec<Fp>,
+    pub path_element_balances: Vec<[Fp; N_ASSETS]>,
     pub path_indices: Vec<Fp>,
-    pub assets_sum: Fp,
+    pub assets_sum: Vec<Fp>,
     pub root_hash: Fp,
 }
 
-impl Circuit<Fp> for MerkleSumTreeCircuit {
-    type Config = MerkleSumTreeConfig;
+impl<const MST_WIDTH: usize, const N_ASSETS: usize> Circuit<Fp>
+    for MerkleSumTreeCircuit<MST_WIDTH, N_ASSETS>
+{
+    type Config = MerkleSumTreeConfig<MST_WIDTH>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -22,16 +24,19 @@ impl Circuit<Fp> for MerkleSumTreeCircuit {
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        // config columns for the merkle tree chip
-        let col_a = meta.advice_column();
-        let col_b = meta.advice_column();
-        let col_c = meta.advice_column();
-        let col_d = meta.advice_column();
-        let col_e = meta.advice_column();
+        // Allocate MST_WIDTH of advice columns for the MerkleSumTreeChip
+        let mut advice_cols: Vec<Column<Advice>> = Vec::with_capacity(MST_WIDTH);
+        for _ in 0..MST_WIDTH {
+            advice_cols.push(meta.advice_column());
+        }
 
         let instance = meta.instance_column();
 
-        MerkleSumTreeChip::configure(meta, [col_a, col_b, col_c, col_d, col_e], instance)
+        MerkleSumTreeChip::<MST_WIDTH, N_ASSETS>::configure(
+            meta,
+            advice_cols.try_into().unwrap(),
+            instance,
+        )
     }
 
     fn synthesize(
@@ -40,25 +45,28 @@ impl Circuit<Fp> for MerkleSumTreeCircuit {
         mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
         let chip = MerkleSumTreeChip::construct(config);
-        let (leaf_hash, leaf_balance) = chip.assing_leaf_hash_and_balance(
+        let (leaf_hash, leaf_balances) = chip.assign_leaf_hash_and_balances(
             layouter.namespace(|| "assign leaf"),
             self.leaf_hash,
-            self.leaf_balance,
+            &self.leaf_balances,
         )?;
 
         chip.expose_public(layouter.namespace(|| "public leaf hash"), &leaf_hash, 0)?;
-        chip.expose_public(
-            layouter.namespace(|| "public leaf balance"),
-            &leaf_balance,
-            1,
-        )?;
+
+        for (i, asset_balance) in leaf_balances.iter().enumerate() {
+            chip.expose_public(
+                layouter.namespace(|| "public leaf balance"),
+                asset_balance,
+                1 + i,
+            )?;
+        }
 
         // apply it for level 0 of the merkle tree
         // node cells passed as inputs are the leaf_hash cell and the leaf_balance cell
         let (mut next_hash, mut next_sum) = chip.merkle_prove_layer(
             layouter.namespace(|| format!("level {} merkle proof", 0)),
             &leaf_hash,
-            &leaf_balance,
+            &leaf_balances,
             self.path_element_hashes[0],
             self.path_element_balances[0],
             self.path_indices[0],
@@ -80,7 +88,11 @@ impl Circuit<Fp> for MerkleSumTreeCircuit {
         // enforce computed sum to be less than the assets sum
         chip.enforce_less_than(layouter.namespace(|| "enforce less than"), &next_sum)?;
 
-        chip.expose_public(layouter.namespace(|| "public root"), &next_hash, 2)?;
+        chip.expose_public(
+            layouter.namespace(|| "public root"),
+            &next_hash,
+            1 + N_ASSETS,
+        )?;
         Ok(())
     }
 }

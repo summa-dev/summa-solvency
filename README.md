@@ -14,8 +14,19 @@ at your option.
 
 ## Usage
 
-`cargo build`
-`cargo test --features dev-graph -- --nocapture`
+If [circuit parameters](src/merkle_sum_tree/params.rs) do not satisfy your needs, modify the [generator script](circuit_parameters_gen/generate_params.py) accordingly and then run it by executing
+
+```
+cd circuit_parameters_gen/
+python3 generate_params.py
+```
+
+To build and test the circuit, execute
+
+```
+cargo build
+cargo test --features dev-graph -- --nocapture
+```
 
 ## Chips
 
