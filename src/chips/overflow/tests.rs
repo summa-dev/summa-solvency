@@ -1,6 +1,7 @@
 use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
+
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
 #[derive(Debug, Clone)]
 pub struct AddConfig {
@@ -137,13 +138,13 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> Circuit<Fp>
         overflow_chip.load(&mut layouter)?;
 
         // check overflow
-        overflow_chip.assign(layouter.namespace(|| "checking overflow value a"), a_cell)?;
-        overflow_chip.assign(layouter.namespace(|| "checking overflow value b"), b_cell)?;
+        overflow_chip.assign(layouter.namespace(|| "checking overflow value a"), &a_cell)?;
+        overflow_chip.assign(layouter.namespace(|| "checking overflow value b"), &b_cell)?;
 
         // to perform a + b as part of test
         overflow_chip.assign(
             layouter.namespace(|| "checking overflow value a + b"),
-            c_cell,
+            &c_cell,
         )?;
 
         Ok(())

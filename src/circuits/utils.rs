@@ -19,26 +19,36 @@ use halo2_proofs::{
 use rand::rngs::OsRng;
 use std::fs::File;
 
-pub fn instantiate_circuit(assets_sum: Fp, proof: MerkleProof) -> MerkleSumTreeCircuit {
+pub fn instantiate_circuit<const MST_WIDTH: usize, const N_ASSETS: usize>(
+    assets_sum: [Fp; N_ASSETS],
+    proof: MerkleProof<N_ASSETS>,
+) -> MerkleSumTreeCircuit<MST_WIDTH, N_ASSETS> {
     MerkleSumTreeCircuit {
         leaf_hash: proof.entry.compute_leaf().hash,
-        leaf_balance: big_int_to_fp(proof.entry.balance()),
+        leaf_balances: proof
+            .entry
+            .balances()
+            .iter()
+            .map(big_int_to_fp)
+            .collect::<Vec<_>>(),
         path_element_hashes: proof.sibling_hashes,
         path_element_balances: proof.sibling_sums,
         path_indices: proof.path_indices,
-        assets_sum,
+        assets_sum: assets_sum.to_vec(),
         root_hash: proof.root_hash,
     }
 }
 
-pub fn instantiate_empty_circuit(levels: usize) -> MerkleSumTreeCircuit {
+pub fn instantiate_empty_circuit<const MST_WIDTH: usize, const N_ASSETS: usize>(
+    levels: usize,
+) -> MerkleSumTreeCircuit<MST_WIDTH, N_ASSETS> {
     MerkleSumTreeCircuit {
         leaf_hash: Fp::zero(),
-        leaf_balance: Fp::zero(),
+        leaf_balances: Vec::new(),
         path_element_hashes: vec![Fp::zero(); levels],
-        path_element_balances: vec![Fp::zero(); levels],
+        path_element_balances: vec![[Fp::zero(); N_ASSETS]; levels],
         path_indices: vec![Fp::zero(); levels],
-        assets_sum: Fp::zero(),
+        assets_sum: vec![Fp::zero(); N_ASSETS],
         root_hash: Fp::zero(),
     }
 }

@@ -10,10 +10,10 @@ use summa_solvency::{
         full_prover, full_verifier, generate_setup_params, instantiate_circuit,
         instantiate_empty_circuit,
     },
-    merkle_sum_tree::MerkleSumTree,
+    merkle_sum_tree::{MerkleSumTree, MST_WIDTH, N_ASSETS},
 };
 
-const MIN_POWER: u32 = 4;
+const MIN_POWER: u32 = 5;
 const MAX_POWER: u32 = 27;
 const SAMPLE_SIZE: usize = 10;
 
@@ -26,7 +26,7 @@ fn build_mstree_benchmark(_c: &mut Criterion) {
         let bench_name = format!("build merkle sum tree for 2 power of {} entries", i);
         criterion.bench_function(&bench_name, |b| {
             b.iter(|| {
-                MerkleSumTree::new(&csv_file).unwrap();
+                MerkleSumTree::<N_ASSETS>::new(&csv_file).unwrap();
             })
         });
     }
@@ -41,8 +41,11 @@ fn verification_key_gen_benchmark(_c: &mut Criterion) {
         let bench_name = format!("gen verification key for 2 power of {} entries", i);
         criterion.bench_function(&bench_name, |b| {
             b.iter(|| {
-                keygen_vk(&params, &instantiate_empty_circuit(i.try_into().unwrap()))
-                    .expect("vk generation should not fail");
+                keygen_vk(
+                    &params,
+                    &instantiate_empty_circuit::<MST_WIDTH, N_ASSETS>(i.try_into().unwrap()),
+                )
+                .expect("vk generation should not fail");
             })
         });
     }
@@ -54,15 +57,18 @@ fn proving_key_gen_benchmark(_c: &mut Criterion) {
     for i in MIN_POWER..=MAX_POWER {
         let params: ParamsKZG<Bn256> = generate_setup_params(i.try_into().unwrap());
 
-        let vk = keygen_vk(&params, &instantiate_empty_circuit(i.try_into().unwrap()))
-            .expect("vk generation should not fail");
+        let vk = keygen_vk(
+            &params,
+            &instantiate_empty_circuit::<MST_WIDTH, N_ASSETS>(i.try_into().unwrap()),
+        )
+        .expect("vk generation should not fail");
         let bench_name = format!("gen proving key for 2 power of {} entries", i);
         criterion.bench_function(&bench_name, |b| {
             b.iter(|| {
                 keygen_pk(
                     &params,
                     vk.clone(),
-                    &instantiate_empty_circuit(i.try_into().unwrap()),
+                    &instantiate_empty_circuit::<MST_WIDTH, N_ASSETS>(i.try_into().unwrap()),
                 )
                 .expect("pk generation should not fail");
             })
@@ -74,7 +80,7 @@ fn generate_zk_proof_benchmark(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
     for i in MIN_POWER..=MAX_POWER {
-        let circuit = instantiate_empty_circuit(i.try_into().unwrap());
+        let circuit = instantiate_empty_circuit::<MST_WIDTH, N_ASSETS>(i.try_into().unwrap());
 
         let params: ParamsKZG<Bn256> = generate_setup_params(i.try_into().unwrap());
 
@@ -88,18 +94,17 @@ fn generate_zk_proof_benchmark(_c: &mut Criterion) {
         let user_index = 0;
 
         let mt_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
-
-        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1 in order to make the proof valid
+        // assets_sum are defined as liabilities_sum + 1 in order to make the proof valid
+        let assets_sum: [Fp; N_ASSETS] =
+            merkle_sum_tree.root().balances.map(|x| x + Fp::from(1u64));
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = instantiate_circuit(assets_sum, mt_proof);
+        let circuit = instantiate_circuit::<MST_WIDTH, N_ASSETS>(assets_sum, mt_proof);
 
-        let public_input = vec![
-            circuit.leaf_hash,
-            circuit.leaf_balance,
-            circuit.root_hash,
-            circuit.assets_sum,
-        ];
+        let mut public_input = vec![circuit.leaf_hash];
+        public_input.extend(&circuit.leaf_balances);
+        public_input.push(circuit.root_hash);
+        public_input.extend(&circuit.assets_sum);
 
         let bench_name = format!("generate zk proof - tree of 2 power of {} entries", i);
         criterion.bench_function(&bench_name, |b| {
@@ -114,7 +119,7 @@ fn verify_zk_proof_benchmark(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
     for i in MIN_POWER..=MAX_POWER {
-        let circuit = instantiate_empty_circuit(i.try_into().unwrap());
+        let circuit = instantiate_empty_circuit::<MST_WIDTH, N_ASSETS>(i.try_into().unwrap());
 
         let params: ParamsKZG<Bn256> = generate_setup_params(i.try_into().unwrap());
 
@@ -129,17 +134,17 @@ fn verify_zk_proof_benchmark(_c: &mut Criterion) {
 
         let mt_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
-        let assets_sum = merkle_sum_tree.root().balance + Fp::from(1u64); // assets_sum are defined as liabilities_sum + 1 in order to make the proof valid
+        // assets_sum are defined as liabilities_sum + 1 in order to make the proof valid
+        let assets_sum: [Fp; N_ASSETS] =
+            merkle_sum_tree.root().balances.map(|x| x + Fp::from(1u64));
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = instantiate_circuit(assets_sum, mt_proof);
+        let circuit = instantiate_circuit::<MST_WIDTH, N_ASSETS>(assets_sum, mt_proof);
 
-        let public_input = vec![
-            circuit.leaf_hash,
-            circuit.leaf_balance,
-            circuit.root_hash,
-            circuit.assets_sum,
-        ];
+        let mut public_input = vec![circuit.leaf_hash];
+        public_input.extend(&circuit.leaf_balances);
+        public_input.push(circuit.root_hash);
+        public_input.extend(&circuit.assets_sum);
 
         let proof = full_prover(&params, &pk, circuit, &public_input);
 

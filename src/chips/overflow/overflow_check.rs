@@ -98,7 +98,7 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
     pub fn assign(
         &self,
         mut layouter: impl Layouter<Fp>,
-        value: AssignedCell<Fp, Fp>,
+        value: &AssignedCell<Fp, Fp>,
     ) -> Result<(), Error> {
         layouter.assign_region(
             || "assign decomposed values",
