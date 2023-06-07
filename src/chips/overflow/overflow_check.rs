@@ -97,7 +97,7 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
     pub fn assign(
         &self,
         mut layouter: impl Layouter<Fp>,
-        update_value: Value<Fp>,
+        value: AssignedCell<Fp, Fp>,
     ) -> Result<(), Error> {
         layouter.assign_region(
             || "assign decomposed values",
@@ -106,11 +106,11 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
                 self.config.selector.enable(&mut region, 0)?;
 
                 // Assign input value to the cell inside the region
-                region.assign_advice(|| "assign value", self.config.a, 0, || update_value)?;
+                let _ = value.copy_advice(|| "assign value", &mut region, self.config.a, 0);
 
                 // Just used helper function for decomposing. In other halo2 application used functions based on Field.
                 let decomposed_values: Vec<Fp> = decompose_bigint_to_ubits(
-                    &value_fp_to_big_uint(update_value),
+                    &value_fp_to_big_uint(value.value().map(|x| x.to_owned())),
                     ACC_COLS,
                     MAX_BITS as usize,
                 ) as Vec<Fp>;
