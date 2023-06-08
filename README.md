@@ -4,10 +4,29 @@ This repository contains the Halo2 circuit implementation for the Proof of Solve
 
 This library makes use of the [PSE Fork of Halo2](https://github.com/privacy-scaling-explorations/halo2).
 
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0, ([LICENSE-APACHE](./LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](./LICENSE-MIT) or http://opensource.org/licenses/MIT)
+at your option.
+
 ## Usage
 
-`cargo build`
-`cargo test --features dev-graph -- --nocapture`
+If [circuit parameters](src/merkle_sum_tree/params.rs) do not satisfy your needs, modify the [generator script](circuit_parameters_gen/generate_params.py) accordingly and then run it by executing
+
+```
+cd circuit_parameters_gen/
+python3 generate_params.py
+```
+
+To build and test the circuit, execute
+
+```
+cargo build
+cargo test --features dev-graph -- --nocapture
+```
 
 ## Chips
 
@@ -73,7 +92,7 @@ For the level 0 of the tree:
 
 | a                | b                     | c               |    d              |   e        |  bool_selector | swap_selector |  sum_selector | lt_selector
 | --               | -                     | --              |   ---             |  ---       |    --          | ---           |  ---          | ---
-| leaf_hash        | leaf_balance          | element_hash    |element_balance    | index      |        1       | 1             |  0            | 0
+| leaf_hash        | leaf_balance          | element_hash    |element_balance    | index      |     1          | 1             |  0            | 0
 | input_left_hash  | input_left_balance    | input_right_hash|input_right_balance|computed_sum|     0          | 0             |  1            | 0
 
 At row 0, we assign the leaf_hash, the leaf_balance, the element_hash (from `path_element_hashes`), the element_balance (from `path_element_balances`) and the bit (from `path_indices`). At this row we turn on `bool_selector` and `swap_selector`.
@@ -81,13 +100,13 @@ At row 0, we assign the leaf_hash, the leaf_balance, the element_hash (from `pat
 At row 1, we assign the input_left_hash, the input_right_balance, the input_right_hash, the input_right_balance and the digest. 
 At this row we activate the `poseidon_chip` and call the `hash` function on that by passing as input cells `[input_left_hash, input_left_balance, input_right_hash, input_right_balance]`. This function will return the assigned cell containing the `computed_hash`.
 
-The chip contains 4 custom gates: 
+The chip contains 5 custom gates: 
 
-- If the `bool_selector` is on, checks that the value inside the c column is either 0 or 1
+- If the `bool_selector` is on, checks that the value inside the e column is either 0 or 1
 - If the `swap_selector` is on, checks that the swap on the next row is performed correctly according to the `bit`
 - If the `sum_selector` is on, checks that the sum between the `input_left_balance` and the `input_right_balance` is equal to the `computed_sum`
-- If the `lt_selector` is on activates the lt chip and verifies the `check` from the current config is equal to the `lt` from the lt chip. Note that the `check` of the chip is set to constant 1.
-- checks that the `computed_hash` is equal to the hash of the `input_left_hash`, the `input_left_balance`, the `input_right_hash` and the `input_right_balance`. This hashing is enabled by the `poseidon_chip`.
+- If the `lt_selector` is on, checks that the value in column e is less than a value passed as part of the instance column.
+- Checks that the `computed_hash` is equal to the hash of the `input_left_hash`, the `input_left_balance`, the `input_right_hash` and the `input_right_balance`. This hashing is enabled by the `poseidon_chip`.
 
 For the other levels of the tree:
 
@@ -130,7 +149,9 @@ The benchmarking included the following areas:
 In order to run the benchmarking, we provide a set of dummy `username, balance` entries formatted in csv files. The csv files can be downloaded as follows 
 
 ``` 
-cd benches/csv
+cd benches
+mkdir csv
+cd csv 
 wget https://csv-files-summa.s3.eu-west-1.amazonaws.com/csv/csv_files.zip
 unzip csv_files.zip
 ```
@@ -141,4 +162,4 @@ To run the benches
 
 `cargo bench` 
 
-Note that by default the function will run the benchmarking for all the csv files from the power of 2 until the power of 27. You can change the range of the benchmarking by changing the `MIN_POWER` and `MAX_POWER` constants inside the `benches/full_solvency_flow.rs` file.
+Note that by default the function will run the benchmarking for all the csv files from the power of 2 defined by the constant `LEVELS`, which is now set to 5. You can change the value assigned to `LEVELS` to run the benchmarking for a different number of entries.
