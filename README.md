@@ -4,10 +4,29 @@ This repository contains the Halo2 circuit implementation for the Proof of Solve
 
 This library makes use of the [PSE Fork of Halo2](https://github.com/privacy-scaling-explorations/halo2).
 
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0, ([LICENSE-APACHE](./LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](./LICENSE-MIT) or http://opensource.org/licenses/MIT)
+at your option.
+
 ## Usage
 
-`cargo build`
-`cargo test --features dev-graph -- --nocapture`
+If [circuit parameters](src/merkle_sum_tree/params.rs) do not satisfy your needs, modify the [generator script](circuit_parameters_gen/generate_params.py) accordingly and then run it by executing
+
+```
+cd circuit_parameters_gen/
+python3 generate_params.py
+```
+
+To build and test the circuit, execute
+
+```
+cargo build
+cargo test --features dev-graph -- --nocapture
+```
 
 ## Chips
 
@@ -143,4 +162,4 @@ To run the benches
 
 `cargo bench` 
 
-Note that by default the function will run the benchmarking for all the csv files from the power of 2 until the power of 27. You can change the range of the benchmarking by changing the `MIN_POWER` and `MAX_POWER` constants inside the `benches/full_solvency_flow.rs` file.
+Note that by default the function will run the benchmarking for all the csv files from the power of 2 defined by the constant `LEVELS`, which is now set to 5. You can change the value assigned to `LEVELS` to run the benchmarking for a different number of entries.
