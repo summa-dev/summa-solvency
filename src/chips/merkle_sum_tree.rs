@@ -339,14 +339,12 @@ impl MerkleSumTreeChip {
                     .value()
                     .zip(computed_sum_cell.value())
                     .map(|(total_assets, computed_sum)| {
-                        if let Err(e) = chip.assign(
+                        chip.assign(
                             &mut region,
                             0,
-                            computed_sum.to_owned(),
-                            total_assets.to_owned(),
-                        ) {
-                            println!("Error: {:?}", e);
-                        };
+                            Value::known(computed_sum.to_owned()),
+                            Value::known(total_assets.to_owned()),
+                        )
                     });
 
                 Ok(())
