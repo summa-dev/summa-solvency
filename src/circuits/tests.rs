@@ -446,7 +446,7 @@ mod test {
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![VerifyFailure::ConstraintNotSatisfied {
-                constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                constraint: ((8, "is_lt is 1").into(), 0, "").into(),
                 location: FailureLocation::InRegion {
                     region: (30, "enforce sum to be less than total assets").into(),
                     offset: 0

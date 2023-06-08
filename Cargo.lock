@@ -1064,7 +1064,7 @@ dependencies = [
 [[package]]
 name = "eth-types"
 version = "0.1.0"
-source = "git+https://github.com/privacy-scaling-explorations/zkevm-circuits#73b2aebca9400ac8b31c9394fb726690dbfe0b74"
+source = "git+https://github.com/privacy-scaling-explorations/zkevm-circuits#96208223cc7cb02ac8f2e1b621afe149b69e0942"
 dependencies = [
  "ethers-core",
  "ethers-signers",
@@ -1342,7 +1342,7 @@ checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 [[package]]
 name = "gadgets"
 version = "0.1.0"
-source = "git+https://github.com/privacy-scaling-explorations/zkevm-circuits#73b2aebca9400ac8b31c9394fb726690dbfe0b74"
+source = "git+https://github.com/privacy-scaling-explorations/zkevm-circuits#96208223cc7cb02ac8f2e1b621afe149b69e0942"
 dependencies = [
  "digest 0.7.6",
  "eth-types",
