@@ -1,9 +1,11 @@
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
+use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof, MerkleSumTree};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*};
 
-#[derive(Clone, Default)]
-pub struct MerkleSumTreeCircuit<const MST_WIDTH: usize, const N_ASSETS: usize> {
+#[derive(Clone)]
+pub struct MerkleSumTreeCircuit<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize>
+{
     pub leaf_hash: Fp,
     pub leaf_balances: Vec<Fp>,
     pub path_element_hashes: Vec<Fp>,
@@ -13,14 +15,59 @@ pub struct MerkleSumTreeCircuit<const MST_WIDTH: usize, const N_ASSETS: usize> {
     pub root_hash: Fp,
 }
 
-impl<const MST_WIDTH: usize, const N_ASSETS: usize> Circuit<Fp>
-    for MerkleSumTreeCircuit<MST_WIDTH, N_ASSETS>
+impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize>
+    MerkleSumTreeCircuit<LEVELS, MST_WIDTH, N_ASSETS>
+{
+    pub fn init_empty() -> Self {
+        Self {
+            leaf_hash: Fp::zero(),
+            leaf_balances: vec![Fp::zero(); N_ASSETS],
+            path_element_hashes: vec![Fp::zero(); LEVELS],
+            path_element_balances: vec![[Fp::zero(); N_ASSETS]; LEVELS],
+            path_indices: vec![Fp::zero(); LEVELS],
+            assets_sum: vec![Fp::zero(); N_ASSETS],
+            root_hash: Fp::zero(),
+        }
+    }
+
+    pub fn init_from_assets_and_path(
+        assets_sum: [Fp; N_ASSETS],
+        path: &str,
+        user_index: usize,
+    ) -> Self {
+        let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
+
+        let proof: MerkleProof<N_ASSETS> = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        assert_eq!(proof.path_indices.len(), LEVELS);
+        assert_eq!(proof.sibling_hashes.len(), LEVELS);
+        assert_eq!(proof.sibling_sums.len(), LEVELS);
+
+        Self {
+            leaf_hash: proof.entry.compute_leaf().hash,
+            leaf_balances: proof
+                .entry
+                .balances()
+                .iter()
+                .map(big_int_to_fp)
+                .collect::<Vec<_>>(),
+            path_element_hashes: proof.sibling_hashes,
+            path_element_balances: proof.sibling_sums,
+            path_indices: proof.path_indices,
+            assets_sum: assets_sum.to_vec(),
+            root_hash: proof.root_hash,
+        }
+    }
+}
+
+impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> Circuit<Fp>
+    for MerkleSumTreeCircuit<LEVELS, MST_WIDTH, N_ASSETS>
 {
     type Config = MerkleSumTreeConfig<MST_WIDTH>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
-        Self::default()
+        Self::init_empty()
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {

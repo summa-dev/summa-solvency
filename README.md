@@ -162,4 +162,4 @@ To run the benches
 
 `cargo bench` 
 
-Note that by default the function will run the benchmarking for all the csv files from the power of 2 until the power of 27. You can change the range of the benchmarking by changing the `MIN_POWER` and `MAX_POWER` constants inside the `benches/full_solvency_flow.rs` file.
+Note that by default the function will run the benchmarking for all the csv files from the power of 2 defined by the constant `LEVELS`, which is now set to 5. You can change the value assigned to `LEVELS` to run the benchmarking for a different number of entries.

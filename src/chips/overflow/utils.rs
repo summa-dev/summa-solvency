@@ -55,7 +55,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
     fn decompose_modulus() {
         // bn254 modulus, r = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
         let max_minus_one = Fp::from_raw([
@@ -99,7 +98,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn decompose_250bits() {
         // 1 << 251 = 0x800000000000000000000000000000000000000000000000000000000000000
         //       -1 = 0x7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
@@ -120,7 +118,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn decompose_251bits() {
         // 1 << 252 = 0x1000000000000000000000000000000000000000000000000000000000000000
         //      - 1 = 0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff

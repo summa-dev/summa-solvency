@@ -445,20 +445,17 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                     // enable lt seletor
                     self.config.lt_selector.enable(&mut region, 0)?;
 
-                    //Assign total assets and computed sum cells to the chip:
-                    total_assets_cell
-                        .value()
-                        .zip(computed_sum_cell.value())
-                        .map(|(total_assets, computed_sum)| {
-                            if let Err(e) = chip.assign(
-                                &mut region,
-                                0,
-                                computed_sum.to_owned(),
-                                total_assets.to_owned(),
-                            ) {
-                                println!("Error: {:?}", e);
-                            };
-                        });
+                total_assets_cell
+                    .value()
+                    .zip(computed_sum_cell.value())
+                    .map(|(total_assets, computed_sum)| {
+                        chip.assign(
+                            &mut region,
+                            0,
+                            Value::known(computed_sum.to_owned()),
+                            Value::known(total_assets.to_owned()),
+                        )
+                    });
 
                     Ok(())
                 },
