@@ -56,9 +56,7 @@ pub fn instantiate_empty_circuit<const MST_WIDTH: usize, const N_ASSETS: usize>(
 pub fn generate_setup_params(levels: usize) -> ParamsKZG<Bn256> {
     // 2^k is the number of rows for the circuit. We choos 27 levels as upper bound for the merkle sum tree
     let k = match levels {
-        4..=11 => 9,
-        12..=23 => 10,
-        24..=27 => 11,
+        4..=27 => 11,
         _ => 0,
     };
 

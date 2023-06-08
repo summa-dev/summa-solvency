@@ -1,3 +1,4 @@
+use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::spec_node::MySpec as PoseidonSpecNode;
 use crate::merkle_sum_tree::{R_L_NODE, WIDTH_NODE};
@@ -5,6 +6,8 @@ use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
 
+const ACC_COLS: usize = 31;
+const MAX_BITS: u8 = 8;
 const WIDTH: usize = WIDTH_NODE;
 const RATE: usize = R_L_NODE;
 const L: usize = R_L_NODE;
@@ -18,6 +21,7 @@ pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
     pub lt_selector: Selector,
     pub instance: Column<Instance>,
     pub poseidon_config: PoseidonConfig<WIDTH, RATE, L>,
+    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, ACC_COLS>,
     pub lt_config: LtConfig<Fp, 8>,
 }
 #[derive(Debug, Clone)]
@@ -93,6 +97,9 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                 .collect::<Vec<_>>()
         });
 
+        // configure overflow chip
+        let overflow_check_config = OverflowChip::configure(meta);
+
         // Enforces that input_left_balance[i] + input_right_balance[i] = computed_sum[i]
         meta.create_gate("sum constraint", |meta| {
             (0..N_ASSETS)
@@ -106,14 +113,10 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                 .collect::<Vec<_>>()
         });
 
-        let advice_columns_poseidon_chip = (0..WIDTH_NODE)
-            .map(|_| meta.advice_column())
-            .collect::<Vec<_>>();
-
         let poseidon_config =
             PoseidonChip::<PoseidonSpecNode, WIDTH_NODE, R_L_NODE, R_L_NODE>::configure(
                 meta,
-                &advice_columns_poseidon_chip,
+                // &advice_columns_poseidon_chip,
             );
 
         // configure lt chip
@@ -132,6 +135,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             lt_selector,
             instance,
             poseidon_config,
+            overflow_check_config,
             lt_config,
         };
 
@@ -372,6 +376,26 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             layouter.namespace(|| format!("hash {} child nodes", 2 * (1 + N_ASSETS))),
             hash_input,
         )?;
+
+        // Initiate the overflow check chip
+        let overflow_chip = OverflowChip::construct(self.config.overflow_check_config.clone());
+
+        overflow_chip.load(&mut layouter)?;
+
+        // Each balance cell is constrained to be less than the maximum limit
+        for left_balance in left_balances.iter() {
+            overflow_chip.assign(
+                layouter.namespace(|| "overflow check left balance"),
+                &left_balance,
+            )?;
+        }
+
+        for right_balance in right_balances.iter() {
+            overflow_chip.assign(
+                layouter.namespace(|| "overflow check right balance"),
+                &right_balance,
+            )?;
+        }
 
         Ok((computed_hash, computed_sum_cells))
     }
