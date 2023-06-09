@@ -2192,17 +2192,17 @@ pub(crate) const ROUND_CONSTANTS: [[Fp; 5]; 68] = [
             0x29eb_1de4_2a3a_d381,
         ]),
     ],
-]; // n: 254
-   // t: 5
-   // N: 1270
-   // Result Algorithm 1:
-   // [True, 0]
-   // Result Algorithm 2:
-   // [True, None]
-   // Result Algorithm 3:
-   // [True, None]
-   // Prime number: 0x0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
-   // MDS matrix:
+];// n: 254
+// t: 5
+// N: 1270
+// Result Algorithm 1:
+// [True, 0]
+// Result Algorithm 2:
+// [True, None]
+// Result Algorithm 3:
+// [True, None]
+// Prime number: 0x0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
+// MDS matrix:
 pub(crate) const MDS: [[Fp; 5]; 5] = [
     [
         Fp::from_raw([
@@ -2235,8 +2235,7 @@ pub(crate) const MDS: [[Fp; 5]; 5] = [
             0x7dea_3e33_6cd9_6a39,
             0x0aaa_35e2_c84b_af11,
         ]),
-    ],
-    [
+    ],    [
         Fp::from_raw([
             0x69f6_61b2_eb74_c839,
             0x0529_03dc_6609_ea69,
@@ -2267,8 +2266,7 @@ pub(crate) const MDS: [[Fp; 5]; 5] = [
             0x8019_5b95_92d8_cf2b,
             0x14dd_b5fa_da01_71db,
         ]),
-    ],
-    [
+    ],    [
         Fp::from_raw([
             0xa4fa_8478_970d_401d,
             0x55b9_1bff_652a_d69a,
@@ -2299,8 +2297,7 @@ pub(crate) const MDS: [[Fp; 5]; 5] = [
             0x4901_8222_e7b8_922e,
             0x2efc_2b90_d688_1348,
         ]),
-    ],
-    [
+    ],    [
         Fp::from_raw([
             0xf1af_d6c5_f721_f830,
             0x3c3f_fa45_50bd_2514,
@@ -2331,8 +2328,7 @@ pub(crate) const MDS: [[Fp; 5]; 5] = [
             0x86f7_cd4f_d710_c509,
             0x07f0_17a7_ebd5_6dd0,
         ]),
-    ],
-    [
+    ],    [
         Fp::from_raw([
             0xe2f7_8c2c_cc2e_3595,
             0x7c5e_55c2_0146_259b,
@@ -2364,7 +2360,7 @@ pub(crate) const MDS: [[Fp; 5]; 5] = [
             0x1407_4bb1_4c98_2c81,
         ]),
     ],
-]; // Inverse MDS matrix:
+];// Inverse MDS matrix:
 pub(crate) const MDS_INV: [[Fp; 5]; 5] = [
     [
         Fp::from_raw([
@@ -2397,8 +2393,7 @@ pub(crate) const MDS_INV: [[Fp; 5]; 5] = [
             0x05c8_7598_5566_7af4,
             0x245f_6aa5_4869_51fc,
         ]),
-    ],
-    [
+    ],    [
         Fp::from_raw([
             0x44ed_2060_93d6_aabd,
             0x1b4b_d6e6_9583_8469,
@@ -2429,8 +2424,7 @@ pub(crate) const MDS_INV: [[Fp; 5]; 5] = [
             0x6e4a_5dbc_7bbc_2f86,
             0x2ef0_87b9_5a30_db20,
         ]),
-    ],
-    [
+    ],    [
         Fp::from_raw([
             0x9b0a_dc8b_e22c_2097,
             0x8b3b_3579_9934_113f,
@@ -2461,8 +2455,7 @@ pub(crate) const MDS_INV: [[Fp; 5]; 5] = [
             0x5d41_bdd3_ccf8_e33f,
             0x07d1_50a7_2e22_cdd1,
         ]),
-    ],
-    [
+    ],    [
         Fp::from_raw([
             0x9305_cd67_3be8_ad9e,
             0xbcd5_922e_8e81_b550,
@@ -2493,8 +2486,7 @@ pub(crate) const MDS_INV: [[Fp; 5]; 5] = [
             0xd9e0_31c1_0ea9_700d,
             0x229c_fdf3_f130_b726,
         ]),
-    ],
-    [
+    ],    [
         Fp::from_raw([
             0x9062_3a1f_a068_26c5,
             0xdeff_a4d4_9dfd_b739,

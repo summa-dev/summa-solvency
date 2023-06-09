@@ -73,7 +73,7 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
                     },
                 );
 
-                vec![s_doc.clone() * (decomposed_value_sum - value)]
+                vec![s_doc * (decomposed_value_sum - value)]
             },
         );
 

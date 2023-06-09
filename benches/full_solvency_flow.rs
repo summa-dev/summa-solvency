@@ -69,7 +69,7 @@ fn generate_zk_proof_benchmark(_c: &mut Criterion) {
 
     let csv_file = format!("benches/csv/entry_2_{}.csv", LEVELS);
 
-    let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+    let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
     // Only now we can instantiate the circuit with the actual inputs
     let circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
@@ -101,7 +101,7 @@ fn verify_zk_proof_benchmark(_c: &mut Criterion) {
 
     let csv_file = format!("benches/csv/entry_2_{}.csv", LEVELS);
 
-    let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+    let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
     // Only now we can instantiate the circuit with the actual inputs
     let circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(

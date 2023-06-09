@@ -8,7 +8,8 @@ use std::path::Path;
 #[derive(Debug, Deserialize)]
 struct CsvEntry {
     username: String,
-    balance: Vec<String>,
+    balance1: String,
+    balance2: String,
 }
 
 pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
@@ -22,15 +23,19 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
 
     for result in rdr.deserialize() {
         let record: CsvEntry = result?;
-        let mut balances_big_int: Vec<BigInt> = Vec::new();
-        for balance in record.balance {
-            balances_big_int.push(BigInt::parse_bytes(balance.as_bytes(), 10).unwrap());
-        }
+
+        // Transform balance1 and balance2 to BigInt
+        let balance1_big_int = BigInt::parse_bytes(record.balance1.as_bytes(), 10).unwrap();
+        let balance2_big_int = BigInt::parse_bytes(record.balance2.as_bytes(), 10).unwrap();
+
+        let balances_big_int = vec![balance1_big_int, balance2_big_int];
+
         balances_acc = balances_acc
             .iter()
             .zip(balances_big_int.iter())
             .map(|(x, y)| x + y)
             .collect();
+
         let entry = Entry::new(record.username, balances_big_int.try_into().unwrap())?;
         entries.push(entry);
     }

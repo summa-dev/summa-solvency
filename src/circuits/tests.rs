@@ -18,7 +18,7 @@ mod test {
 
     #[test]
     fn test_valid_merkle_sum_tree() {
-        let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         for user_index in 0..16 {
             let circuit =
@@ -46,7 +46,10 @@ mod test {
 
         let assets_sum_big_int = 18446744073710096591_u128.to_bigint().unwrap(); // greater than liabilities sum
 
-        let assets_sum = [big_int_to_fp(&assets_sum_big_int)];
+        let assets_sum = [
+            big_int_to_fp(&assets_sum_big_int),
+            big_int_to_fp(&assets_sum_big_int),
+        ];
 
         let circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
@@ -67,12 +70,12 @@ mod test {
 
     #[test]
     fn test_valid_merkle_sum_tree_with_full_prover() {
-        let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         let circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
-        let params = ParamsKZG::<Bn256>::setup(11, OsRng);
+        let params = ParamsKZG::<Bn256>::setup(12, OsRng);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -104,7 +107,7 @@ mod test {
     // Passing an invalid root hash in the instance column should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_root_hash() {
-        let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         let circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
@@ -127,12 +130,12 @@ mod test {
             Err(vec![
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 2 }
+                    location: FailureLocation::OutsideRegion { row: 3 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 39).into(),
+                    column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (25, "permute state").into(),
+                        region: (39, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -142,7 +145,7 @@ mod test {
 
     #[test]
     fn test_invalid_root_hash_with_full_prover() {
-        let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         let circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
@@ -179,7 +182,7 @@ mod test {
     // Passing an invalid leaf hash as input for the witness generation should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_leaf_hash_as_witness() {
-        let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         let mut circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
@@ -202,12 +205,12 @@ mod test {
             Err(vec![
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 2 }
+                    location: FailureLocation::OutsideRegion { row: 3 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 39).into(),
+                    column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (25, "permute state").into(),
+                        region: (39, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -218,7 +221,7 @@ mod test {
     // Passing an invalid leaf hash in the instance column should fail the permutation check between the (valid) leaf hash added as part of the witness and the instance column leaf hash
     #[test]
     fn test_invalid_leaf_hash_as_instance() {
-        let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         let circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
@@ -241,7 +244,7 @@ mod test {
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 3).into(),
+                    column: (Any::advice(), 6).into(),
                     location: FailureLocation::InRegion {
                         region: (1, "merkle prove layer").into(),
                         offset: 0
@@ -258,9 +261,9 @@ mod test {
     // Passing an invalid leaf balance as input for the witness generation should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_leaf_balance_as_witness() {
-        let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
-        let user_balance = [Fp::from(11888u64)];
+        let user_balance = [Fp::from(11888u64), Fp::from(41163u64)];
 
         let mut circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
@@ -270,7 +273,7 @@ mod test {
             );
 
         // invalid leaf balance
-        circuit.leaf_hash = Fp::from(1000u64);
+        circuit.leaf_balances = vec![Fp::from(1000u64), circuit.leaf_balances[1]];
 
         let mut public_input = vec![circuit.leaf_hash];
         public_input.extend(user_balance);
@@ -278,17 +281,29 @@ mod test {
         public_input.extend(assets_sum);
 
         let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 2 }
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "merkle prove layer").into(),
+                        offset: 0
+                    }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 39).into(),
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 1 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 3 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (25, "permute state").into(),
+                        region: (39, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -299,7 +314,7 @@ mod test {
     // Passing an invalid leaf balance in the instance column should fail the permutation check between the (valid) leaf balance added as part of the witness and the instance column leaf balance
     #[test]
     fn test_invalid_leaf_balance_as_instance() {
-        let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         let circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
@@ -308,11 +323,11 @@ mod test {
                 0,
             );
 
-        // add invalid leaf balance in the instance column
-        let invalid_leaf_balance = [Fp::from(1000u64)];
+        //Invalid leaf balance for the instance column
+        let invalid_leaf_balance = Fp::from(1000u64);
 
         let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(invalid_leaf_balance);
+        public_input.extend([invalid_leaf_balance, circuit.leaf_balances[1]]);
         public_input.push(circuit.root_hash);
         public_input.extend(&circuit.assets_sum);
 
@@ -339,7 +354,7 @@ mod test {
     // Passing a non binary index should fail the bool constraint check and the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_non_binary_index() {
-        let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         let mut circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
@@ -367,16 +382,16 @@ mod test {
                         region: (1, "merkle prove layer").into(),
                         offset: 0
                     },
-                    cell_values: vec![(((Any::advice(), 5).into(), 0).into(), "0x2".to_string()),]
+                    cell_values: vec![(((Any::advice(), 8).into(), 0).into(), "0x2".to_string()),]
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 2 }
+                    location: FailureLocation::OutsideRegion { row: 3 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 39).into(),
+                    column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (25, "permute state").into(),
+                        region: (39, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -387,7 +402,7 @@ mod test {
     // Swapping the indices should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_swapping_index() {
-        let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         let mut circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
@@ -411,12 +426,12 @@ mod test {
             Err(vec![
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 2 }
+                    location: FailureLocation::OutsideRegion { row: 3 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 39).into(),
+                    column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (25, "permute state").into(),
+                        region: (39, "permute state").into(),
                         offset: 38
                     }
                 }
@@ -427,7 +442,8 @@ mod test {
     // Passing an assets sum that is less than the liabilities sum should fail the lessThan constraint check
     #[test]
     fn test_is_not_less_than() {
-        let less_than_assets_sum = [Fp::from(556861u64)]; // less than liabilities sum (556862)
+        // Make the first asset sum less than liabilities sum (556862)
+        let less_than_assets_sum = [Fp::from(556861u64), Fp::from(556863u64)];
 
         let circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
@@ -448,12 +464,12 @@ mod test {
             Err(vec![VerifyFailure::ConstraintNotSatisfied {
                 constraint: ((8, "is_lt is 1").into(), 0, "").into(),
                 location: FailureLocation::InRegion {
-                    region: (30, "enforce sum to be less than total assets").into(),
+                    region: (46, "enforce sum to be less than total assets").into(),
                     offset: 0
                 },
                 cell_values: vec![
                     // The zero means that is not less than
-                    (((Any::advice(), 44).into(), 0).into(), "0".to_string())
+                    (((Any::advice(), 47).into(), 0).into(), "0".to_string())
                 ]
             }])
         );
@@ -773,7 +789,7 @@ mod test {
     fn print_merkle_sum_tree() {
         use plotters::prelude::*;
 
-        let assets_sum = [Fp::from(556863u64)]; // greater than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         let circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
@@ -790,7 +806,7 @@ mod test {
             .unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
-            .render(8, &circuit, &root)
+            .render(9, &circuit, &root)
             .unwrap();
     }
 

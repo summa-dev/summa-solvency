@@ -17,7 +17,7 @@ mod test {
         // expect root hash to be different than 0
         assert!(root.hash != 0.into());
         // expect balance to match the sum of all entries
-        assert!(root.balances == [556862.into()]);
+        assert!(root.balances == [556862.into(), 556862.into()]);
         // expect depth to be 4
         assert!(*merkle_tree.depth() == 4_usize);
 
@@ -38,13 +38,19 @@ mod test {
 
         // should retrun the index of an entry that exist in the tree
         assert_eq!(
-            merkle_tree.index_of("AtwIxZHo", [35479.to_bigint().unwrap()]),
+            merkle_tree.index_of(
+                "AtwIxZHo",
+                [35479.to_bigint().unwrap(), 31699.to_bigint().unwrap()]
+            ),
             Some(15)
         );
 
         // shouldn't retrun the index of an entry that doesn't exist in the tree
         assert_eq!(
-            merkle_tree.index_of("AtwHHHHo", [35478.to_bigint().unwrap()]),
+            merkle_tree.index_of(
+                "AtwHHHHo",
+                [35478.to_bigint().unwrap(), 35478.to_bigint().unwrap()]
+            ),
             None
         );
 
@@ -59,8 +65,11 @@ mod test {
 
         // shouldn't verify a proof with a wrong entry
         let mut proof_invalid_1 = proof.clone();
-        proof_invalid_1.entry =
-            Entry::new("AtwIxZHo".to_string(), [35479.to_bigint().unwrap()]).unwrap();
+        proof_invalid_1.entry = Entry::new(
+            "AtwIxZHo".to_string(),
+            [35479.to_bigint().unwrap(), 35479.to_bigint().unwrap()],
+        )
+        .unwrap();
         assert!(!merkle_tree.verify_proof(&proof_invalid_1));
 
         // shouldn't verify a proof with a wrong root hash
@@ -70,7 +79,7 @@ mod test {
 
         // shouldn't verify a proof with a wrong computed balance
         let mut proof_invalid_3 = proof;
-        proof_invalid_3.sibling_sums[0] = [0.into()];
+        proof_invalid_3.sibling_sums[0] = [0.into(), 0.into()];
     }
 
     #[test]

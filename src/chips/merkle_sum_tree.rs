@@ -1,16 +1,16 @@
 use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
-use crate::chips::poseidon::spec_node::MySpec as PoseidonSpecNode;
-use crate::merkle_sum_tree::{R_L_NODE, WIDTH_NODE};
+use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
+use crate::merkle_sum_tree::L_NODE;
 use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
 
 const ACC_COLS: usize = 31;
 const MAX_BITS: u8 = 8;
-const WIDTH: usize = WIDTH_NODE;
-const RATE: usize = R_L_NODE;
-const L: usize = R_L_NODE;
+const WIDTH: usize = 5;
+const RATE: usize = 4;
+const L: usize = L_NODE;
 
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
@@ -113,11 +113,10 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                 .collect::<Vec<_>>()
         });
 
-        let poseidon_config =
-            PoseidonChip::<PoseidonSpecNode, WIDTH_NODE, R_L_NODE, R_L_NODE>::configure(
-                meta,
-                // &advice_columns_poseidon_chip,
-            );
+        let poseidon_config = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(
+            meta,
+            // &advice_columns_poseidon_chip,
+        );
 
         // configure lt chip
         let lt_config = LtChip::configure(
@@ -346,10 +345,9 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         )?;
 
         // instantiate the poseidon_chip
-        let poseidon_chip =
-            PoseidonChip::<PoseidonSpecNode, WIDTH_NODE, R_L_NODE, R_L_NODE>::construct(
-                self.config.poseidon_config.clone(),
-            );
+        let poseidon_chip = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::construct(
+            self.config.poseidon_config.clone(),
+        );
 
         // The hash function inside the poseidon_chip performs the following action
         // 1. Copy the left and right cells from the previous row
@@ -364,7 +362,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             .map(|x| x.to_owned())
             .collect();
 
-        let hash_input: [AssignedCell<Fp, Fp>; R_L_NODE] = match hash_input_vec.try_into() {
+        let hash_input: [AssignedCell<Fp, Fp>; L] = match hash_input_vec.try_into() {
             Ok(arr) => arr,
             Err(_) => panic!("Failed to convert Vec to Array"),
         };
@@ -383,14 +381,14 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         for left_balance in left_balances.iter() {
             overflow_chip.assign(
                 layouter.namespace(|| "overflow check left balance"),
-                &left_balance,
+                left_balance,
             )?;
         }
 
         for right_balance in right_balances.iter() {
             overflow_chip.assign(
                 layouter.namespace(|| "overflow check right balance"),
-                &right_balance,
+                right_balance,
             )?;
         }
 
@@ -425,25 +423,26 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                     let total_assets_cell = region.assign_advice_from_instance(
                         || "copy total assets",
                         self.config.instance,
-                        3 + i,
+                        //total assets go in the "end" of the public input after 1 leaf, N_ASSETS asset balances and 1 root
+                        2 + N_ASSETS + i,
                         self.config.advice[1],
                         i,
                     )?;
 
-                // enable lt seletor
-                self.config.lt_selector.enable(&mut region, 0)?;
+                    // enable lt seletor
+                    self.config.lt_selector.enable(&mut region, i)?;
 
-                total_assets_cell
-                    .value()
-                    .zip(computed_sum_cell.value())
-                    .map(|(total_assets, computed_sum)| {
-                        chip.assign(
-                            &mut region,
-                            0,
-                            Value::known(computed_sum.to_owned()),
-                            Value::known(total_assets.to_owned()),
-                        )
-                    });
+                    total_assets_cell
+                        .value()
+                        .zip(computed_sum_cell.value())
+                        .map(|(total_assets, computed_sum)| {
+                            chip.assign(
+                                &mut region,
+                                i,
+                                Value::known(computed_sum.to_owned()),
+                                Value::known(total_assets.to_owned()),
+                            )
+                        });
 
                     Ok(())
                 },
