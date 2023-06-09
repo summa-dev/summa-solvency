@@ -5,12 +5,17 @@ use std::error::Error;
 use std::fs::File;
 use std::path::Path;
 
-#[derive(Debug, Deserialize)]
-struct CsvEntry {
-    username: String,
-    balance1: String,
-    balance2: String,
+macro_rules! csv_entry {
+    ($($name:ident),+) => {
+        #[derive(Debug, Deserialize)]
+        struct CsvEntry {
+            username: String,
+            $($name: String,)+
+        }
+    };
 }
+
+csv_entry!(balance1, balance2);
 
 pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
     path: P,
