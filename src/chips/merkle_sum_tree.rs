@@ -139,16 +139,13 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             lt_config,
         };
 
-        meta.create_gate(
-            "verifies that `check` from current config equal to is_lt from LtChip",
-            |meta| {
-                let q_enable = meta.query_selector(lt_selector);
+        meta.create_gate("is_lt is 1", |meta| {
+            let q_enable = meta.query_selector(lt_selector);
 
-                let check = meta.query_advice(advice[2], Rotation::cur());
-
-                vec![q_enable * (config.lt_config.is_lt(meta, None) - check)]
-            },
-        );
+            vec![
+                q_enable * (config.lt_config.is_lt(meta, None) - Expression::Constant(Fp::from(1))),
+            ]
+        });
 
         config
     }
@@ -433,17 +430,8 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                         i,
                     )?;
 
-                    // set check to be equal to 1
-                    region.assign_advice(
-                        || "check",
-                        //"Column c" from the spec
-                        self.config.advice[2],
-                        i,
-                        || Value::known(Fp::from(1)),
-                    )?;
-
-                    // enable lt seletor
-                    self.config.lt_selector.enable(&mut region, 0)?;
+                // enable lt seletor
+                self.config.lt_selector.enable(&mut region, 0)?;
 
                 total_assets_cell
                     .value()
