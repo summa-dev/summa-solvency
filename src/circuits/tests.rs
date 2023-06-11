@@ -162,7 +162,13 @@ mod test {
             num_instances,
             None,
         );
-        evm_verify(deployment_code, instances, proof_calldata);
+        let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
+
+        // assert gas_cost to be between 575000 and 580000
+        assert!(
+            (575000..=580000).contains(&gas_cost),
+            "gas_cost is not within the expected range"
+        );
     }
 
     // Passing an invalid root hash in the instance column should fail the permutation check between the computed root hash and the instance column root hash
