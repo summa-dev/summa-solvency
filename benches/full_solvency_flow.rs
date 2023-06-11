@@ -29,7 +29,7 @@ fn build_mstree_benchmark(_c: &mut Criterion) {
 fn verification_key_gen_benchmark(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(LEVELS);
+    let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
     let empty_circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
@@ -44,7 +44,7 @@ fn verification_key_gen_benchmark(_c: &mut Criterion) {
 fn proving_key_gen_benchmark(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(LEVELS);
+    let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
     let empty_circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
@@ -60,7 +60,7 @@ fn proving_key_gen_benchmark(_c: &mut Criterion) {
 fn generate_zk_proof_benchmark(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(LEVELS);
+    let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
     let empty_circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
@@ -92,7 +92,7 @@ fn generate_zk_proof_benchmark(_c: &mut Criterion) {
 fn verify_zk_proof_benchmark(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(LEVELS);
+    let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
     let empty_circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 

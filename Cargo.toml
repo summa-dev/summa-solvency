@@ -23,6 +23,7 @@ serde = { version = "1.0", features = ["derive"] }
 hex = "0.4.3"
 num-bigint = "0.4"
 num_cpus = "1.15"
+snark-verifier-sdk = { git = "https://github.com/privacy-scaling-explorations/snark-verifier"}
 
 [dev-dependencies]
 criterion= "0.3"

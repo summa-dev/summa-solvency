@@ -5,3 +5,4 @@
 /benches/csv
 circuit_parameters_gen/generate_parameters_grain.sage.py
 circuit_parameters_gen/__pycache__
+/output

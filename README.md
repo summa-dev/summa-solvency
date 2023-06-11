@@ -28,6 +28,11 @@ cargo build
 cargo test --features dev-graph -- --nocapture
 ```
 
+To run the on-chain verifer test run
+```
+cargo test --release  -- --ignored --nocapture
+```
+
 ## Chips
 
 - [Poseidon](#Poseidon)
