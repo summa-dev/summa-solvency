@@ -8,8 +8,8 @@ use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
 
 const ACC_COLS: usize = 31;
 const MAX_BITS: u8 = 8;
-const WIDTH: usize = 5;
-const RATE: usize = 4;
+const WIDTH: usize = 7;
+const RATE: usize = 6;
 const L: usize = L_NODE;
 
 #[derive(Debug, Clone)]
@@ -113,10 +113,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                 .collect::<Vec<_>>()
         });
 
-        let poseidon_config = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(
-            meta,
-            // &advice_columns_poseidon_chip,
-        );
+        let poseidon_config = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(meta);
 
         // configure lt chip
         let lt_config = LtChip::configure(
