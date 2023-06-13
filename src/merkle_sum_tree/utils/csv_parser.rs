@@ -5,35 +5,34 @@ use std::error::Error;
 use std::fs::File;
 use std::path::Path;
 
-macro_rules! csv_entry {
-    ($($name:ident),+) => {
-        #[derive(Debug, Deserialize)]
-        struct CsvEntry {
-            username: String,
-            $($name: String,)+
-        }
-    };
+#[derive(Debug, Deserialize)]
+struct CsvEntry {
+    username: String,
+    balances: String,
 }
-
-csv_entry!(balance1, balance2);
 
 pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
     path: P,
 ) -> Result<Vec<Entry<N_ASSETS>>, Box<dyn Error>> {
     let mut entries = Vec::new();
     let file = File::open(path)?;
-    let mut rdr = csv::Reader::from_reader(file);
+    let mut rdr = csv::ReaderBuilder::new()
+        .delimiter(b';') // The fields are separated by a semicolon
+        .from_reader(file);
 
     let mut balances_acc: Vec<BigInt> = vec![BigInt::from(0); N_ASSETS];
 
     for result in rdr.deserialize() {
         let record: CsvEntry = result?;
 
-        // Transform balance1 and balance2 to BigInt
-        let balance1_big_int = BigInt::parse_bytes(record.balance1.as_bytes(), 10).unwrap();
-        let balance2_big_int = BigInt::parse_bytes(record.balance2.as_bytes(), 10).unwrap();
+        // Split the balances string into separate balance strings
+        let balance_strs: Vec<&str> = record.balances.split(',').collect();
 
-        let balances_big_int = vec![balance1_big_int, balance2_big_int];
+        // Parse each balance string as a BigInt
+        let balances_big_int: Vec<BigInt> = balance_strs
+            .into_iter()
+            .map(|balance_str| BigInt::parse_bytes(balance_str.as_bytes(), 10).unwrap())
+            .collect();
 
         balances_acc = balances_acc
             .iter()
