@@ -135,8 +135,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (39, "permute state").into(),
-                        offset: 38
+                        region: (31, "permute state").into(),
+                        offset: 43
                     }
                 }
             ])
@@ -210,8 +210,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (39, "permute state").into(),
-                        offset: 38
+                        region: (31, "permute state").into(),
+                        offset: 43
                     }
                 }
             ])
@@ -303,8 +303,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (39, "permute state").into(),
-                        offset: 38
+                        region: (31, "permute state").into(),
+                        offset: 43
                     }
                 }
             ])
@@ -391,8 +391,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (39, "permute state").into(),
-                        offset: 38
+                        region: (31, "permute state").into(),
+                        offset: 43
                     }
                 }
             ])
@@ -431,8 +431,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (39, "permute state").into(),
-                        offset: 38
+                        region: (31, "permute state").into(),
+                        offset: 43
                     }
                 }
             ])
@@ -464,12 +464,12 @@ mod test {
             Err(vec![VerifyFailure::ConstraintNotSatisfied {
                 constraint: ((8, "is_lt is 1").into(), 0, "").into(),
                 location: FailureLocation::InRegion {
-                    region: (46, "enforce sum to be less than total assets").into(),
+                    region: (38, "enforce sum to be less than total assets").into(),
                     offset: 0
                 },
                 cell_values: vec![
                     // The zero means that is not less than
-                    (((Any::advice(), 47).into(), 0).into(), "0".to_string())
+                    (((Any::advice(), 49).into(), 0).into(), "0".to_string())
                 ]
             }])
         );
