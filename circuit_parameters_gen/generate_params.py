@@ -1,12 +1,18 @@
 import os
+import sys
 from calc_round_numbers import get_parameters
+
+# Check if command line argument is provided
+if len(sys.argv) != 2:
+    print("Usage: python3 generate_params.py <num_assets>")
+    sys.exit(1)
 
 # Parameters
 p = 0x30644E72E131A029B85045B68181585D2833E84879B9709143E1F593F0000001
 
-# First, set the parameters for the Merkle tree leaf hasher
+num_assets = int(sys.argv[1])  # Convert the command line argument to integer
+# Set the parameters for the Merkle tree leaf hasher
 # One hash and num_assets assets per Merkle tree node, plus 1 for the Poseidon "width" parameter
-num_assets = 2
 t = 7
 M = 128
 

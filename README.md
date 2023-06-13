@@ -14,11 +14,11 @@ at your option.
 
 ## Usage
 
-If [circuit parameters](src/merkle_sum_tree/params.rs) do not satisfy your needs, modify the [generator script](circuit_parameters_gen/generate_params.py) accordingly and then run it by executing
+If you need to modify the number of asset balances per user account, run the parameter generator script [parameter generator script](circuit_parameters_gen/generate_params.py):
 
 ```
 cd circuit_parameters_gen/
-python3 generate_params.py
+python3 generate_params.py 2
 ```
 
 To build and test the circuit, execute
