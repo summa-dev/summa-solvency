@@ -13,6 +13,7 @@ halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", 
 halo2_gadgets = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_04_20"}
 ecdsa = { git = "https://github.com/privacy-scaling-explorations/halo2wrong"}
 ecc = { git = "https://github.com/privacy-scaling-explorations/halo2wrong"}
+maingate =  { git = "https://github.com/privacy-scaling-explorations/halo2wrong", tag = "v2023_04_20" }
 gadgets = { git = "https://github.com/privacy-scaling-explorations/zkevm-circuits"}
 plotters = { version = "0.3.4", optional = true }
 rand = "0.8"
@@ -24,6 +25,7 @@ hex = "0.4.3"
 num-bigint = "0.4"
 num_cpus = "1.15"
 snark-verifier-sdk = { git = "https://github.com/privacy-scaling-explorations/snark-verifier"}
+itertools = "0.10.3"
 
 [dev-dependencies]
 criterion= "0.3"

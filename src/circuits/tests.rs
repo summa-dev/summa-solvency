@@ -1,10 +1,12 @@
 #[cfg(test)]
 mod test {
 
-    use crate::circuits::merkle_sum_tree::MerkleSumTreeCircuit;
-    use crate::circuits::utils::{full_prover, full_verifier, generate_setup_params};
-    use crate::merkle_sum_tree::big_int_to_fp;
-    use crate::merkle_sum_tree::{MST_WIDTH, N_ASSETS};
+    use crate::circuits::{
+        aggregation::WrappedAggregationCircuit,
+        merkle_sum_tree::MerkleSumTreeCircuit,
+        utils::{full_prover, full_verifier, generate_setup_params},
+    };
+    use crate::merkle_sum_tree::{big_int_to_fp, MST_WIDTH, N_ASSETS};
     use ark_std::{end_timer, start_timer};
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
@@ -108,7 +110,6 @@ mod test {
         assert!(full_verifier(&params, &vk, proof, &public_input));
     }
 
-    // TO DO: Need to assert something here as output of the test. Wait for PR in snark verifier to be merged.
     #[test]
     #[ignore]
     fn test_valid_merkle_sum_tree_with_full_recursive_prover() {
@@ -143,8 +144,17 @@ mod test {
         let snark_app = [(); 1]
             .map(|_| gen_snark_shplonk(&params_app, &pk_app, circuit_app.clone(), None::<&str>));
 
+        const N_SNARK: usize = 1;
+
         // create aggregation circuit
-        let agg_circuit = AggregationCircuit::<SHPLONK>::new(&params_agg, snark_app);
+        let agg_circuit = WrappedAggregationCircuit::<N_SNARK>::new(&params_agg, snark_app);
+
+        // // Test it with mock prover
+        // let valid_prover = MockProver::run(23, &agg_circuit, agg_circuit.instances()).unwrap();
+        // valid_prover.assert_satisfied();
+
+        // assert that agg_circuit.instances()[0] == circuit_app.instances()[0]
+        assert_eq!(agg_circuit.instances()[0], circuit_app.instances()[0]);
 
         // generate pk for the aggregation circuit
         let start0 = start_timer!(|| "gen vk & pk");
