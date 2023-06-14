@@ -14,7 +14,7 @@ at your option.
 
 ## Usage
 
-If [circuit parameters](src/merkle_sum_tree/params.rs) do not satisfy your needs, modify the [generator script](circuit_parameters_gen/generate_params.py) accordingly and then run it by executing
+If Poseidon hasher parameters do not satisfy your needs, modify the [generator script](circuit_parameters_gen/generate_params.py) accordingly and then run it by executing
 
 ```
 cd circuit_parameters_gen/

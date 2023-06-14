@@ -5,7 +5,7 @@ mod tests;
 mod utils;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
-pub use params::{MST_WIDTH, N_ASSETS, R_L_ENTRY, R_L_NODE, WIDTH_ENTRY, WIDTH_NODE};
+pub use params::{L_ENTRY, L_NODE, MST_WIDTH, N_ASSETS};
 
 #[derive(Clone, Debug)]
 pub struct MerkleProof<const N_ASSETS: usize> {

@@ -97,7 +97,7 @@ def print_hex(c, last, rust=False):
         hex_str += "{0:#0{1}x}".format(c, hex_length) + ("" if last else ", ")
     return hex_str
 
-def print_round_constants(round_constants, n, t, field, rust=False, file_name="./../src/chips/poseidon/poseidon_params.rs"):
+def print_round_constants(round_constants, n, t, field, R_F, R_P, rust=False, file_name="./../src/chips/poseidon/poseidon_params.rs"):
     num_round_constants = len(round_constants)
     assert num_round_constants % t == 0
     rounds = num_round_constants // t  # R_F + R_P
@@ -110,7 +110,12 @@ def print_round_constants(round_constants, n, t, field, rust=False, file_name=".
         elif field == 1:
             f.write("//! Round constants for GF(p):\n")
         if rust:
-            f.write('//! Parameters for using rate 4 Poseidon with the BN256 field.\n//! Patterned after [halo2_gadgets::poseidon::primitives::fp]\n//! The parameters can be reproduced by running the following Sage script from\n//! [this repository](https://github.com/daira/pasta-hadeshash):\n//!\n//! ```text\n//! $ sage generate_parameters_grain.sage 1 0 254 5 8 60 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001 --rust\n//! ```\n//!\n//! where 1 means "prime field", 0 means "non-negative sbox", 254 is the bitsize\n//! of the field, 5 is the Poseidon width (rate + 1), 8 is the number of full\n//! rounds, 60 is the number of partial rounds.\n//! More info here => https://hackmd.io/@letargicus/SJOvx48Nn\n')
+            f.write("//! Parameters for using rate {} Poseidon with the BN256 field.\n".format(t - 1))
+            f.write("//! Patterned after [halo2_gadgets::poseidon::primitives::fp]\n")
+            f.write("//! The parameters can be reproduced by running the following Sage script from\n")
+            f.write("//! [this repository](https://github.com/daira/pasta-hadeshash):\n")
+            f.write("//!\n//! ```text\n//! $ sage generate_parameters_grain.sage 1 0 254 {} {} {} 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001 --rust\n//! ```\n//!\n".format(t, R_F, R_P))
+            f.write("//! where 1 means 'prime field', 0 means 'non-negative sbox', 254 is the bitsize\n//! of the field, {} is the Poseidon width (rate + 1), {} is the number of full\n//! rounds, {} is the number of partial rounds.\n//! More info here => https://hackmd.io/@letargicus/SJOvx48Nn\n".format(t, R_F, R_P))
             f.write("use halo2_proofs::halo2curves::bn256::Fr as Fp;\n")
             f.write("pub(crate) const ROUND_CONSTANTS: [[Fp; {}]; {}] = [\n".format(t, rounds))
         
@@ -120,7 +125,7 @@ def print_round_constants(round_constants, n, t, field, rust=False, file_name=".
                 f.write(print_hex(entry, i == t-1, rust=rust))
             f.write("    ],\n" if rust else "],\n")
         if rust:
-            f.write("];")
+            f.write("];\n")
 
 def create_mds_p(n, t):
     M = matrix(F, t, t)
@@ -328,7 +333,7 @@ def print_matrix(M, t, rust=False, file_name="./../src/chips/poseidon/poseidon_p
             for (i, entry) in enumerate(M[row]):
                 f.write(print_hex(entry, i == t-1, rust=rust))
             f.write("    ]," if rust else "],")
-        f.write("\n];")
+        f.write("\n];\n")
 
 def print_linear_layer(M, n, t, rust=False, file_name="./../src/chips/poseidon/poseidon_params.rs"):
     # 'a' for append mode
@@ -392,7 +397,7 @@ def main(args):
 
     # Round constants
     round_constants = generate_constants(FIELD, FIELD_SIZE, NUM_CELLS, R_F_FIXED, R_P_FIXED, PRIME_NUMBER)
-    print_round_constants(round_constants, FIELD_SIZE, NUM_CELLS, FIELD, rust=rust, file_name=file_name)
+    print_round_constants(round_constants, FIELD_SIZE, NUM_CELLS, FIELD, R_F_FIXED, R_P_FIXED, rust=rust, file_name=file_name)
 
     # Matrix
     linear_layer = generate_matrix(FIELD, FIELD_SIZE, NUM_CELLS)

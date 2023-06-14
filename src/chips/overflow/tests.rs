@@ -113,14 +113,12 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> Circuit<Fp>
         let addchip_config = AddChip::configure(meta);
         let overflow_check_config = OverflowChip::<MAX_BITS, ACC_COLS>::configure(meta);
 
-        let config = {
+        {
             OverflowCheckTestConfig {
                 addchip_config,
                 overflow_check_config,
             }
-        };
-
-        config
+        }
     }
 
     fn synthesize(
