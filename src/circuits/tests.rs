@@ -526,8 +526,6 @@ mod test {
             }])
         );
 
-        assert!(invalid_prover.verify().is_err());
-
         // Make the second asset sum less than liabilities sum (556862)
         let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
 
@@ -559,8 +557,6 @@ mod test {
                 ]
             }])
         );
-
-        assert!(invalid_prover.verify().is_err());
     }
 
     use crate::circuits::ecdsa::EcdsaVerifyCircuit;

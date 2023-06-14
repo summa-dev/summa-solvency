@@ -14,11 +14,11 @@ at your option.
 
 ## Usage
 
-If you need to modify the number of asset balances per user account, run the parameter generator script [parameter generator script](circuit_parameters_gen/generate_params.py):
+If Poseidon hasher parameters do not satisfy your needs, modify the [generator script](circuit_parameters_gen/generate_params.py) accordingly and then run it by executing
 
 ```
 cd circuit_parameters_gen/
-python3 generate_params.py 2
+python3 generate_params.py
 ```
 
 To build and test the circuit, execute
