@@ -19,8 +19,8 @@ mod test {
     use snark_verifier_sdk::{
         evm::{evm_verify, gen_evm_proof_shplonk, gen_evm_verifier_shplonk},
         gen_pk,
-        halo2::{aggregation::AggregationCircuit, gen_snark_shplonk},
-        CircuitExt, SHPLONK,
+        halo2::gen_snark_shplonk,
+        CircuitExt,
     };
 
     const LEVELS: usize = 4;
@@ -113,19 +113,16 @@ mod test {
     #[test]
     #[ignore]
     fn test_valid_merkle_sum_tree_with_full_recursive_prover() {
-        // generate params for aggregation circuit
+        // params for the aggregation circuit
         let params_agg = generate_setup_params(23);
 
         // downsize params for our application specific snark
         let mut params_app = params_agg.clone();
         params_app.downsize(11);
 
+        // generate the verification key and the proving key for the application circuit, using an empty circuit
         let circuit_app = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
-        // we generate the verification key and the proving key for our application circuit
-        // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
-        // Note: the dimension of the circuit used to generate the keys must be the same as the dimension of the circuit used to generate the proof
-        // In this case, the dimension are represented by the heigth of the merkle tree
         let vk_app = keygen_vk(&params_app, &circuit_app).expect("vk generation should not fail");
         let pk_app =
             keygen_pk(&params_app, vk_app, &circuit_app).expect("pk generation should not fail");
@@ -140,7 +137,6 @@ mod test {
                 0,
             );
 
-        // generate snark for our application. This will be the input for the aggregation circuit. Here I can actually use many different snarks from different application
         let snark_app = [(); 1]
             .map(|_| gen_snark_shplonk(&params_app, &pk_app, circuit_app.clone(), None::<&str>));
 
@@ -149,24 +145,20 @@ mod test {
         // create aggregation circuit
         let agg_circuit = WrappedAggregationCircuit::<N_SNARK>::new(&params_agg, snark_app);
 
-        // // Test it with mock prover
-        // let valid_prover = MockProver::run(23, &agg_circuit, agg_circuit.instances()).unwrap();
-        // valid_prover.assert_satisfied();
-
-        // assert that agg_circuit.instances()[0] == circuit_app.instances()[0]
         assert_eq!(agg_circuit.instances()[0], circuit_app.instances()[0]);
 
-        // generate pk for the aggregation circuit
         let start0 = start_timer!(|| "gen vk & pk");
+        // generate proving key for the aggregation circuit
         let pk_agg = gen_pk(&params_agg, &agg_circuit.without_witnesses(), None);
         end_timer!(start0);
 
         let num_instances = agg_circuit.num_instance();
         let instances = agg_circuit.instances();
+
         let proof_calldata =
             gen_evm_proof_shplonk(&params_agg, &pk_agg, agg_circuit, instances.clone());
 
-        let deployment_code = gen_evm_verifier_shplonk::<AggregationCircuit<SHPLONK>>(
+        let deployment_code = gen_evm_verifier_shplonk::<WrappedAggregationCircuit<N_SNARK>>(
             &params_agg,
             pk_agg.get_vk(),
             num_instances,
@@ -174,9 +166,9 @@ mod test {
         );
         let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
 
-        // assert gas_cost to be between 575000 and 580000
+        // assert gas_cost to verify the proof on chain to be between 575000 and 590000
         assert!(
-            (575000..=580000).contains(&gas_cost),
+            (575000..=590000).contains(&gas_cost),
             "gas_cost is not within the expected range"
         );
     }

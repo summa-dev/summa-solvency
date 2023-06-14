@@ -5,7 +5,7 @@ use halo2_proofs::{
 };
 use snark_verifier_sdk::halo2::aggregation::AggregationConfig;
 
-// Wrapper around AggregationConfig that also contains the instance columns from the input circuits and a method to expose a cell to an instance column
+/// Wrapper around AggregationConfig that adds a vector of instance columns. Specifically an instance column for each input SNARK.
 #[derive(Clone)]
 pub struct WrappedAggregationConfig<const N_SNARK: usize> {
     pub aggregation_config: AggregationConfig,
