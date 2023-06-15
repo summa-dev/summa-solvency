@@ -1,7 +1,9 @@
 use crate::chips::overflow::utils::*;
 
+use halo2_proofs::circuit::{AssignedCell, Layouter, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
+use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector};
+use halo2_proofs::poly::Rotation;
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
