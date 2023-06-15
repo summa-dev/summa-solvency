@@ -217,7 +217,7 @@ mod test {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (1, "").into(),
-                        offset: 3
+                        offset: 1
                     }
                 }
             ])
