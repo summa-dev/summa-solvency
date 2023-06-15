@@ -2,7 +2,7 @@
 mod test {
 
     use crate::circuits::merkle_sum_tree::MerkleSumTreeCircuit;
-    use crate::circuits::utils::{full_prover, full_verifier};
+    use crate::circuits::utils::{full_prover, full_verifier, generate_setup_params};
     use crate::merkle_sum_tree::big_int_to_fp;
     use crate::merkle_sum_tree::{MST_WIDTH, N_ASSETS};
     use halo2_proofs::{
@@ -75,7 +75,7 @@ mod test {
         let circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
-        let params = ParamsKZG::<Bn256>::setup(11, OsRng);
+        let params = generate_setup_params(11);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -150,7 +150,7 @@ mod test {
         let circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
-        let params = ParamsKZG::<Bn256>::setup(11, OsRng);
+        let params = generate_setup_params(11);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
