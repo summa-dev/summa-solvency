@@ -2,6 +2,7 @@ use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof, MerkleSumTree};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::{circuit::*, plonk::*};
+use snark_verifier_sdk::CircuitExt;
 
 #[derive(Clone)]
 pub struct MerkleSumTreeCircuit<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize>
@@ -13,6 +14,22 @@ pub struct MerkleSumTreeCircuit<const LEVELS: usize, const MST_WIDTH: usize, con
     pub path_indices: Vec<Fp>,
     pub assets_sum: Vec<Fp>,
     pub root_hash: Fp,
+}
+
+impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> CircuitExt<Fp>
+    for MerkleSumTreeCircuit<LEVELS, MST_WIDTH, N_ASSETS>
+{
+    fn num_instance(&self) -> Vec<usize> {
+        vec![2 * (1 + N_ASSETS)]
+    }
+
+    fn instances(&self) -> Vec<Vec<Fp>> {
+        let mut instances = vec![self.leaf_hash];
+        instances.extend(&self.leaf_balances);
+        instances.push(self.root_hash);
+        instances.extend(&self.assets_sum);
+        vec![instances]
+    }
 }
 
 impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize>
