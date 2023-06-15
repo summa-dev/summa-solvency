@@ -313,7 +313,9 @@ mod test {
         assert!(!full_verifier(&params, &vk, proof, &public_input));
     }
 
-    // Passing an invalid leaf hash as input for the witness generation should fail the permutation check between the computed root hash and the instance column root hash
+    // Passing an invalid leaf hash as input for the witness generation should fail:
+    // - the permutation check between the leaf hash and the instance column leaf hash
+    // - the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_leaf_hash_as_witness() {
         let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
@@ -325,18 +327,29 @@ mod test {
                 0,
             );
 
-        // invalidate leaf hash
-        circuit.leaf_hash = Fp::from(1000u64);
-
         let mut public_input = vec![circuit.leaf_hash];
         public_input.extend(&circuit.leaf_balances);
         public_input.push(circuit.root_hash);
         public_input.extend(&circuit.assets_sum);
 
+        // invalidate leaf hash
+        circuit.leaf_hash = Fp::from(1000u64);
+
         let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 6).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "merkle prove layer").into(),
+                        offset: 0
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 0 }
+                },
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 3 }
