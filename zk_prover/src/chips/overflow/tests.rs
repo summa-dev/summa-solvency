@@ -150,7 +150,7 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> Circuit<Fp>
 }
 
 #[cfg(test)]
-mod tests {
+mod testing {
     use super::OverflowCheckTestCircuit;
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
