@@ -4,13 +4,15 @@ use ecc::integer::{IntegerInstructions, Range};
 use ecc::maingate::{MainGate, RangeChip, RangeInstructions, RegionCtx};
 use ecc::GeneralEccChip;
 use ecdsa::ecdsa::{AssignedEcdsaSig, AssignedPublicKey, EcdsaChip, EcdsaConfig};
+use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::halo2curves::{
     bn256::Fr as Fp,
     group::{Curve, Group},
     secp256k1::Secp256k1Affine as Secp256k1,
     CurveAffine,
 };
-use halo2_proofs::{circuit::*, plonk::*};
+use halo2_proofs::plonk::{Circuit, ConstraintSystem, Error};
+
 use rand::rngs::OsRng;
 
 const BIT_LEN_LIMB: usize = 68;

@@ -1,7 +1,8 @@
 // Patterned after [halo2wrong ECDSA](https://github.com/privacy-scaling-explorations/halo2wrong/blob/master/ecdsa/src/ecdsa.rs)
 use ecdsa::ecdsa::EcdsaConfig;
+use halo2_proofs::circuit::{AssignedCell, Layouter};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::{circuit::*, plonk::*};
+use halo2_proofs::plonk::Error;
 
 #[derive(Debug, Clone)]
 pub struct EcdsaConfigWithInstance {
