@@ -153,17 +153,17 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
     pub fn assign_leaf_hash_and_balances(
         &self,
         mut layouter: impl Layouter<Fp>,
-        leaf_hash: Fp,
         leaf_balances: &[Fp],
     ) -> Result<(AssignedCell<Fp, Fp>, Vec<AssignedCell<Fp, Fp>>), Error> {
         let (leaf_hash_cell, leaf_balance_cells) = layouter.assign_region(
             || "assign leaf hash",
             |mut region| {
-                let hash = region.assign_advice(
+                let hash = region.assign_advice_from_instance(
                     || "leaf hash",
+                    self.config.instance,
+                    0,
                     self.config.advice[MST_WIDTH - 3],
                     0,
-                    || Value::known(leaf_hash),
                 )?;
 
                 let balances: Vec<AssignedCell<Fp, Fp>> = (0..N_ASSETS)
