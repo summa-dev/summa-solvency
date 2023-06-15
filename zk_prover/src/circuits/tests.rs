@@ -91,16 +91,11 @@ mod test {
                 0,
             );
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(circuit.root_hash);
-        public_input.extend(&circuit.assets_sum);
-
         // Generate the proof
-        let proof = full_prover(&params, &pk, circuit, &public_input);
+        let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
 
         // verify the proof to be true
-        assert!(full_verifier(&params, &vk, proof, &public_input));
+        assert!(full_verifier(&params, &vk, proof, circuit.instances()));
     }
 
     #[test]
@@ -205,7 +200,7 @@ mod test {
 
         // add invalid_root_hash to agg_circuit.instances()[0][3]
         let mut agg_circuit_invalid_instances = agg_circuit.instances();
-        agg_circuit_invalid_instances[0][3] = invalid_root_hash;
+        agg_circuit_invalid_instances[0][N_ASSETS + 1] = invalid_root_hash;
 
         let invalid_prover =
             MockProver::run(23, &agg_circuit, agg_circuit_invalid_instances).unwrap();
@@ -265,7 +260,7 @@ mod test {
     }
 
     #[test]
-    fn test_invalid_root_hash_with_full_prover() {
+    fn test_invalid_root_hash_as_instance_with_full_prover() {
         let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         let circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
@@ -288,16 +283,15 @@ mod test {
 
         let invalid_root_hash = Fp::from(1000u64);
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(invalid_root_hash);
-        public_input.extend(&circuit.assets_sum);
+        // add invalid_root_hash to agg_circuit.instances()[0][3]
+        let mut instances = circuit.instances();
+        instances[0][N_ASSETS + 1] = invalid_root_hash;
 
         // Generate the proof
-        let proof = full_prover(&params, &pk, circuit, &public_input);
+        let proof = full_prover(&params, &pk, circuit, instances.clone());
 
         // verify the proof to be false
-        assert!(!full_verifier(&params, &vk, proof, &public_input));
+        assert!(!full_verifier(&params, &vk, proof, instances));
     }
 
     // Passing an invalid leaf hash as input for the witness generation should fail:
