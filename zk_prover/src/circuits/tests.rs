@@ -176,6 +176,67 @@ mod test {
         );
     }
 
+    #[test]
+    fn test_invalid_merkle_sum_tree_with_full_recursive_prover() {
+        // params for the aggregation circuit
+        let params_agg = generate_setup_params(23);
+
+        // downsize params for our application specific snark
+        let mut params_app = params_agg.clone();
+        params_app.downsize(11);
+
+        // generate the verification key and the proving key for the application circuit, using an empty circuit
+        let circuit_app = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
+
+        let vk_app = keygen_vk(&params_app, &circuit_app).expect("vk generation should not fail");
+        let pk_app =
+            keygen_pk(&params_app, vk_app, &circuit_app).expect("pk generation should not fail");
+
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
+
+        // Only now we can instantiate the circuit with the actual inputs
+        let circuit_app =
+            MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
+                assets_sum,
+                "src/merkle_sum_tree/csv/entry_16.csv",
+                0,
+            );
+
+        let snark_app = [(); 1]
+            .map(|_| gen_snark_shplonk(&params_app, &pk_app, circuit_app.clone(), None::<&str>));
+
+        const N_SNARK: usize = 1;
+
+        // create aggregation circuit
+        let agg_circuit = WrappedAggregationCircuit::<N_SNARK>::new(&params_agg, snark_app);
+
+        let invalid_root_hash = Fp::from(1000u64);
+
+        // add invalid_root_hash to agg_circuit.instances()[0][3]
+        let mut agg_circuit_invalid_instances = agg_circuit.instances();
+        agg_circuit_invalid_instances[0][3] = invalid_root_hash;
+
+        let invalid_prover =
+            MockProver::run(23, &agg_circuit, agg_circuit_invalid_instances).unwrap();
+
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 3 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "").into(),
+                        offset: 3
+                    }
+                }
+            ])
+        );
+    }
+
     // Passing an invalid root hash in the instance column should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_root_hash() {
