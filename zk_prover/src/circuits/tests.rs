@@ -1,18 +1,27 @@
 #[cfg(test)]
 mod test {
 
-    use crate::circuits::merkle_sum_tree::MerkleSumTreeCircuit;
-    use crate::circuits::utils::{full_prover, full_verifier, generate_setup_params};
-    use crate::merkle_sum_tree::big_int_to_fp;
-    use crate::merkle_sum_tree::{MST_WIDTH, N_ASSETS};
+    use crate::circuits::{
+        aggregation::WrappedAggregationCircuit,
+        merkle_sum_tree::MerkleSumTreeCircuit,
+        utils::{full_prover, full_verifier, generate_setup_params},
+    };
+    use crate::merkle_sum_tree::{big_int_to_fp, MST_WIDTH, N_ASSETS};
+    use ark_std::{end_timer, start_timer};
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
-        halo2curves::bn256::{Bn256, Fr as Fp},
-        plonk::{keygen_pk, keygen_vk, Any},
-        poly::kzg::commitment::ParamsKZG,
+        halo2curves::bn256::Fr as Fp,
+        plonk::{keygen_pk, keygen_vk, Any, Circuit},
+        poly::commitment::Params,
     };
     use num_bigint::ToBigInt;
     use rand::rngs::OsRng;
+    use snark_verifier_sdk::{
+        evm::{evm_verify, gen_evm_proof_shplonk, gen_evm_verifier_shplonk},
+        gen_pk,
+        halo2::gen_snark_shplonk,
+        CircuitExt,
+    };
 
     const LEVELS: usize = 4;
 
@@ -102,6 +111,69 @@ mod test {
 
         // verify the proof to be true
         assert!(full_verifier(&params, &vk, proof, &public_input));
+    }
+
+    #[test]
+    #[ignore]
+    fn test_valid_merkle_sum_tree_with_full_recursive_prover() {
+        // params for the aggregation circuit
+        let params_agg = generate_setup_params(23);
+
+        // downsize params for our application specific snark
+        let mut params_app = params_agg.clone();
+        params_app.downsize(11);
+
+        // generate the verification key and the proving key for the application circuit, using an empty circuit
+        let circuit_app = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
+
+        let vk_app = keygen_vk(&params_app, &circuit_app).expect("vk generation should not fail");
+        let pk_app =
+            keygen_pk(&params_app, vk_app, &circuit_app).expect("pk generation should not fail");
+
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
+
+        // Only now we can instantiate the circuit with the actual inputs
+        let circuit_app =
+            MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
+                assets_sum,
+                "src/merkle_sum_tree/csv/entry_16.csv",
+                0,
+            );
+
+        let snark_app = [(); 1]
+            .map(|_| gen_snark_shplonk(&params_app, &pk_app, circuit_app.clone(), None::<&str>));
+
+        const N_SNARK: usize = 1;
+
+        // create aggregation circuit
+        let agg_circuit = WrappedAggregationCircuit::<N_SNARK>::new(&params_agg, snark_app);
+
+        assert_eq!(agg_circuit.instances()[0], circuit_app.instances()[0]);
+
+        let start0 = start_timer!(|| "gen vk & pk");
+        // generate proving key for the aggregation circuit
+        let pk_agg = gen_pk(&params_agg, &agg_circuit.without_witnesses(), None);
+        end_timer!(start0);
+
+        let num_instances = agg_circuit.num_instance();
+        let instances = agg_circuit.instances();
+
+        let proof_calldata =
+            gen_evm_proof_shplonk(&params_agg, &pk_agg, agg_circuit, instances.clone());
+
+        let deployment_code = gen_evm_verifier_shplonk::<WrappedAggregationCircuit<N_SNARK>>(
+            &params_agg,
+            pk_agg.get_vk(),
+            num_instances,
+            None,
+        );
+        let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
+
+        // assert gas_cost to verify the proof on chain to be between 575000 and 590000
+        assert!(
+            (575000..=590000).contains(&gas_cost),
+            "gas_cost is not within the expected range"
+        );
     }
 
     // Passing an invalid root hash in the instance column should fail the permutation check between the computed root hash and the instance column root hash
