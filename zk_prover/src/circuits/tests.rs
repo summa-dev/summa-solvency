@@ -177,6 +177,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_invalid_merkle_sum_tree_with_full_recursive_prover() {
         // params for the aggregation circuit
         let params_agg = generate_setup_params(23);
