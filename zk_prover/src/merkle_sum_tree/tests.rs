@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test {
 
-    use crate::merkle_sum_tree::utils::big_int_to_fp;
+    use crate::merkle_sum_tree::utils::{big_int_to_fp, poseidon_node};
     use crate::merkle_sum_tree::{Entry, MerkleSumTree, N_ASSETS};
     use num_bigint::{BigInt, ToBigInt};
 
@@ -129,6 +129,37 @@ mod test {
         // verify proof
         assert!(merkle_tree.verify_proof(&proof));
     }
+
+    #[test]
+    fn test_penultimate_level_data() {
+        let merkle_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16_bigints.csv").unwrap();
+
+        let root = merkle_tree.root();
+
+        let penultimate_level_data = merkle_tree.penultimate_level_data();
+
+        // perform hashing using poseidon node
+        let expected_root = poseidon_node(
+            penultimate_level_data.0.hash,
+            penultimate_level_data.0.balances,
+            penultimate_level_data.1.hash,
+            penultimate_level_data.1.balances,
+        );
+
+        assert_eq!(root.hash, expected_root);
+
+        assert_eq!(
+            root.balances[0],
+            penultimate_level_data.0.balances[0] + penultimate_level_data.1.balances[0]
+        );
+
+        assert_eq!(
+            root.balances[1],
+            penultimate_level_data.0.balances[1] + penultimate_level_data.1.balances[1]
+        );
+    }
+
     #[test]
     fn test_big_int_conversion() {
         let big_int = 3.to_bigint().unwrap();

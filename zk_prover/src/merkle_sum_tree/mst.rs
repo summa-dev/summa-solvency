@@ -56,6 +56,12 @@ impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
         index_of(username, balances, &self.nodes)
     }
 
+    pub fn penultimate_level_data(&self) -> (&Node<N_ASSETS>, &Node<N_ASSETS>) {
+        let penultimate_level = &self.nodes[self.depth - 1];
+
+        (&penultimate_level[0], &penultimate_level[1])
+    }
+
     pub fn generate_proof(&self, index: usize) -> Result<MerkleProof<N_ASSETS>, &'static str> {
         create_proof(index, &self.entries, self.depth, &self.nodes, &self.root)
     }
