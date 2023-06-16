@@ -4,6 +4,7 @@ mod test {
     use crate::circuits::{
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
+        solvency::SolvencyCircuit,
         utils::{full_prover, full_verifier, generate_setup_params},
     };
     use crate::merkle_sum_tree::{MST_WIDTH, N_ASSETS};
@@ -478,6 +479,21 @@ mod test {
         );
     }
 
+    // Passing assets_sum that are less than the liabilities sum should not failt the solvency circuit
+    #[test]
+    fn test_valid_liabilities_less_than_assets() {
+        // Make the first asset sum more than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        let circuit = SolvencyCircuit::<MST_WIDTH, N_ASSETS>::init(
+            assets_sum,
+            "src/merkle_sum_tree/csv/entry_16.csv",
+        );
+
+        let valid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
+
+        valid_prover.assert_satisfied();
+    }
     // // Passing an assets sum that is less than the liabilities sum should fail the lessThan constraint check
     // #[test]
     // fn test_is_not_less_than() {
