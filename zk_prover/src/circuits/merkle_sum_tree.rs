@@ -6,34 +6,29 @@ use halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem, Error};
 use snark_verifier_sdk::CircuitExt;
 
 #[derive(Clone)]
-pub struct MerkleSumTreeCircuit<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize>
-{
+pub struct MstInclusionCircuit<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> {
     pub leaf_hash: Fp,
     pub leaf_balances: Vec<Fp>,
     pub path_element_hashes: Vec<Fp>,
     pub path_element_balances: Vec<[Fp; N_ASSETS]>,
     pub path_indices: Vec<Fp>,
-    pub assets_sum: Vec<Fp>,
     pub root_hash: Fp,
 }
 
 impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> CircuitExt<Fp>
-    for MerkleSumTreeCircuit<LEVELS, MST_WIDTH, N_ASSETS>
+    for MstInclusionCircuit<LEVELS, MST_WIDTH, N_ASSETS>
 {
     fn num_instance(&self) -> Vec<usize> {
-        vec![2 + N_ASSETS]
+        vec![2]
     }
 
     fn instances(&self) -> Vec<Vec<Fp>> {
-        let mut instances = vec![self.leaf_hash];
-        instances.push(self.root_hash);
-        instances.extend(&self.assets_sum);
-        vec![instances]
+        vec![vec![self.leaf_hash, self.root_hash]]
     }
 }
 
 impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize>
-    MerkleSumTreeCircuit<LEVELS, MST_WIDTH, N_ASSETS>
+    MstInclusionCircuit<LEVELS, MST_WIDTH, N_ASSETS>
 {
     pub fn init_empty() -> Self {
         Self {
@@ -42,16 +37,11 @@ impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize>
             path_element_hashes: vec![Fp::zero(); LEVELS],
             path_element_balances: vec![[Fp::zero(); N_ASSETS]; LEVELS],
             path_indices: vec![Fp::zero(); LEVELS],
-            assets_sum: vec![Fp::zero(); N_ASSETS],
             root_hash: Fp::zero(),
         }
     }
 
-    pub fn init_from_assets_and_path(
-        assets_sum: [Fp; N_ASSETS],
-        path: &str,
-        user_index: usize,
-    ) -> Self {
+    pub fn init(path: &str, user_index: usize) -> Self {
         let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
 
         let proof: MerkleProof<N_ASSETS> = merkle_sum_tree.generate_proof(user_index).unwrap();
@@ -71,14 +61,13 @@ impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize>
             path_element_hashes: proof.sibling_hashes,
             path_element_balances: proof.sibling_sums,
             path_indices: proof.path_indices,
-            assets_sum: assets_sum.to_vec(),
             root_hash: proof.root_hash,
         }
     }
 }
 
 impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> Circuit<Fp>
-    for MerkleSumTreeCircuit<LEVELS, MST_WIDTH, N_ASSETS>
+    for MstInclusionCircuit<LEVELS, MST_WIDTH, N_ASSETS>
 {
     type Config = MerkleSumTreeConfig<MST_WIDTH>;
     type FloorPlanner = SimpleFloorPlanner;
@@ -141,14 +130,7 @@ impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> Circuit
             )?;
         }
 
-        // enforce computed sum to be less than the assets sum
-        chip.enforce_less_than(layouter.namespace(|| "enforce less than"), &next_sum)?;
-
-        chip.expose_public(
-            layouter.namespace(|| "public root"),
-            &next_hash,
-            1,
-        )?;
+        chip.expose_public(layouter.namespace(|| "public root"), &next_hash, 1)?;
         Ok(())
     }
 }
