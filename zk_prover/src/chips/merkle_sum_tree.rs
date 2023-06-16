@@ -386,11 +386,12 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         Ok((computed_hash, computed_sum_cells))
     }
 
-    // Enforce computed sum to be less than total assets passed inside the instance column
+    // Enforce computed sum to be less than total assets passed inside the instance column. `index` is the row in the instance column where assets_sum[0] is stored.
     pub fn enforce_less_than(
         &self,
         mut layouter: impl Layouter<Fp>,
         prev_computed_sum_cells: &[AssignedCell<Fp, Fp>],
+        index: usize,
     ) -> Result<(), Error> {
         // Initiate lt chip
         let chip = LtChip::construct(self.config.lt_config);
@@ -410,12 +411,11 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                         i,
                     )?;
 
-                    //Next, copy the total assets from instance columns
+                    // Next, copy the total assets from instance columns
                     let total_assets_cell = region.assign_advice_from_instance(
                         || "copy total assets",
                         self.config.instance,
-                        //total assets go in the "end" of the public input after 1 leaf, N_ASSETS asset balances and 1 root
-                        2 + i,
+                        index + i,
                         self.config.advice[1],
                         i,
                     )?;
