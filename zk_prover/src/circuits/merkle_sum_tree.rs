@@ -111,8 +111,11 @@ impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> Circuit
         let chip = MerkleSumTreeChip::construct(config);
         let (leaf_hash, leaf_balances) = chip.assign_leaf_hash_and_balances(
             layouter.namespace(|| "assign leaf"),
+            self.leaf_hash,
             &self.leaf_balances,
         )?;
+
+        chip.expose_public(layouter.namespace(|| "public leaf hash"), &leaf_hash, 0)?;
 
         // apply it for level 0 of the merkle tree
         // node cells passed as inputs are the leaf_hash cell and the leaf_balance cell
@@ -141,7 +144,11 @@ impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> Circuit
         // enforce computed sum to be less than the assets sum
         chip.enforce_less_than(layouter.namespace(|| "enforce less than"), &next_sum)?;
 
-        chip.expose_public(layouter.namespace(|| "public root"), &next_hash, 1)?;
+        chip.expose_public(
+            layouter.namespace(|| "public root"),
+            &next_hash,
+            1,
+        )?;
         Ok(())
     }
 }
