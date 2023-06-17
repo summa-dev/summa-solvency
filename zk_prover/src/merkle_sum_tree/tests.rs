@@ -137,26 +137,28 @@ mod test {
 
         let root = merkle_tree.root();
 
-        let penultimate_level_data = merkle_tree.penultimate_level_data();
+        let (node_left, node_right) = merkle_tree
+            .penultimate_level_data()
+            .expect("Failed to retrieve penultimate level data");
 
         // perform hashing using poseidon node
         let expected_root = poseidon_node(
-            penultimate_level_data.0.hash,
-            penultimate_level_data.0.balances,
-            penultimate_level_data.1.hash,
-            penultimate_level_data.1.balances,
+            node_left.hash,
+            node_left.balances,
+            node_right.hash,
+            node_right.balances,
         );
 
         assert_eq!(root.hash, expected_root);
 
         assert_eq!(
             root.balances[0],
-            penultimate_level_data.0.balances[0] + penultimate_level_data.1.balances[0]
+            node_left.balances[0] + node_right.balances[0]
         );
 
         assert_eq!(
             root.balances[1],
-            penultimate_level_data.0.balances[1] + penultimate_level_data.1.balances[1]
+            node_left.balances[1] + node_right.balances[1]
         );
     }
 

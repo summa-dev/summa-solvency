@@ -44,8 +44,9 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> SolvencyCircuit<MST_WIDTH, N
     pub fn init(assets_sum: [Fp; N_ASSETS], path: &str) -> Self {
         let merkle_sum_tree = MerkleSumTree::<N_ASSETS>::new(path).unwrap();
 
-        let (penultimate_node_left, penultimate_node_right) =
-            merkle_sum_tree.penultimate_level_data();
+        let (penultimate_node_left, penultimate_node_right) = merkle_sum_tree
+            .penultimate_level_data()
+            .expect("Failed to retrieve penultimate level data");
 
         let root_hash = merkle_sum_tree.root().hash;
 
