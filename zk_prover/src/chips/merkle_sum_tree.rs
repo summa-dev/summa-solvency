@@ -26,7 +26,6 @@ pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
     pub instance: Column<Instance>,
     pub poseidon_config: PoseidonConfig<WIDTH, RATE, L>,
     pub overflow_check_config: OverflowCheckConfig<MAX_BITS, ACC_COLS>,
-    pub lt_config: LtConfig<Fp, 8>,
 }
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeChip<const MST_WIDTH: usize, const N_ASSETS: usize> {
@@ -119,14 +118,6 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
 
         let poseidon_config = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(meta);
 
-        // configure lt chip
-        let lt_config = LtChip::configure(
-            meta,
-            |meta| meta.query_selector(lt_selector),
-            |meta| meta.query_advice(advice[0], Rotation::cur()),
-            |meta| meta.query_advice(advice[1], Rotation::cur()),
-        );
-
         let config = MerkleSumTreeConfig::<MST_WIDTH> {
             advice,
             bool_selector,
@@ -136,16 +127,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             instance,
             poseidon_config,
             overflow_check_config,
-            lt_config,
         };
-
-        meta.create_gate("is_lt is 1", |meta| {
-            let q_enable = meta.query_selector(lt_selector);
-
-            vec![
-                q_enable * (config.lt_config.is_lt(meta, None) - Expression::Constant(Fp::from(1))),
-            ]
-        });
 
         config
     }
@@ -384,63 +366,6 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         }
 
         Ok((computed_hash, computed_sum_cells))
-    }
-
-    // Enforce computed sum to be less than total assets passed inside the instance column. `index` is the row in the instance column where assets_sum[0] is stored.
-    pub fn enforce_less_than(
-        &self,
-        mut layouter: impl Layouter<Fp>,
-        prev_computed_sum_cells: &[AssignedCell<Fp, Fp>],
-        index: usize,
-    ) -> Result<(), Error> {
-        // Initiate lt chip
-        let chip = LtChip::construct(self.config.lt_config);
-
-        // load lookup table
-        chip.load(&mut layouter)?;
-
-        for (i, prev_computed_sum_cell) in prev_computed_sum_cells.iter().enumerate() {
-            layouter.assign_region(
-                || "enforce sum to be less than total assets",
-                |mut region| {
-                    // First, copy the computed sum
-                    let computed_sum_cell = prev_computed_sum_cell.copy_advice(
-                        || "copy computed sum",
-                        &mut region,
-                        self.config.advice[0],
-                        i,
-                    )?;
-
-                    // Next, copy the total assets from instance columns
-                    let total_assets_cell = region.assign_advice_from_instance(
-                        || "copy total assets",
-                        self.config.instance,
-                        index + i,
-                        self.config.advice[1],
-                        i,
-                    )?;
-
-                    // enable lt seletor
-                    self.config.lt_selector.enable(&mut region, i)?;
-
-                    total_assets_cell
-                        .value()
-                        .zip(computed_sum_cell.value())
-                        .map(|(total_assets, computed_sum)| {
-                            chip.assign(
-                                &mut region,
-                                i,
-                                Value::known(computed_sum.to_owned()),
-                                Value::known(total_assets.to_owned()),
-                            )
-                        });
-
-                    Ok(())
-                },
-            )?;
-        }
-
-        Ok(())
     }
 
     // Enforce copy constraint check between input cell and instance column at row passed as input

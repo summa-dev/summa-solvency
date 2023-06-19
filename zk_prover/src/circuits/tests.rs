@@ -4,7 +4,7 @@ mod test {
     use crate::circuits::{
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
-        solvency::SolvencyCircuit,
+        // solvency::SolvencyCircuit,
         utils::{full_prover, full_verifier, generate_setup_params},
     };
     use crate::merkle_sum_tree::{MST_WIDTH, N_ASSETS};
@@ -508,148 +508,148 @@ mod test {
         );
     }
 
-    // Passing assets_sum that are less than the liabilities sum should not fail the solvency circuit
-    #[test]
-    fn test_valid_liabilities_less_than_assets() {
-        // Make the first asset sum more than liabilities sum (556862)
-        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+    // // Passing assets_sum that are less than the liabilities sum should not fail the solvency circuit
+    // #[test]
+    // fn test_valid_liabilities_less_than_assets() {
+    //     // Make the first asset sum more than liabilities sum (556862)
+    //     let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
 
-        let circuit = SolvencyCircuit::<MST_WIDTH, N_ASSETS>::init(
-            assets_sum,
-            "src/merkle_sum_tree/csv/entry_16.csv",
-        );
+    //     let circuit = SolvencyCircuit::<MST_WIDTH, N_ASSETS>::init(
+    //         assets_sum,
+    //         "src/merkle_sum_tree/csv/entry_16.csv",
+    //     );
 
-        let valid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
+    //     let valid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
 
-        valid_prover.assert_satisfied();
-    }
+    //     valid_prover.assert_satisfied();
+    // }
 
-    // Passing assets sum that is less than the liabilities sum should fail the solvency circuit
-    #[test]
-    fn test_invalid_assets_less_than_liabilities() {
-        // Make the first asset sum less than liabilities sum (556862)
-        let less_than_assets_sum_1st = [Fp::from(556861u64), Fp::from(556863u64)];
+    // // Passing assets sum that is less than the liabilities sum should fail the solvency circuit
+    // #[test]
+    // fn test_invalid_assets_less_than_liabilities() {
+    //     // Make the first asset sum less than liabilities sum (556862)
+    //     let less_than_assets_sum_1st = [Fp::from(556861u64), Fp::from(556863u64)];
 
-        let circuit = SolvencyCircuit::<MST_WIDTH, N_ASSETS>::init(
-            less_than_assets_sum_1st,
-            "src/merkle_sum_tree/csv/entry_16.csv",
-        );
+    //     let circuit = SolvencyCircuit::<MST_WIDTH, N_ASSETS>::init(
+    //         less_than_assets_sum_1st,
+    //         "src/merkle_sum_tree/csv/entry_16.csv",
+    //     );
 
-        let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
+    //     let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
 
-        assert_eq!(
-            invalid_prover.verify(),
-            Err(vec![VerifyFailure::ConstraintNotSatisfied {
-                constraint: ((8, "is_lt is 1").into(), 0, "").into(),
-                location: FailureLocation::InRegion {
-                    region: (11, "enforce sum to be less than total assets").into(),
-                    offset: 0
-                },
-                cell_values: vec![
-                    // The zero means that is not less than
-                    (((Any::advice(), 49).into(), 0).into(), "0".to_string())
-                ]
-            }])
-        );
+    //     assert_eq!(
+    //         invalid_prover.verify(),
+    //         Err(vec![VerifyFailure::ConstraintNotSatisfied {
+    //             constraint: ((8, "is_lt is 1").into(), 0, "").into(),
+    //             location: FailureLocation::InRegion {
+    //                 region: (11, "enforce sum to be less than total assets").into(),
+    //                 offset: 0
+    //             },
+    //             cell_values: vec![
+    //                 // The zero means that is not less than
+    //                 (((Any::advice(), 49).into(), 0).into(), "0".to_string())
+    //             ]
+    //         }])
+    //     );
 
-        // Make the second asset sum less than liabilities sum (556862)
-        let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
+    //     // Make the second asset sum less than liabilities sum (556862)
+    //     let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
 
-        let circuit = SolvencyCircuit::<MST_WIDTH, N_ASSETS>::init(
-            less_than_assets_sum_2nd,
-            "src/merkle_sum_tree/csv/entry_16.csv",
-        );
+    //     let circuit = SolvencyCircuit::<MST_WIDTH, N_ASSETS>::init(
+    //         less_than_assets_sum_2nd,
+    //         "src/merkle_sum_tree/csv/entry_16.csv",
+    //     );
 
-        let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
+    //     let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
 
-        assert_eq!(
-            invalid_prover.verify(),
-            Err(vec![VerifyFailure::ConstraintNotSatisfied {
-                constraint: ((8, "is_lt is 1").into(), 0, "").into(),
-                location: FailureLocation::InRegion {
-                    region: (12, "enforce sum to be less than total assets").into(),
-                    offset: 0
-                },
-                cell_values: vec![
-                    // The zero means that is not less than
-                    (((Any::advice(), 49).into(), 0).into(), "0".to_string())
-                ]
-            }])
-        );
+    //     assert_eq!(
+    //         invalid_prover.verify(),
+    //         Err(vec![VerifyFailure::ConstraintNotSatisfied {
+    //             constraint: ((8, "is_lt is 1").into(), 0, "").into(),
+    //             location: FailureLocation::InRegion {
+    //                 region: (12, "enforce sum to be less than total assets").into(),
+    //                 offset: 0
+    //             },
+    //             cell_values: vec![
+    //                 // The zero means that is not less than
+    //                 (((Any::advice(), 49).into(), 0).into(), "0".to_string())
+    //             ]
+    //         }])
+    //     );
 
-        // Make both the balances less than liabilities sum (556862)
-        let less_than_assets_sum_both = [Fp::from(556861u64), Fp::from(556861u64)];
+    //     // Make both the balances less than liabilities sum (556862)
+    //     let less_than_assets_sum_both = [Fp::from(556861u64), Fp::from(556861u64)];
 
-        let circuit = SolvencyCircuit::<MST_WIDTH, N_ASSETS>::init(
-            less_than_assets_sum_both,
-            "src/merkle_sum_tree/csv/entry_16.csv",
-        );
+    //     let circuit = SolvencyCircuit::<MST_WIDTH, N_ASSETS>::init(
+    //         less_than_assets_sum_both,
+    //         "src/merkle_sum_tree/csv/entry_16.csv",
+    //     );
 
-        let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
+    //     let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
 
-        assert_eq!(
-            invalid_prover.verify(),
-            Err(vec![
-                VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((8, "is_lt is 1").into(), 0, "").into(),
-                    location: FailureLocation::InRegion {
-                        region: (11, "enforce sum to be less than total assets").into(),
-                        offset: 0
-                    },
-                    cell_values: vec![
-                        // The zero means that is not less than
-                        (((Any::advice(), 49).into(), 0).into(), "0".to_string())
-                    ]
-                },
-                VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((8, "is_lt is 1").into(), 0, "").into(),
-                    location: FailureLocation::InRegion {
-                        region: (12, "enforce sum to be less than total assets").into(),
-                        offset: 0
-                    },
-                    cell_values: vec![
-                        // The zero means that is not less than
-                        (((Any::advice(), 49).into(), 0).into(), "0".to_string())
-                    ]
-                }
-            ])
-        );
-    }
+    //     assert_eq!(
+    //         invalid_prover.verify(),
+    //         Err(vec![
+    //             VerifyFailure::ConstraintNotSatisfied {
+    //                 constraint: ((8, "is_lt is 1").into(), 0, "").into(),
+    //                 location: FailureLocation::InRegion {
+    //                     region: (11, "enforce sum to be less than total assets").into(),
+    //                     offset: 0
+    //                 },
+    //                 cell_values: vec![
+    //                     // The zero means that is not less than
+    //                     (((Any::advice(), 49).into(), 0).into(), "0".to_string())
+    //                 ]
+    //             },
+    //             VerifyFailure::ConstraintNotSatisfied {
+    //                 constraint: ((8, "is_lt is 1").into(), 0, "").into(),
+    //                 location: FailureLocation::InRegion {
+    //                     region: (12, "enforce sum to be less than total assets").into(),
+    //                     offset: 0
+    //                 },
+    //                 cell_values: vec![
+    //                     // The zero means that is not less than
+    //                     (((Any::advice(), 49).into(), 0).into(), "0".to_string())
+    //                 ]
+    //             }
+    //         ])
+    //     );
+    // }
 
-    // Manipulating the liabilities to make it less than the assets sum should fail the solvency circuit because the root hash will not match
-    #[test]
-    fn test_invalid_manipulated_liabilties() {
-        // For the second asset, the assets_sum is less than the liabilities sum (556862)
-        let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
+    // // Manipulating the liabilities to make it less than the assets sum should fail the solvency circuit because the root hash will not match
+    // #[test]
+    // fn test_invalid_manipulated_liabilties() {
+    //     // For the second asset, the assets_sum is less than the liabilities sum (556862)
+    //     let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
 
-        let mut circuit = SolvencyCircuit::<MST_WIDTH, N_ASSETS>::init(
-            less_than_assets_sum_2nd,
-            "src/merkle_sum_tree/csv/entry_16.csv",
-        );
+    //     let mut circuit = SolvencyCircuit::<MST_WIDTH, N_ASSETS>::init(
+    //         less_than_assets_sum_2nd,
+    //         "src/merkle_sum_tree/csv/entry_16.csv",
+    //     );
 
-        // But actually, the CEX tries to manipulate the liabilities sum for the second asset to make it less than the assets sum
-        circuit.left_node_balances[1] = Fp::from(1u64);
+    //     // But actually, the CEX tries to manipulate the liabilities sum for the second asset to make it less than the assets sum
+    //     circuit.left_node_balances[1] = Fp::from(1u64);
 
-        // This should pass the less than constraint but generate a root hash that does not match the one passed in the instance
-        let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
+    //     // This should pass the less than constraint but generate a root hash that does not match the one passed in the instance
+    //     let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
 
-        assert_eq!(
-            invalid_prover.verify(),
-            Err(vec![
-                VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 0 }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
-                    location: FailureLocation::InRegion {
-                        region: (4, "permute state").into(),
-                        offset: 43
-                    }
-                }
-            ])
-        );
-    }
+    //     assert_eq!(
+    //         invalid_prover.verify(),
+    //         Err(vec![
+    //             VerifyFailure::Permutation {
+    //                 column: (Any::Instance, 0).into(),
+    //                 location: FailureLocation::OutsideRegion { row: 0 }
+    //             },
+    //             VerifyFailure::Permutation {
+    //                 column: (Any::advice(), 42).into(),
+    //                 location: FailureLocation::InRegion {
+    //                     region: (4, "permute state").into(),
+    //                     offset: 43
+    //                 }
+    //             }
+    //         ])
+    //     );
+    // }
 
     use crate::circuits::ecdsa::EcdsaVerifyCircuit;
     use ecc::maingate::{big_to_fe, decompose, fe_to_big};
@@ -919,11 +919,11 @@ mod test {
             0,
         );
 
-        let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384))
+        let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (4096, 32768))
             .into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root
-            .titled("Merkle Sum Tree Layout", ("sans-serif", 60))
+            .titled("Merkle Sum Tree Layout", ("sans-serif", 25))
             .unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
