@@ -26,6 +26,35 @@ mod test {
     const LEVELS: usize = 4;
 
     #[test]
+    fn test_standard_on_chain_verifier() {
+        let params = generate_setup_params(11);
+
+        let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
+        );
+
+        let pk = gen_pk(&params, &circuit, None);
+
+        let num_instances = circuit.num_instance();
+        let instances = circuit.instances();
+
+        let proof_calldata = gen_evm_proof_shplonk(&params, &pk, circuit, instances.clone());
+
+        let deployment_code = gen_evm_verifier_shplonk::<
+            MstInclusionCircuit<LEVELS, MST_WIDTH, N_ASSETS>,
+        >(&params, pk.get_vk(), num_instances, None);
+
+        let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
+
+        // assert gas_cost to verify the proof on chain to be between 575000 and 590000
+        assert!(
+            (0..=600000).contains(&gas_cost),
+            "gas_cost is not within the expected range"
+        );
+    }
+
+    #[test]
     fn test_valid_merkle_sum_tree() {
         for user_index in 0..16 {
             let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
