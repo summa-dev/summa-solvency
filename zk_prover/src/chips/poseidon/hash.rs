@@ -10,7 +10,7 @@ use halo2_gadgets::poseidon::{primitives::*, Hash, Pow5Chip, Pow5Config};
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter},
     halo2curves::bn256::Fr as Fp,
-    plonk::{ConstraintSystem, Error},
+    plonk::{Advice, Column, ConstraintSystem, Error},
 };
 use std::marker::PhantomData;
 
@@ -46,14 +46,14 @@ impl<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize, const L: u
     }
 
     // Configuration of the PoseidonChip
+    // TO DO: Check security of using vectors here!
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
-        // hash_inputs: &[Column<Advice>],
+        hash_inputs: Vec<Column<Advice>>,
+        partial_sbox: Column<Advice>,
     ) -> PoseidonConfig<WIDTH, RATE, L> {
-        let partial_sbox = meta.advice_column();
         let rc_a = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
         let rc_b = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
-        let hash_inputs = (0..WIDTH).map(|_| meta.advice_column()).collect::<Vec<_>>();
 
         for hash_input in &hash_inputs {
             meta.enable_equality(*hash_input);

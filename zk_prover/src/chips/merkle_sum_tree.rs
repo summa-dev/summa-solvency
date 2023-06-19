@@ -116,7 +116,19 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                 .collect::<Vec<_>>()
         });
 
-        let poseidon_config = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(meta);
+        // Slice a advice into a vector of WIDTH + 1 columns
+        let hash_inputs = (0..WIDTH)
+            .map(|i| advice[i])
+            .collect::<Vec<Column<Advice>>>();
+
+        // extract a further instance column partial_sbox at index WIDTH + 1
+        let partial_sbox = advice[WIDTH];
+
+        let poseidon_config = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(
+            meta,
+            hash_inputs,
+            partial_sbox,
+        );
 
         let config = MerkleSumTreeConfig::<MST_WIDTH> {
             advice,

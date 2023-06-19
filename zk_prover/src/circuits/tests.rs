@@ -246,16 +246,16 @@ mod test {
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 1 }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
+                    column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (31, "permute state").into(),
                         offset: 43
                     }
-                }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 1 }
+                },
             ])
         );
     }
@@ -310,6 +310,13 @@ mod test {
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (31, "permute state").into(),
+                        offset: 43
+                    }
+                },
+                VerifyFailure::Permutation {
                     column: (Any::advice(), 6).into(),
                     location: FailureLocation::InRegion {
                         region: (1, "merkle prove layer").into(),
@@ -324,13 +331,6 @@ mod test {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
                 },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
-                    location: FailureLocation::InRegion {
-                        region: (31, "permute state").into(),
-                        offset: 43
-                    }
-                }
             ])
         );
     }
@@ -390,15 +390,15 @@ mod test {
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 1 }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
+                    column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (31, "permute state").into(),
                         offset: 43
                     }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 1 }
                 }
             ])
         );
@@ -420,16 +420,16 @@ mod test {
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 1 }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
+                    column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (31, "permute state").into(),
                         offset: 43
                     }
-                }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 1 }
+                },
             ])
         );
     }
@@ -461,16 +461,16 @@ mod test {
                     cell_values: vec![(((Any::advice(), 8).into(), 0).into(), "0x2".to_string()),]
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 1 }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
+                    column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (31, "permute state").into(),
                         offset: 43
                     }
-                }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 1 }
+                },
             ])
         );
     }
@@ -494,16 +494,16 @@ mod test {
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 1 }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
+                    column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (31, "permute state").into(),
                         offset: 43
                     }
-                }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 1 }
+                },
             ])
         );
     }
@@ -919,7 +919,7 @@ mod test {
             0,
         );
 
-        let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (4096, 32768))
+        let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384))
             .into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root
