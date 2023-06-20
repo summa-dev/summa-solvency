@@ -17,24 +17,25 @@ use halo2_proofs::{
 use rand::rngs::OsRng;
 use std::fs::File;
 
-pub fn generate_setup_params(levels: usize) -> ParamsKZG<Bn256> {
-    // 2^k is the number of rows for the circuit. We choos 27 levels as upper bound for the merkle sum tree
-    let k = match levels {
-        4..=27 => 11,
-        _ => 0,
-    };
-
+pub fn generate_setup_params(k: u32) -> ParamsKZG<Bn256> {
     let ptau_path = format!("ptau/hermez-raw-{}", k);
 
     let metadata = std::fs::metadata(ptau_path.clone());
 
     if metadata.is_err() {
         println!("ptau file not found, generating a trusted setup of our own. If needed, download the ptau from https://github.com/han0110/halo2-kzg-srs");
-        ParamsKZG::<Bn256>::setup(k, OsRng)
+        // start timer
+        let timer = start_timer!(|| "Creating params");
+        let params = ParamsKZG::<Bn256>::setup(k, OsRng);
+        end_timer!(timer);
+        params
     } else {
         println!("ptau file found");
+        let timer = start_timer!(|| "Creating params");
         let mut params_fs = File::open(ptau_path).expect("couldn't load params");
-        ParamsKZG::<Bn256>::read(&mut params_fs).expect("Failed to read params")
+        let params = ParamsKZG::<Bn256>::read(&mut params_fs).expect("Failed to read params");
+        end_timer!(timer);
+        params
     }
 }
 

@@ -28,6 +28,11 @@ cargo build
 cargo test --features dev-graph -- --nocapture
 ```
 
+To run the on-chain verifer test run
+```
+cargo test --release  -- --ignored --nocapture test_valid_merkle_sum_tree_with_full_recursive_prover
+```
+
 ## Chips
 
 - [Poseidon](#Poseidon)
