@@ -21,7 +21,6 @@ pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
     pub bool_selector: Selector,
     pub swap_selector: Selector,
     pub sum_selector: Selector,
-    pub lt_selector: Selector,
     pub instance: Column<Instance>,
     pub poseidon_config: PoseidonConfig<WIDTH, RATE, L>,
     pub overflow_check_config: OverflowCheckConfig<MAX_BITS, ACC_COLS>,
@@ -49,7 +48,6 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         let bool_selector = meta.selector();
         let swap_selector = meta.selector();
         let sum_selector = meta.selector();
-        let lt_selector = meta.selector();
 
         // enable equality for leaf hashes and computed sums copy constraint with instance column (col_a)
         for col in advice.iter() {
@@ -141,7 +139,6 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             bool_selector,
             swap_selector,
             sum_selector,
-            lt_selector,
             instance,
             poseidon_config,
             overflow_check_config,

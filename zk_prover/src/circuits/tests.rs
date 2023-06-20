@@ -27,7 +27,7 @@ mod test {
 
     #[test]
     fn test_standard_on_chain_verifier() {
-        let params = generate_setup_params(10);
+        let params = generate_setup_params(11);
 
         let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
