@@ -18,8 +18,7 @@ const L: usize = L_NODE;
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
     pub advice: [Column<Advice>; MST_WIDTH],
-    pub bool_selector: Selector,
-    pub swap_selector: Selector,
+    pub bool_and_swap_selector: Selector,
     pub sum_selector: Selector,
     pub instance: Column<Instance>,
     pub poseidon_config: PoseidonConfig<WIDTH, RATE, L>,
@@ -45,8 +44,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         let col_c: Column<Advice> = advice[advice.len() - 1];
 
         // create selectors
-        let bool_selector = meta.selector();
-        let swap_selector = meta.selector();
+        let bool_and_swap_selector = meta.selector();
         let sum_selector = meta.selector();
 
         // enable equality for leaf hashes and computed sums copy constraint with instance column (col_a)
@@ -58,7 +56,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         // Enforces that swap_bit is either a 0 or 1 when the bool selector is enabled
         // s * swap_bit * (1 - swap_bit) = 0
         meta.create_gate("bool constraint", |meta| {
-            let s = meta.query_selector(bool_selector);
+            let s = meta.query_selector(bool_and_swap_selector);
             let swap_bit = meta.query_advice(col_c, Rotation::cur());
             vec![s * swap_bit.clone() * (Expression::Constant(Fp::from(1)) - swap_bit)]
         });
@@ -66,7 +64,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         // Enforces that if the swap_bit is on, the columns will be swapped.
         // This applies only when the swap selector is enabled
         meta.create_gate("swap constraint", |meta| {
-            let s = meta.query_selector(swap_selector);
+            let s = meta.query_selector(bool_and_swap_selector);
             let swap_bit = meta.query_advice(col_c, Rotation::cur());
             let hash_l_cur = meta.query_advice(col_a, Rotation::cur());
             let hash_r_cur = meta.query_advice(col_b, Rotation::cur());
@@ -133,8 +131,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
 
         MerkleSumTreeConfig::<MST_WIDTH> {
             advice,
-            bool_selector,
-            swap_selector,
+            bool_and_swap_selector,
             sum_selector,
             instance,
             poseidon_config,
@@ -190,8 +187,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             || "merkle prove layer",
             |mut region| {
                 // Row 0
-                self.config.bool_selector.enable(&mut region, 0)?;
-                self.config.swap_selector.enable(&mut region, 0)?;
+                self.config.bool_and_swap_selector.enable(&mut region, 0)?;
                 let l1 = prev_hash.copy_advice(
                     || "copy hash cell from previous level",
                     &mut region,
