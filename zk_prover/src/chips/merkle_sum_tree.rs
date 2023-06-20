@@ -9,8 +9,8 @@ use halo2_proofs::plonk::{
 };
 use halo2_proofs::poly::Rotation;
 
-const ACC_COLS: usize = 5;
-const MAX_BITS: u8 = 5;
+const ACC_COLS: usize = 8;
+const MAX_BITS: u8 = 8;
 const WIDTH: usize = 7;
 const RATE: usize = 6;
 const L: usize = L_NODE;
