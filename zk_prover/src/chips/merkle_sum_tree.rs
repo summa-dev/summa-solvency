@@ -121,18 +121,15 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         });
 
         // fill decomposed_values with the values [0, WIDTH) of the advice vector
-        let mut hash_inputs = [advice[0]; WIDTH];
-        hash_inputs[..WIDTH].copy_from_slice(&advice[..WIDTH]);
+        let mut state = [advice[0]; WIDTH];
+        state[..WIDTH].copy_from_slice(&advice[..WIDTH]);
 
         // fill partial_sbox with the value at index WIDTH of the advice vector
 
         let partial_sbox = advice[WIDTH];
 
-        let poseidon_config = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(
-            meta,
-            hash_inputs,
-            partial_sbox,
-        );
+        let poseidon_config =
+            PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(meta, state, partial_sbox);
 
         MerkleSumTreeConfig::<MST_WIDTH> {
             advice,
