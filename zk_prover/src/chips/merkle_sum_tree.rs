@@ -2,7 +2,6 @@ use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::merkle_sum_tree::L_NODE;
-use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
 use halo2_proofs::circuit::{AssignedCell, Layouter, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
@@ -10,8 +9,8 @@ use halo2_proofs::plonk::{
 };
 use halo2_proofs::poly::Rotation;
 
-const ACC_COLS: usize = 31;
-const MAX_BITS: u8 = 8;
+const ACC_COLS: usize = 5;
+const MAX_BITS: u8 = 5;
 const WIDTH: usize = 7;
 const RATE: usize = 6;
 const L: usize = L_NODE;
@@ -100,8 +99,15 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                 .collect::<Vec<_>>()
         });
 
+        // fill decomposed_values with the values [0, ACC_COLS) of the advice vector
+        let mut decomposed_values = [advice[0]; ACC_COLS];
+        decomposed_values[..ACC_COLS].copy_from_slice(&advice[..ACC_COLS]);
+
+        // fill a with the value at index ACC_COLS of the advice vector
+        let a = advice[ACC_COLS];
+
         // configure overflow chip
-        let overflow_check_config = OverflowChip::configure(meta);
+        let overflow_check_config = OverflowChip::configure(meta, a, decomposed_values);
 
         // Enforces that input_left_balance[i] + input_right_balance[i] = computed_sum[i]
         meta.create_gate("sum constraint", |meta| {
@@ -116,12 +122,12 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                 .collect::<Vec<_>>()
         });
 
-        // Slice a advice into a vector of WIDTH + 1 columns
-        let hash_inputs = (0..WIDTH)
-            .map(|i| advice[i])
-            .collect::<Vec<Column<Advice>>>();
+        // fill decomposed_values with the values [0, WIDTH) of the advice vector
+        let mut hash_inputs = [advice[0]; WIDTH];
+        hash_inputs[..WIDTH].copy_from_slice(&advice[..WIDTH]);
 
-        // extract a further instance column partial_sbox at index WIDTH + 1
+        // fill partial_sbox with the value at index WIDTH of the advice vector
+
         let partial_sbox = advice[WIDTH];
 
         let poseidon_config = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(
@@ -130,7 +136,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             partial_sbox,
         );
 
-        let config = MerkleSumTreeConfig::<MST_WIDTH> {
+        MerkleSumTreeConfig::<MST_WIDTH> {
             advice,
             bool_selector,
             swap_selector,
@@ -139,9 +145,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             instance,
             poseidon_config,
             overflow_check_config,
-        };
-
-        config
+        }
     }
 
     pub fn assign_leaf_hash_and_balances(

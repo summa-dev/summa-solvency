@@ -11,7 +11,7 @@ pub struct OverflowCheckConfig<const MAX_BITS: u8, const ACC_COLS: usize> {
     pub a: Column<Advice>,
     pub decomposed_values: [Column<Advice>; ACC_COLS],
     pub range: Column<Fixed>,
-    pub selector: Selector,
+    pub toggle_overflow_check: Selector,
 }
 
 #[derive(Debug, Clone)]
@@ -24,18 +24,20 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
         Self { config }
     }
 
-    pub fn configure(meta: &mut ConstraintSystem<Fp>) -> OverflowCheckConfig<MAX_BITS, ACC_COLS> {
-        let selector = meta.selector();
+    pub fn configure(
+        meta: &mut ConstraintSystem<Fp>,
+        a: Column<Advice>,
+        decomposed_values: [Column<Advice>; ACC_COLS],
+    ) -> OverflowCheckConfig<MAX_BITS, ACC_COLS> {
+        let toggle_overflow_check = meta.complex_selector();
         let range = meta.fixed_column();
-        let a = meta.advice_column();
-        let decomposed_values = [(); ACC_COLS].map(|_| meta.advice_column());
 
         meta.enable_equality(a);
 
         meta.create_gate(
             "equality check between decomposed_value and value",
             |meta| {
-                let s_doc = meta.query_selector(selector);
+                let s_doc = meta.query_selector(toggle_overflow_check);
 
                 let value = meta.query_advice(a, Rotation::cur());
 
@@ -87,7 +89,8 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
             meta.lookup_any("range check for MAXBITS", |meta| {
                 let cell = meta.query_advice(*column, Rotation::cur());
                 let range = meta.query_fixed(range, Rotation::cur());
-                vec![(cell, range)]
+                let enable_lookup = meta.query_selector(toggle_overflow_check);
+                vec![(enable_lookup * cell, range)]
             });
         });
 
@@ -95,7 +98,7 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
             a,
             decomposed_values,
             range,
-            selector,
+            toggle_overflow_check,
         }
     }
 
@@ -108,7 +111,7 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
             || "assign decomposed values",
             |mut region| {
                 // enable selector
-                self.config.selector.enable(&mut region, 0)?;
+                self.config.toggle_overflow_check.enable(&mut region, 0)?;
 
                 // Assign input value to the cell inside the region
                 value.copy_advice(|| "assign value", &mut region, self.config.a, 0)?;
