@@ -113,6 +113,8 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> Circuit<Fp>
         let addchip_config = AddChip::configure(meta);
 
         let a = meta.advice_column();
+        meta.enable_equality(a);
+
         let decomposed_values = [(); ACC_COLS].map(|_| meta.advice_column());
 
         let overflow_check_config =
