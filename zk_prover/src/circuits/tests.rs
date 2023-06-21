@@ -121,11 +121,11 @@ mod test {
     #[ignore]
     fn test_valid_merkle_sum_tree_with_full_recursive_prover() {
         // params for the aggregation circuit
-        let params_agg = generate_setup_params(22);
+        let params_agg = generate_setup_params(20);
 
         // downsize params for our application specific snark
         let mut params_app = params_agg.clone();
-        params_app.downsize(11);
+        params_app.downsize(9);
 
         // generate the verification key and the proving key for the application circuit, using an empty circuit
         let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
@@ -180,7 +180,7 @@ mod test {
     #[ignore]
     fn test_invalid_merkle_sum_tree_with_full_recursive_prover() {
         // params for the aggregation circuit
-        let params_agg = generate_setup_params(23);
+        let params_agg = generate_setup_params(20);
 
         // downsize params for our application specific snark
         let mut params_app = params_agg.clone();
@@ -213,7 +213,7 @@ mod test {
         agg_circuit_invalid_instances[0][1] = invalid_root_hash;
 
         let invalid_prover =
-            MockProver::run(23, &agg_circuit, agg_circuit_invalid_instances).unwrap();
+            MockProver::run(20, &agg_circuit, agg_circuit_invalid_instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
