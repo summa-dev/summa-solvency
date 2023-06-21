@@ -26,13 +26,11 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
 
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
-        a: Column<Advice>,
         decomposed_values: [Column<Advice>; ACC_COLS],
+        a: Column<Advice>,
     ) -> OverflowCheckConfig<MAX_BITS, ACC_COLS> {
         let toggle_overflow_check = meta.complex_selector();
         let range = meta.fixed_column();
-
-        meta.enable_equality(a);
 
         meta.create_gate(
             "equality check between decomposed_value and value",

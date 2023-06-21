@@ -24,12 +24,13 @@ mod test {
     };
 
     const LEVELS: usize = 4;
+    const L: usize = 6;
 
     #[test]
     fn test_standard_on_chain_verifier() {
-        let params = generate_setup_params(11);
+        let params = generate_setup_params(9);
 
-        let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -41,9 +42,12 @@ mod test {
 
         let proof_calldata = gen_evm_proof_shplonk(&params, &pk, circuit, instances.clone());
 
-        let deployment_code = gen_evm_verifier_shplonk::<
-            MstInclusionCircuit<LEVELS, MST_WIDTH, N_ASSETS>,
-        >(&params, pk.get_vk(), num_instances, None);
+        let deployment_code = gen_evm_verifier_shplonk::<MstInclusionCircuit<LEVELS, L, N_ASSETS>>(
+            &params,
+            pk.get_vk(),
+            num_instances,
+            None,
+        );
 
         let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
 
@@ -57,7 +61,7 @@ mod test {
     #[test]
     fn test_valid_merkle_sum_tree() {
         for user_index in 0..16 {
-            let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+            let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
                 "src/merkle_sum_tree/csv/entry_16.csv",
                 user_index,
             );
@@ -73,7 +77,7 @@ mod test {
         // Same as above but now the entries contain a balance that is greater than 64 bits
         // liabilities sum is 18446744073710096590
 
-        let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );

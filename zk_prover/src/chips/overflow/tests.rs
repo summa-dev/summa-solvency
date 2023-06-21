@@ -115,7 +115,8 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> Circuit<Fp>
         let a = meta.advice_column();
         let decomposed_values = [(); ACC_COLS].map(|_| meta.advice_column());
 
-        let overflow_check_config = OverflowChip::<MAX_BITS, ACC_COLS>::configure(meta, a, decomposed_values);
+        let overflow_check_config =
+            OverflowChip::<MAX_BITS, ACC_COLS>::configure(meta, decomposed_values, a);
 
         {
             OverflowCheckTestConfig {
