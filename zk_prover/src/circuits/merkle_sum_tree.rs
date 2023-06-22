@@ -108,7 +108,7 @@ impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
         let overflow_check_config = OverflowChip::<MAX_BITS, ACC_COLS>::configure(
             meta,
             advices[0..ACC_COLS].try_into().unwrap(),
-            advices[ACC_COLS + 1],
+            advices[ACC_COLS],
         );
 
         let instance = meta.instance_column();
