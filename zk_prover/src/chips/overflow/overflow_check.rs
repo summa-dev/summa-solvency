@@ -30,6 +30,8 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
         let a = meta.advice_column();
         let decomposed_values = [(); ACC_COLS].map(|_| meta.advice_column());
 
+        meta.enable_equality(a);
+
         meta.create_gate(
             "equality check between decomposed_value and value",
             |meta| {
@@ -109,7 +111,7 @@ impl<const MAX_BITS: u8, const ACC_COLS: usize> OverflowChip<MAX_BITS, ACC_COLS>
                 self.config.selector.enable(&mut region, 0)?;
 
                 // Assign input value to the cell inside the region
-                let _ = value.copy_advice(|| "assign value", &mut region, self.config.a, 0);
+                value.copy_advice(|| "assign value", &mut region, self.config.a, 0)?;
 
                 // Just used helper function for decomposing. In other halo2 application used functions based on Field.
                 let decomposed_values: Vec<Fp> = decompose_bigint_to_ubits(
