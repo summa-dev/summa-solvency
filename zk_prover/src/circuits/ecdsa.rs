@@ -83,7 +83,10 @@ impl Circuit<Fp> for EcdsaVerifyCircuit {
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
-        Self::default()
+        EcdsaVerifyCircuit {
+            window_size: 4,
+            ..Default::default()
+        }
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
