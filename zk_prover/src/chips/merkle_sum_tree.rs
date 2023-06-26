@@ -141,8 +141,8 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
     // Assign the hashes for node in a region following this layout on 3 advice columns:
     // | a              | b                 | c          |
     // | ------------   | -------------     | ---------- |
-    // | `current_hash`    | `element_hash`    | `swap_bit` |
-    // | `current_hash`    | `element_hash`    | -          | on this row `current_hash` and `element_hash` are swapped according to `swap_bit`
+    // | `current_hash` | `element_hash`    | `swap_bit` |
+    // | `current_hash` | `element_hash`    | -          | on this row `current_hash` and `element_hash` are swapped according to `swap_bit`
     pub fn assign_nodes_hashes_per_level(
         &self,
         mut layouter: impl Layouter<Fp>,
