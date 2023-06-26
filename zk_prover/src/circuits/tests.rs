@@ -787,7 +787,7 @@ mod test {
             0,
         );
 
-        let root = BitMapBackend::new("prints/merkle-sum-tree-layout-2.png", (2048, 16384))
+        let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384))
             .into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root
@@ -795,7 +795,7 @@ mod test {
             .unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
-            .render(9, &circuit, &root)
+            .render(11, &circuit, &root)
             .unwrap();
     }
 
