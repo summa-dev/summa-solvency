@@ -21,12 +21,11 @@ impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> Circuit
     for MerkleSumTreeCircuit<LEVELS, MST_WIDTH, N_ASSETS>
 {
     fn num_instance(&self) -> Vec<usize> {
-        vec![2 * (1 + N_ASSETS)]
+        vec![2 + N_ASSETS]
     }
 
     fn instances(&self) -> Vec<Vec<Fp>> {
         let mut instances = vec![self.leaf_hash];
-        instances.extend(&self.leaf_balances);
         instances.push(self.root_hash);
         instances.extend(&self.assets_sum);
         vec![instances]
@@ -118,14 +117,6 @@ impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> Circuit
 
         chip.expose_public(layouter.namespace(|| "public leaf hash"), &leaf_hash, 0)?;
 
-        for (i, asset_balance) in leaf_balances.iter().enumerate() {
-            chip.expose_public(
-                layouter.namespace(|| "public leaf balance"),
-                asset_balance,
-                1 + i,
-            )?;
-        }
-
         // apply it for level 0 of the merkle tree
         // node cells passed as inputs are the leaf_hash cell and the leaf_balance cell
         let (mut next_hash, mut next_sum) = chip.merkle_prove_layer(
@@ -156,7 +147,7 @@ impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> Circuit
         chip.expose_public(
             layouter.namespace(|| "public root"),
             &next_hash,
-            1 + N_ASSETS,
+            1,
         )?;
         Ok(())
     }

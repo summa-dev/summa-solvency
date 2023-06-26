@@ -53,7 +53,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         let sum_selector = meta.selector();
         let lt_selector = meta.selector();
 
-        // enable equality for leaf hashes, balances and computed sums copy constraint with instance column (col_a)
+        // enable equality for leaf hashes and computed sums copy constraint with instance column (col_a)
         for col in advice.iter() {
             meta.enable_equality(*col);
         }
@@ -415,7 +415,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                         || "copy total assets",
                         self.config.instance,
                         //total assets go in the "end" of the public input after 1 leaf, N_ASSETS asset balances and 1 root
-                        2 + N_ASSETS + i,
+                        2 + i,
                         self.config.advice[1],
                         i,
                     )?;

@@ -62,6 +62,7 @@ mod test {
                 0,
             );
 
+        assert_eq!(circuit.instances()[0].len(), circuit.num_instance()[0]);
         let valid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
 
         valid_prover.assert_satisfied();
@@ -198,9 +199,8 @@ mod test {
 
         let invalid_root_hash = Fp::from(1000u64);
 
-        // add invalid_root_hash to agg_circuit.instances()[0][3]
         let mut agg_circuit_invalid_instances = agg_circuit.instances();
-        agg_circuit_invalid_instances[0][N_ASSETS + 1] = invalid_root_hash;
+        agg_circuit_invalid_instances[0][1] = invalid_root_hash;
 
         let invalid_prover =
             MockProver::run(23, &agg_circuit, agg_circuit_invalid_instances).unwrap();
@@ -210,13 +210,13 @@ mod test {
             Err(vec![
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 3 }
+                    location: FailureLocation::OutsideRegion { row: 1 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (1, "").into(),
-                        offset: 3
+                        offset: 1
                     }
                 }
             ])
@@ -237,7 +237,7 @@ mod test {
 
         let mut instances = circuit.instances();
         let invalid_root_hash = Fp::from(1000u64);
-        instances[0][N_ASSETS + 1] = invalid_root_hash;
+        instances[0][1] = invalid_root_hash;
 
         let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
 
@@ -246,7 +246,7 @@ mod test {
             Err(vec![
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 3 }
+                    location: FailureLocation::OutsideRegion { row: 1 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
@@ -283,9 +283,8 @@ mod test {
 
         let invalid_root_hash = Fp::from(1000u64);
 
-        // add invalid_root_hash to agg_circuit.instances()[0][3]
         let mut instances = circuit.instances();
-        instances[0][N_ASSETS + 1] = invalid_root_hash;
+        instances[0][1] = invalid_root_hash;
 
         // Generate the proof
         let proof = full_prover(&params, &pk, circuit, instances.clone());
@@ -330,7 +329,7 @@ mod test {
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 3 }
+                    location: FailureLocation::OutsideRegion { row: 1 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
@@ -380,9 +379,9 @@ mod test {
     }
 
     // Passing an invalid leaf balance as input for the witness generation.
-    // The following permutation checks should fail:
-    // - for the balance of the user for the first asset that doesn't match the expected one;
-    // - for the root hash that doesn't match the expected one.
+    // Invalid leaf balance means: leaf_hash = H(user_id, valid_balance), while the leaf balance passed as witness is invalid.
+    // The following permutation check should fail:
+    // - The root hash that doesn't match the expected one.
     #[test]
     fn test_invalid_leaf_balance_as_witness() {
         let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
@@ -406,19 +405,8 @@ mod test {
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 0).into(),
-                    location: FailureLocation::InRegion {
-                        region: (1, "merkle prove layer").into(),
-                        offset: 0
-                    }
-                },
-                VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 3 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
@@ -451,19 +439,8 @@ mod test {
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 1).into(),
-                    location: FailureLocation::InRegion {
-                        region: (1, "merkle prove layer").into(),
-                        offset: 0
-                    }
-                },
-                VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 2 }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 3 }
+                    location: FailureLocation::OutsideRegion { row: 1 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
@@ -472,42 +449,6 @@ mod test {
                         offset: 43
                     }
                 }
-            ])
-        );
-    }
-
-    // Passing an invalid leaf balance in the instance column should fail the permutation check between the (valid) leaf balance added as part of the witness and the instance column leaf balance
-    #[test]
-    fn test_invalid_leaf_balance_as_instance() {
-        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
-
-        let circuit =
-            MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
-                assets_sum,
-                "src/merkle_sum_tree/csv/entry_16.csv",
-                0,
-            );
-
-        let mut instances = circuit.instances();
-        let invalid_leaf_balance_0 = Fp::from(1000u64);
-        instances[0][1] = invalid_leaf_balance_0;
-
-        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
-
-        assert_eq!(
-            invalid_prover.verify(),
-            Err(vec![
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 0).into(),
-                    location: FailureLocation::InRegion {
-                        region: (1, "merkle prove layer").into(),
-                        offset: 0
-                    }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 1 }
-                },
             ])
         );
     }
@@ -544,7 +485,7 @@ mod test {
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 3 }
+                    location: FailureLocation::OutsideRegion { row: 1 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
@@ -581,7 +522,7 @@ mod test {
             Err(vec![
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 3 }
+                    location: FailureLocation::OutsideRegion { row: 1 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
