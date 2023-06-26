@@ -10,7 +10,6 @@ use halo2_proofs::plonk::{
 };
 use halo2_proofs::poly::Rotation;
 
-const ACC_COLS: usize = 31;
 const MAX_BITS: u8 = 8;
 const WIDTH: usize = 7;
 const RATE: usize = 6;
@@ -25,7 +24,7 @@ pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
     pub lt_selector: Selector,
     pub instance: Column<Instance>,
     pub poseidon_config: PoseidonConfig<WIDTH, RATE, L>,
-    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, ACC_COLS>,
+    pub overflow_check_config: OverflowCheckConfig<MAX_BITS>,
     pub lt_config: LtConfig<Fp, 8>,
 }
 #[derive(Debug, Clone)]
@@ -102,7 +101,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         });
 
         // configure overflow chip
-        let overflow_check_config = OverflowChip::configure(meta);
+        let overflow_check_config = OverflowChip::configure(meta, advice[0], advice[1]);
 
         // Enforces that input_left_balance[i] + input_right_balance[i] = computed_sum[i]
         meta.create_gate("sum constraint", |meta| {
