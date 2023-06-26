@@ -63,7 +63,6 @@ mod test {
             );
 
         assert_eq!(circuit.instances()[0].len(), circuit.num_instance()[0]);
-
         let valid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
 
         valid_prover.assert_satisfied();
@@ -330,6 +329,10 @@ mod test {
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 0 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
                 },
                 VerifyFailure::Permutation {
@@ -450,6 +453,42 @@ mod test {
                         offset: 43
                     }
                 }
+            ])
+        );
+    }
+
+    // Passing an invalid leaf balance in the instance column should fail the permutation check between the (valid) leaf balance added as part of the witness and the instance column leaf balance
+    #[test]
+    fn test_invalid_leaf_balance_as_instance() {
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
+
+        let circuit =
+            MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
+                assets_sum,
+                "src/merkle_sum_tree/csv/entry_16.csv",
+                0,
+            );
+
+        let mut instances = circuit.instances();
+        let invalid_leaf_balance_0 = Fp::from(1000u64);
+        instances[0][1] = invalid_leaf_balance_0;
+
+        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
+
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "merkle prove layer").into(),
+                        offset: 0
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 1 }
+                },
             ])
         );
     }
