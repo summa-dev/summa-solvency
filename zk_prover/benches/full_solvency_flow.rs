@@ -1,12 +1,12 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use halo2_proofs::{
-    halo2curves::bn256::{Bn256, Fr as Fp},
+    halo2curves::bn256::Bn256,
     plonk::{keygen_pk, keygen_vk},
     poly::kzg::commitment::ParamsKZG,
 };
 use snark_verifier_sdk::CircuitExt;
 use summa_solvency::{
-    circuits::merkle_sum_tree::MerkleSumTreeCircuit,
+    circuits::merkle_sum_tree::MstInclusionCircuit,
     circuits::utils::{full_prover, full_verifier, generate_setup_params},
     merkle_sum_tree::{MerkleSumTree, MST_WIDTH, N_ASSETS},
 };
@@ -32,7 +32,7 @@ fn verification_key_gen_benchmark(_c: &mut Criterion) {
 
     let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
-    let empty_circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
     let bench_name = format!("gen verification key for 2 power of {} entries", LEVELS);
     criterion.bench_function(&bench_name, |b| {
@@ -47,7 +47,7 @@ fn proving_key_gen_benchmark(_c: &mut Criterion) {
 
     let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
-    let empty_circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
     let vk = keygen_vk(&params, &empty_circuit).expect("vk generation should not fail");
     let bench_name = format!("gen proving key for 2 power of {} entries", LEVELS);
@@ -63,19 +63,15 @@ fn generate_zk_proof_benchmark(_c: &mut Criterion) {
 
     let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
-    let empty_circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
     let vk = keygen_vk(&params, &empty_circuit).expect("vk generation should not fail");
     let pk = keygen_pk(&params, vk, &empty_circuit).expect("pk generation should not fail");
 
     let csv_file = format!("benches/csv/entry_2_{}.csv", LEVELS);
 
-    let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
-
     // Only now we can instantiate the circuit with the actual inputs
-    let circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
-        assets_sum, &csv_file, 0,
-    );
+    let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(&csv_file, 0);
 
     let bench_name = format!("generate zk proof - tree of 2 power of {} entries", LEVELS);
     criterion.bench_function(&bench_name, |b| {
@@ -90,24 +86,15 @@ fn verify_zk_proof_benchmark(_c: &mut Criterion) {
 
     let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
-    let empty_circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
     let vk = keygen_vk(&params, &empty_circuit).expect("vk generation should not fail");
     let pk = keygen_pk(&params, vk.clone(), &empty_circuit).expect("pk generation should not fail");
 
     let csv_file = format!("benches/csv/entry_2_{}.csv", LEVELS);
 
-    let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
-
     // Only now we can instantiate the circuit with the actual inputs
-    let circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
-        assets_sum, &csv_file, 0,
-    );
-
-    let mut public_input = vec![circuit.leaf_hash];
-    public_input.extend(&circuit.leaf_balances);
-    public_input.push(circuit.root_hash);
-    public_input.extend(&circuit.assets_sum);
+    let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(&csv_file, 0);
 
     let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
 
