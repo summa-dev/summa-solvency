@@ -1,64 +1,41 @@
-use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
-use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
-use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
-use crate::merkle_sum_tree::L_NODE;
 use halo2_proofs::circuit::{AssignedCell, Layouter, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::plonk::{
-    Advice, Column, ConstraintSystem, Error, Expression, Instance, Selector,
-};
+use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector};
 use halo2_proofs::poly::Rotation;
 
-const ACC_COLS: usize = 31;
-const MAX_BITS: u8 = 8;
-const WIDTH: usize = 3;
-const RATE: usize = 2;
-const L: usize = L_NODE;
-
 #[derive(Debug, Clone)]
-pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
-    pub advice: [Column<Advice>; MST_WIDTH],
-    pub bool_selector: Selector,
-    pub swap_selector: Selector,
+pub struct MerkleSumTreeConfig {
+    pub advice: [Column<Advice>; 3],
+    pub bool_and_swap_selector: Selector,
     pub sum_selector: Selector,
-    pub instance: Column<Instance>,
-    pub poseidon_config: PoseidonConfig<WIDTH, RATE, L>,
-    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, ACC_COLS>,
 }
 #[derive(Debug, Clone)]
-pub struct MerkleSumTreeChip<const MST_WIDTH: usize, const N_ASSETS: usize> {
-    config: MerkleSumTreeConfig<MST_WIDTH>,
+pub struct MerkleSumTreeChip<const N_ASSETS: usize> {
+    config: MerkleSumTreeConfig,
 }
 
-impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH, N_ASSETS> {
-    pub fn construct(config: MerkleSumTreeConfig<MST_WIDTH>) -> Self {
+impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
+    pub fn construct(config: MerkleSumTreeConfig) -> Self {
         Self { config }
     }
 
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
-        advice: [Column<Advice>; MST_WIDTH],
-        instance: Column<Instance>,
-    ) -> MerkleSumTreeConfig<MST_WIDTH> {
-        let col_a: Column<Advice> = advice[advice.len() - 3];
-        let col_b: Column<Advice> = advice[advice.len() - 2];
-        let col_c: Column<Advice> = advice[advice.len() - 1];
+        advice: [Column<Advice>; 3],
+        selectors: [Selector; 2],
+    ) -> MerkleSumTreeConfig {
+        let col_a: Column<Advice> = advice[0];
+        let col_b: Column<Advice> = advice[1];
+        let col_c: Column<Advice> = advice[2];
 
         // create selectors
-        let bool_selector = meta.selector();
-        let swap_selector = meta.selector();
-        let sum_selector = meta.selector();
-
-        // enable equality for leaf hashes and computed sums copy constraint with instance column (col_a)
-        for col in advice.iter() {
-            meta.enable_equality(*col);
-        }
-        meta.enable_equality(instance);
+        let bool_and_swap_selector = selectors[0];
+        let sum_selector = selectors[1];
 
         // Enforces that swap_bit is either a 0 or 1 when the bool selector is enabled
         // s * swap_bit * (1 - swap_bit) = 0
         meta.create_gate("bool constraint", |meta| {
-            let s = meta.query_selector(bool_selector);
+            let s = meta.query_selector(bool_and_swap_selector);
             let swap_bit = meta.query_advice(col_c, Rotation::cur());
             vec![s * swap_bit.clone() * (Expression::Constant(Fp::from(1)) - swap_bit)]
         });
@@ -66,66 +43,47 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         // Enforces that if the swap_bit is on, the columns will be swapped.
         // This applies only when the swap selector is enabled
         meta.create_gate("swap constraint", |meta| {
-            let s = meta.query_selector(swap_selector);
+            let s = meta.query_selector(bool_and_swap_selector);
             let swap_bit = meta.query_advice(col_c, Rotation::cur());
-            let hash_l_cur = meta.query_advice(col_a, Rotation::cur());
-            let hash_r_cur = meta.query_advice(col_b, Rotation::cur());
-            let hash_l_next = meta.query_advice(col_a, Rotation::next());
-            let hash_r_next = meta.query_advice(col_b, Rotation::next());
+            let elelment_l_cur = meta.query_advice(col_a, Rotation::cur());
+            let elelment_r_cur = meta.query_advice(col_b, Rotation::cur());
+            let elelment_l_next = meta.query_advice(col_a, Rotation::next());
+            let elelment_r_next = meta.query_advice(col_b, Rotation::next());
 
-            let hashes_constraint = s.clone()
-                * swap_bit.clone()
-                * ((hash_l_next - hash_l_cur) - (hash_r_cur - hash_r_next));
+            let swap_constraint = s
+                * swap_bit
+                * ((elelment_l_next - elelment_l_cur) - (elelment_r_cur - elelment_r_next));
 
-            //Element-wise balance constraints for the sibling nodes
-            let balance_constraints = (0..N_ASSETS)
-                .map(|i| {
-                    let balance_l_cur = meta.query_advice(advice[i], Rotation::cur());
-                    let balance_r_cur = meta.query_advice(advice[i + N_ASSETS], Rotation::cur());
-                    let balance_l_next = meta.query_advice(advice[i], Rotation::next());
-                    let balance_r_next = meta.query_advice(advice[i + N_ASSETS], Rotation::next());
-
-                    s.clone()
-                        * swap_bit.clone()
-                        * ((balance_l_next - balance_l_cur) - (balance_r_cur - balance_r_next))
-                })
-                .collect::<Vec<_>>();
-
-            vec![hashes_constraint]
-                .into_iter()
-                .chain(balance_constraints)
-                .collect::<Vec<_>>()
+            vec![swap_constraint]
         });
-
-        // configure overflow chip
-        let overflow_check_config = OverflowChip::configure(meta);
 
         // Enforces that input_left_balance[i] + input_right_balance[i] = computed_sum[i]
         meta.create_gate("sum constraint", |meta| {
             (0..N_ASSETS)
-                .map(|i| {
-                    let left_balance = meta.query_advice(advice[i], Rotation::cur());
-                    let right_balance = meta.query_advice(advice[i + N_ASSETS], Rotation::cur());
-                    let computed_sum = meta.query_advice(advice[i + 2 * N_ASSETS], Rotation::cur());
+                .map(|_| {
+                    let left_balance = meta.query_advice(col_a, Rotation::cur());
+                    let right_balance = meta.query_advice(col_b, Rotation::cur());
+                    let computed_sum = meta.query_advice(col_c, Rotation::cur());
                     let s = meta.query_selector(sum_selector);
                     s * (left_balance + right_balance - computed_sum)
                 })
                 .collect::<Vec<_>>()
         });
 
-        let poseidon_config = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(meta);
-
-        MerkleSumTreeConfig::<MST_WIDTH> {
+        MerkleSumTreeConfig {
             advice,
-            bool_selector,
-            swap_selector,
+            bool_and_swap_selector,
             sum_selector,
-            instance,
-            poseidon_config,
-            overflow_check_config,
         }
     }
 
+    // Assign the leaf hash and balances to the tree following this layout on a single column:
+    // | a |
+    // | leaf hash |
+    // | leaf_balance_0 |
+    // | leaf_balance_1 |
+    // | ... |
+    // | leaf_balance_N |
     pub fn assign_leaf_hash_and_balances(
         &self,
         mut layouter: impl Layouter<Fp>,
@@ -137,7 +95,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             |mut region| {
                 let hash = region.assign_advice(
                     || "leaf hash",
-                    self.config.advice[MST_WIDTH - 3],
+                    self.config.advice[0],
                     0,
                     || Value::known(leaf_hash),
                 )?;
@@ -146,8 +104,8 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                     .map(|i| {
                         region.assign_advice(
                             || "leaf balances",
-                            self.config.advice[i],
-                            0,
+                            self.config.advice[0],
+                            i + 1,
                             || Value::known(leaf_balances[i]),
                         )
                     })
@@ -160,215 +118,192 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         Ok((leaf_hash_cell, leaf_balance_cells))
     }
 
-    pub fn merkle_prove_layer(
+    // assign the swap bit to a cell
+    pub fn assing_swap_bit(
         &self,
         mut layouter: impl Layouter<Fp>,
-        prev_hash: &AssignedCell<Fp, Fp>,
-        prev_balances: &[AssignedCell<Fp, Fp>],
-        element_hash: Fp,
-        element_balances: [Fp; N_ASSETS],
-        index: Fp,
-    ) -> Result<(AssignedCell<Fp, Fp>, Vec<AssignedCell<Fp, Fp>>), Error> {
-        let (left_hash, left_balances, right_hash, right_balances, computed_sum_cells) = layouter
-            .assign_region(
-            || "merkle prove layer",
+        swap_bit: Fp,
+    ) -> Result<AssignedCell<Fp, Fp>, Error> {
+        let swap_bit_cell = layouter.assign_region(
+            || "assign swap bit",
             |mut region| {
-                // Row 0
-                self.config.bool_selector.enable(&mut region, 0)?;
-                self.config.swap_selector.enable(&mut region, 0)?;
-                let l1 = prev_hash.copy_advice(
-                    || "copy hash cell from previous level",
+                let swap_bit_cell = region.assign_advice(
+                    || "swap bit",
+                    self.config.advice[0],
+                    0,
+                    || Value::known(swap_bit),
+                )?;
+
+                Ok(swap_bit_cell)
+            },
+        )?;
+        Ok(swap_bit_cell)
+    }
+
+    // Assign the hashes for node in a region following this layout on 3 advice columns:
+    // | a              | b                 | c          |
+    // | ------------   | -------------     | ---------- |
+    // | `current_hash` | `element_hash`    | `swap_bit` |
+    // | `current_hash` | `element_hash`    | -          | on this row `current_hash` and `element_hash` are swapped according to `swap_bit`
+    pub fn assign_nodes_hashes_per_level(
+        &self,
+        mut layouter: impl Layouter<Fp>,
+        current_hash: &AssignedCell<Fp, Fp>,
+        element_hash: Fp,
+        swap_bit_assigned: AssignedCell<Fp, Fp>,
+    ) -> Result<(AssignedCell<Fp, Fp>, AssignedCell<Fp, Fp>), Error> {
+        layouter.assign_region(
+            || "assign nodes hashes per merkle tree level",
+            |mut region| {
+                // enable the bool_and_swap_selector at row 0
+                self.config.bool_and_swap_selector.enable(&mut region, 0)?;
+
+                // copy the current_hash to the column self.config.advice[0] at offset 0
+                let l1 = current_hash.copy_advice(
+                    || "copy current hash from previous level",
                     &mut region,
-                    self.config.advice[MST_WIDTH - 3],
+                    self.config.advice[0],
                     0,
                 )?;
-                let l2s: Vec<AssignedCell<Fp, Fp>> = prev_balances
-                    .iter()
-                    .enumerate()
-                    .map(|(i, x)| {
-                        x.copy_advice(
-                            || "copy balance cell from previous level",
-                            &mut region,
-                            self.config.advice[i],
-                            0,
-                        )
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
 
+                // assign the element hash to the column self.config.advice[1] at offset 0
                 let r1 = region.assign_advice(
-                    || "assign element_hash",
-                    self.config.advice[MST_WIDTH - 2],
+                    || "element hash",
+                    self.config.advice[1],
                     0,
                     || Value::known(element_hash),
                 )?;
-                let r2s: Vec<AssignedCell<Fp, Fp>> = element_balances
-                    .iter()
-                    .enumerate()
-                    .map(|(i, x)| {
-                        region.assign_advice(
-                            || "assign element_balance",
-                            self.config.advice[N_ASSETS + i],
-                            0,
-                            || Value::known(*x),
-                        )
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
 
-                let index = region.assign_advice(
-                    || "assign index",
-                    self.config.advice[MST_WIDTH - 1],
+                // assign the swap_bit to the column self.config.advice[2] at offset 0
+                let swap_bit = swap_bit_assigned.copy_advice(
+                    || "swap bit",
+                    &mut region,
+                    self.config.advice[2],
                     0,
-                    || Value::known(index),
                 )?;
 
+                // Extract the value from the cell
                 let mut l1_val = l1.value().map(|x| x.to_owned());
-                let mut l2_vals: Vec<Value<Fp>> = l2s
-                    .iter()
-                    .map(|x| x.value().map(|x| x.to_owned()))
-                    .collect();
                 let mut r1_val = r1.value().map(|x| x.to_owned());
-                let mut r2_vals: Vec<Value<Fp>> = r2s
-                    .iter()
-                    .map(|x| x.value().map(|x| x.to_owned()))
-                    .collect();
 
-                // Row 1
-                self.config.sum_selector.enable(&mut region, 1)?;
-
-                // if index is 0 return (l1, l2, r1, r2) else return (r1, r2, l1, l2)
-                index.value().map(|x| x.to_owned()).map(|x| {
-                    (l1_val, l2_vals, r1_val, r2_vals) = if x == Fp::zero() {
-                        (l1_val, l2_vals.clone(), r1_val, r2_vals.clone())
+                // perform the swap according to the swap bit
+                // if swap_bit is 0 return (l1, r1) else return (r1, l1)
+                swap_bit.value().map(|x| x.to_owned()).map(|x| {
+                    (l1_val, r1_val) = if x == Fp::zero() {
+                        (l1_val, r1_val)
                     } else {
-                        (r1_val, r2_vals.clone(), l1_val, l2_vals.clone())
+                        (r1_val, l1_val)
                     };
                 });
 
-                // We need to perform the assignment of the row below according to the index
+                // Perform the assignment according to the swap at offset 1
                 let left_hash = region.assign_advice(
-                    || "assign left hash to be hashed",
-                    self.config.advice[MST_WIDTH - 3],
+                    || "assign left hash after swap",
+                    self.config.advice[0],
                     1,
                     || l1_val,
                 )?;
 
-                let left_balances: Vec<AssignedCell<Fp, Fp>> = l2_vals
-                    .iter()
-                    .enumerate()
-                    .map(|(i, x)| {
-                        region.assign_advice(
-                            || "assign left balance to be hashed",
-                            self.config.advice[i],
-                            1,
-                            || x.to_owned(),
-                        )
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-
                 let right_hash = region.assign_advice(
-                    || "assign right hash to be hashed",
-                    self.config.advice[MST_WIDTH - 2],
+                    || "assign right hash after swap",
+                    self.config.advice[1],
                     1,
                     || r1_val,
                 )?;
 
-                let right_balances = r2_vals
-                    .iter()
-                    .enumerate()
-                    .map(|(i, x)| {
-                        region.assign_advice(
-                            || "assign left balance to be hashed",
-                            self.config.advice[N_ASSETS + i],
-                            1,
-                            || x.to_owned(),
-                        )
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                // Computing the left and right balances sum, element-wise:
-                let computed_sums = l2_vals.iter().zip(r2_vals.iter()).map(|(a, b)| *a + b);
-
-                // Now we can assign the sum results to the computed_sums cells.
-                let computed_sum_cells = computed_sums
-                    .enumerate()
-                    .map(|(i, x)| {
-                        region.assign_advice(
-                            || format!("assign sum of left and right balances {}", i),
-                            self.config.advice[2 * N_ASSETS + i],
-                            1,
-                            || x,
-                        )
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                Ok((
-                    left_hash,
-                    left_balances,
-                    right_hash,
-                    right_balances,
-                    computed_sum_cells,
-                ))
+                Ok((left_hash, right_hash))
             },
-        )?;
-
-        // instantiate the poseidon_chip
-        let poseidon_chip = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::construct(
-            self.config.poseidon_config.clone(),
-        );
-
-        // The hash function inside the poseidon_chip performs the following action
-        // 1. Copy the left and right cells from the previous row
-        // 2. Perform the hash function and assign the digest to the current row
-        // 3. Constrain the digest to be equal to the hash of the left and right values
-
-        let hash_input_vec: Vec<AssignedCell<Fp, Fp>> = [left_hash]
-            .iter()
-            .chain(left_balances.iter())
-            .chain([right_hash].iter())
-            .chain(right_balances.iter())
-            .map(|x| x.to_owned())
-            .collect();
-
-        let hash_input: [AssignedCell<Fp, Fp>; L] = match hash_input_vec.try_into() {
-            Ok(arr) => arr,
-            Err(_) => panic!("Failed to convert Vec to Array"),
-        };
-
-        let computed_hash = poseidon_chip.hash(
-            layouter.namespace(|| format!("hash {} child nodes", 2 * (1 + N_ASSETS))),
-            hash_input,
-        )?;
-
-        // Initiate the overflow check chip
-        let overflow_chip = OverflowChip::construct(self.config.overflow_check_config.clone());
-
-        overflow_chip.load(&mut layouter)?;
-
-        // Each balance cell is constrained to be less than the maximum limit
-        for left_balance in left_balances.iter() {
-            overflow_chip.assign(
-                layouter.namespace(|| "overflow check left balance"),
-                left_balance,
-            )?;
-        }
-
-        for right_balance in right_balances.iter() {
-            overflow_chip.assign(
-                layouter.namespace(|| "overflow check right balance"),
-                right_balance,
-            )?;
-        }
-
-        Ok((computed_hash, computed_sum_cells))
+        )
     }
 
-    // Enforce copy constraint check between input cell and instance column at row passed as input
-    pub fn expose_public(
+    // Assign the nodes balance for a single asset in a region following this layout on 3 advice columns:
+    // | a                 | b                 | c          |
+    // | ------------      | -------------     | ---------- |
+    // | `current_balance` | `element_balance` | `swap_bit` |
+    // | `current_balance` | `element_balance` | `sum`      | on this row `current_balance` and `element_balance` are swapped according to `swap_bit`
+    pub fn assign_nodes_balance_per_asset(
         &self,
         mut layouter: impl Layouter<Fp>,
-        cell: &AssignedCell<Fp, Fp>,
-        row: usize,
-    ) -> Result<(), Error> {
-        layouter.constrain_instance(cell.cell(), self.config.instance, row)
+        current_balance: &AssignedCell<Fp, Fp>,
+        element_balance: Fp,
+        swap_bit_assigned: AssignedCell<Fp, Fp>,
+    ) -> Result<
+        (
+            AssignedCell<Fp, Fp>,
+            AssignedCell<Fp, Fp>,
+            AssignedCell<Fp, Fp>,
+        ),
+        Error,
+    > {
+        layouter.assign_region(
+            || "assign nodes balances per asset",
+            |mut region| {
+                // enable the bool_and_swap_selector at row 0
+                self.config.bool_and_swap_selector.enable(&mut region, 0)?;
+
+                // copy the current_balances to the column self.config.advice[0] at offset 0
+                let l1 = current_balance.copy_advice(
+                    || "copy current balance from prev level",
+                    &mut region,
+                    self.config.advice[0],
+                    0,
+                )?;
+
+                // assign the element_balance to the column self.config.advice[1] at offset 0
+                let r1 = region.assign_advice(
+                    || "element balance",
+                    self.config.advice[1],
+                    0,
+                    || Value::known(element_balance),
+                )?;
+
+                // assign the swap_bit to the column self.config.advice[2] at offset 0
+                let swap_bit = swap_bit_assigned.copy_advice(
+                    || "swap bit",
+                    &mut region,
+                    self.config.advice[2],
+                    0,
+                )?;
+
+                // Extract the value from the cell
+                let mut l1_val = l1.value().map(|x| x.to_owned());
+                let mut r1_val = r1.value().map(|x| x.to_owned());
+
+                // perform the swap according to the swap bit
+                // if swap_bit is 0 return (l1, r1) else return (r1, l1)
+                swap_bit.value().map(|x| x.to_owned()).map(|x| {
+                    (l1_val, r1_val) = if x == Fp::zero() {
+                        (l1_val, r1_val)
+                    } else {
+                        (r1_val, l1_val)
+                    };
+                });
+
+                // Perform the assignment according to the swap at offset 1
+                let left_balance_asset = region.assign_advice(
+                    || "assign left balance after swap",
+                    self.config.advice[0],
+                    1,
+                    || l1_val,
+                )?;
+
+                let right_balance_asset = region.assign_advice(
+                    || "assign right balance after swap",
+                    self.config.advice[1],
+                    1,
+                    || r1_val,
+                )?;
+
+                // enable the sum_selector at offset 1
+                self.config.sum_selector.enable(&mut region, 1)?;
+
+                // compute the sum of the two balances and assign it to the column self.config.advice[2] at offset 1
+                let sum = l1_val.zip(r1_val).map(|(a, b)| a + b);
+                let sum_cell =
+                    region.assign_advice(|| "sum of balances", self.config.advice[2], 1, || sum)?;
+
+                Ok((left_balance_asset, right_balance_asset, sum_cell))
+            },
+        )
     }
 }

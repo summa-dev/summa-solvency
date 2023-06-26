@@ -6,7 +6,7 @@ mod test {
         merkle_sum_tree::MstInclusionCircuit,
         utils::{full_prover, full_verifier, generate_setup_params},
     };
-    use crate::merkle_sum_tree::{MST_WIDTH, N_ASSETS};
+    use crate::merkle_sum_tree::N_ASSETS;
     use ark_std::{end_timer, start_timer};
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
@@ -23,16 +23,18 @@ mod test {
     };
 
     const LEVELS: usize = 4;
+    const L: usize = 2 + (N_ASSETS * 2);
+    const K: u32 = 10;
 
     #[test]
     fn test_valid_merkle_sum_tree() {
         for user_index in 0..16 {
-            let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+            let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
                 "src/merkle_sum_tree/csv/entry_16.csv",
                 user_index,
             );
 
-            let valid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
+            let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
             assert_eq!(circuit.instances()[0].len(), circuit.num_instance()[0]);
 
@@ -42,10 +44,10 @@ mod test {
 
     #[test]
     fn test_valid_merkle_sum_tree_with_full_prover() {
-        let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
-        let params = generate_setup_params(11);
+        let params = generate_setup_params(K);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -55,7 +57,7 @@ mod test {
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -75,17 +77,17 @@ mod test {
 
         // downsize params for our application specific snark
         let mut params_app = params_agg.clone();
-        params_app.downsize(11);
+        params_app.downsize(K);
 
         // generate the verification key and the proving key for the application circuit, using an empty circuit
-        let circuit_app = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
+        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
         let vk_app = keygen_vk(&params_app, &circuit_app).expect("vk generation should not fail");
         let pk_app =
             keygen_pk(&params_app, vk_app, &circuit_app).expect("pk generation should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit_app = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -134,17 +136,17 @@ mod test {
 
         // downsize params for our application specific snark
         let mut params_app = params_agg.clone();
-        params_app.downsize(11);
+        params_app.downsize(K);
 
         // generate the verification key and the proving key for the application circuit, using an empty circuit
-        let circuit_app = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
+        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
         let vk_app = keygen_vk(&params_app, &circuit_app).expect("vk generation should not fail");
         let pk_app =
             keygen_pk(&params_app, vk_app, &circuit_app).expect("pk generation should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit_app = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -186,7 +188,7 @@ mod test {
     // Passing an invalid root hash in the instance column should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_root_hash() {
-        let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -195,32 +197,32 @@ mod test {
         let invalid_root_hash = Fp::from(1000u64);
         instances[0][1] = invalid_root_hash;
 
-        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (61, "permute state").into(),
+                        offset: 38
+                    }
+                },
+                VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
                 },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
-                    location: FailureLocation::InRegion {
-                        region: (47, "permute state").into(),
-                        offset: 38
-                    }
-                }
             ])
         );
     }
 
     #[test]
     fn test_invalid_root_hash_as_instance_with_full_prover() {
-        let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
-        let params = generate_setup_params(11);
+        let params = generate_setup_params(K);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -228,7 +230,7 @@ mod test {
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -250,7 +252,7 @@ mod test {
     // - the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_leaf_hash_as_witness() {
-        let mut circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -260,15 +262,22 @@ mod test {
         // invalidate leaf hash
         circuit.leaf_hash = Fp::from(1000u64);
 
-        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 6).into(),
+                    column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (1, "merkle prove layer").into(),
+                        region: (3, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (61, "permute state").into(),
+                        offset: 38
                     }
                 },
                 VerifyFailure::Permutation {
@@ -279,13 +288,6 @@ mod test {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
                 },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
-                    location: FailureLocation::InRegion {
-                        region: (47, "permute state").into(),
-                        offset: 38
-                    }
-                }
             ])
         );
     }
@@ -293,7 +295,7 @@ mod test {
     // Passing an invalid leaf hash in the instance column should fail the permutation check between the (valid) leaf hash added as part of the witness and the instance column leaf hash
     #[test]
     fn test_invalid_leaf_hash_as_instance() {
-        let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -302,15 +304,15 @@ mod test {
         let invalid_leaf_hash = Fp::from(1000u64);
         instances[0][0] = invalid_leaf_hash;
 
-        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 6).into(),
+                    column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (1, "merkle prove layer").into(),
+                        region: (3, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
                     }
                 },
@@ -328,7 +330,7 @@ mod test {
     // - The root hash that doesn't match the expected one.
     #[test]
     fn test_invalid_leaf_balance_as_witness() {
-        let mut circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -339,26 +341,26 @@ mod test {
         // invalid leaf balance for the first asset
         circuit.leaf_balances = vec![Fp::from(1000u64), circuit.leaf_balances[1]];
 
-        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 1 }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
+                    column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (47, "permute state").into(),
+                        region: (61, "permute state").into(),
                         offset: 38
                     }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 1 }
                 }
             ])
         );
 
-        let mut circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -369,30 +371,29 @@ mod test {
         // invalid leaf balance for the second asset
         circuit.leaf_balances = vec![circuit.leaf_balances[0], Fp::from(1000u64)];
 
-        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (61, "permute state").into(),
+                        offset: 38
+                    }
+                },
+                VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
                 },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
-                    location: FailureLocation::InRegion {
-                        region: (47, "permute state").into(),
-                        offset: 38
-                    }
-                }
             ])
         );
     }
-
-    // Passing a non binary index should fail the bool constraint check and the permutation check between the computed root hash and the instance column root hash
+    // Passing a non binary index should fail the bool constraint inside "assign nodes hashes per merkle tree level" and "assign nodes balances per asset" region and the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_non_binary_index() {
-        let mut circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -402,30 +403,46 @@ mod test {
         // invalidate path index inside the circuit
         circuit.path_indices[0] = Fp::from(2);
 
-        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((0, "bool constraint").into(), 0, "").into(),
+                    constraint: ((3, "bool constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (1, "merkle prove layer").into(),
+                        region: (3, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
                     },
-                    cell_values: vec![(((Any::advice(), 8).into(), 0).into(), "0x2".to_string()),]
+                    cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
+                },
+                VerifyFailure::ConstraintNotSatisfied {
+                    constraint: ((3, "bool constraint").into(), 0, "").into(),
+                    location: FailureLocation::InRegion {
+                        region: (4, "assign nodes balances per asset").into(),
+                        offset: 0
+                    },
+                    cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
+                },
+                VerifyFailure::ConstraintNotSatisfied {
+                    constraint: ((3, "bool constraint").into(), 0, "").into(),
+                    location: FailureLocation::InRegion {
+                        region: (7, "assign nodes balances per asset").into(),
+                        offset: 0
+                    },
+                    cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (61, "permute state").into(),
+                        offset: 38
+                    }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
                 },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
-                    location: FailureLocation::InRegion {
-                        region: (47, "permute state").into(),
-                        offset: 38
-                    }
-                }
             ])
         );
     }
@@ -433,7 +450,7 @@ mod test {
     // Swapping the indices should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_swapping_index() {
-        let mut circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -443,22 +460,22 @@ mod test {
         // swap indices
         circuit.path_indices[0] = Fp::from(1);
 
-        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (61, "permute state").into(),
+                        offset: 38
+                    }
+                },
+                VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
                 },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 42).into(),
-                    location: FailureLocation::InRegion {
-                        region: (47, "permute state").into(),
-                        offset: 38
-                    }
-                }
             ])
         );
     }
@@ -469,7 +486,7 @@ mod test {
     //     // Make the first asset sum less than liabilities sum (556862)
     //     let less_than_assets_sum_1st = [Fp::from(556861u64), Fp::from(556863u64)];
 
-    //     let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
+    //     let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_from_assets_and_path(
     //         less_than_assets_sum_1st,
     //         "src/merkle_sum_tree/csv/entry_16.csv",
     //         0,
@@ -495,7 +512,7 @@ mod test {
     //     // Make the second asset sum less than liabilities sum (556862)
     //     let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
 
-    //     let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
+    //     let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_from_assets_and_path(
     //         less_than_assets_sum_2nd,
     //         "src/merkle_sum_tree/csv/entry_16.csv",
     //         0,
@@ -782,7 +799,7 @@ mod test {
     fn print_merkle_sum_tree() {
         use plotters::prelude::*;
 
-        let circuit = MstInclusionCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init(
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             0,
         );
@@ -795,7 +812,7 @@ mod test {
             .unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
-            .render(11, &circuit, &root)
+            .render(K, &circuit, &root)
             .unwrap();
     }
 
