@@ -73,7 +73,7 @@ mod test {
     #[ignore]
     fn test_valid_merkle_sum_tree_with_full_recursive_prover() {
         // params for the aggregation circuit
-        let params_agg = generate_setup_params(20);
+        let params_agg = generate_setup_params(21);
 
         // downsize params for our application specific snark
         let mut params_app = params_agg.clone();
@@ -132,7 +132,7 @@ mod test {
     #[ignore]
     fn test_invalid_merkle_sum_tree_with_full_recursive_prover() {
         // params for the aggregation circuit
-        let params_agg = generate_setup_params(20);
+        let params_agg = generate_setup_params(21);
 
         // downsize params for our application specific snark
         let mut params_app = params_agg.clone();
