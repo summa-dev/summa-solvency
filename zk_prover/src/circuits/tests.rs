@@ -25,11 +25,12 @@ mod test {
 
     const LEVELS: usize = 4;
     const L: usize = 6;
+    const K: u32 = 10;
 
     #[test]
     #[ignore]
     fn test_standard_on_chain_verifier() {
-        let params = generate_setup_params(9);
+        let params = generate_setup_params(K);
 
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
@@ -67,7 +68,7 @@ mod test {
                 user_index,
             );
 
-            let valid_prover = MockProver::run(9, &circuit, circuit.instances()).unwrap();
+            let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
             valid_prover.assert_satisfied();
         }
@@ -85,7 +86,7 @@ mod test {
 
         assert_eq!(circuit.instances()[0].len(), circuit.num_instance()[0]);
 
-        let valid_prover = MockProver::run(9, &circuit, circuit.instances()).unwrap();
+        let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
         valid_prover.assert_satisfied();
     }
@@ -95,7 +96,7 @@ mod test {
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
-        let params = generate_setup_params(9);
+        let params = generate_setup_params(K);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -245,7 +246,7 @@ mod test {
         let invalid_root_hash = Fp::from(1000u64);
         instances[0][1] = invalid_root_hash;
 
-        let invalid_prover = MockProver::run(9, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -253,8 +254,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (45, "permute state").into(),
-                        offset: 43
+                        region: (61, "permute state").into(),
+                        offset: 38
                     }
                 },
                 VerifyFailure::Permutation {
@@ -270,7 +271,7 @@ mod test {
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
-        let params = generate_setup_params(9);
+        let params = generate_setup_params(K);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -310,7 +311,7 @@ mod test {
         // invalidate leaf hash
         circuit.leaf_hash = Fp::from(1000u64);
 
-        let invalid_prover = MockProver::run(9, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
@@ -324,8 +325,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (45, "permute state").into(),
-                        offset: 43
+                        region: (61, "permute state").into(),
+                        offset: 38
                     }
                 },
                 VerifyFailure::Permutation {
@@ -352,7 +353,7 @@ mod test {
         let invalid_leaf_hash = Fp::from(1000u64);
         instances[0][0] = invalid_leaf_hash;
 
-        let invalid_prover = MockProver::run(9, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -389,7 +390,7 @@ mod test {
         // invalid leaf balance for the first asset
         circuit.leaf_balances = vec![Fp::from(1000u64), circuit.leaf_balances[1]];
 
-        let invalid_prover = MockProver::run(9, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -397,8 +398,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (45, "permute state").into(),
-                        offset: 43
+                        region: (61, "permute state").into(),
+                        offset: 38
                     }
                 },
                 VerifyFailure::Permutation {
@@ -419,7 +420,7 @@ mod test {
         // invalid leaf balance for the second asset
         circuit.leaf_balances = vec![circuit.leaf_balances[0], Fp::from(1000u64)];
 
-        let invalid_prover = MockProver::run(9, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -427,8 +428,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (45, "permute state").into(),
-                        offset: 43
+                        region: (61, "permute state").into(),
+                        offset: 38
                     }
                 },
                 VerifyFailure::Permutation {
@@ -452,7 +453,7 @@ mod test {
         // invalidate path index inside the circuit
         circuit.path_indices[0] = Fp::from(2);
 
-        let invalid_prover = MockProver::run(9, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -484,8 +485,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (45, "permute state").into(),
-                        offset: 43
+                        region: (61, "permute state").into(),
+                        offset: 38
                     }
                 },
                 VerifyFailure::Permutation {
@@ -509,7 +510,7 @@ mod test {
         // swap indices
         circuit.path_indices[0] = Fp::from(1);
 
-        let invalid_prover = MockProver::run(9, &circuit, instances).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -517,8 +518,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (45, "permute state").into(),
-                        offset: 43
+                        region: (61, "permute state").into(),
+                        offset: 38
                     }
                 },
                 VerifyFailure::Permutation {
@@ -805,7 +806,7 @@ mod test {
             .unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
-            .render(9, &circuit, &root)
+            .render(K, &circuit, &root)
             .unwrap();
     }
 

@@ -54,9 +54,6 @@ impl<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize, const L: u
         let rc_a = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
         let rc_b = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
 
-        for col in &state {
-            meta.enable_equality(*col);
-        }
         meta.enable_constant(rc_b[0]);
 
         let pow5_config = Pow5Chip::configure::<S>(

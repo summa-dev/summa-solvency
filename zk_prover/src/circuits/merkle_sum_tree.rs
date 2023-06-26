@@ -8,10 +8,8 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance};
 use snark_verifier_sdk::CircuitExt;
 
-const ACC_COLS: usize = 5;
+const ACC_COLS: usize = 3;
 const MAX_BITS: u8 = 8;
-const WIDTH: usize = 7;
-const RATE: usize = 6;
 
 // LEVELS indicates the levels of the tree
 // L is the length of the hasher input, namely 2 + (2 * N_ASSETS)
@@ -82,7 +80,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize>
 #[derive(Debug, Clone)]
 pub struct MstInclusionConfig<const L: usize, const N_ASSETS: usize> {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
-    pub poseidon_config: PoseidonConfig<WIDTH, RATE, L>,
+    pub poseidon_config: PoseidonConfig<3, 2, L>,
     pub overflow_check_config: OverflowCheckConfig<MAX_BITS, ACC_COLS>,
     pub instance: Column<Instance>,
 }
@@ -90,20 +88,25 @@ pub struct MstInclusionConfig<const L: usize, const N_ASSETS: usize> {
 impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
         // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config
-        let advices: [Column<Advice>; WIDTH + 1] = std::array::from_fn(|_| meta.advice_column());
+        let advices: [Column<Advice>; 4] = std::array::from_fn(|_| meta.advice_column());
 
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox
-        let poseidon_config = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(
+        let poseidon_config = PoseidonChip::<PoseidonSpec, 3, 2, L>::configure(
             meta,
-            advices[0..WIDTH].try_into().unwrap(),
-            advices[WIDTH],
+            advices[0..3].try_into().unwrap(),
+            advices[3],
         );
+
+        // enable permutation for all the advice columns
+        for col in &advices {
+            meta.enable_equality(*col);
+        }
 
         // the configuration of merkle_sum_tree will always require 3 advices, no matter the number of assets
         let merkle_sum_tree_config =
             MerkleSumTreeChip::<N_ASSETS>::configure(meta, advices[0..3].try_into().unwrap());
 
-        assert!(ACC_COLS <= advices.len());
+        assert!(ACC_COLS < advices.len()); // make sure we have enough advice columns to allocate to the overflow check
 
         let overflow_check_config = OverflowChip::<MAX_BITS, ACC_COLS>::configure(
             meta,
@@ -156,7 +159,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
         let merkle_sum_tree_chip =
             MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
         let poseidon_chip =
-            PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::construct(config.poseidon_config.clone());
+            PoseidonChip::<PoseidonSpec, 3, 2, L>::construct(config.poseidon_config.clone());
         let overflow_check_chip = OverflowChip::construct(config.overflow_check_config.clone());
 
         // Assign the leaf hash and the leaf balances
