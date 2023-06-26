@@ -7,8 +7,11 @@ is already implemented in halo2_gadgets, there is no wrapper chip that makes it 
 // compared to `hash_with_instance` this version doesn't use any instance column.
 
 use halo2_gadgets::poseidon::{primitives::*, Hash, Pow5Chip, Pow5Config};
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::{circuit::*, plonk::*};
+use halo2_proofs::{
+    circuit::{AssignedCell, Layouter},
+    halo2curves::bn256::Fr as Fp,
+    plonk::{ConstraintSystem, Error},
+};
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]

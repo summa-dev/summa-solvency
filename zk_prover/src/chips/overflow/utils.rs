@@ -1,5 +1,4 @@
-use halo2_proofs::circuit::*;
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use halo2_proofs::{circuit::Value, halo2curves::bn256::Fr as Fp};
 use num_bigint::BigUint;
 
 fn fp_to_big_uint(f: Fp) -> BigUint {

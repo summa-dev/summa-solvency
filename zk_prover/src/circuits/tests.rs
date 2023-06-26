@@ -37,12 +37,7 @@ mod test {
                     user_index,
                 );
 
-            let mut public_input = vec![circuit.leaf_hash];
-            public_input.extend(&circuit.leaf_balances);
-            public_input.push(circuit.root_hash);
-            public_input.extend(&circuit.assets_sum);
-
-            let valid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+            let valid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
 
             valid_prover.assert_satisfied();
         }
@@ -67,12 +62,7 @@ mod test {
                 0,
             );
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(circuit.root_hash);
-        public_input.extend(&circuit.assets_sum);
-
-        let valid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+        let valid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
 
         valid_prover.assert_satisfied();
     }
@@ -101,16 +91,11 @@ mod test {
                 0,
             );
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(circuit.root_hash);
-        public_input.extend(&circuit.assets_sum);
-
         // Generate the proof
-        let proof = full_prover(&params, &pk, circuit, &public_input);
+        let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
 
         // verify the proof to be true
-        assert!(full_verifier(&params, &vk, proof, &public_input));
+        assert!(full_verifier(&params, &vk, proof, circuit.instances()));
     }
 
     #[test]
@@ -215,7 +200,7 @@ mod test {
 
         // add invalid_root_hash to agg_circuit.instances()[0][3]
         let mut agg_circuit_invalid_instances = agg_circuit.instances();
-        agg_circuit_invalid_instances[0][3] = invalid_root_hash;
+        agg_circuit_invalid_instances[0][N_ASSETS + 1] = invalid_root_hash;
 
         let invalid_prover =
             MockProver::run(23, &agg_circuit, agg_circuit_invalid_instances).unwrap();
@@ -250,14 +235,11 @@ mod test {
                 0,
             );
 
+        let mut instances = circuit.instances();
         let invalid_root_hash = Fp::from(1000u64);
+        instances[0][N_ASSETS + 1] = invalid_root_hash;
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(invalid_root_hash);
-        public_input.extend(&circuit.assets_sum);
-
-        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -278,7 +260,7 @@ mod test {
     }
 
     #[test]
-    fn test_invalid_root_hash_with_full_prover() {
+    fn test_invalid_root_hash_as_instance_with_full_prover() {
         let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
         let circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
@@ -301,19 +283,20 @@ mod test {
 
         let invalid_root_hash = Fp::from(1000u64);
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(invalid_root_hash);
-        public_input.extend(&circuit.assets_sum);
+        // add invalid_root_hash to agg_circuit.instances()[0][3]
+        let mut instances = circuit.instances();
+        instances[0][N_ASSETS + 1] = invalid_root_hash;
 
         // Generate the proof
-        let proof = full_prover(&params, &pk, circuit, &public_input);
+        let proof = full_prover(&params, &pk, circuit, instances.clone());
 
         // verify the proof to be false
-        assert!(!full_verifier(&params, &vk, proof, &public_input));
+        assert!(!full_verifier(&params, &vk, proof, instances));
     }
 
-    // Passing an invalid leaf hash as input for the witness generation should fail the permutation check between the computed root hash and the instance column root hash
+    // Passing an invalid leaf hash as input for the witness generation should fail:
+    // - the permutation check between the leaf hash and the instance column leaf hash
+    // - the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_leaf_hash_as_witness() {
         let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
@@ -325,18 +308,26 @@ mod test {
                 0,
             );
 
+        let instances = circuit.instances();
+
         // invalidate leaf hash
         circuit.leaf_hash = Fp::from(1000u64);
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(circuit.root_hash);
-        public_input.extend(&circuit.assets_sum);
-
-        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 6).into(),
+                    location: FailureLocation::InRegion {
+                        region: (1, "merkle prove layer").into(),
+                        offset: 0
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 0 }
+                },
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 3 }
@@ -364,15 +355,11 @@ mod test {
                 0,
             );
 
-        // add invalid leaf hash in the instance column
+        let mut instances = circuit.instances();
         let invalid_leaf_hash = Fp::from(1000u64);
+        instances[0][0] = invalid_leaf_hash;
 
-        let mut public_input = vec![invalid_leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(circuit.root_hash);
-        public_input.extend(&circuit.assets_sum);
-
-        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -400,8 +387,6 @@ mod test {
     fn test_invalid_leaf_balance_as_witness() {
         let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
-        let user_balance = [Fp::from(11888u64), Fp::from(41163u64)];
-
         let mut circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
                 assets_sum,
@@ -409,15 +394,13 @@ mod test {
                 0,
             );
 
+        // We need to extract the valid instances before invalidating the circuit
+        let instances = circuit.instances();
+
         // invalid leaf balance for the first asset
         circuit.leaf_balances = vec![Fp::from(1000u64), circuit.leaf_balances[1]];
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(user_balance);
-        public_input.push(circuit.root_hash);
-        public_input.extend(assets_sum);
-
-        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -449,8 +432,6 @@ mod test {
 
         let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // greater than liabilities sum (556862)
 
-        let user_balance = [Fp::from(11888u64), Fp::from(41163u64)];
-
         let mut circuit =
             MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_from_assets_and_path(
                 assets_sum,
@@ -458,15 +439,13 @@ mod test {
                 0,
             );
 
+        // We need to extract the valid instances before invalidating the circuit
+        let instances = circuit.instances();
+
         // invalid leaf balance for the second asset
         circuit.leaf_balances = vec![circuit.leaf_balances[0], Fp::from(1000u64)];
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(user_balance);
-        public_input.push(circuit.root_hash);
-        public_input.extend(assets_sum);
-
-        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -509,15 +488,11 @@ mod test {
                 0,
             );
 
-        //Invalid leaf balance for the instance column
-        let invalid_leaf_balance = Fp::from(1000u64);
+        let mut instances = circuit.instances();
+        let invalid_leaf_balance_0 = Fp::from(1000u64);
+        instances[0][1] = invalid_leaf_balance_0;
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend([invalid_leaf_balance, circuit.leaf_balances[1]]);
-        public_input.push(circuit.root_hash);
-        public_input.extend(&circuit.assets_sum);
-
-        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -549,15 +524,12 @@ mod test {
                 0,
             );
 
+        let instances = circuit.instances();
+
         // invalidate path index inside the circuit
         circuit.path_indices[0] = Fp::from(2);
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(circuit.root_hash);
-        public_input.extend(&circuit.assets_sum);
-
-        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -597,15 +569,12 @@ mod test {
                 0,
             );
 
+        let instances = circuit.instances();
+
         // swap indices
         circuit.path_indices[0] = Fp::from(1);
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(circuit.root_hash);
-        public_input.extend(&circuit.assets_sum);
-
-        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -638,12 +607,7 @@ mod test {
                 0,
             );
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(circuit.root_hash);
-        public_input.extend(&circuit.assets_sum);
-
-        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -670,12 +634,7 @@ mod test {
                 0,
             );
 
-        let mut public_input = vec![circuit.leaf_hash];
-        public_input.extend(&circuit.leaf_balances);
-        public_input.push(circuit.root_hash);
-        public_input.extend(&circuit.assets_sum);
-
-        let invalid_prover = MockProver::run(11, &circuit, vec![public_input]).unwrap();
+        let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -745,26 +704,9 @@ mod test {
             assert_eq!(r, r_candidate);
         }
 
-        let limbs_x = decompose(public_key.x, 4, 68)
-            .iter()
-            .map(|x| big_to_fe(fe_to_big(*x)))
-            .collect::<Vec<Fp>>();
-
-        let limbs_y = decompose(public_key.y, 4, 68)
-            .iter()
-            .map(|y| big_to_fe(fe_to_big(*y)))
-            .collect::<Vec<Fp>>();
-
-        // merge limbs_x and limbs_y into a single vector
-        let mut pub_input = vec![];
-        pub_input.extend(limbs_x);
-        pub_input.extend(limbs_y);
-
-        let instance = vec![pub_input];
-
         let circuit = EcdsaVerifyCircuit::init(public_key, r, s, msg_hash);
 
-        let valid_prover = MockProver::run(18, &circuit, instance).unwrap();
+        let valid_prover = MockProver::run(18, &circuit, circuit.instances()).unwrap();
 
         valid_prover.assert_satisfied();
     }
@@ -804,26 +746,11 @@ mod test {
 
         let msg_hash = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(MSG_HASH).unwrap();
 
-        let limbs_x = decompose(public_key.x, 4, 68)
-            .iter()
-            .map(|x| big_to_fe(fe_to_big(*x)))
-            .collect::<Vec<Fp>>();
-
-        let limbs_y = decompose(public_key.y, 4, 68)
-            .iter()
-            .map(|y| big_to_fe(fe_to_big(*y)))
-            .collect::<Vec<Fp>>();
-
-        // merge limbs_x and limbs_y into a single vector
-        let mut pub_input = vec![];
-        pub_input.extend(limbs_x);
-        pub_input.extend(limbs_y);
-
-        let instance = vec![pub_input];
-
         let circuit = EcdsaVerifyCircuit::init(public_key, r, s, msg_hash);
 
-        let valid_prover = MockProver::run(18, &circuit, instance).unwrap();
+        assert_eq!(circuit.instances()[0].len(), circuit.num_instance()[0]);
+
+        let valid_prover = MockProver::run(18, &circuit, circuit.instances()).unwrap();
 
         valid_prover.assert_satisfied();
     }
@@ -846,26 +773,9 @@ mod test {
 
         let msg_hash = <Secp256k1 as CurveAffine>::ScalarExt::from_repr(MSG_HASH).unwrap();
 
-        let limbs_x = decompose(public_key.x, 4, 68)
-            .iter()
-            .map(|x| big_to_fe(fe_to_big(*x)))
-            .collect::<Vec<Fp>>();
-
-        let limbs_y = decompose(public_key.y, 4, 68)
-            .iter()
-            .map(|y| big_to_fe(fe_to_big(*y)))
-            .collect::<Vec<Fp>>();
-
-        // merge limbs_x and limbs_y into a single vector
-        let mut pub_input = vec![];
-        pub_input.extend(limbs_x);
-        pub_input.extend(limbs_y);
-
-        let instance = vec![pub_input];
-
         let circuit = EcdsaVerifyCircuit::init(public_key, r, invalid_s, msg_hash);
 
-        let invalid_prover = MockProver::run(18, &circuit, instance).unwrap();
+        let invalid_prover = MockProver::run(18, &circuit, circuit.instances()).unwrap();
 
         assert!(invalid_prover.verify().is_err());
     }

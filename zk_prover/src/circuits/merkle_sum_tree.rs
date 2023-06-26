@@ -1,7 +1,8 @@
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof, MerkleSumTree};
+use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::{circuit::*, plonk::*};
+use halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem, Error};
 use snark_verifier_sdk::CircuitExt;
 
 #[derive(Clone)]

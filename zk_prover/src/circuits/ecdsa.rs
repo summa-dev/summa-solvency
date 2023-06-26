@@ -1,55 +1,29 @@
 // Patterned after [halo2wrong ECDSA](https://github.com/privacy-scaling-explorations/halo2wrong/blob/master/ecdsa/src/ecdsa.rs)
+use crate::chips::ecdsa::EcdsaConfigWithInstance;
 use ecc::integer::{IntegerInstructions, Range};
-use ecc::maingate::{MainGate, RangeChip, RangeInstructions, RegionCtx};
+use ecc::maingate::{
+    big_to_fe, decompose, fe_to_big, MainGate, RangeChip, RangeInstructions, RegionCtx,
+};
 use ecc::GeneralEccChip;
 use ecdsa::ecdsa::{AssignedEcdsaSig, AssignedPublicKey, EcdsaChip, EcdsaConfig};
+use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::halo2curves::{
     bn256::Fr as Fp,
     group::{Curve, Group},
     secp256k1::Secp256k1Affine as Secp256k1,
     CurveAffine,
 };
-use halo2_proofs::{circuit::*, plonk::*};
+use halo2_proofs::plonk::{Circuit, ConstraintSystem, Error};
+
 use rand::rngs::OsRng;
+use snark_verifier_sdk::CircuitExt;
 
 const BIT_LEN_LIMB: usize = 68;
 const NUMBER_OF_LIMBS: usize = 4;
 
-#[derive(Debug, Clone)]
-pub struct EcdsaConfigWithInstance {
-    pub ecdsa_config: EcdsaConfig,
-}
-
-impl EcdsaConfigWithInstance {
-    pub fn expose_limbs_to_public(
-        &self,
-        mut layouter: impl Layouter<Fp>,
-        pk_x_limbs: Vec<AssignedCell<Fp, Fp>>,
-        pk_y_limbs: Vec<AssignedCell<Fp, Fp>>,
-        x_row_start: usize,
-        y_row_start: usize,
-    ) -> Result<(), Error> {
-        // loop over pk_x_limbs and pk_y_limbs and expose them to instance column
-        for i in 0..4 {
-            layouter.constrain_instance(
-                pk_x_limbs[i].cell(),
-                self.ecdsa_config.main_gate_config.instance,
-                x_row_start + i,
-            )?;
-            layouter.constrain_instance(
-                pk_y_limbs[i].cell(),
-                self.ecdsa_config.main_gate_config.instance,
-                y_row_start + i,
-            )?;
-        }
-
-        Ok(())
-    }
-}
-
 #[derive(Default, Clone)]
 pub struct EcdsaVerifyCircuit {
-    pub public_key: Value<Secp256k1>,
+    pub public_key: Secp256k1,
     pub signature: Value<(
         <Secp256k1 as CurveAffine>::ScalarExt,
         <Secp256k1 as CurveAffine>::ScalarExt,
@@ -58,6 +32,31 @@ pub struct EcdsaVerifyCircuit {
 
     pub aux_generator: Secp256k1,
     pub window_size: usize,
+}
+
+impl CircuitExt<Fp> for EcdsaVerifyCircuit {
+    fn num_instance(&self) -> Vec<usize> {
+        vec![8]
+    }
+
+    fn instances(&self) -> Vec<Vec<Fp>> {
+        let limbs_x = decompose(self.public_key.x, 4, 68)
+            .iter()
+            .map(|x| big_to_fe(fe_to_big(*x)))
+            .collect::<Vec<Fp>>();
+
+        let limbs_y = decompose(self.public_key.y, 4, 68)
+            .iter()
+            .map(|y| big_to_fe(fe_to_big(*y)))
+            .collect::<Vec<Fp>>();
+
+        // merge limbs_x and limbs_y into a single vector
+        let mut instance = vec![];
+        instance.extend(limbs_x);
+        instance.extend(limbs_y);
+
+        vec![instance]
+    }
 }
 
 impl EcdsaVerifyCircuit {
@@ -70,7 +69,7 @@ impl EcdsaVerifyCircuit {
         let aux_generator = <Secp256k1 as CurveAffine>::CurveExt::random(OsRng).to_affine();
 
         Self {
-            public_key: Value::known(public_key),
+            public_key,
             signature: Value::known((r, s)),
             msg_hash: Value::known(msg_hash),
             aux_generator,
@@ -151,7 +150,7 @@ impl Circuit<Fp> for EcdsaVerifyCircuit {
                     s: s_assigned,
                 };
 
-                let pk_in_circuit = ecc_chip.assign_point(ctx, self.public_key)?;
+                let pk_in_circuit = ecc_chip.assign_point(ctx, Value::known(self.public_key))?;
 
                 let x_clone = pk_in_circuit.x();
                 let y_clone = pk_in_circuit.y();

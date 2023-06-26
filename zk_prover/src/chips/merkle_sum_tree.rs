@@ -3,8 +3,12 @@ use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::merkle_sum_tree::L_NODE;
 use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
+use halo2_proofs::circuit::{AssignedCell, Layouter, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::{circuit::*, plonk::*, poly::Rotation};
+use halo2_proofs::plonk::{
+    Advice, Column, ConstraintSystem, Error, Expression, Instance, Selector,
+};
+use halo2_proofs::poly::Rotation;
 
 const ACC_COLS: usize = 31;
 const MAX_BITS: u8 = 8;
@@ -120,7 +124,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             meta,
             |meta| meta.query_selector(lt_selector),
             |meta| meta.query_advice(advice[0], Rotation::cur()),
-            |meta: &mut VirtualCells<Fp>| meta.query_advice(advice[1], Rotation::cur()),
+            |meta| meta.query_advice(advice[1], Rotation::cur()),
         );
 
         let config = MerkleSumTreeConfig::<MST_WIDTH> {
@@ -258,19 +262,9 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
                 // if index is 0 return (l1, l2, r1, r2) else return (r1, r2, l1, l2)
                 index.value().map(|x| x.to_owned()).map(|x| {
                     (l1_val, l2_vals, r1_val, r2_vals) = if x == Fp::zero() {
-                        (
-                            l1_val.clone(),
-                            l2_vals.clone(),
-                            r1_val.clone(),
-                            r2_vals.clone(),
-                        )
+                        (l1_val, l2_vals.clone(), r1_val, r2_vals.clone())
                     } else {
-                        (
-                            r1_val.clone(),
-                            r2_vals.clone(),
-                            l1_val.clone(),
-                            l2_vals.clone(),
-                        )
+                        (r1_val, r2_vals.clone(), l1_val, l2_vals.clone())
                     };
                 });
 

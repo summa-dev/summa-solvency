@@ -4,6 +4,7 @@ use halo2_proofs::{
     plonk::{keygen_pk, keygen_vk},
     poly::kzg::commitment::ParamsKZG,
 };
+use snark_verifier_sdk::CircuitExt;
 use summa_solvency::{
     circuits::merkle_sum_tree::MerkleSumTreeCircuit,
     circuits::utils::{full_prover, full_verifier, generate_setup_params},
@@ -65,7 +66,7 @@ fn generate_zk_proof_benchmark(_c: &mut Criterion) {
     let empty_circuit = MerkleSumTreeCircuit::<LEVELS, MST_WIDTH, N_ASSETS>::init_empty();
 
     let vk = keygen_vk(&params, &empty_circuit).expect("vk generation should not fail");
-    let pk = keygen_pk(&params, vk.clone(), &empty_circuit).expect("pk generation should not fail");
+    let pk = keygen_pk(&params, vk, &empty_circuit).expect("pk generation should not fail");
 
     let csv_file = format!("benches/csv/entry_2_{}.csv", LEVELS);
 
@@ -76,15 +77,10 @@ fn generate_zk_proof_benchmark(_c: &mut Criterion) {
         assets_sum, &csv_file, 0,
     );
 
-    let mut public_input = vec![circuit.leaf_hash];
-    public_input.extend(&circuit.leaf_balances);
-    public_input.push(circuit.root_hash);
-    public_input.extend(&circuit.assets_sum);
-
     let bench_name = format!("generate zk proof - tree of 2 power of {} entries", LEVELS);
     criterion.bench_function(&bench_name, |b| {
         b.iter(|| {
-            full_prover(&params, &pk, circuit.clone(), &public_input);
+            full_prover(&params, &pk, circuit.clone(), circuit.instances());
         })
     });
 }
@@ -113,12 +109,12 @@ fn verify_zk_proof_benchmark(_c: &mut Criterion) {
     public_input.push(circuit.root_hash);
     public_input.extend(&circuit.assets_sum);
 
-    let proof = full_prover(&params, &pk, circuit, &public_input);
+    let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
 
     let bench_name = format!("verify zk proof - tree of 2 power of {} entries", LEVELS);
     criterion.bench_function(&bench_name, |b| {
         b.iter(|| {
-            full_verifier(&params, &vk, proof.clone(), &public_input);
+            full_verifier(&params, &vk, proof.clone(), circuit.instances());
         })
     });
 }
