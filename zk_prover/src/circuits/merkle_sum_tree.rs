@@ -53,9 +53,11 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize>
     }
 
     pub fn init(path: &str, user_index: usize) -> Self {
+        assert_eq!((N_ASSETS * 2) + 2, L);
+
         let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
 
-        let proof: MerkleProof<N_ASSETS> = merkle_sum_tree.generate_proof(user_index).unwrap();
+        let proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
         assert_eq!(proof.path_indices.len(), LEVELS);
         assert_eq!(proof.sibling_hashes.len(), LEVELS);
@@ -87,7 +89,7 @@ pub struct MstInclusionConfig<const L: usize, const N_ASSETS: usize> {
 
 impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
-        // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config
+        // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config with WIDTH 3
         let advices: [Column<Advice>; 4] = std::array::from_fn(|_| meta.advice_column());
 
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox
@@ -160,7 +162,8 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
             MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
         let poseidon_chip =
             PoseidonChip::<PoseidonSpec, 3, 2, L>::construct(config.poseidon_config.clone());
-        let overflow_check_chip = OverflowChip::construct(config.overflow_check_config.clone());
+        let overflow_check_chip =
+            OverflowChip::<MAX_BITS, ACC_COLS>::construct(config.overflow_check_config.clone());
 
         // Assign the leaf hash and the leaf balances
         let (mut current_hash, mut current_balances) = merkle_sum_tree_chip
