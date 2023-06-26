@@ -28,7 +28,6 @@ mod test {
     const K: u32 = 10;
 
     #[test]
-    #[ignore]
     fn test_standard_on_chain_verifier() {
         let params = generate_setup_params(K);
 
