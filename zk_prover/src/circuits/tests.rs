@@ -165,7 +165,7 @@ mod test {
         agg_circuit_invalid_instances[0][1] = invalid_root_hash;
 
         let invalid_prover =
-            MockProver::run(23, &agg_circuit, agg_circuit_invalid_instances).unwrap();
+            MockProver::run(21, &agg_circuit, agg_circuit_invalid_instances).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
@@ -479,62 +479,6 @@ mod test {
             ])
         );
     }
-
-    // // Passing an assets sum that is less than the liabilities sum should fail the lessThan constraint check
-    // #[test]
-    // fn test_is_not_less_than() {
-    //     // Make the first asset sum less than liabilities sum (556862)
-    //     let less_than_assets_sum_1st = [Fp::from(556861u64), Fp::from(556863u64)];
-
-    //     let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_from_assets_and_path(
-    //         less_than_assets_sum_1st,
-    //         "src/merkle_sum_tree/csv/entry_16.csv",
-    //         0,
-    //     );
-
-    //     let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
-
-    //     assert_eq!(
-    //         invalid_prover.verify(),
-    //         Err(vec![VerifyFailure::ConstraintNotSatisfied {
-    //             constraint: ((8, "is_lt is 1").into(), 0, "").into(),
-    //             location: FailureLocation::InRegion {
-    //                 region: (38, "enforce sum to be less than total assets").into(),
-    //                 offset: 0
-    //             },
-    //             cell_values: vec![
-    //                 // The zero means that is not less than
-    //                 (((Any::advice(), 49).into(), 0).into(), "0".to_string())
-    //             ]
-    //         }])
-    //     );
-
-    //     // Make the second asset sum less than liabilities sum (556862)
-    //     let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
-
-    //     let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_from_assets_and_path(
-    //         less_than_assets_sum_2nd,
-    //         "src/merkle_sum_tree/csv/entry_16.csv",
-    //         0,
-    //     );
-
-    //     let invalid_prover = MockProver::run(11, &circuit, circuit.instances()).unwrap();
-
-    //     assert_eq!(
-    //         invalid_prover.verify(),
-    //         Err(vec![VerifyFailure::ConstraintNotSatisfied {
-    //             constraint: ((8, "is_lt is 1").into(), 0, "").into(),
-    //             location: FailureLocation::InRegion {
-    //                 region: (39, "enforce sum to be less than total assets").into(),
-    //                 offset: 0
-    //             },
-    //             cell_values: vec![
-    //                 // The zero means that is not less than
-    //                 (((Any::advice(), 49).into(), 0).into(), "0".to_string())
-    //             ]
-    //         }])
-    //     );
-    // }
 
     use crate::circuits::ecdsa::EcdsaVerifyCircuit;
     use ecc::maingate::{big_to_fe, decompose, fe_to_big};
