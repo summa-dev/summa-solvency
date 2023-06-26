@@ -207,8 +207,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (31, "permute state").into(),
-                        offset: 43
+                        region: (47, "permute state").into(),
+                        offset: 38
                     }
                 }
             ])
@@ -282,8 +282,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (31, "permute state").into(),
-                        offset: 43
+                        region: (47, "permute state").into(),
+                        offset: 38
                     }
                 }
             ])
@@ -351,8 +351,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (31, "permute state").into(),
-                        offset: 43
+                        region: (47, "permute state").into(),
+                        offset: 38
                     }
                 }
             ])
@@ -381,8 +381,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (31, "permute state").into(),
-                        offset: 43
+                        region: (47, "permute state").into(),
+                        offset: 38
                     }
                 }
             ])
@@ -422,8 +422,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (31, "permute state").into(),
-                        offset: 43
+                        region: (47, "permute state").into(),
+                        offset: 38
                     }
                 }
             ])
@@ -455,8 +455,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 42).into(),
                     location: FailureLocation::InRegion {
-                        region: (31, "permute state").into(),
-                        offset: 43
+                        region: (47, "permute state").into(),
+                        offset: 38
                     }
                 }
             ])

@@ -11,8 +11,8 @@ use halo2_proofs::poly::Rotation;
 
 const ACC_COLS: usize = 31;
 const MAX_BITS: u8 = 8;
-const WIDTH: usize = 7;
-const RATE: usize = 6;
+const WIDTH: usize = 3;
+const RATE: usize = 2;
 const L: usize = L_NODE;
 
 #[derive(Debug, Clone)]
@@ -48,7 +48,6 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
         let bool_selector = meta.selector();
         let swap_selector = meta.selector();
         let sum_selector = meta.selector();
-        let lt_selector = meta.selector();
 
         // enable equality for leaf hashes and computed sums copy constraint with instance column (col_a)
         for col in advice.iter() {
@@ -116,7 +115,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
 
         let poseidon_config = PoseidonChip::<PoseidonSpec, WIDTH, RATE, L>::configure(meta);
 
-        let config = MerkleSumTreeConfig::<MST_WIDTH> {
+        MerkleSumTreeConfig::<MST_WIDTH> {
             advice,
             bool_selector,
             swap_selector,
@@ -124,9 +123,7 @@ impl<const MST_WIDTH: usize, const N_ASSETS: usize> MerkleSumTreeChip<MST_WIDTH,
             instance,
             poseidon_config,
             overflow_check_config,
-        };
-
-        config
+        }
     }
 
     pub fn assign_leaf_hash_and_balances(
