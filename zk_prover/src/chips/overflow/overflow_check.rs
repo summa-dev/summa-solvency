@@ -23,6 +23,17 @@ pub struct OverflowChip<const MAX_BITS: u8, const MOD_BITS: usize> {
 
 impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS> {
     pub fn construct(config: OverflowCheckConfig<MAX_BITS, MOD_BITS>) -> Self {
+        let num_rows = MOD_BITS / MAX_BITS as usize;
+        let remainder = MOD_BITS % MAX_BITS as usize;
+
+        // Check if MOD_BITS is not evenly divisible by MAX_BITS
+        if remainder != 0 {
+            eprintln!(
+                "Warning: MOD_BITS ({}) is not evenly divisible by MAX_BITS ({}). Number of rows is {}.\nIs this intended?",
+                MOD_BITS, MAX_BITS, num_rows
+            );
+        }
+
         Self { config }
     }
 
