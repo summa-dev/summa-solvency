@@ -77,36 +77,36 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         }
     }
 
-    // Assign the leaf hash and balances to the tree following this layout on a single column:
+    // Assign the entry hash and balances to the tree following this layout on a single column:
     // | a |
-    // | leaf hash |
-    // | leaf_balance_0 |
-    // | leaf_balance_1 |
+    // | entry hash |
+    // | entry_balance_0 |
+    // | entry_balance_1 |
     // | ... |
-    // | leaf_balance_N |
-    pub fn assign_leaf_hash_and_balances(
+    // | entry_balance_N |
+    pub fn assign_entry_hash_and_balances(
         &self,
         mut layouter: impl Layouter<Fp>,
-        leaf_hash: Fp,
-        leaf_balances: &[Fp],
+        entry_hash: Fp,
+        entry_balances: &[Fp],
     ) -> Result<(AssignedCell<Fp, Fp>, Vec<AssignedCell<Fp, Fp>>), Error> {
-        let (leaf_hash_cell, leaf_balance_cells) = layouter.assign_region(
-            || "assign leaf hash",
+        let (entry_hash_cell, entry_balance_cells) = layouter.assign_region(
+            || "assign entry hash",
             |mut region| {
                 let hash = region.assign_advice(
-                    || "leaf hash",
+                    || "entry hash",
                     self.config.advice[0],
                     0,
-                    || Value::known(leaf_hash),
+                    || Value::known(entry_hash),
                 )?;
 
                 let balances: Vec<AssignedCell<Fp, Fp>> = (0..N_ASSETS)
                     .map(|i| {
                         region.assign_advice(
-                            || "leaf balances",
+                            || "entry balances",
                             self.config.advice[0],
                             i + 1,
-                            || Value::known(leaf_balances[i]),
+                            || Value::known(entry_balances[i]),
                         )
                     })
                     .collect::<Result<Vec<_>, _>>()?;
@@ -115,7 +115,7 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
             },
         )?;
 
-        Ok((leaf_hash_cell, leaf_balance_cells))
+        Ok((entry_hash_cell, entry_balance_cells))
     }
 
     // assign the swap bit to a cell

@@ -183,7 +183,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
 
         // Assign the leaf hash and the leaf balances
         let (mut current_hash, mut current_balances) = merkle_sum_tree_chip
-            .assign_leaf_hash_and_balances(
+            .assign_entry_hash_and_balances(
                 layouter.namespace(|| "assign leaf hash and balances"),
                 self.leaf_hash,
                 &self.leaf_balances,
