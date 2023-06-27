@@ -94,11 +94,14 @@ impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
         // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config with WIDTH 3
         let advices: [Column<Advice>; 4] = std::array::from_fn(|_| meta.advice_column());
 
-        // the max number of fixed columns needed is 2 * WIDTH given requirement of the poseidon config with WIDTH 3
-        let fixed_columns: [Column<Fixed>; 6] = std::array::from_fn(|_| meta.fixed_column());
+        // we need 2 * WIDTH fixed columns for poseidon config with WIDTH 3 + 1 for the overflow check chip
+        let fixed_columns: [Column<Fixed>; 7] = std::array::from_fn(|_| meta.fixed_column());
 
         // we also need 2 selectors for the MerkleSumTreeChip
         let selectors: [Selector; 2] = std::array::from_fn(|_| meta.selector());
+
+        // we need 1 complex selector for the overflow check
+        let toggle_overflow_check = meta.complex_selector();
 
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, 3 fixed columns for rc_a and 3 for rc_b
         let poseidon_config = PoseidonChip::<PoseidonSpec, 3, 2, L>::configure(
@@ -121,8 +124,13 @@ impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
             selectors,
         );
 
-        let overflow_check_config =
-            OverflowChip::<MAX_BITS, MOD_BITS>::configure(meta, advices[0], advices[1]);
+        let overflow_check_config = OverflowChip::<MAX_BITS, MOD_BITS>::configure(
+            meta,
+            advices[0],
+            advices[1],
+            fixed_columns[6],
+            toggle_overflow_check,
+        );
 
         let instance = meta.instance_column();
         meta.enable_equality(instance);

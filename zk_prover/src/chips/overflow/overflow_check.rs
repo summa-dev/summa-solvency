@@ -41,10 +41,9 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
         meta: &mut ConstraintSystem<Fp>,
         a: Column<Advice>,
         b: Column<Advice>,
+        range: Column<Fixed>,
+        toggle_overflow_check: Selector,
     ) -> OverflowCheckConfig<MAX_BITS, MOD_BITS> {
-        let range = meta.fixed_column();
-        let toggle_overflow_check = meta.complex_selector();
-
         let num_rows = MOD_BITS / MAX_BITS as usize;
 
         meta.enable_equality(a);
