@@ -24,7 +24,7 @@ mod test {
 
     const LEVELS: usize = 4;
     const L: usize = 2 + (N_ASSETS * 2);
-    const K: u32 = 10;
+    const K: u32 = 11;
 
     #[test]
     fn test_valid_merkle_sum_tree() {

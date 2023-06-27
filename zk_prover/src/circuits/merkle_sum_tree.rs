@@ -10,7 +10,7 @@ use halo2_proofs::plonk::{
 };
 use snark_verifier_sdk::CircuitExt;
 
-const ACC_COLS: usize = 3;
+const MOD_BITS: usize = 252;
 const MAX_BITS: u8 = 8;
 
 // LEVELS indicates the levels of the tree
@@ -85,7 +85,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize>
 pub struct MstInclusionConfig<const L: usize, const N_ASSETS: usize> {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
     pub poseidon_config: PoseidonConfig<3, 2, L>,
-    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, ACC_COLS>,
+    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, MOD_BITS>,
     pub instance: Column<Instance>,
 }
 
@@ -121,7 +121,8 @@ impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
             selectors,
         );
 
-        let overflow_check_config = OverflowChip::<MAX_BITS, ACC_COLS>::configure(meta);
+        let overflow_check_config =
+            OverflowChip::<MAX_BITS, MOD_BITS>::configure(meta, advices[0], advices[1]);
 
         let instance = meta.instance_column();
         meta.enable_equality(instance);
@@ -170,7 +171,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
         let poseidon_chip =
             PoseidonChip::<PoseidonSpec, 3, 2, L>::construct(config.poseidon_config.clone());
         let overflow_check_chip =
-            OverflowChip::<MAX_BITS, ACC_COLS>::construct(config.overflow_check_config.clone());
+            OverflowChip::<MAX_BITS, MOD_BITS>::construct(config.overflow_check_config.clone());
 
         // Assign the leaf hash and the leaf balances
         let (mut current_hash, mut current_balances) = merkle_sum_tree_chip
