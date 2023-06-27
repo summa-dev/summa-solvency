@@ -6,10 +6,10 @@ use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, F
 use halo2_proofs::poly::Rotation;
 use std::fmt::Debug;
 
-const MOD_BITS: usize = 252;
-
+// `MAX_BITS` is the maximum number of bits that can be represented by a single cell.
+// `MOD_BITS` is number of bits the finite field modulus.
 #[derive(Debug, Clone)]
-pub struct OverflowCheckConfig<const MAX_BITS: u8> {
+pub struct OverflowCheckConfig<const MAX_BITS: u8, const MOD_BITS: usize> {
     pub a: Column<Advice>,
     pub b: Column<Advice>,
     pub range: Column<Fixed>,
@@ -17,12 +17,12 @@ pub struct OverflowCheckConfig<const MAX_BITS: u8> {
 }
 
 #[derive(Debug, Clone)]
-pub struct OverflowChip<const MAX_BITS: u8> {
-    config: OverflowCheckConfig<MAX_BITS>,
+pub struct OverflowChip<const MAX_BITS: u8, const MOD_BITS: usize> {
+    config: OverflowCheckConfig<MAX_BITS, MOD_BITS>,
 }
 
-impl<const MAX_BITS: u8> OverflowChip<MAX_BITS> {
-    pub fn construct(config: OverflowCheckConfig<MAX_BITS>) -> Self {
+impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS> {
+    pub fn construct(config: OverflowCheckConfig<MAX_BITS, MOD_BITS>) -> Self {
         Self { config }
     }
 
@@ -30,7 +30,7 @@ impl<const MAX_BITS: u8> OverflowChip<MAX_BITS> {
         meta: &mut ConstraintSystem<Fp>,
         a: Column<Advice>,
         b: Column<Advice>,
-    ) -> OverflowCheckConfig<MAX_BITS> {
+    ) -> OverflowCheckConfig<MAX_BITS, MOD_BITS> {
         let range = meta.fixed_column();
         let toggle_overflow_check = meta.complex_selector();
 

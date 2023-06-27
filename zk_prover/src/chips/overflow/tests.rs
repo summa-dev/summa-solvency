@@ -88,19 +88,21 @@ impl AddChip {
 }
 
 #[derive(Debug, Clone)]
-pub struct OverflowCheckTestConfig<const MAX_BITS: u8> {
+pub struct OverflowCheckTestConfig<const MAX_BITS: u8, const MOD_BITS: usize> {
     pub addchip_config: AddConfig,
-    pub overflow_check_config: OverflowCheckConfig<MAX_BITS>,
+    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, MOD_BITS>,
 }
 
 #[derive(Default, Clone, Debug)]
-struct OverflowCheckTestCircuit<const MAX_BITS: u8> {
+struct OverflowCheckTestCircuit<const MAX_BITS: u8, const MOD_BITS: usize> {
     pub a: Fp,
     pub b: Fp,
 }
 
-impl<const MAX_BITS: u8> Circuit<Fp> for OverflowCheckTestCircuit<MAX_BITS> {
-    type Config = OverflowCheckTestConfig<MAX_BITS>;
+impl<const MAX_BITS: u8, const MOD_BITS: usize> Circuit<Fp>
+    for OverflowCheckTestCircuit<MAX_BITS, MOD_BITS>
+{
+    type Config = OverflowCheckTestConfig<MAX_BITS, MOD_BITS>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -115,7 +117,7 @@ impl<const MAX_BITS: u8> Circuit<Fp> for OverflowCheckTestCircuit<MAX_BITS> {
 
         let b = meta.advice_column();
 
-        let overflow_check_config = OverflowChip::<MAX_BITS>::configure(meta, a, b);
+        let overflow_check_config = OverflowChip::<MAX_BITS, MOD_BITS>::configure(meta, a, b);
 
         {
             OverflowCheckTestConfig {
@@ -163,6 +165,52 @@ mod testing {
     };
 
     #[test]
+    fn test_none_overflow_16bits_case() {
+        let k = 5;
+
+        // a: new value
+        let a = Fp::from((1 << 16) - 2);
+        let b = Fp::from(1);
+
+        let circuit = OverflowCheckTestCircuit::<4, 16> { a, b };
+        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        prover.assert_satisfied();
+    }
+
+    #[test]
+    fn test_overflow_16bits_case() {
+        let k = 5;
+
+        let a = Fp::from((1 << 16) - 2);
+        let b = Fp::from(3);
+
+        let circuit = OverflowCheckTestCircuit::<4, 16> { a, b };
+        let invalid_prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![VerifyFailure::ConstraintNotSatisfied {
+                constraint: (
+                    (1, "equality check between decomposed_value and value").into(),
+                    0,
+                    ""
+                )
+                    .into(),
+                location: FailureLocation::InRegion {
+                    region: (4, "assign decomposed values").into(),
+                    offset: 0
+                },
+                cell_values: vec![
+                    (((Any::advice(), 3).into(), 0).into(), "0x10001".to_string()),
+                    (((Any::advice(), 4).into(), 0).into(), "0".to_string()),
+                    (((Any::advice(), 4).into(), 1).into(), "0".to_string()),
+                    (((Any::advice(), 4).into(), 2).into(), "0".to_string()),
+                    (((Any::advice(), 4).into(), 3).into(), "1".to_string()),
+                ]
+            }])
+        );
+    }
+
+    #[test]
     fn test_overflow_250bits_case() {
         // 5 bits are optimal choices for 252 bits field
         // 32 ( = 1 << 5 ) fixed column for range check
@@ -178,7 +226,7 @@ mod testing {
         ]);
         let b = Fp::from(1);
 
-        let circuit = OverflowCheckTestCircuit::<5> { a, b };
+        let circuit = OverflowCheckTestCircuit::<5, 252> { a, b };
         let invalid_prover = MockProver::run(k, &circuit, vec![]).unwrap();
 
         fn gen_errors(region_num: usize, last_advice: &str, advice: &str) -> VerifyFailure {
@@ -273,7 +321,7 @@ mod testing {
         ]);
         let b = Fp::from(1);
 
-        let circuit = OverflowCheckTestCircuit::<12> { a, b };
+        let circuit = OverflowCheckTestCircuit::<12, 252> { a, b };
         let invalid_prover = MockProver::run(k, &circuit, vec![]).unwrap();
 
         assert_eq!(
@@ -333,7 +381,7 @@ mod testing {
             0x0fffffffffffffff,
         ]);
 
-        let circuit = OverflowCheckTestCircuit::<8> {
+        let circuit = OverflowCheckTestCircuit::<8, 252> {
             a: max_balance,
             b: max_balance,
         };

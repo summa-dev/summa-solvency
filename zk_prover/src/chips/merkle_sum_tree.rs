@@ -10,6 +10,7 @@ use halo2_proofs::plonk::{
 };
 use halo2_proofs::poly::Rotation;
 
+const MOD_BITS: usize = 252;
 const MAX_BITS: u8 = 8;
 const WIDTH: usize = 7;
 const RATE: usize = 6;
@@ -24,7 +25,7 @@ pub struct MerkleSumTreeConfig<const MST_WIDTH: usize> {
     pub lt_selector: Selector,
     pub instance: Column<Instance>,
     pub poseidon_config: PoseidonConfig<WIDTH, RATE, L>,
-    pub overflow_check_config: OverflowCheckConfig<MAX_BITS>,
+    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, MOD_BITS>,
     pub lt_config: LtConfig<Fp, 8>,
 }
 #[derive(Debug, Clone)]
