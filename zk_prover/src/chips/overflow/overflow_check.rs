@@ -46,8 +46,6 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
     ) -> OverflowCheckConfig<MAX_BITS, MOD_BITS> {
         let num_rows = MOD_BITS / MAX_BITS as usize;
 
-        meta.enable_equality(a);
-
         meta.create_gate(
             "equality check between decomposed_value and value",
             |meta| {
