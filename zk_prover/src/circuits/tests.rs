@@ -27,6 +27,54 @@ mod test {
     const K: u32 = 11;
 
     #[test]
+    fn test_standard_on_chain_verifier() {
+        let params = generate_setup_params(K);
+
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            0,
+        );
+
+        let pk = gen_pk(&params, &circuit, None);
+
+        let num_instances = circuit.num_instance();
+        let instances = circuit.instances();
+
+        let proof_calldata = gen_evm_proof_shplonk(&params, &pk, circuit, instances.clone());
+
+        use snark_verifier::cost::CostEstimation;
+        let protocol = snark_verifier::system::halo2::compile(
+            &params,
+            pk.get_vk(),
+            snark_verifier::system::halo2::Config::kzg().with_num_instance(num_instances.clone()),
+        );
+        let cost = snark_verifier::verifier::plonk::PlonkSuccinctVerifier::<
+            snark_verifier::pcs::kzg::KzgAs<
+                halo2_proofs::halo2curves::bn256::Bn256,
+                snark_verifier::pcs::kzg::Bdfg21,
+            >,
+        >::estimate_cost(&protocol);
+        dbg!(cost);
+
+        let deployment_code = gen_evm_verifier_shplonk::<MstInclusionCircuit<LEVELS, L, N_ASSETS>>(
+            &params,
+            pk.get_vk(),
+            num_instances,
+            None,
+        );
+
+        dbg!(deployment_code.len());
+
+        let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
+
+        // assert gas_cost to verify the proof on chain to be between 575000 and 600000
+        assert!(
+            (575000..=600000).contains(&gas_cost),
+            "gas_cost is not within the expected range"
+        );
+    }
+
+    #[test]
     fn test_valid_merkle_sum_tree() {
         for user_index in 0..16 {
             let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
