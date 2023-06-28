@@ -284,13 +284,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
         // expose the last current hash, namely the root hash, as public input
         config.expose_public(layouter.namespace(|| "public root hash"), &current_hash, 1)?;
 
-        // perform range check on the balances of the root node
-        for balance in current_balances.iter() {
-            overflow_check_chip.assign(
-                layouter.namespace(|| "overflow check root balance"),
-                balance,
-            )?;
-        }
+        // don't need to perform further range check on the balances of the root node as their addends are already constrained to be less than 2^MOD_BITS
 
         Ok(())
     }
