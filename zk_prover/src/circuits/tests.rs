@@ -1,11 +1,13 @@
 #[cfg(test)]
 mod test {
 
+    use std::{fs::File, io::Write, path::Path};
+
     use crate::circuits::{
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
         // solvency::SolvencyCircuit,
-        utils::{full_prover, full_verifier, generate_setup_params},
+        utils::{full_prover, full_verifier, generate_setup_params, write_verifier_sol_from_yul},
     };
     use crate::merkle_sum_tree::N_ASSETS;
     use ark_std::{end_timer, start_timer};
@@ -43,12 +45,25 @@ mod test {
 
         let proof_calldata = gen_evm_proof_shplonk(&params, &pk, circuit, instances.clone());
 
+        let hex_proof_calldata = hex::encode(proof_calldata.clone());
+
+        let mut file = File::create("src/contracts/proof_calldata.txt").unwrap();
+
+        file.write_all(hex_proof_calldata.as_bytes())
+            .expect("Unable to write data to file");
+
+        let yul_code_path = "src/contracts/SolvencyVerifier.yul";
+
         let deployment_code = gen_evm_verifier_shplonk::<MstInclusionCircuit<LEVELS, L, N_ASSETS>>(
             &params,
             pk.get_vk(),
             num_instances,
-            None,
+            Some(Path::new(yul_code_path)),
         );
+
+        let sol_code_path = "src/contracts/SolvencyVerifier.sol";
+
+        write_verifier_sol_from_yul(yul_code_path, sol_code_path).unwrap();
 
         let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
 
