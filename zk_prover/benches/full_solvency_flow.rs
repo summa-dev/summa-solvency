@@ -13,11 +13,11 @@ use summa_solvency::{
 
 const SAMPLE_SIZE: usize = 10;
 const LEVELS: usize = 5;
-const N_ASSETS: usize = 2;
-const PATH_NAME: &str = "two_assets";
+const N_ASSETS: usize = 1;
+const PATH_NAME: &str = "one_asset";
 const L: usize = 2 + (N_ASSETS * 2);
 
-fn build_mstree_benchmark(_c: &mut Criterion) {
+fn build_mstree(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
     let csv_file = format!(
@@ -37,7 +37,7 @@ fn build_mstree_benchmark(_c: &mut Criterion) {
     });
 }
 
-fn verification_key_gen_benchmark(_c: &mut Criterion) {
+fn verification_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
     let params: ParamsKZG<Bn256> = generate_setup_params(11);
@@ -55,7 +55,7 @@ fn verification_key_gen_benchmark(_c: &mut Criterion) {
     });
 }
 
-fn proving_key_gen_benchmark(_c: &mut Criterion) {
+fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
     let params: ParamsKZG<Bn256> = generate_setup_params(11);
@@ -74,7 +74,7 @@ fn proving_key_gen_benchmark(_c: &mut Criterion) {
     });
 }
 
-fn generate_zk_proof_benchmark(_c: &mut Criterion) {
+fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
     let params: ParamsKZG<Bn256> = generate_setup_params(11);
@@ -103,7 +103,7 @@ fn generate_zk_proof_benchmark(_c: &mut Criterion) {
     });
 }
 
-fn verify_zk_proof_benchmark(_c: &mut Criterion) {
+fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
     let params: ParamsKZG<Bn256> = generate_setup_params(11);
@@ -123,6 +123,8 @@ fn verify_zk_proof_benchmark(_c: &mut Criterion) {
 
     let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
 
+    println!("proof size in bytes: {}", proof.len());
+
     let bench_name = format!(
         "verify zk proof - tree of 2 power of {} entries with {} assets",
         LEVELS, N_ASSETS
@@ -136,10 +138,10 @@ fn verify_zk_proof_benchmark(_c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    build_mstree_benchmark,
-    verification_key_gen_benchmark,
-    proving_key_gen_benchmark,
-    generate_zk_proof_benchmark,
-    verify_zk_proof_benchmark
+    build_mstree,
+    verification_key_gen_mst_inclusion_circuit,
+    proving_key_gen_mst_inclusion_circuit,
+    generate_zk_proof_mst_inclusion_circuit,
+    verify_zk_proof_mst_inclusion_circuit
 );
 criterion_main!(benches);

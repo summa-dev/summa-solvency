@@ -172,3 +172,5 @@ You can set the following parameters to run the benches:
 - `LEVELS` -> the number of entries in the merkle sum tree. By default it is set to 5, which means that the benches will run for 2^5 entries.
 - `SAMPLE_SIZE` -> the number of samples to run for each bench. By default it is set to 10, which is the minimum allowed by criterion.rs
 - `N_ASSETS and PATH_NAME` -> the number of assets to be used in the benchmarking. By default it is set to 2. For now you can only switch it between 1 and 2 as these are the only csv folder available. More will be added soon.
+
+Furthermore the benchmarking function `verify_zk_proof_benchmark` will also print out the proof size in bytes.
