@@ -26,6 +26,7 @@ mod test {
     const LEVELS: usize = 4;
     const L: usize = 2 + (N_ASSETS * 2);
     const K: u32 = 11;
+    const N_BYTES: usize = 31;
 
     #[test]
     fn test_valid_merkle_sum_tree() {
@@ -487,7 +488,7 @@ mod test {
         // Make the first asset sum more than liabilities sum (556862)
         let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
 
-        let circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             assets_sum,
         );
@@ -503,7 +504,7 @@ mod test {
         // Make the first asset sum less than liabilities sum (556862)
         let less_than_assets_sum_1st = [Fp::from(556861u64), Fp::from(556863u64)];
 
-        let circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             less_than_assets_sum_1st,
         );
@@ -528,7 +529,7 @@ mod test {
         // Make the second asset sum less than liabilities sum (556862)
         let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
 
-        let circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             less_than_assets_sum_2nd,
         );
@@ -553,7 +554,7 @@ mod test {
         // Make both the balances less than liabilities sum (556862)
         let less_than_assets_sum_both = [Fp::from(556861u64), Fp::from(556861u64)];
 
-        let circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             less_than_assets_sum_both,
         );
@@ -595,7 +596,7 @@ mod test {
         // For the second asset, the assets_sum is less than the liabilities sum (556862)
         let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
 
-        let mut circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+        let mut circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             less_than_assets_sum_2nd,
         );
@@ -911,7 +912,7 @@ mod test {
 
         let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
 
-        let circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
             "src/merkle_sum_tree/csv/entry_16.csv",
             assets_sum,
         );
