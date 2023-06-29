@@ -2,7 +2,7 @@ use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
-use crate::merkle_sum_tree::{big_int_to_fp, MerkleSumTree};
+use crate::merkle_sum_tree::{big_int_to_fp, MerkleSumTree, MOD_BITS};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
@@ -10,7 +10,6 @@ use halo2_proofs::plonk::{
 };
 use snark_verifier_sdk::CircuitExt;
 
-const MOD_BITS: usize = 248;
 const MAX_BITS: u8 = 8;
 
 // LEVELS indicates the levels of the tree

@@ -7,7 +7,7 @@ mod test {
         solvency::SolvencyCircuit,
         utils::{full_prover, full_verifier, generate_setup_params},
     };
-    use crate::merkle_sum_tree::N_ASSETS;
+    use crate::merkle_sum_tree::{MOD_BITS, N_ASSETS};
     use ark_std::{end_timer, start_timer};
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
@@ -26,7 +26,7 @@ mod test {
     const LEVELS: usize = 4;
     const L: usize = 2 + (N_ASSETS * 2);
     const K: u32 = 11;
-    const N_BYTES: usize = 31;
+    const N_BYTES: usize = MOD_BITS / 8;
 
     #[test]
     fn test_valid_merkle_sum_tree() {
