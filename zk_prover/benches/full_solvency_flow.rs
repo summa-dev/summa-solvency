@@ -12,9 +12,9 @@ use summa_solvency::{
 };
 
 const SAMPLE_SIZE: usize = 10;
-const LEVELS: usize = 5;
-const N_ASSETS: usize = 1;
-const PATH_NAME: &str = "one_asset";
+const LEVELS: usize = 15;
+const N_ASSETS: usize = 2;
+const PATH_NAME: &str = "two_assets";
 const L: usize = 2 + (N_ASSETS * 2);
 
 fn build_mstree(_c: &mut Criterion) {
@@ -40,7 +40,7 @@ fn build_mstree(_c: &mut Criterion) {
 fn verification_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(11);
+    let params: ParamsKZG<Bn256> = generate_setup_params(12);
 
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
@@ -58,7 +58,7 @@ fn verification_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
 fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(11);
+    let params: ParamsKZG<Bn256> = generate_setup_params(12);
 
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
@@ -77,7 +77,7 @@ fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
 fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(11);
+    let params: ParamsKZG<Bn256> = generate_setup_params(12);
 
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
@@ -106,7 +106,7 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(11);
+    let params: ParamsKZG<Bn256> = generate_setup_params(12);
 
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 

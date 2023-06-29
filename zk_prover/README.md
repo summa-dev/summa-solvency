@@ -169,8 +169,27 @@ To run the benches
 
 You can set the following parameters to run the benches:
 
-- `LEVELS` -> the number of entries in the merkle sum tree. By default it is set to 5, which means that the benches will run for 2^5 entries.
+- `LEVELS` -> the number of entries in the merkle sum tree. By default it is set to 15, which means that the benches will run for 2^15 entries.
 - `SAMPLE_SIZE` -> the number of samples to run for each bench. By default it is set to 10, which is the minimum allowed by criterion.rs
 - `N_ASSETS and PATH_NAME` -> the number of assets to be used in the benchmarking. By default it is set to 2. For now you can only switch it between 1 and 2 as these are the only csv folder available. More will be added soon.
 
+Note that the `k` of the circuit may vary based on the LEVELS
+
 Furthermore the benchmarking function `verify_zk_proof_benchmark` will also print out the proof size in bytes.
+
+### Current Benchmarks
+
+2^15 entries (32768) users, 2 assets
+
+| MST init     |
+| --------     |
+| 2.5648 s     |
+
+For Merkle Sum Tree Proof of Inclusion circuit
+
+| VK Gen      | Pk Gen   | Proof Generation | Proof Verification | Proof Size (bytes) |
+| ------      | ------   | ---------------- | ------------------ | ------------------ |
+| 129.17 ms   | 61.765 ms|    1.0354 s      |    7.8823 ms       | 10432              |
+
+
+
