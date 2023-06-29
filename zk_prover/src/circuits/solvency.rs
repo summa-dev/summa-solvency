@@ -170,14 +170,8 @@ impl<const L: usize, const N_ASSETS: usize> SolvencyConfig<L, N_ASSETS> {
                 // enable lt seletor
                 self.lt_selector.enable(&mut region, 0)?;
 
-                lhs.value().zip(rhs.value()).map(|(lhs, rhs)| {
-                    lt_chip.assign(
-                        &mut region,
-                        0,
-                        Value::known(lhs.to_owned()),
-                        Value::known(rhs.to_owned()),
-                    )
-                });
+                lt_chip.assign(&mut region, 0, lhs.value().copied(), rhs.value().copied())?;
+
                 Ok(())
             },
         )?;

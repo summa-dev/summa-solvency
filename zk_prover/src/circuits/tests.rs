@@ -884,7 +884,7 @@ mod test {
 
     #[cfg(feature = "dev-graph")]
     #[test]
-    fn print_merkle_sum_tree() {
+    fn print_mst_inclusion() {
         use plotters::prelude::*;
 
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
@@ -892,12 +892,34 @@ mod test {
             0,
         );
 
-        let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384))
+        let root = BitMapBackend::new("prints/mst-inclusion-layout.png", (2048, 16384))
             .into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root
-            .titled("Merkle Sum Tree Layout", ("sans-serif", 60))
+            .titled("Merkle Sum Tree Inclusion Layout", ("sans-serif", 60))
             .unwrap();
+
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(K, &circuit, &root)
+            .unwrap();
+    }
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_solvency_circuit() {
+        use plotters::prelude::*;
+
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            assets_sum,
+        );
+
+        let root =
+            BitMapBackend::new("prints/solvency-layout.png", (2048, 16384)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root.titled("Solvency Layout", ("sans-serif", 60)).unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
             .render(K, &circuit, &root)

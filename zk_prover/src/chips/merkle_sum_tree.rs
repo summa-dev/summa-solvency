@@ -183,12 +183,12 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
                 )?;
 
                 // Extract the value from the cell
-                let mut l1_val = l1.value().map(|x| x.to_owned());
-                let mut r1_val = r1.value().map(|x| x.to_owned());
+                let mut l1_val = l1.value().copied();
+                let mut r1_val = r1.value().copied();
 
                 // perform the swap according to the swap bit
                 // if swap_bit is 0 return (l1, r1) else return (r1, l1)
-                swap_bit.value().map(|x| x.to_owned()).map(|x| {
+                swap_bit.value().copied().map(|x| {
                     (l1_val, r1_val) = if x == Fp::zero() {
                         (l1_val, r1_val)
                     } else {
@@ -266,12 +266,12 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
                 )?;
 
                 // Extract the value from the cell
-                let mut l1_val = l1.value().map(|x| x.to_owned());
-                let mut r1_val = r1.value().map(|x| x.to_owned());
+                let mut l1_val = l1.value().copied();
+                let mut r1_val = r1.value().copied();
 
                 // perform the swap according to the swap bit
                 // if swap_bit is 0 return (l1, r1) else return (r1, l1)
-                swap_bit.value().map(|x| x.to_owned()).map(|x| {
+                swap_bit.value().copied().map(|x| {
                     (l1_val, r1_val) = if x == Fp::zero() {
                         (l1_val, r1_val)
                     } else {
