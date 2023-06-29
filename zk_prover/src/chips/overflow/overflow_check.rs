@@ -41,10 +41,9 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
         meta: &mut ConstraintSystem<Fp>,
         a: Column<Advice>,
         b: Column<Advice>,
+        range: Column<Fixed>,
+        toggle_overflow_check: Selector,
     ) -> OverflowCheckConfig<MAX_BITS, MOD_BITS> {
-        let range = meta.fixed_column();
-        let toggle_overflow_check = meta.complex_selector();
-
         let num_rows = MOD_BITS / MAX_BITS as usize;
 
         meta.create_gate(
@@ -130,7 +129,7 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
                 let num_rows = MOD_BITS / MAX_BITS as usize;
 
                 // Assign input value to the cell inside the region
-                let _ = value.copy_advice(|| "assign value", &mut region, self.config.a, 0);
+                value.copy_advice(|| "assign value", &mut region, self.config.a, 0)?;
 
                 // Just used helper function for decomposing. In other halo2 application used functions based on Field.
                 let decomposed_values: Vec<Fp> = decompose_bigint_to_ubits(

@@ -25,7 +25,7 @@ To build and test the circuit, execute
 
 ```
 cargo build
-cargo test --features dev-graph -- --nocapture
+cargo test --release --features dev-graph -- --nocapture
 ```
 
 To run the on-chain verifer test run
