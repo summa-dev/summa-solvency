@@ -383,7 +383,7 @@ pub fn gen_solidity_calldata<C: Circuit<Fp> + CircuitExt<Fp>>(
     params: &ParamsKZG<Bn256>,
     pk: &ProvingKey<G1Affine>,
     circuit: C,
-) -> (Vec<u8>, Vec<U256>) {
+) -> (Bytes, Vec<U256>) {
     let instances = circuit.instances();
 
     let pf_time = start_timer!(|| "Creating proof");
@@ -399,7 +399,9 @@ pub fn gen_solidity_calldata<C: Circuit<Fp> + CircuitExt<Fp>>(
         public_inputs.push(u);
     }
 
-    (proof_calldata, public_inputs)
+    let solidity_calldata = Bytes::from(proof_calldata);
+
+    (solidity_calldata, public_inputs)
 }
 
 pub fn write_verifier_sol_from_yul(
