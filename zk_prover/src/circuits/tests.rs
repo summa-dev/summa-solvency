@@ -4,6 +4,7 @@ mod test {
     use crate::circuits::{
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
+        solvency::SolvencyCircuit,
         utils::{full_prover, full_verifier, generate_setup_params},
     };
     use crate::merkle_sum_tree::N_ASSETS;
@@ -475,6 +476,149 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
+                },
+            ])
+        );
+    }
+
+    // Passing assets_sum that are less than the liabilities sum should not fail the solvency circuit
+    #[test]
+    fn test_valid_liabilities_less_than_assets() {
+        // Make the first asset sum more than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            assets_sum,
+        );
+
+        let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        valid_prover.assert_satisfied();
+    }
+
+    // Passing assets sum that is less than the liabilities sum should fail the solvency circuit
+    #[test]
+    fn test_invalid_assets_less_than_liabilities() {
+        // Make the first asset sum less than liabilities sum (556862)
+        let less_than_assets_sum_1st = [Fp::from(556861u64), Fp::from(556863u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            less_than_assets_sum_1st,
+        );
+
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+                invalid_prover.verify(),
+                Err(vec![VerifyFailure::ConstraintNotSatisfied {
+                    constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                    location: FailureLocation::InRegion {
+                        region: (13, "enforce input cell to be less than value in instance column at row `index`").into(),
+                        offset: 0
+                    },
+                    cell_values: vec![
+                        // The zero means that is not less than
+                        (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                    ]
+                }])
+            );
+
+        // Make the second asset sum less than liabilities sum (556862)
+        let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            less_than_assets_sum_2nd,
+        );
+
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+                invalid_prover.verify(),
+                Err(vec![VerifyFailure::ConstraintNotSatisfied {
+                    constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                    location: FailureLocation::InRegion {
+                        region: (14, "enforce input cell to be less than value in instance column at row `index`").into(),
+                        offset: 0
+                    },
+                    cell_values: vec![
+                        // The zero means that is not less than
+                        (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                    ]
+                }])
+            );
+
+        // Make both the balances less than liabilities sum (556862)
+        let less_than_assets_sum_both = [Fp::from(556861u64), Fp::from(556861u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            less_than_assets_sum_both,
+        );
+
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+                invalid_prover.verify(),
+                Err(vec![
+                    VerifyFailure::ConstraintNotSatisfied {
+                        constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                        location: FailureLocation::InRegion {
+                            region: (13, "enforce input cell to be less than value in instance column at row `index`").into(),
+                            offset: 0
+                        },
+                        cell_values: vec![
+                            // The zero means that is not less than
+                            (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                        ]
+                    },
+                    VerifyFailure::ConstraintNotSatisfied {
+                        constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                        location: FailureLocation::InRegion {
+                            region: (14, "enforce input cell to be less than value in instance column at row `index`").into(),
+                            offset: 0
+                        },
+                        cell_values: vec![
+                            // The zero means that is not less than
+                            (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                        ]
+                    }
+                ])
+            );
+    }
+
+    // Manipulating the liabilities to make it less than the assets sum should fail the solvency circuit because the root hash will not match
+    #[test]
+    fn test_invalid_manipulated_liabilties() {
+        // For the second asset, the assets_sum is less than the liabilities sum (556862)
+        let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
+
+        let mut circuit = SolvencyCircuit::<L, N_ASSETS>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            less_than_assets_sum_2nd,
+        );
+
+        // But actually, the CEX tries to manipulate the liabilities sum for the second asset to make it less than the assets sum
+        circuit.left_node_balances[1] = Fp::from(1u64);
+
+        // This should pass the less than constraint but generate a root hash that does not match the one passed in the instance
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (11, "permute state").into(),
+                        offset: 38
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 0 }
                 },
             ])
         );
