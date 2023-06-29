@@ -4,7 +4,7 @@ from calc_round_numbers import get_parameters
 # Parameters
 p = 0x30644E72E131A029B85045B68181585D2833E84879B9709143E1F593F0000001
 
-t = 3 # Poseidon hasher width
+t = 2 # Poseidon hasher width
 M = 128
 
 # Call the function and get the parameters

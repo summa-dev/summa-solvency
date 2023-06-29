@@ -78,32 +78,32 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
 #[derive(Debug, Clone)]
 pub struct SolvencyConfig<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
-    pub poseidon_config: PoseidonConfig<3, 2, L>,
+    pub poseidon_config: PoseidonConfig<2, 1, L>,
     pub instance: Column<Instance>,
-    pub lt_selector: Selector,
-    pub lt_config: LtConfig<Fp, N_BYTES>,
+    // pub lt_selector: Selector,
+    // pub lt_config: LtConfig<Fp, N_BYTES>,
 }
 
 impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
     SolvencyConfig<L, N_ASSETS, N_BYTES>
 {
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
-        // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config with WIDTH 3
-        let advices: [Column<Advice>; 4] = std::array::from_fn(|_| meta.advice_column());
+        // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config with WIDTH 2
+        let advices: [Column<Advice>; 3] = std::array::from_fn(|_| meta.advice_column());
 
-        // the max number of fixed columns needed is 2 * WIDTH given requirement of the poseidon config with WIDTH 3
-        let fixed_columns: [Column<Fixed>; 6] = std::array::from_fn(|_| meta.fixed_column());
+        // the max number of fixed columns needed is 2 * WIDTH given requirement of the poseidon config with WIDTH 2
+        let fixed_columns: [Column<Fixed>; 4] = std::array::from_fn(|_| meta.fixed_column());
 
-        // we also need 3 selectors: 2 for the MerkleSumTreeChip and 1 for the LtChip
-        let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
+        // we also need 3 selectors: 2 for the MerkleSumTreeChip
+        let selectors: [Selector; 2] = std::array::from_fn(|_| meta.selector());
 
-        // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, 3 fixed columns for rc_a and 3 for rc_b
-        let poseidon_config = PoseidonChip::<PoseidonSpec, 3, 2, L>::configure(
+        // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, 2 fixed columns for rc_a and 2 for rc_b
+        let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, L>::configure(
             meta,
-            advices[0..3].try_into().unwrap(),
-            advices[3],
-            fixed_columns[0..3].try_into().unwrap(),
-            fixed_columns[3..6].try_into().unwrap(),
+            advices[0..2].try_into().unwrap(),
+            advices[2],
+            fixed_columns[0..2].try_into().unwrap(),
+            fixed_columns[2..4].try_into().unwrap(),
         );
 
         // enable permutation for all the advice columns
@@ -118,21 +118,21 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
             selectors[0..2].try_into().unwrap(),
         );
 
-        let lt_selector = selectors[2];
+        // let lt_selector = selectors[2];
 
-        // configure lt chip
-        let lt_config = LtChip::configure(
-            meta,
-            |meta| meta.query_selector(lt_selector),
-            |meta| meta.query_advice(advices[0], Rotation::cur()),
-            |meta| meta.query_advice(advices[1], Rotation::cur()),
-        );
+        // // configure lt chip
+        // let lt_config = LtChip::configure(
+        //     meta,
+        //     |meta| meta.query_selector(lt_selector),
+        //     |meta| meta.query_advice(advices[0], Rotation::cur()),
+        //     |meta| meta.query_advice(advices[1], Rotation::cur()),
+        // );
 
-        // Gate that enforces that the result of the lt chip is 1 at the row in which the lt selector is enabled
-        meta.create_gate("is_lt is 1", |meta| {
-            let lt_enable = meta.query_selector(lt_selector);
-            vec![lt_enable * (lt_config.is_lt(meta, None) - Expression::Constant(Fp::from(1)))]
-        });
+        // // Gate that enforces that the result of the lt chip is 1 at the row in which the lt selector is enabled
+        // meta.create_gate("is_lt is 1", |meta| {
+        //     let lt_enable = meta.query_selector(lt_selector);
+        //     vec![lt_enable * (lt_config.is_lt(meta, None) - Expression::Constant(Fp::from(1)))]
+        // });
 
         let instance = meta.instance_column();
         meta.enable_equality(instance);
@@ -140,51 +140,51 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         Self {
             merkle_sum_tree_config,
             poseidon_config,
-            lt_config,
-            lt_selector,
+            // lt_config,
+            // lt_selector,
             instance,
         }
     }
 
-    // Enforce value in the cell passed as input to be less than the value in the instance column at row `index`.
-    pub fn enforce_less_than(
-        &self,
-        mut layouter: impl Layouter<Fp>,
-        input_cell: &AssignedCell<Fp, Fp>,
-        index: usize,
-        lt_chip: &LtChip<Fp, N_BYTES>,
-    ) -> Result<(), Error> {
-        layouter.assign_region(
-            || "enforce input cell to be less than value in instance column at row `index`",
-            |mut region| {
-                // First, copy the input cell inside the region
-                let lhs = input_cell.copy_advice(
-                    || "copy input sum",
-                    &mut region,
-                    self.merkle_sum_tree_config.advice[0],
-                    0,
-                )?;
+    // // Enforce value in the cell passed as input to be less than the value in the instance column at row `index`.
+    // pub fn enforce_less_than(
+    //     &self,
+    //     mut layouter: impl Layouter<Fp>,
+    //     input_cell: &AssignedCell<Fp, Fp>,
+    //     index: usize,
+    //     lt_chip: &LtChip<Fp, N_BYTES>,
+    // ) -> Result<(), Error> {
+    //     layouter.assign_region(
+    //         || "enforce input cell to be less than value in instance column at row `index`",
+    //         |mut region| {
+    //             // First, copy the input cell inside the region
+    //             let lhs = input_cell.copy_advice(
+    //                 || "copy input sum",
+    //                 &mut region,
+    //                 self.merkle_sum_tree_config.advice[0],
+    //                 0,
+    //             )?;
 
-                // Next, copy the value from the instance columns
-                let rhs = region.assign_advice_from_instance(
-                    || "copy value from instance column",
-                    self.instance,
-                    index,
-                    self.merkle_sum_tree_config.advice[1],
-                    0,
-                )?;
+    //             // Next, copy the value from the instance columns
+    //             let rhs = region.assign_advice_from_instance(
+    //                 || "copy value from instance column",
+    //                 self.instance,
+    //                 index,
+    //                 self.merkle_sum_tree_config.advice[1],
+    //                 0,
+    //             )?;
 
-                // enable lt seletor
-                self.lt_selector.enable(&mut region, 0)?;
+    //             // enable lt seletor
+    //             self.lt_selector.enable(&mut region, 0)?;
 
-                lt_chip.assign(&mut region, 0, lhs.value().copied(), rhs.value().copied())?;
+    //             lt_chip.assign(&mut region, 0, lhs.value().copied(), rhs.value().copied())?;
 
-                Ok(())
-            },
-        )?;
+    //             Ok(())
+    //         },
+    //     )?;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     // Enforce copy constraint check between input cell and instance column at row passed as input
     pub fn expose_public(
@@ -220,8 +220,8 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
         let merkle_sum_tree_chip =
             MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
         let poseidon_chip =
-            PoseidonChip::<PoseidonSpec, 3, 2, L>::construct(config.poseidon_config.clone());
-        let lt_chip = LtChip::<Fp, N_BYTES>::construct(config.lt_config);
+            PoseidonChip::<PoseidonSpec, 2, 1, L>::construct(config.poseidon_config.clone());
+        // let lt_chip = LtChip::<Fp, N_BYTES>::construct(config.lt_config);
 
         // Assign the left penultimate hash and the left penultimate balances
         let (left_node_hash, left_node_balances) = merkle_sum_tree_chip
@@ -284,18 +284,18 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
         // expose the root hash, as public input
         config.expose_public(layouter.namespace(|| "public root hash"), &root_hash, 0)?;
 
-        // load lookup table for lt chip
-        lt_chip.load(&mut layouter)?;
+        // // load lookup table for lt chip
+        // lt_chip.load(&mut layouter)?;
 
-        // enforce root balances to be less than the assets sum
-        for asset in 0..N_ASSETS {
-            config.enforce_less_than(
-                layouter.namespace(|| "enforce less than"),
-                &root_balances[asset],
-                asset + 1,
-                &lt_chip,
-            )?;
-        }
+        // // enforce root balances to be less than the assets sum
+        // for asset in 0..N_ASSETS {
+        //     config.enforce_less_than(
+        //         layouter.namespace(|| "enforce less than"),
+        //         &root_balances[asset],
+        //         asset + 1,
+        //         &lt_chip,
+        //     )?;
+        // }
 
         Ok(())
     }

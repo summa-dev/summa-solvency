@@ -1,13 +1,16 @@
 #[cfg(test)]
 mod test {
 
-    use std::{fs::File, io::Write, path::Path};
+    use std::path::Path;
 
     use crate::circuits::{
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
         solvency::SolvencyCircuit,
-        utils::{full_prover, full_verifier, generate_setup_params},
+        utils::{
+            full_prover, full_verifier, gen_solidity_calldata, generate_setup_params,
+            write_verifier_sol_from_yul,
+        },
     };
     use crate::merkle_sum_tree::{MOD_BITS, N_ASSETS};
     use ark_std::{end_timer, start_timer};
@@ -29,6 +32,53 @@ mod test {
     const L: usize = 2 + (N_ASSETS * 2);
     const K: u32 = 11;
     const N_BYTES: usize = MOD_BITS / 8;
+
+    #[test]
+    fn test_standard_on_chain_verifier() {
+        let params = generate_setup_params(K);
+
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            assets_sum,
+        );
+
+        let pk = gen_pk(&params, &circuit, None);
+
+        let num_instances = circuit.num_instance();
+        let instances = circuit.instances();
+
+        let proof_calldata =
+            gen_evm_proof_shplonk(&params, &pk, circuit.clone(), instances.clone());
+
+        let yul_code_path = "src/contracts/SolvencyVerifier.yul";
+
+        let deployment_code = gen_evm_verifier_shplonk::<SolvencyCircuit<L, N_ASSETS, N_BYTES>>(
+            &params,
+            pk.get_vk(),
+            num_instances,
+            Some(Path::new(yul_code_path)),
+        );
+
+        let sol_code_path = "src/contracts/SolvencyVerifier.sol";
+
+        write_verifier_sol_from_yul(yul_code_path, sol_code_path).unwrap();
+
+        let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
+
+        // get solidity calldata
+        let calldata = gen_solidity_calldata(&params, &pk, circuit);
+
+        // print calldata
+        println!("calldata: {:?}", calldata);
+
+        // assert gas_cost to verify the proof on chain to be between 575000 and 590000
+        assert!(
+            (0..=600000).contains(&gas_cost),
+            "gas_cost is not within the expected range"
+        );
+    }
 
     #[test]
     fn test_valid_merkle_sum_tree() {

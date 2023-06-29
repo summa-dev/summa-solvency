@@ -83,7 +83,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize>
 #[derive(Debug, Clone)]
 pub struct MstInclusionConfig<const L: usize, const N_ASSETS: usize> {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
-    pub poseidon_config: PoseidonConfig<3, 2, L>,
+    pub poseidon_config: PoseidonConfig<2, 1, L>,
     pub overflow_check_config: OverflowCheckConfig<MAX_BITS, MOD_BITS>,
     pub instance: Column<Instance>,
 }
@@ -103,7 +103,7 @@ impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
         let toggle_overflow_check = meta.complex_selector();
 
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, 3 fixed columns for rc_a and 3 for rc_b
-        let poseidon_config = PoseidonChip::<PoseidonSpec, 3, 2, L>::configure(
+        let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, L>::configure(
             meta,
             advices[0..3].try_into().unwrap(),
             advices[3],
@@ -176,7 +176,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
         let merkle_sum_tree_chip =
             MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
         let poseidon_chip =
-            PoseidonChip::<PoseidonSpec, 3, 2, L>::construct(config.poseidon_config.clone());
+            PoseidonChip::<PoseidonSpec, 2, 1, L>::construct(config.poseidon_config.clone());
         let overflow_check_chip =
             OverflowChip::<MAX_BITS, MOD_BITS>::construct(config.overflow_check_config.clone());
 
