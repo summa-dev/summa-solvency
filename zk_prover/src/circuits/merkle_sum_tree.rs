@@ -10,7 +10,7 @@ use halo2_proofs::plonk::{
 };
 use snark_verifier_sdk::CircuitExt;
 
-const MOD_BITS: usize = 252;
+const MOD_BITS: usize = 248;
 const MAX_BITS: u8 = 8;
 
 // LEVELS indicates the levels of the tree
