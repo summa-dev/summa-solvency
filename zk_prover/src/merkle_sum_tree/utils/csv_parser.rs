@@ -44,7 +44,7 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
         entries.push(entry);
     }
 
-    // Iterate through the balance accumulator and throw error if any balance is not in MOD_BITS range (0, 2 ^^ 248):
+    // Iterate through the balance accumulator and throw error if any balance is not in MOD_BITS range (0, 2 ** 248):
     for balance in balances_acc {
         if balance >= BigInt::from(2).pow(MOD_BITS as u32) {
             return Err(
