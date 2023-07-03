@@ -4,6 +4,7 @@ use crate::merkle_sum_tree::utils::{
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use num_bigint::BigInt;
 
+#[derive(Debug, Clone)]
 pub struct MerkleSumTree<const N_ASSETS: usize> {
     root: Node<N_ASSETS>,
     nodes: Vec<Vec<Node<N_ASSETS>>>,
