@@ -13,7 +13,8 @@ pub struct OverflowCheckConfig<const MAX_BITS: u8, const MOD_BITS: usize> {
     pub a: Column<Advice>,
     pub b: Column<Advice>,
     pub range: Column<Fixed>,
-    pub toggle_overflow_check: Selector,
+    pub toggle_decomposed_value_check: Selector,
+    pub toggle_lookup_check: Selector,
 }
 
 #[derive(Debug, Clone)]
@@ -42,14 +43,15 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
         a: Column<Advice>,
         b: Column<Advice>,
         range: Column<Fixed>,
-        toggle_overflow_check: Selector,
+        toggle_decomposed_value_check: Selector,
+        toggle_lookup_check: Selector,
     ) -> OverflowCheckConfig<MAX_BITS, MOD_BITS> {
         let num_rows = MOD_BITS / MAX_BITS as usize;
 
         meta.create_gate(
             "equality check between decomposed_value and value",
             |meta| {
-                let s = meta.query_selector(toggle_overflow_check);
+                let s = meta.query_selector(toggle_decomposed_value_check);
 
                 let value = meta.query_advice(a, Rotation::cur());
 
@@ -98,20 +100,20 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
 
         meta.annotate_lookup_any_column(range, || "LOOKUP_MAXBITS_RANGE");
 
-        for i in 0..num_rows {
-            meta.lookup_any("range check for MAXBITS", |meta| {
-                let cell = meta.query_advice(b, Rotation(i as i32));
-                let range = meta.query_fixed(range, Rotation::cur());
-                let enable_lookup = meta.query_selector(toggle_overflow_check);
-                vec![(enable_lookup * cell, range)]
-            });
-        }
+        meta.lookup_any("range check for MAXBITS", |meta| {
+            let cell = meta.query_advice(b, Rotation::cur());
+            let range = meta.query_fixed(range, Rotation::cur());
+
+            let enable_lookup = meta.query_selector(toggle_lookup_check);
+            vec![(enable_lookup * cell, range)]
+        });
 
         OverflowCheckConfig {
             a,
             b,
             range,
-            toggle_overflow_check,
+            toggle_decomposed_value_check,
+            toggle_lookup_check,
         }
     }
 
@@ -124,7 +126,9 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
             || "assign decomposed values",
             |mut region| {
                 // enable selector
-                self.config.toggle_overflow_check.enable(&mut region, 0)?;
+                self.config
+                    .toggle_decomposed_value_check
+                    .enable(&mut region, 0)?;
 
                 let num_rows = MOD_BITS / MAX_BITS as usize;
 
@@ -140,6 +144,8 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
 
                 // Note that, decomposed result is little edian. So, we need to reverse it.
                 for (idx, val) in decomposed_values.iter().rev().enumerate() {
+                    self.config.toggle_lookup_check.enable(&mut region, idx)?;
+
                     region.assign_advice(
                         || format!("assign decomposed {} row", idx),
                         self.config.b,
