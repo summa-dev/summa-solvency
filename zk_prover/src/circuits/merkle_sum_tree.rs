@@ -96,11 +96,11 @@ impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
         // we need 2 * WIDTH fixed columns for poseidon config with WIDTH 3 + 1 for the overflow check chip
         let fixed_columns: [Column<Fixed>; 7] = std::array::from_fn(|_| meta.fixed_column());
 
-        // we also need 2 selectors for the MerkleSumTreeChip
-        let selectors: [Selector; 2] = std::array::from_fn(|_| meta.selector());
+        // we also need 2 selectors for the MerkleSumTreeChip and 1 for the overflow check chip
+        let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
 
-        // we need 1 complex selector for the overflow check
-        let toggle_overflow_check = meta.complex_selector();
+        // we need 1 complex selector for the lookup check
+        let toggle_lookup_check = meta.complex_selector();
 
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, 3 fixed columns for rc_a and 3 for rc_b
         let poseidon_config = PoseidonChip::<PoseidonSpec, 3, 2, L>::configure(
@@ -120,7 +120,7 @@ impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
         let merkle_sum_tree_config = MerkleSumTreeChip::<N_ASSETS>::configure(
             meta,
             advices[0..3].try_into().unwrap(),
-            selectors,
+            selectors[0..2].try_into().unwrap(),
         );
 
         let overflow_check_config = OverflowChip::<MAX_BITS, MOD_BITS>::configure(
@@ -128,7 +128,8 @@ impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
             advices[0],
             advices[1],
             fixed_columns[6],
-            toggle_overflow_check,
+            selectors[2],
+            toggle_lookup_check,
         );
 
         let instance = meta.instance_column();

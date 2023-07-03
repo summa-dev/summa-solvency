@@ -146,12 +146,12 @@ In order to test the circuits with a real trusted setup, we need to download the
 The benchmarking included the following areas:
 
 - Merkle Sum Tree Generation 
-- Verification Key Gen
-- Proving Key Gen
-- ZK Proof Generation
-- ZK Proof Verification
+- Verification Key Gen for MstInclusion Circuit
+- Proving Key Gen for MstInclusion Circuit
+- ZK Proof Generation for MstInclusion Circuit
+- ZK Proof Verification for MstInclusion Circuit
 
-In order to run the benchmarking, we provide a set of dummy `username, balance` entries formatted in csv files. The csv files can be downloaded as follows 
+In order to run the benchmarking, we provide a set of dummy `username, balances` entries formatted in csv files. The csv files can be downloaded as follows 
 
 ``` 
 cd benches
@@ -179,17 +179,19 @@ Furthermore the benchmarking function `verify_zk_proof_benchmark` will also prin
 
 ### Current Benchmarks
 
+Run on MacBook Pro 2023, M2 Pro, 32GB RAM, 12 cores
+
 2^15 entries (32768) users, 2 assets
 
 | MST init     |
 | --------     |
-| 2.5648 s     |
+| 2.6274 s     |
 
 For Merkle Sum Tree Proof of Inclusion circuit
 
 | VK Gen      | Pk Gen   | Proof Generation | Proof Verification | Proof Size (bytes) |
 | ------      | ------   | ---------------- | ------------------ | ------------------ |
-| 129.17 ms   | 61.765 ms|    1.0354 s      |    7.8823 ms       | 10432              |
+| 172.09 ms (+33.3%)   | 63.307 ms (+2.496%)|    285.14 ms (-72.45%)     |    4.7232 ms (-40.07%)       | 2752   (-73.61%)         |
 
 
 

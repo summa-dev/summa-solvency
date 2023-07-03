@@ -120,11 +120,20 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> Circuit<Fp>
         // the max number of fixed columns needed is 2 * WIDTH given requirement of the poseidon config with WIDTH 3
         let range = meta.fixed_column();
 
-        // we need 1 complex selector for the overflow check
-        let toggle_overflow_check = meta.complex_selector();
+        // we need 1 selector for the decomposed value check
+        let toggle_decomposed_value_check = meta.selector();
 
-        let overflow_check_config =
-            OverflowChip::<MAX_BITS, MOD_BITS>::configure(meta, a, b, range, toggle_overflow_check);
+        // we need 1 complex selector for the lookup check
+        let toggle_lookup_check = meta.complex_selector();
+
+        let overflow_check_config = OverflowChip::<MAX_BITS, MOD_BITS>::configure(
+            meta,
+            a,
+            b,
+            range,
+            toggle_decomposed_value_check,
+            toggle_lookup_check,
+        );
 
         {
             OverflowCheckTestConfig {
