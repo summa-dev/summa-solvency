@@ -1,0 +1,26 @@
+name: Contracts
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install packages
+        uses: actions/setup-node@v3
+        with:
+          #Remove the restriction as soon as this is resolved: https://github.com/NomicFoundation/hardhat/issues/3877
+          node-version: "18.15"
+      - run: |
+          cd contracts
+          npm ci
+      - name: Run Tests
+        run: |
+          cd contracts
+          npx hardhat node & REPORT_GAS=true npx hardhat test & npx hardhat coverage
