@@ -1,6 +1,5 @@
 use crate::merkle_sum_tree::utils::create_middle_node::create_middle_node;
 use crate::merkle_sum_tree::{Entry, Node};
-use ark_std::{end_timer, start_timer};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use std::thread;
 
@@ -10,8 +9,6 @@ pub fn build_merkle_tree_from_entries<const N_ASSETS: usize>(
     nodes: &mut Vec<Vec<Node<N_ASSETS>>>,
 ) -> Result<Node<N_ASSETS>, Box<dyn std::error::Error>> {
     let n = entries.len();
-
-    let tree_building = start_timer!(|| "build merkle tree");
 
     let mut tree: Vec<Vec<Node<N_ASSETS>>> = Vec::with_capacity(depth + 1);
 
@@ -41,7 +38,6 @@ pub fn build_merkle_tree_from_entries<const N_ASSETS: usize>(
     for level in 1..=depth {
         build_middle_level(level, &mut tree, n)
     }
-    end_timer!(tree_building);
 
     let root = tree[depth][0].clone();
     *nodes = tree;
@@ -52,7 +48,6 @@ fn build_leaves_level<const N_ASSETS: usize>(
     entries: &[Entry<N_ASSETS>],
     tree: &mut [Vec<Node<N_ASSETS>>],
 ) {
-    let leaves_building = start_timer!(|| "compute leaves");
     // Compute the leaves in parallel
     let mut handles = vec![];
     let chunk_size = (entries.len() + num_cpus::get() - 1) / num_cpus::get();
@@ -74,7 +69,6 @@ fn build_leaves_level<const N_ASSETS: usize>(
             index += 1;
         }
     }
-    end_timer!(leaves_building);
 }
 
 fn build_middle_level<const N_ASSETS: usize>(
@@ -86,7 +80,6 @@ fn build_middle_level<const N_ASSETS: usize>(
 
     let mut handles = vec![];
     let chunk_size = (nodes_in_level + num_cpus::get() - 1) / num_cpus::get();
-    let middle_level_building = start_timer!(|| "compute middle level in parallel");
 
     for chunk in tree[level - 1].chunks(chunk_size * 2) {
         let chunk = chunk.to_vec();
@@ -106,6 +99,4 @@ fn build_middle_level<const N_ASSETS: usize>(
             index += 1;
         }
     }
-
-    end_timer!(middle_level_building);
 }

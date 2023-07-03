@@ -52,6 +52,17 @@ impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
         &self.entries
     }
 
+    pub fn penultimate_level_data(
+        &self,
+    ) -> Result<(&Node<N_ASSETS>, &Node<N_ASSETS>), &'static str> {
+        let penultimate_level = self
+            .nodes
+            .get(self.depth - 1)
+            .ok_or("The tree does not have a penultimate level")?;
+
+        Ok((&penultimate_level[0], &penultimate_level[1]))
+    }
+
     pub fn index_of(&self, username: &str, balances: [BigInt; N_ASSETS]) -> Option<usize> {
         index_of(username, balances, &self.nodes)
     }

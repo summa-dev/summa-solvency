@@ -7,8 +7,11 @@ is already implemented in halo2_gadgets, there is no wrapper chip that makes it 
 // compared to `hash_with_instance` this version doesn't use any instance column.
 
 use halo2_gadgets::poseidon::{primitives::*, Hash, Pow5Chip, Pow5Config};
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::{circuit::*, plonk::*};
+use halo2_proofs::{
+    circuit::{AssignedCell, Layouter},
+    halo2curves::bn256::Fr as Fp,
+    plonk::{Advice, Column, ConstraintSystem, Error, Fixed},
+};
 use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
@@ -45,25 +48,13 @@ impl<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize, const L: u
     // Configuration of the PoseidonChip
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
-        // hash_inputs: &[Column<Advice>],
+        state: [Column<Advice>; WIDTH],
+        partial_sbox: Column<Advice>,
+        rc_a: [Column<Fixed>; WIDTH],
+        rc_b: [Column<Fixed>; WIDTH],
     ) -> PoseidonConfig<WIDTH, RATE, L> {
-        let partial_sbox = meta.advice_column();
-        let rc_a = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
-        let rc_b = (0..WIDTH).map(|_| meta.fixed_column()).collect::<Vec<_>>();
-        let hash_inputs = (0..WIDTH).map(|_| meta.advice_column()).collect::<Vec<_>>();
-
-        for hash_input in &hash_inputs {
-            meta.enable_equality(*hash_input);
-        }
         meta.enable_constant(rc_b[0]);
-
-        let pow5_config = Pow5Chip::configure::<S>(
-            meta,
-            hash_inputs.try_into().unwrap(),
-            partial_sbox,
-            rc_a.try_into().unwrap(),
-            rc_b.try_into().unwrap(),
-        );
+        let pow5_config = Pow5Chip::configure::<S>(meta, state, partial_sbox, rc_a, rc_b);
 
         PoseidonConfig { pow5_config }
     }

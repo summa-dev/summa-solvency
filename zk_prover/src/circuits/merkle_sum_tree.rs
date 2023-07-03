@@ -1,60 +1,64 @@
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
-use crate::merkle_sum_tree::{big_int_to_fp, MerkleProof, MerkleSumTree};
+use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
+use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
+use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
+use crate::merkle_sum_tree::{big_int_to_fp, MerkleSumTree, MOD_BITS};
+use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::{circuit::*, plonk::*};
+use halo2_proofs::plonk::{
+    Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Instance, Selector,
+};
 use snark_verifier_sdk::CircuitExt;
 
+const MAX_BITS: u8 = 8;
+
+// LEVELS indicates the levels of the tree
+// L is the length of the hasher input, namely 2 + (2 * N_ASSETS)
+// N_ASSETS is the number of assets in the tree
 #[derive(Clone)]
-pub struct MerkleSumTreeCircuit<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize>
-{
+pub struct MstInclusionCircuit<const LEVELS: usize, const L: usize, const N_ASSETS: usize> {
     pub leaf_hash: Fp,
     pub leaf_balances: Vec<Fp>,
     pub path_element_hashes: Vec<Fp>,
     pub path_element_balances: Vec<[Fp; N_ASSETS]>,
     pub path_indices: Vec<Fp>,
-    pub assets_sum: Vec<Fp>,
     pub root_hash: Fp,
 }
 
-impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> CircuitExt<Fp>
-    for MerkleSumTreeCircuit<LEVELS, MST_WIDTH, N_ASSETS>
+impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> CircuitExt<Fp>
+    for MstInclusionCircuit<LEVELS, L, N_ASSETS>
 {
     fn num_instance(&self) -> Vec<usize> {
-        vec![2 * (1 + N_ASSETS)]
+        vec![2]
     }
 
     fn instances(&self) -> Vec<Vec<Fp>> {
-        let mut instances = vec![self.leaf_hash];
-        instances.extend(&self.leaf_balances);
-        instances.push(self.root_hash);
-        instances.extend(&self.assets_sum);
-        vec![instances]
+        vec![vec![self.leaf_hash, self.root_hash]]
     }
 }
 
-impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize>
-    MerkleSumTreeCircuit<LEVELS, MST_WIDTH, N_ASSETS>
+impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize>
+    MstInclusionCircuit<LEVELS, L, N_ASSETS>
 {
     pub fn init_empty() -> Self {
+        assert_eq!((N_ASSETS * 2) + 2, L);
+
         Self {
             leaf_hash: Fp::zero(),
             leaf_balances: vec![Fp::zero(); N_ASSETS],
             path_element_hashes: vec![Fp::zero(); LEVELS],
             path_element_balances: vec![[Fp::zero(); N_ASSETS]; LEVELS],
             path_indices: vec![Fp::zero(); LEVELS],
-            assets_sum: vec![Fp::zero(); N_ASSETS],
             root_hash: Fp::zero(),
         }
     }
 
-    pub fn init_from_assets_and_path(
-        assets_sum: [Fp; N_ASSETS],
-        path: &str,
-        user_index: usize,
-    ) -> Self {
+    pub fn init(path: &str, user_index: usize) -> Self {
+        assert_eq!((N_ASSETS * 2) + 2, L);
+
         let merkle_sum_tree = MerkleSumTree::new(path).unwrap();
 
-        let proof: MerkleProof<N_ASSETS> = merkle_sum_tree.generate_proof(user_index).unwrap();
+        let proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
         assert_eq!(proof.path_indices.len(), LEVELS);
         assert_eq!(proof.sibling_hashes.len(), LEVELS);
@@ -71,16 +75,89 @@ impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize>
             path_element_hashes: proof.sibling_hashes,
             path_element_balances: proof.sibling_sums,
             path_indices: proof.path_indices,
-            assets_sum: assets_sum.to_vec(),
             root_hash: proof.root_hash,
         }
     }
 }
 
-impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> Circuit<Fp>
-    for MerkleSumTreeCircuit<LEVELS, MST_WIDTH, N_ASSETS>
+#[derive(Debug, Clone)]
+pub struct MstInclusionConfig<const L: usize, const N_ASSETS: usize> {
+    pub merkle_sum_tree_config: MerkleSumTreeConfig,
+    pub poseidon_config: PoseidonConfig<3, 2, L>,
+    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, MOD_BITS>,
+    pub instance: Column<Instance>,
+}
+
+impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
+    pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
+        // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config with WIDTH 3
+        let advices: [Column<Advice>; 4] = std::array::from_fn(|_| meta.advice_column());
+
+        // we need 2 * WIDTH fixed columns for poseidon config with WIDTH 3 + 1 for the overflow check chip
+        let fixed_columns: [Column<Fixed>; 7] = std::array::from_fn(|_| meta.fixed_column());
+
+        // we also need 2 selectors for the MerkleSumTreeChip and 1 for the overflow check chip
+        let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
+
+        // we need 1 complex selector for the lookup check
+        let toggle_lookup_check = meta.complex_selector();
+
+        // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, 3 fixed columns for rc_a and 3 for rc_b
+        let poseidon_config = PoseidonChip::<PoseidonSpec, 3, 2, L>::configure(
+            meta,
+            advices[0..3].try_into().unwrap(),
+            advices[3],
+            fixed_columns[0..3].try_into().unwrap(),
+            fixed_columns[3..6].try_into().unwrap(),
+        );
+
+        // enable permutation for all the advice columns
+        for col in &advices {
+            meta.enable_equality(*col);
+        }
+
+        // the configuration of merkle_sum_tree will always require 3 advices, no matter the number of assets
+        let merkle_sum_tree_config = MerkleSumTreeChip::<N_ASSETS>::configure(
+            meta,
+            advices[0..3].try_into().unwrap(),
+            selectors[0..2].try_into().unwrap(),
+        );
+
+        let overflow_check_config = OverflowChip::<MAX_BITS, MOD_BITS>::configure(
+            meta,
+            advices[0],
+            advices[1],
+            fixed_columns[6],
+            selectors[2],
+            toggle_lookup_check,
+        );
+
+        let instance = meta.instance_column();
+        meta.enable_equality(instance);
+
+        Self {
+            merkle_sum_tree_config,
+            poseidon_config,
+            overflow_check_config,
+            instance,
+        }
+    }
+
+    // Enforce copy constraint check between input cell and instance column at row passed as input
+    pub fn expose_public(
+        &self,
+        mut layouter: impl Layouter<Fp>,
+        cell: &AssignedCell<Fp, Fp>,
+        row: usize,
+    ) -> Result<(), Error> {
+        layouter.constrain_instance(cell.cell(), self.instance, row)
+    }
+}
+
+impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
+    for MstInclusionCircuit<LEVELS, L, N_ASSETS>
 {
-    type Config = MerkleSumTreeConfig<MST_WIDTH>;
+    type Config = MstInclusionConfig<L, N_ASSETS>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -88,19 +165,7 @@ impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> Circuit
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        // Allocate MST_WIDTH of advice columns for the MerkleSumTreeChip
-        let mut advice_cols: Vec<Column<Advice>> = Vec::with_capacity(MST_WIDTH);
-        for _ in 0..MST_WIDTH {
-            advice_cols.push(meta.advice_column());
-        }
-
-        let instance = meta.instance_column();
-
-        MerkleSumTreeChip::<MST_WIDTH, N_ASSETS>::configure(
-            meta,
-            advice_cols.try_into().unwrap(),
-            instance,
-        )
+        MstInclusionConfig::<L, N_ASSETS>::configure(meta)
     }
 
     fn synthesize(
@@ -108,55 +173,119 @@ impl<const LEVELS: usize, const MST_WIDTH: usize, const N_ASSETS: usize> Circuit
         config: Self::Config,
         mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
-        let chip = MerkleSumTreeChip::construct(config);
-        let (leaf_hash, leaf_balances) = chip.assign_leaf_hash_and_balances(
-            layouter.namespace(|| "assign leaf"),
-            self.leaf_hash,
-            &self.leaf_balances,
-        )?;
+        // build auxiliary chips
+        let merkle_sum_tree_chip =
+            MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
+        let poseidon_chip =
+            PoseidonChip::<PoseidonSpec, 3, 2, L>::construct(config.poseidon_config.clone());
+        let overflow_check_chip =
+            OverflowChip::<MAX_BITS, MOD_BITS>::construct(config.overflow_check_config.clone());
 
-        chip.expose_public(layouter.namespace(|| "public leaf hash"), &leaf_hash, 0)?;
-
-        for (i, asset_balance) in leaf_balances.iter().enumerate() {
-            chip.expose_public(
-                layouter.namespace(|| "public leaf balance"),
-                asset_balance,
-                1 + i,
+        // Assign the leaf hash and the leaf balances
+        let (mut current_hash, mut current_balances) = merkle_sum_tree_chip
+            .assign_entry_hash_and_balances(
+                layouter.namespace(|| "assign leaf hash and balances"),
+                self.leaf_hash,
+                &self.leaf_balances,
             )?;
+
+        // expose the first current hash, namely the leaf hash, as public input
+        config.expose_public(layouter.namespace(|| "public leaf hash"), &current_hash, 0)?;
+
+        // load overflow check chip
+        overflow_check_chip.load(&mut layouter)?;
+
+        for level in 0..LEVELS {
+            let namespace_prefix = format!("level {}", level);
+
+            // For each level assign the index to the circuit
+            let swap_bit_level = merkle_sum_tree_chip.assing_swap_bit(
+                layouter.namespace(|| format!("{}: assign swap bit", namespace_prefix)),
+                self.path_indices[level],
+            )?;
+
+            // For each level assign the hashes to the circuit
+            let (hash_left_current, hash_right_current) = merkle_sum_tree_chip
+                .assign_nodes_hashes_per_level(
+                    layouter.namespace(|| format!("{}: assign nodes hashes", namespace_prefix)),
+                    &current_hash,
+                    self.path_element_hashes[level],
+                    swap_bit_level.clone(),
+                )?;
+
+            let mut next_balances = vec![];
+            let mut left_balances = vec![];
+            let mut right_balances = vec![];
+
+            // Within each level, assign the balances to the circuit per asset
+            for asset in 0..N_ASSETS {
+                let (left_balance, right_balance, next_balance) = merkle_sum_tree_chip
+                    .assign_nodes_balance_per_asset(
+                        layouter.namespace(|| {
+                            format!(
+                                "{}: asset {}: assign nodes balance",
+                                namespace_prefix, asset
+                            )
+                        }),
+                        &current_balances[asset],
+                        self.path_element_balances[level][asset],
+                        swap_bit_level.clone(),
+                    )?;
+
+                // Each balance cell is constrained to be less than the overflow limit
+                overflow_check_chip.assign(
+                    layouter.namespace(|| {
+                        format!(
+                            "{}: asset {}: overflow check left balance",
+                            namespace_prefix, asset
+                        )
+                    }),
+                    &left_balance,
+                )?;
+                overflow_check_chip.assign(
+                    layouter.namespace(|| {
+                        format!(
+                            "{}: asset {}: overflow check right balance",
+                            namespace_prefix, asset
+                        )
+                    }),
+                    &right_balance,
+                )?;
+
+                next_balances.push(next_balance);
+                left_balances.push(left_balance);
+                right_balances.push(right_balance);
+            }
+
+            // create an hash_input array of length L that contains the left hash, the left balances, the right hash and the right balances
+            let hash_input_vec: Vec<AssignedCell<Fp, Fp>> = [hash_left_current]
+                .iter()
+                .chain(left_balances.iter())
+                .chain([hash_right_current].iter())
+                .chain(right_balances.iter())
+                .map(|x| x.to_owned())
+                .collect();
+
+            let hash_input: [AssignedCell<Fp, Fp>; L] = match hash_input_vec.try_into() {
+                Ok(arr) => arr,
+                Err(_) => panic!("Failed to convert Vec to Array"),
+            };
+
+            // compute the next hash
+            let computed_hash = poseidon_chip.hash(
+                layouter.namespace(|| format!("{}: perform poseidon hash", namespace_prefix)),
+                hash_input,
+            )?;
+
+            current_balances = next_balances;
+            current_hash = computed_hash;
         }
 
-        // apply it for level 0 of the merkle tree
-        // node cells passed as inputs are the leaf_hash cell and the leaf_balance cell
-        let (mut next_hash, mut next_sum) = chip.merkle_prove_layer(
-            layouter.namespace(|| format!("level {} merkle proof", 0)),
-            &leaf_hash,
-            &leaf_balances,
-            self.path_element_hashes[0],
-            self.path_element_balances[0],
-            self.path_indices[0],
-        )?;
+        // expose the last current hash, namely the root hash, as public input
+        config.expose_public(layouter.namespace(|| "public root hash"), &current_hash, 1)?;
 
-        // apply it for the remaining levels of the merkle tree
-        // node cells passed as inputs are the computed_hash_prev_level cell and the computed_balance_prev_level cell
-        for i in 1..self.path_element_balances.len() {
-            (next_hash, next_sum) = chip.merkle_prove_layer(
-                layouter.namespace(|| format!("level {} merkle proof", i)),
-                &next_hash,
-                &next_sum,
-                self.path_element_hashes[i],
-                self.path_element_balances[i],
-                self.path_indices[i],
-            )?;
-        }
+        // don't need to perform further range check on the balances of the root node as their addends are already constrained to be less than 2^MOD_BITS
 
-        // enforce computed sum to be less than the assets sum
-        chip.enforce_less_than(layouter.namespace(|| "enforce less than"), &next_sum)?;
-
-        chip.expose_public(
-            layouter.namespace(|| "public root"),
-            &next_hash,
-            1 + N_ASSETS,
-        )?;
         Ok(())
     }
 }

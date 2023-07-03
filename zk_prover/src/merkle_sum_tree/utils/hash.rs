@@ -3,8 +3,8 @@ use crate::merkle_sum_tree::{L_ENTRY, L_NODE};
 use halo2_gadgets::poseidon::primitives::{self as poseidon, ConstantLength};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
-const WIDTH: usize = 7;
-const RATE: usize = 6;
+const WIDTH: usize = 3;
+const RATE: usize = 2;
 
 pub fn poseidon_node<const N_ASSETS: usize>(
     l1: Fp,
