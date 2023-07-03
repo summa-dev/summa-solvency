@@ -104,9 +104,6 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
             let cell = meta.query_advice(b, Rotation::cur());
             let range = meta.query_fixed(range, Rotation::cur());
 
-            // print range
-            println!("range: {:?}", range);
-
             let enable_lookup = meta.query_selector(toggle_lookup_check);
             vec![(enable_lookup * cell, range)]
         });
