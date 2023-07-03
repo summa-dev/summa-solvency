@@ -193,5 +193,10 @@ For Merkle Sum Tree Proof of Inclusion circuit
 | ------      | ------   | ---------------- | ------------------ | ------------------ |
 | 172.09 ms (+33.3%)   | 63.307 ms (+2.496%)|    285.14 ms (-72.45%)     |    4.7232 ms (-40.07%)       | 2752   (-73.61%)         |
 
+For Proof of Solvency circuit
+
+| VK Gen      | Pk Gen   | Proof Generation | Proof Verification | Proof Size (bytes) |
+| ------      | ------   | ---------------- | ------------------ | ------------------ |
+| 109.64 ms   | 57.848 ms|    1.3231s     |    6.9582 ms       | 11520        |
 
 
