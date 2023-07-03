@@ -1,12 +1,15 @@
 #[cfg(test)]
 mod test {
 
+    use std::{fs::File, io::Write, path::Path};
+
     use crate::circuits::{
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
+        solvency::SolvencyCircuit,
         utils::{full_prover, full_verifier, generate_setup_params},
     };
-    use crate::merkle_sum_tree::N_ASSETS;
+    use crate::merkle_sum_tree::{MOD_BITS, N_ASSETS};
     use ark_std::{end_timer, start_timer};
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
@@ -25,6 +28,7 @@ mod test {
     const LEVELS: usize = 4;
     const L: usize = 2 + (N_ASSETS * 2);
     const K: u32 = 11;
+    const N_BYTES: usize = MOD_BITS / 8;
 
     #[test]
     fn test_valid_merkle_sum_tree() {
@@ -480,6 +484,212 @@ mod test {
         );
     }
 
+    // Passing assets_sum that are less than the liabilities sum should not fail the solvency circuit
+    #[test]
+    fn test_valid_liabilities_less_than_assets() {
+        // Make the first asset sum more than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            assets_sum,
+        );
+
+        let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        valid_prover.assert_satisfied();
+    }
+
+    // Passing assets sum that is less than the liabilities sum should fail the solvency circuit
+    #[test]
+    fn test_invalid_assets_less_than_liabilities() {
+        // Make the first asset sum less than liabilities sum (556862)
+        let less_than_assets_sum_1st = [Fp::from(556861u64), Fp::from(556863u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            less_than_assets_sum_1st,
+        );
+
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+                invalid_prover.verify(),
+                Err(vec![VerifyFailure::ConstraintNotSatisfied {
+                    constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                    location: FailureLocation::InRegion {
+                        region: (13, "enforce input cell to be less than value in instance column at row `index`").into(),
+                        offset: 0
+                    },
+                    cell_values: vec![
+                        // The zero means that is not less than
+                        (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                    ]
+                }])
+            );
+
+        // Make the second asset sum less than liabilities sum (556862)
+        let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            less_than_assets_sum_2nd,
+        );
+
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+                invalid_prover.verify(),
+                Err(vec![VerifyFailure::ConstraintNotSatisfied {
+                    constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                    location: FailureLocation::InRegion {
+                        region: (14, "enforce input cell to be less than value in instance column at row `index`").into(),
+                        offset: 0
+                    },
+                    cell_values: vec![
+                        // The zero means that is not less than
+                        (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                    ]
+                }])
+            );
+
+        // Make both the balances less than liabilities sum (556862)
+        let less_than_assets_sum_both = [Fp::from(556861u64), Fp::from(556861u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            less_than_assets_sum_both,
+        );
+
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+                invalid_prover.verify(),
+                Err(vec![
+                    VerifyFailure::ConstraintNotSatisfied {
+                        constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                        location: FailureLocation::InRegion {
+                            region: (13, "enforce input cell to be less than value in instance column at row `index`").into(),
+                            offset: 0
+                        },
+                        cell_values: vec![
+                            // The zero means that is not less than
+                            (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                        ]
+                    },
+                    VerifyFailure::ConstraintNotSatisfied {
+                        constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                        location: FailureLocation::InRegion {
+                            region: (14, "enforce input cell to be less than value in instance column at row `index`").into(),
+                            offset: 0
+                        },
+                        cell_values: vec![
+                            // The zero means that is not less than
+                            (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                        ]
+                    }
+                ])
+            );
+    }
+
+    // Manipulating the liabilities to make it less than the assets sum should fail the solvency circuit because the root hash will not match
+    #[test]
+    fn test_invalid_manipulated_liabilties() {
+        // For the second asset, the assets_sum is less than the liabilities sum (556862)
+        let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
+
+        let mut circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            less_than_assets_sum_2nd,
+        );
+
+        // But actually, the CEX tries to manipulate the liabilities sum for the second asset to make it less than the assets sum
+        circuit.left_node_balances[1] = Fp::from(1u64);
+
+        // This should pass the less than constraint but generate a root hash that does not match the one passed in the instance
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (11, "permute state").into(),
+                        offset: 38
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 0 }
+                },
+            ])
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn test_valid_solvency_with_full_recursive_prover() {
+        // params for the aggregation circuit
+        let params_agg = generate_setup_params(23);
+
+        // downsize params for our application specific snark
+        let mut params_app = params_agg.clone();
+        params_app.downsize(K);
+
+        // Make the first asset sum more than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        // generate the verification key and the proving key for the application circuit, using an empty circuit
+        let circuit_app = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
+
+        let vk_app = keygen_vk(&params_app, &circuit_app).expect("vk generation should not fail");
+        let pk_app =
+            keygen_pk(&params_app, vk_app, &circuit_app).expect("pk generation should not fail");
+
+        // Only now we can instantiate the circuit with the actual inputs
+        let circuit_app = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            assets_sum,
+        );
+
+        let snark_app = [(); 1]
+            .map(|_| gen_snark_shplonk(&params_app, &pk_app, circuit_app.clone(), None::<&str>));
+
+        const N_SNARK: usize = 1;
+
+        // create aggregation circuit
+        let agg_circuit = WrappedAggregationCircuit::<N_SNARK>::new(&params_agg, snark_app);
+
+        assert_eq!(agg_circuit.instances()[0], circuit_app.instances()[0]);
+
+        let start0 = start_timer!(|| "gen vk & pk");
+        // generate proving key for the aggregation circuit
+        let pk_agg = gen_pk(&params_agg, &agg_circuit.without_witnesses(), None);
+        end_timer!(start0);
+
+        let num_instances = agg_circuit.num_instance();
+        let instances = agg_circuit.instances();
+
+        let proof_calldata =
+            gen_evm_proof_shplonk(&params_agg, &pk_agg, agg_circuit, instances.clone());
+
+        let deployment_code = gen_evm_verifier_shplonk::<WrappedAggregationCircuit<N_SNARK>>(
+            &params_agg,
+            pk_agg.get_vk(),
+            num_instances,
+            Some(Path::new("src/contracts/SolvencyVerifier.yul")),
+        );
+
+        let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
+
+        // assert gas_cost to verify the proof on chain to be between 575000 and 590000
+        assert!(
+            (575000..=590000).contains(&gas_cost),
+            "gas_cost is not within the expected range"
+        );
+    }
+
     use crate::circuits::ecdsa::EcdsaVerifyCircuit;
     use ecc::maingate::{big_to_fe, decompose, fe_to_big};
     use halo2_proofs::arithmetic::{CurveAffine, Field};
@@ -740,7 +950,7 @@ mod test {
 
     #[cfg(feature = "dev-graph")]
     #[test]
-    fn print_merkle_sum_tree() {
+    fn print_mst_inclusion() {
         use plotters::prelude::*;
 
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
@@ -748,12 +958,34 @@ mod test {
             0,
         );
 
-        let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384))
+        let root = BitMapBackend::new("prints/mst-inclusion-layout.png", (2048, 16384))
             .into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root
-            .titled("Merkle Sum Tree Layout", ("sans-serif", 60))
+            .titled("Merkle Sum Tree Inclusion Layout", ("sans-serif", 60))
             .unwrap();
+
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(K, &circuit, &root)
+            .unwrap();
+    }
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_solvency_circuit() {
+        use plotters::prelude::*;
+
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            "src/merkle_sum_tree/csv/entry_16.csv",
+            assets_sum,
+        );
+
+        let root =
+            BitMapBackend::new("prints/solvency-layout.png", (2048, 16384)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root.titled("Solvency Layout", ("sans-serif", 60)).unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
             .render(K, &circuit, &root)
