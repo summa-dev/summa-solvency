@@ -61,11 +61,11 @@ impl<const N_BYTES: usize> LtVerticalChip<N_BYTES> {
         q_enable: impl FnOnce(&mut VirtualCells<'_, Fp>) -> Expression<Fp>,
         lhs: impl FnOnce(&mut VirtualCells<Fp>) -> Expression<Fp>,
         rhs: impl FnOnce(&mut VirtualCells<Fp>) -> Expression<Fp>,
+        lt: Column<Advice>,
+        diff: Column<Advice>,
+        u8: Column<Fixed>,
     ) -> LtVerticalConfig<N_BYTES> {
-        let lt = meta.advice_column();
-        let diff = meta.advice_column();
         let range = pow_of_two(N_BYTES * 8);
-        let u8 = meta.fixed_column();
 
         meta.create_gate("lt gate", |meta| {
             let q_enable = q_enable(meta);
@@ -73,10 +73,7 @@ impl<const N_BYTES: usize> LtVerticalChip<N_BYTES> {
 
             let mut diff_bytes = Vec::<Expression<Fp>>::new();
 
-            diff_bytes.push(meta.query_advice(diff, Rotation::cur()));
-            diff_bytes.push(meta.query_advice(diff, Rotation::next()));
-
-            for i in 2..N_BYTES {
+            for i in 0..N_BYTES {
                 diff_bytes.push(meta.query_advice(diff, Rotation(i as i32)));
             }
 
@@ -91,18 +88,6 @@ impl<const N_BYTES: usize> LtVerticalChip<N_BYTES> {
         });
 
         meta.annotate_lookup_any_column(u8, || "LOOKUP_u8");
-
-        meta.lookup_any("range check for u8", |meta| {
-            let u8_cell = meta.query_advice(diff, Rotation::cur());
-            let u8_range = meta.query_fixed(u8, Rotation::cur());
-            vec![(u8_cell, u8_range)]
-        });
-
-        meta.lookup_any("range check for u8", |meta| {
-            let u8_cell = meta.query_advice(diff, Rotation::next());
-            let u8_range = meta.query_fixed(u8, Rotation::cur());
-            vec![(u8_cell, u8_range)]
-        });
 
         for i in 0..N_BYTES {
             meta.lookup_any("range check for u8", |meta| {
