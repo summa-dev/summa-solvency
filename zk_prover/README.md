@@ -25,7 +25,7 @@ To build and test the circuit, execute
 
 ```
 cargo build
-cargo test --features dev-graph -- --nocapture
+cargo test --release --features dev-graph -- --nocapture
 ```
 
 To run the on-chain verifer test run
@@ -146,25 +146,52 @@ In order to test the circuits with a real trusted setup, we need to download the
 The benchmarking included the following areas:
 
 - Merkle Sum Tree Generation 
-- Verification Key Gen
-- Proving Key Gen
-- ZK Proof Generation
-- ZK Proof Verification
+- Verification Key Gen for MstInclusion Circuit
+- Proving Key Gen for MstInclusion Circuit
+- ZK Proof Generation for MstInclusion Circuit
+- ZK Proof Verification for MstInclusion Circuit
 
-In order to run the benchmarking, we provide a set of dummy `username, balance` entries formatted in csv files. The csv files can be downloaded as follows 
+In order to run the benchmarking, we provide a set of dummy `username, balances` entries formatted in csv files. The csv files can be downloaded as follows 
 
 ``` 
 cd benches
 mkdir csv
 cd csv 
-wget https://csv-files-summa.s3.eu-west-1.amazonaws.com/csv/csv_files.zip
-unzip csv_files.zip
+wget https://summa-solvency.s3.eu-central-1.amazonaws.com/csv_files.tar.bz2
+tar -xjf csv_files.tar.bz2
 ```
 
-The csv folder will contain files named as `entry_2_5.csv` to `entry_2_27.csv`. 2^5 or 2^27 is the number of entries in the file that will be used to feed the merkle sum tree and, eventually, the zk prover.
+The csv folder will contain two subfolder namely `one_asset` and `two_assets`. Each folders will contain files named as `one_asset_entry_2_17.csv` or `two_assets_entry_2_5.csv`. 2^17 or 2^5 is the number of entries in the file that will be used to feed the merkle sum tree and, eventually, the zk prover. These entries represent the number of users of the exchange.
 
 To run the benches 
 
 `cargo bench` 
 
-Note that by default the function will run the benchmarking for all the csv files from the power of 2 defined by the constant `LEVELS`, which is now set to 5. You can change the value assigned to `LEVELS` to run the benchmarking for a different number of entries.
+You can set the following parameters to run the benches:
+
+- `LEVELS` -> the number of entries in the merkle sum tree. By default it is set to 15, which means that the benches will run for 2^15 entries.
+- `SAMPLE_SIZE` -> the number of samples to run for each bench. By default it is set to 10, which is the minimum allowed by criterion.rs
+- `N_ASSETS and PATH_NAME` -> the number of assets to be used in the benchmarking. By default it is set to 2. For now you can only switch it between 1 and 2 as these are the only csv folder available. More will be added soon.
+
+Note that the `k` of the circuit may vary based on the LEVELS
+
+Furthermore the benchmarking function `verify_zk_proof_benchmark` will also print out the proof size in bytes.
+
+### Current Benchmarks
+
+Run on MacBook Pro 2023, M2 Pro, 32GB RAM, 12 cores
+
+2^15 entries (32768) users, 2 assets
+
+| MST init     |
+| --------     |
+| 2.6274 s     |
+
+For Merkle Sum Tree Proof of Inclusion circuit
+
+| VK Gen      | Pk Gen   | Proof Generation | Proof Verification | Proof Size (bytes) |
+| ------      | ------   | ---------------- | ------------------ | ------------------ |
+| 172.09 ms (+33.3%)   | 63.307 ms (+2.496%)|    285.14 ms (-72.45%)     |    4.7232 ms (-40.07%)       | 2752   (-73.61%)         |
+
+
+

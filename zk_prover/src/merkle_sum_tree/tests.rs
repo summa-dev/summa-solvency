@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test {
 
-    use crate::merkle_sum_tree::utils::big_int_to_fp;
+    use crate::merkle_sum_tree::utils::{big_int_to_fp, poseidon_node};
     use crate::merkle_sum_tree::{Entry, MerkleSumTree, N_ASSETS};
     use num_bigint::{BigInt, ToBigInt};
 
@@ -86,13 +86,12 @@ mod test {
     fn test_mst_overflow() {
         let result =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16_overflow.csv");
-        // assert!(result.is_err(), "Expected an error due to balance overflow");
 
         if let Err(e) = result {
-            assert_eq!(e.to_string(), "Balance is larger than the modulus");
-
-            // Passing entries whose balance sum overflows the field should throw an error at the constructor
-            // MerkleSumTree::new("src/merkle_sum_tree/csv/entry_16_overflow.csv").unwrap() should throw  Balance is larger than the modulus
+            assert_eq!(
+                e.to_string(),
+                "Accumulated balance is not in the expected range, proof generation will fail!"
+            );
         }
     }
 
@@ -149,5 +148,37 @@ mod test {
 
         let fp_3 = fp_2 - fp;
         assert_eq!(fp_3, 18446744073709551613.into());
+    }
+
+    #[test]
+    fn test_penultimate_level_data() {
+        let merkle_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16_bigints.csv").unwrap();
+
+        let root = merkle_tree.root();
+
+        let (node_left, node_right) = merkle_tree
+            .penultimate_level_data()
+            .expect("Failed to retrieve penultimate level data");
+
+        // perform hashing using poseidon node
+        let expected_root = poseidon_node(
+            node_left.hash,
+            node_left.balances,
+            node_right.hash,
+            node_right.balances,
+        );
+
+        assert_eq!(root.hash, expected_root);
+
+        assert_eq!(
+            root.balances[0],
+            node_left.balances[0] + node_right.balances[0]
+        );
+
+        assert_eq!(
+            root.balances[1],
+            node_left.balances[1] + node_right.balances[1]
+        );
     }
 }
