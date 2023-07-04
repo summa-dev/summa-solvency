@@ -18,8 +18,6 @@ interface Verifier {
 contract Summa is Ownable {
     using ECDSA for bytes32;
 
-    uint256 constant ERC20_INPUTS = 1;
-
     Verifier private verifier;
 
     event ProofOfSolvencySubmitted(bytes32 indexed exchangeId, uint256 mstRoot);
