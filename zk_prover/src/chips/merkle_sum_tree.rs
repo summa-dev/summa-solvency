@@ -3,12 +3,25 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector};
 use halo2_proofs::poly::Rotation;
 
+/// Configuration for the Merkle Sum Tree Chip
+///
+/// # Fields
+///
+/// * `advice`: advice columns to fit the witness values.
+/// * `bool_and_swap_selector`: Selector to toggle the bool and swap constraints.
+/// * `sum_selector`: Selector to toggle the sum constraints.
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeConfig {
     pub advice: [Column<Advice>; 3],
     pub bool_and_swap_selector: Selector,
     pub sum_selector: Selector,
 }
+
+/// Chip that performs various constraints related to a Merkle Sum Tree data structure such as:
+/// Contains the following constraints:
+/// * `s * swap_bit * (1 - swap_bit) = 0` (if `bool_and_swap_selector` is toggled). It basically enforces that swap_bit is either a 0 or 1.
+/// * `s * swap_bit * ((elelment_l_next - elelment_l_cur) - (elelment_r_cur - elelment_r_next))`. Enforces that if the swap_bit is equal to 1, the values will be swapped on the next row (if `bool_and_swap_selector` is toggled).
+/// * `s * (left_balance + right_balance - computed_sum)`. It constraints the computed sum to be equal to the sum of the left and right balances (if `sum_selector` is toggled).
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeChip<const N_ASSETS: usize> {
     config: MerkleSumTreeConfig,
@@ -28,20 +41,15 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         let col_b: Column<Advice> = advice[1];
         let col_c: Column<Advice> = advice[2];
 
-        // create selectors
         let bool_and_swap_selector = selectors[0];
         let sum_selector = selectors[1];
 
-        // Enforces that swap_bit is either a 0 or 1 when the bool selector is enabled
-        // s * swap_bit * (1 - swap_bit) = 0
         meta.create_gate("bool constraint", |meta| {
             let s = meta.query_selector(bool_and_swap_selector);
             let swap_bit = meta.query_advice(col_c, Rotation::cur());
             vec![s * swap_bit.clone() * (Expression::Constant(Fp::from(1)) - swap_bit)]
         });
 
-        // Enforces that if the swap_bit is on, the columns will be swapped.
-        // This applies only when the swap selector is enabled
         meta.create_gate("swap constraint", |meta| {
             let s = meta.query_selector(bool_and_swap_selector);
             let swap_bit = meta.query_advice(col_c, Rotation::cur());
@@ -57,7 +65,6 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
             vec![swap_constraint]
         });
 
-        // Enforces that input_left_balance[i] + input_right_balance[i] = computed_sum[i]
         meta.create_gate("sum constraint", |meta| {
             (0..N_ASSETS)
                 .map(|_| {
@@ -77,13 +84,15 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         }
     }
 
-    // Assign the entry hash and balances to the tree following this layout on a single column:
-    // | a |
-    // | entry hash |
-    // | entry_balance_0 |
-    // | entry_balance_1 |
-    // | ... |
-    // | entry_balance_N |
+    /// Assigns the entry hash and balances to the tree following this layout on a single column and returns the assigned cells:
+    ///
+    /// | a |
+    /// | -- |
+    /// | entry hash |
+    /// | entry_balance_0 |
+    /// | entry_balance_1 |
+    /// | ... |
+    /// | entry_balance_N |
     pub fn assign_entry_hash_and_balances(
         &self,
         mut layouter: impl Layouter<Fp>,
@@ -118,7 +127,7 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         Ok((entry_hash_cell, entry_balance_cells))
     }
 
-    // assign the swap bit to a cell
+    // Assigns the swap bit to a cell and returns it
     pub fn assing_swap_bit(
         &self,
         mut layouter: impl Layouter<Fp>,
@@ -140,11 +149,14 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         Ok(swap_bit_cell)
     }
 
-    // Assign the hashes for node in a region following this layout on 3 advice columns:
-    // | a              | b                 | c          |
-    // | ------------   | -------------     | ---------- |
-    // | `current_hash` | `element_hash`    | `swap_bit` |
-    // | `current_hash` | `element_hash`    | -          | on this row `current_hash` and `element_hash` are swapped according to `swap_bit`
+    /// Assign the hashes for node in a region following this layout on 3 advice columns:
+    ///
+    /// | a              | b                 | c          |
+    /// | ------------   | -------------     | ---------- |
+    /// | `current_hash` | `element_hash`    | `swap_bit` |
+    /// | `current_hash` | `element_hash`    | -          |
+    ///
+    /// At row 0 bool_and_swap_selector is enabled
     pub fn assign_nodes_hashes_per_level(
         &self,
         mut layouter: impl Layouter<Fp>,
@@ -216,11 +228,15 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         )
     }
 
-    // Assign the nodes balance for a single asset in a region following this layout on 3 advice columns:
-    // | a                 | b                 | c          |
-    // | ------------      | -------------     | ---------- |
-    // | `current_balance` | `element_balance` | `swap_bit` |
-    // | `current_balance` | `element_balance` | `sum`      | on this row `current_balance` and `element_balance` are swapped according to `swap_bit`
+    /// Assign the nodes balance for a single asset in a region following this layout on 3 advice columns:
+    ///
+    /// | a                 | b                 | c          |
+    /// | ------------      | -------------     | ---------- |
+    /// | `current_balance` | `element_balance` | `swap_bit` |
+    /// | `current_balance` | `element_balance` | `sum`      |
+    ///
+    /// At row 0 bool_and_swap_selector is enabled.
+    /// At row 1 sum_selector is enabled
     pub fn assign_nodes_balance_per_asset(
         &self,
         mut layouter: impl Layouter<Fp>,
