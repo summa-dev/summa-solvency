@@ -41,7 +41,6 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
         }
     }
 
-    // Getters
     pub fn balances(&self) -> &[BigInt; N_ASSETS] {
         &self.balances
     }
