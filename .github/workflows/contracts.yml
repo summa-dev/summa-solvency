@@ -23,4 +23,4 @@ jobs:
       - name: Run Tests
         run: |
           cd contracts
-          npx hardhat node & REPORT_GAS=true npx hardhat test & npx hardhat coverage
+          npx hardhat node & npx hardhat coverage

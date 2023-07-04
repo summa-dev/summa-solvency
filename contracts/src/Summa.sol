@@ -18,108 +18,93 @@ interface Verifier {
 contract Summa is Ownable {
     using ECDSA for bytes32;
 
-    uint256 constant ETH_INPUTS = 1;
     uint256 constant ERC20_INPUTS = 1;
 
     Verifier private verifier;
 
-    event ProofOfSolvencySubmitted(bytes32 indexed exchangeId);
+    event ProofOfSolvencySubmitted(bytes32 indexed exchangeId, uint256 mstRoot);
 
     constructor(Verifier _verifier) {
         verifier = _verifier;
     }
 
+    /**
+     * @dev Submit proof of solvency for a CEX
+     * @param exchangeId The ID of the exchange
+     * @param cexAddresses The CEX addresses
+     * @param cexSignatures The signatures of a message "Summa proof of solvency for {exchangeId}" for each CEX address
+     * @param erc20ContractAddresses The addresses of the ERC20 token contracts that the CEX holds (e.g., USDT, USDC, DAI)
+     * @param balancesToProve The balances to prove. ETH balance should be the first element, followed by ERC20 balances in the order of erc20ContractAddresses
+     * @param mstRoot The root of the Merkle sum tree
+     * @param proof The ZK proof
+     */
     function submitProofOfSolvency(
         string memory exchangeId,
-        address[] memory cexETHAddresses,
-        address[] memory cexERC20Addresses,
-        uint256[] memory cexETHBalances,
-        uint256[] memory cexERC20Balances,
+        address[] memory cexAddresses,
+        bytes[] memory cexSignatures,
         address[] memory erc20ContractAddresses,
-        bytes[] memory cexEthAddressSignatures,
-        bytes[] memory cexERC20AddressSignatures,
+        uint256[] memory balancesToProve,
         uint256 mstRoot,
         bytes memory proof
     ) public {
         require(
-            cexEthAddressSignatures.length == ETH_INPUTS &&
-                cexETHAddresses.length == ETH_INPUTS &&
-                cexETHBalances.length == ETH_INPUTS,
-            "CEX ETH addresses, balances, and signatures count mismatch"
+            cexAddresses.length == cexSignatures.length &&
+                cexAddresses.length > 0,
+            "CEX addresses and signatures count mismatch"
         );
 
         require(
-            cexERC20AddressSignatures.length == ERC20_INPUTS &&
-            cexERC20Addresses.length == ERC20_INPUTS &&
-            erc20ContractAddresses.length == ERC20_INPUTS &&
-            cexERC20Balances.length == ERC20_INPUTS,
-            "CEX ERC20 addresses, balances, and signatures count mismatch"
+            erc20ContractAddresses.length == balancesToProve.length - 1 &&
+                erc20ContractAddresses.length > 0,
+            "ERC20 addresses and balances count mismatch"
         );
 
-        for (uint i = 0; i < cexEthAddressSignatures.length; i++) {
+        uint256 totalETHBalance = 0;
+        uint256[] memory erc20Balances = new uint256[](
+            erc20ContractAddresses.length
+        );
+        for (uint i = 0; i < cexAddresses.length; i++) {
             // Check that message is "summa proof of solvency {exchangeId}" and the signature is valid
             address recoveredPubKey = keccak256(
-                abi.encode(
-                    "Summa proof of solvency for ",
-                    exchangeId
-                )
-            ).toEthSignedMessageHash().recover(
-                    cexEthAddressSignatures[i]
-                );
+                abi.encode("Summa proof of solvency for ", exchangeId)
+            ).toEthSignedMessageHash().recover(cexSignatures[i]);
             require(
-                cexETHAddresses[i] == recoveredPubKey,
+                cexAddresses[i] == recoveredPubKey,
                 "Invalid signer for ETH address"
             );
+
+            totalETHBalance += cexAddresses[i].balance;
+            for (uint j = 0; j < erc20ContractAddresses.length; j++) {
+                erc20Balances[j] += IERC20(erc20ContractAddresses[j]).balanceOf(
+                    cexAddresses[i]
+                );
+            }
+        }
+
+        require(
+            totalETHBalance >= balancesToProve[0],
+            "Actual ETH balance is less than the proven balance"
+        );
+
+        for (uint i = 0; i < erc20ContractAddresses.length; i++) {
             require(
-                cexETHBalances[i] <=
-                    cexETHAddresses[i].balance,
-                "Actual ETH balance less than the proven balance"
+                erc20Balances[i] >= balancesToProve[i + 1],
+                "Actual ERC20 balance is less than the proven balance"
             );
         }
 
-        for (
-            uint i = 0;
-            i < cexERC20AddressSignatures.length;
-            i++
-        ) {
-            address recoveredPubKey = keccak256(
-                abi.encode(
-                    "Summa proof of solvency for ",
-                    exchangeId
-                )
-            ).toEthSignedMessageHash().recover(
-                    cexERC20AddressSignatures[i]
-                );
-            require(
-                cexERC20Addresses[i] == recoveredPubKey,
-                "Invalid signer for ERC20 address"
-            );
-            require(
-                cexERC20Balances[i] <=
-                    IERC20(erc20ContractAddresses[i]).balanceOf(
-                        cexERC20Addresses[i]
-                    ),
-                "Actual ERC20 balance less than the proven balance"
-            );
+        uint256[] memory inputs = new uint256[](balancesToProve.length + 1);
+        inputs[0] = mstRoot;
+
+        for (uint i = 0; i < balancesToProve.length; i++) {
+            inputs[i + 1] = balancesToProve[i];
         }
 
         // Verify ZK proof
-        uint256[] memory inputs = new uint256[](ETH_INPUTS + ERC20_INPUTS + 1);
-        inputs[0] = mstRoot;
-
-        for (uint i = 0; i < ETH_INPUTS; i++) {
-            inputs[i + 1] = cexETHBalances[i];
-        }
-
-        for (uint i = 0; i < ERC20_INPUTS; i++) {
-            inputs[i + ETH_INPUTS + 1] = cexERC20Balances[i];
-        }
-
         require(verifyZkProof(proof, inputs), "Invalid zk proof");
 
-        emit ProofOfSolvencySubmitted(
-            keccak256(abi.encode(exchangeId))
-        );
+        bytes32 exchangeIdHash = keccak256(abi.encode(exchangeId));
+        emit ProofOfSolvencySubmitted(exchangeIdHash, mstRoot);
     }
 
     function verifyZkProof(
