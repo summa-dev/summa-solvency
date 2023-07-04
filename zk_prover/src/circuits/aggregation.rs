@@ -12,8 +12,19 @@ use snark_verifier_sdk::{
     halo2::aggregation::AggregationCircuit, CircuitExt, Snark, BITS, LIMBS, SHPLONK,
 };
 
-/// Wrapper around Aggregation Circuit. It contains a vector of vectors `prev_instances`. Each inner vector represent the instance of an input snark.
-/// For example, if the input snarks are 2 and the instances are [0x11, 0xbb, ...] and [0x22, 0xcc, ...], then prev_instances is [[0x11, 0xbb, ...], [0x22, 0xcc, ...]]
+/// Wrapper structure around AggregationCircuit
+///
+/// The wrapper adds a vector of instance columns. Specifically an instance column for each input SNARK of the aggregation circuit.
+///
+/// # Fields
+///
+/// * `aggregation_circuit`: The configuration for the inner [snark_verifier_sdk::halo2::aggregation::AggregationCircuit]
+/// * `prev_instances`: The instance columns for each input SNARK of the aggregation circuit. Each inner vector represent the instance of an input snark.
+///    For example, if the input snarks are 2 and the instances are `[0x11, 0xbb, ...]` and `[0x22, 0xcc, ...]`, then prev_instances is `[[0x11, 0xbb, ...], [0x22, 0xcc, ...]]`
+///
+/// # Type Parameters
+///
+/// * `N_SNARK`: Number of input SNARKs for the aggregation circuit
 #[derive(Clone)]
 pub struct WrappedAggregationCircuit<const N_SNARK: usize> {
     aggregation_circuit: AggregationCircuit<SHPLONK>,
@@ -21,6 +32,7 @@ pub struct WrappedAggregationCircuit<const N_SNARK: usize> {
 }
 
 impl<const N_SNARK: usize> WrappedAggregationCircuit<N_SNARK> {
+    /// Creates a new WrappedAggregationCircuit
     pub fn new(params: &ParamsKZG<Bn256>, snarks: impl IntoIterator<Item = Snark>) -> Self {
         let snarks = snarks.into_iter().collect_vec();
 
@@ -91,7 +103,7 @@ impl<const N_SNARK: usize> Circuit<Fp> for WrappedAggregationCircuit<N_SNARK> {
 }
 
 impl<const N_SNARK: usize> CircuitExt<Fp> for WrappedAggregationCircuit<N_SNARK> {
-    // for a case of 2 snarks input with 1 instance column each with 4 rows, it should be [4, 4, 16]. Where 16 are `num_instance` from the aggregation circuit
+    /// Returns the number of instances of the circuit. For example, for a case of 2 snarks input with 1 instance column each with 4 rows, it should be `[4, 4, 16]`. Where 16 are `num_instance` from the aggregation circuit
     fn num_instance(&self) -> Vec<usize> {
         let mut num_instance = self
             .prev_instances
@@ -104,7 +116,7 @@ impl<const N_SNARK: usize> CircuitExt<Fp> for WrappedAggregationCircuit<N_SNARK>
         num_instance
     }
 
-    // following the previous example, it should be like [[0x001, 0x111, 0xaaa, 0xbbb], [0xaaa, 0xfff, 0xeee, 0x111], [0x11, 0xbb, ...]]. Note that the last vector is the instance of the aggregation circuit
+    /// Returns the instances of the circuit. Following the previous example, it should be like `[[0x001, 0x111, 0xaaa, 0xbbb], [0xaaa, 0xfff, 0xeee, 0x111], [0x11, 0xbb, ...]]`. Note that the last vector is the instance of the aggregation circuit
     fn instances(&self) -> Vec<Vec<Fp>> {
         let mut instances = self.prev_instances.clone();
         instances.push(self.aggregation_circuit.instances()[0].clone());
