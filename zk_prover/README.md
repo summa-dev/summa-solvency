@@ -4,7 +4,7 @@ This directory contains the Halo2 ZK circuit implementation for the Summa Proof 
 
 ## Usage
 
-To build and test the circuits, execute
+To build, test and print the circuits, execute
 
 ```
 cargo build
@@ -70,14 +70,14 @@ Run on MacBook Pro 2023, M2 Pro, 32GB RAM, 12 cores
 
 For Merkle Sum Tree Proof of Inclusion circuit
 
-| VK Gen      | Pk Gen   | Proof Generation | Proof Verification | Proof Size (bytes) |
-| ------      | ------   | ---------------- | ------------------ | ------------------ |
-| 172.09 ms (+33.3%)   | 63.307 ms (+2.496%)|    285.14 ms (-72.45%)     |    4.7232 ms (-40.07%)       | 2752   (-73.61%)         |
+| VK Gen             | Pk Gen              | Proof Generation    | Proof Verification  | Proof Size (bytes) |
+| ------------------ | ------------------- | ------------------- | ------------------- | ------------------ |
+| 172.09 ms (+33.3%) | 63.307 ms (+2.496%) | 285.14 ms (-72.45%) | 4.7232 ms (-40.07%) | 2752   (-73.61%)   |
 
 For Proof of Solvency circuit
 
-| VK Gen      | Pk Gen   | Proof Generation | Proof Verification | Proof Size (bytes) |
-| ------      | ------   | ---------------- | ------------------ | ------------------ |
-| 109.64 ms   | 57.848 ms|    1.3231s     |    6.9582 ms       | 11520        |
+| VK Gen               | Pk Gen   | Proof Generation | Proof Verification | Proof Size (bytes) |
+| ------               | ------   | ---------------- | ------------------ | ------------------ |
+| 77.363 ms (-29.44%)  | 30.850 ms (-46.47%) |    145.50ms (-89%)       |    4.5124 ms (-35.15%)       | 2752 (-76.11%)              |
 
 
