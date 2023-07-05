@@ -58,7 +58,7 @@ impl<const N_BYTES: usize> LtVerticalChip<N_BYTES> {
     /// Configures the LtVertical chip.
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
-        q_enable: impl FnOnce(&mut VirtualCells<'_, Fp>) -> Expression<Fp>,
+        q_enable: impl Fn(&mut VirtualCells<'_, Fp>) -> Expression<Fp>,
         lhs: impl FnOnce(&mut VirtualCells<Fp>) -> Expression<Fp>,
         rhs: impl FnOnce(&mut VirtualCells<Fp>) -> Expression<Fp>,
         lt: Column<Advice>,
@@ -71,11 +71,9 @@ impl<const N_BYTES: usize> LtVerticalChip<N_BYTES> {
             let q_enable = q_enable(meta);
             let lt = meta.query_advice(lt, Rotation::cur());
 
-            let mut diff_bytes = Vec::<Expression<Fp>>::new();
-
-            for i in 0..N_BYTES {
-                diff_bytes.push(meta.query_advice(diff, Rotation(i as i32)));
-            }
+            let diff_bytes: Vec<Expression<Fp>> = (0..N_BYTES)
+                .map(|i| meta.query_advice(diff, Rotation(i as i32)))
+                .collect();
 
             let check_a =
                 lhs(meta) - rhs(meta) - expr_from_bytes(&diff_bytes) + (lt.clone() * range);
@@ -89,13 +87,12 @@ impl<const N_BYTES: usize> LtVerticalChip<N_BYTES> {
 
         meta.annotate_lookup_any_column(u8, || "LOOKUP_u8");
 
-        for i in 0..N_BYTES {
-            meta.lookup_any("range check for u8", |meta| {
-                let u8_cell = meta.query_advice(diff, Rotation(i as i32));
-                let u8_range = meta.query_fixed(u8, Rotation::cur());
-                vec![(u8_cell, u8_range)]
-            });
-        }
+        meta.lookup_any("range check for u8", |meta| {
+            let u8_cell = meta.query_advice(diff, Rotation::cur());
+            let u8_range = meta.query_fixed(u8, Rotation::cur());
+            let q_enable = q_enable(meta);
+            vec![(q_enable * u8_cell, u8_range)]
+        });
 
         LtVerticalConfig {
             lt,
@@ -186,7 +183,6 @@ impl<const N_BYTES: usize> Chip<Fp> for LtVerticalChip<N_BYTES> {
     }
 }
 
-//tests
 #[cfg(test)]
 mod test {
     use super::*;
@@ -197,7 +193,6 @@ mod test {
         plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector},
         poly::Rotation,
     };
-    use std::marker::PhantomData;
 
     macro_rules! try_test_circuit {
         ($values:expr, $checks:expr, $result:expr) => {{
@@ -206,10 +201,9 @@ mod test {
             // TODO: remove zk blinding factors in halo2 to restore the
             // correct k (without the extra + 2).
             let k = 9;
-            let circuit = TestCircuit::<Fp> {
+            let circuit = TestCircuit {
                 values: Some($values),
                 checks: Some($checks),
-                _marker: PhantomData,
             };
             let prover = MockProver::<Fp>::run(k, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), $result);
@@ -223,10 +217,9 @@ mod test {
             // TODO: remove zk blinding factors in halo2 to restore the
             // correct k (without the extra + 2).
             let k = 9;
-            let circuit = TestCircuit::<Fp> {
+            let circuit = TestCircuit {
                 values: Some($values),
                 checks: Some($checks),
-                _marker: PhantomData,
             };
             let prover = MockProver::<Fp>::run(k, &circuit, vec![]).unwrap();
             assert!(prover.verify().is_err());
@@ -244,15 +237,13 @@ mod test {
         }
 
         #[derive(Default)]
-        struct TestCircuit<Fp> {
-            //Field is F_p
+        struct TestCircuit {
             values: Option<Vec<u64>>,
             // checks[i] = lt(values[i + 1], values[i])
             checks: Option<Vec<bool>>,
-            _marker: PhantomData<Fp>,
         }
 
-        impl Circuit<Fp> for TestCircuit<Fp> {
+        impl Circuit<Fp> for TestCircuit {
             type Config = TestCircuitConfig;
             type FloorPlanner = SimpleFloorPlanner;
             // type Params = () - optional, requires the circuit-params feature
@@ -357,11 +348,24 @@ mod test {
             }
         }
 
-        try_test_circuit!(vec![1, 2, 3, 4, 5], vec![true, true, true, true], Ok(()));
-        try_test_circuit!(vec![1, 2, 1, 3, 2], vec![true, false, true, false], Ok(()));
-        // error
-        try_test_circuit_error!(vec![5, 4, 3, 2, 1], vec![true, true, true, true]);
-        try_test_circuit_error!(vec![1, 2, 1, 3, 2], vec![false, true, false, true]);
+        try_test_circuit!(vec![1, 2], vec![true], Ok(()));
+        try_test_circuit!(vec![2, 3], vec![true], Ok(()));
+        try_test_circuit!(vec![3, 4], vec![true], Ok(()));
+        try_test_circuit!(vec![4, 5], vec![true], Ok(()));
+        try_test_circuit!(vec![1, 2], vec![true], Ok(()));
+        try_test_circuit!(vec![2, 1], vec![false], Ok(()));
+        try_test_circuit!(vec![1, 3], vec![true], Ok(()));
+        try_test_circuit!(vec![3, 2], vec![false], Ok(()));
+
+        // // error
+        try_test_circuit_error!(vec![5, 4], vec![true]);
+        try_test_circuit_error!(vec![4, 3], vec![true]);
+        try_test_circuit_error!(vec![3, 2], vec![true]);
+        try_test_circuit_error!(vec![2, 1], vec![true]);
+        try_test_circuit_error!(vec![1, 2], vec![false]);
+        try_test_circuit_error!(vec![2, 1], vec![true]);
+        try_test_circuit_error!(vec![1, 3], vec![false]);
+        try_test_circuit_error!(vec![3, 2], vec![true]);
     }
 
     #[test]
@@ -376,14 +380,13 @@ mod test {
         }
 
         #[derive(Default)]
-        struct TestCircuit<Fp> {
+        struct TestCircuit {
             values: Option<Vec<(u64, u64)>>,
             // checks[i] = lt(values[i].0 - values[i].1)
             checks: Option<Vec<bool>>,
-            _marker: PhantomData<Fp>,
         }
 
-        impl Circuit<Fp> for TestCircuit<Fp> {
+        impl Circuit<Fp> for TestCircuit {
             type Config = TestCircuitConfig;
             type FloorPlanner = SimpleFloorPlanner;
             // type Params = ();
@@ -491,22 +494,19 @@ mod test {
         }
 
         // ok
-        try_test_circuit!(
-            vec![(1, 2), (4, 4), (5, 5)],
-            vec![true, false, false],
-            Ok(())
-        );
-        try_test_circuit!(
-            vec![
-                (14124, 14124),
-                (383168732, 383168731),
-                (383168731, 383168732)
-            ],
-            vec![false, false, true],
-            Ok(())
-        );
-        // error
-        try_test_circuit_error!(vec![(1, 2), (3, 4), (5, 6)], vec![false, false, false]);
-        try_test_circuit_error!(vec![(1, 1), (3, 4), (6, 6)], vec![true, false, true]);
+        try_test_circuit!(vec![(1, 2)], vec![true], Ok(()));
+        try_test_circuit!(vec![(4, 4)], vec![false], Ok(()));
+        try_test_circuit!(vec![(5, 5)], vec![false], Ok(()));
+        try_test_circuit!(vec![(14124, 14124)], vec![false], Ok(()));
+        try_test_circuit!(vec![(383168732, 383168731)], vec![false], Ok(()));
+        try_test_circuit!(vec![(383168731, 383168732)], vec![true], Ok(()));
+
+        // // error
+        try_test_circuit_error!(vec![(1, 2)], vec![false]);
+        try_test_circuit_error!(vec![(3, 4)], vec![false]);
+        try_test_circuit_error!(vec![(5, 6)], vec![false]);
+        try_test_circuit_error!(vec![(1, 1)], vec![true]);
+        try_test_circuit_error!(vec![(3, 4)], vec![false]);
+        try_test_circuit_error!(vec![(6, 6)], vec![true]);
     }
 }
