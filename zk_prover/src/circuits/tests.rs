@@ -527,7 +527,7 @@ mod test {
                     },
                     cell_values: vec![
                         // The zero means that is not less than
-                        (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                        (((Any::advice(), 2).into(), 0).into(), "0".to_string())
                     ]
                 }])
             );
@@ -552,7 +552,7 @@ mod test {
                     },
                     cell_values: vec![
                         // The zero means that is not less than
-                        (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                        (((Any::advice(), 2).into(), 0).into(), "0".to_string())
                     ]
                 }])
             );
@@ -578,7 +578,7 @@ mod test {
                         },
                         cell_values: vec![
                             // The zero means that is not less than
-                            (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                            (((Any::advice(), 2).into(), 0).into(), "0".to_string())
                         ]
                     },
                     VerifyFailure::ConstraintNotSatisfied {
@@ -589,7 +589,7 @@ mod test {
                         },
                         cell_values: vec![
                             // The zero means that is not less than
-                            (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                            (((Any::advice(), 2).into(), 0).into(), "0".to_string())
                         ]
                     }
                 ])

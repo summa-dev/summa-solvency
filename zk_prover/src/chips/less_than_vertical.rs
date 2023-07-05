@@ -149,6 +149,8 @@ impl<const N_BYTES: usize> LtVerticalInstruction for LtVerticalChip<N_BYTES> {
         });
 
         for idx in 0..N_BYTES {
+            config.lookup_enable.enable(region, idx)?;
+
             region.assign_advice(
                 || format!("lt chip: diff byte {}", idx),
                 config.diff,
@@ -357,10 +359,6 @@ mod test {
                             value_prev = *value;
                         }
 
-                        for i in 0..N_BYTES {
-                            config.lt.lookup_enable.enable(&mut region, i + 1)?;
-                        }
-
                         Ok(())
                     },
                 )
@@ -506,10 +504,6 @@ mod test {
                                 Value::known(*value_a),
                                 Value::known(*value_b),
                             )?;
-
-                            for i in 0..N_BYTES {
-                                config.lt.lookup_enable.enable(&mut region, i + 1)?;
-                            }
                         }
 
                         Ok(())
