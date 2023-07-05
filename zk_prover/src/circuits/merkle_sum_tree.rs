@@ -12,9 +12,21 @@ use snark_verifier_sdk::CircuitExt;
 
 const MAX_BITS: u8 = 8;
 
-// LEVELS indicates the levels of the tree
-// L is the length of the hasher input, namely 2 + (2 * N_ASSETS)
-// N_ASSETS is the number of assets in the tree
+/// Circuit for verifying inclusion of a leaf_hash inside a merkle sum tree with a given root.
+///
+/// # Type Parameters
+/// 
+/// * `LEVELS`: The number of levels of the merkle sum tree
+/// * `L`: The length of the hasher input, namely 2 + (2 * N_ASSETS)
+/// * `N_ASSETS`: The number of assets for which the solvency is verified.
+///
+/// # Fields
+///
+/// * `leaf_hash`: The hash of the leaf to be verified inclusion of
+/// * `leaf_balances`: The balances of the leaf to be verified inclusion of. The length of this vector is N_ASSETS
+/// * `path_element_hashes`: The hashes of the path elements from the leaf to root. The length of this vector is LEVELS
+/// * `path_element_balances`: The balances of the path elements from the leaf to the root. The length of this vector is LEVELS
+/// * `path_indices`: The boolean indices of the path elements from the leaf to the root. 0 indicates that the element is on the right to the path, 1 indicates that the element is on the left to the path. The length of this vector is LEVELS
 #[derive(Clone)]
 pub struct MstInclusionCircuit<const LEVELS: usize, const L: usize, const N_ASSETS: usize> {
     pub leaf_hash: Fp,
@@ -27,11 +39,12 @@ pub struct MstInclusionCircuit<const LEVELS: usize, const L: usize, const N_ASSE
 
 impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> CircuitExt<Fp>
     for MstInclusionCircuit<LEVELS, L, N_ASSETS>
-{
+{   
+    /// Returns the number of public inputs of the circuit. It is 2, namely the laef hash to be verified inclusion of and the root hash of the merkle sum tree.
     fn num_instance(&self) -> Vec<usize> {
         vec![2]
     }
-
+    /// Returns the values of the public inputs of the circuit. Namely the leaf hash to be verified inclusion of and the root hash of the merkle sum tree.
     fn instances(&self) -> Vec<Vec<Fp>> {
         vec![vec![self.leaf_hash, self.root_hash]]
     }
@@ -53,6 +66,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize>
         }
     }
 
+/// Initializes the circuit with the merkle sum tree and the index of the user of which the inclusion is to be verified.
     pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, user_index: usize) -> Self {
         assert_eq!((N_ASSETS * 2) + 2, L);
 
@@ -77,6 +91,19 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize>
         }
     }
 }
+
+/// Configuration for the Mst Inclusion circuit
+/// # Type Parameters
+///
+/// * `L`: The length of the hasher input, namely 2 + (2 * N_ASSETS)
+/// * `N_ASSETS`: The number of assets for which the solvency is verified.
+///
+/// # Fields
+///
+/// * `merkle_sum_tree_config`: Configuration for the merkle sum tree
+/// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 3 and RATE = 2
+/// * `overflow_check_config`: Configuration for the overflow check chip
+/// * `instance`: Instance column used to store the public inputs
 
 #[derive(Debug, Clone)]
 pub struct MstInclusionConfig<const L: usize, const N_ASSETS: usize> {
@@ -141,7 +168,7 @@ impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
         }
     }
 
-    // Enforce copy constraint check between input cell and instance column at row passed as input
+    /// Enforce copy constraint check between input cell and instance column at row passed as input
     pub fn expose_public(
         &self,
         mut layouter: impl Layouter<Fp>,
@@ -162,6 +189,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
         Self::init_empty()
     }
 
+    /// Configures the circuit
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
         MstInclusionConfig::<L, N_ASSETS>::configure(meta)
     }
@@ -283,7 +311,6 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
         config.expose_public(layouter.namespace(|| "public root hash"), &current_hash, 1)?;
 
         // don't need to perform further range check on the balances of the root node as their addends are already constrained to be less than 2^MOD_BITS
-
         Ok(())
     }
 }

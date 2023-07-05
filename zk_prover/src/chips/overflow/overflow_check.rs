@@ -1,13 +1,24 @@
 use crate::chips::overflow::utils::*;
-
 use halo2_proofs::circuit::{AssignedCell, Layouter, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector};
 use halo2_proofs::poly::Rotation;
 use std::fmt::Debug;
 
-// `MAX_BITS` is the maximum number of bits that can be represented by a single cell.
-// `MOD_BITS` is number of bits the finite field modulus.
+/// Configuration for the Overflow Check Chip
+///
+/// # Type Parameters
+///
+/// * `MAX_BITS`: Number of bits of each chunk in which the value to be checked is decomposed into.
+/// * `MOD_BITS`: Range in which the value to be checked should be.
+///
+/// # Fields
+///
+/// * `a`: Advice column for the value to be checked.
+/// * `b`: Advice column for the decomposed values.
+/// * `range`: Fixed column for the range table.
+/// * `toggle_decomposed_value_check`: Selector to toggle the equality check between the decomposed value and the value.
+/// * `toggle_lookup_check`: Selector to toggle the lookup check.
 #[derive(Debug, Clone)]
 pub struct OverflowCheckConfig<const MAX_BITS: u8, const MOD_BITS: usize> {
     pub a: Column<Advice>,
@@ -17,12 +28,17 @@ pub struct OverflowCheckConfig<const MAX_BITS: u8, const MOD_BITS: usize> {
     pub toggle_lookup_check: Selector,
 }
 
+/// Chip that verifies that the value to be checked doesn't overflow the range specified by `MOD_BITS`.
+/// Contains the following constraints:
+/// * `value` = `decomposed_value_sum` (if `toggle_decomposed_value_check` is toggled)
+/// * `decomposed_value` ∈ to `MAX_BITS` lookup table (if `toggle_lookup_check` is toggled). Namely `decomposed_value` should be in the `MAX_BITS` range 
 #[derive(Debug, Clone)]
 pub struct OverflowChip<const MAX_BITS: u8, const MOD_BITS: usize> {
     config: OverflowCheckConfig<MAX_BITS, MOD_BITS>,
 }
 
 impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS> {
+    /// Constructs a new Overflow Chip given an OverflowCheckConfig
     pub fn construct(config: OverflowCheckConfig<MAX_BITS, MOD_BITS>) -> Self {
         let num_rows = MOD_BITS / MAX_BITS as usize;
         let remainder = MOD_BITS % MAX_BITS as usize;
@@ -38,6 +54,7 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
         Self { config }
     }
 
+    /// Configures the Overflow Chip
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
         a: Column<Advice>,
@@ -117,6 +134,7 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
         }
     }
 
+    /// Assigns the value to be checked to the chip by splitting it into `MOD_BITS / MAX_BITS` chunks.
     pub fn assign(
         &self,
         mut layouter: impl Layouter<Fp>,
@@ -125,7 +143,6 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
         layouter.assign_region(
             || "assign decomposed values",
             |mut region| {
-                // enable selector
                 self.config
                     .toggle_decomposed_value_check
                     .enable(&mut region, 0)?;
@@ -159,6 +176,7 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> OverflowChip<MAX_BITS, MOD_BITS>
         )
     }
 
+    /// Loads the lookup table with values from `0` to `2^MAX_BITS - 1`
     pub fn load(&self, layouter: &mut impl Layouter<Fp>) -> Result<(), Error> {
         let range = 1 << (MAX_BITS as usize);
 
