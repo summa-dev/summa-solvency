@@ -146,14 +146,45 @@ impl<const N_ASSETS: usize> SnapShotData<N_ASSETS> {
         (agg_circuit, params_agg)
     }
 
+    #[cfg(feature = "testing")]
+    pub fn generate_proofs(&mut self) {
+        let params_app = generate_setup_params(11);
+
+        let mut user_proofs = HashMap::<String, InclusionProof<N_ASSETS>>::new();
+
+        let (circuit, vk, pk) = Self::get_mst_circuit(params_app.clone(), 0);
+
+        let proof = full_prover(&params_app, &pk, circuit.clone(), circuit.instances());
+
+        let user_instance = circuit.instances()[0].clone();
+
+        println!("user_instance: {:?}", user_instance);
+        println!("entries[15]: {:?}", self.entries.get(&0));
+
+        if let Some(entry) = self.entries.get(&0) {
+            user_proofs.insert(
+                entry.username().to_owned(),
+                InclusionProof::<N_ASSETS> {
+                    leaf_hash: user_instance[0],
+                    balances: entry.balances().clone(),
+                    vk: vk.to_bytes(halo2_proofs::SerdeFormat::RawBytes),
+                    proof,
+                },
+            );
+        }
+
+        // for testing functions
+        self.user_proofs = Some(user_proofs);
+        self.on_chain_proof = Some(vec![16u8; 8]);
+    }
+
+    #[cfg(not(feature = "testing"))]
     pub fn generate_proofs(&mut self) {
         // TODO: generating aggregate proof took quite a long time, consider to run in background task
         let (agg_circuit, params_agg) = self.generate_agg_circuit();
 
         let pk_agg = gen_pk(&params_agg, &agg_circuit.without_witnesses(), None);
         let instances = agg_circuit.instances();
-
-        println!("instance of agg_circuit: {:?}", instances);
 
         let proof_calldata =
             gen_evm_proof_shplonk(&params_agg, &pk_agg, agg_circuit, instances.clone());
@@ -190,14 +221,18 @@ impl<const N_ASSETS: usize> SnapShotData<N_ASSETS> {
     }
 
     pub fn get_user_proof(&self, name: &str) -> Option<&InclusionProof<N_ASSETS>> {
+        // TODO: return error instead of None
         match &self.user_proofs {
             Some(user_proofs) => user_proofs.get(name),
             None => None,
         }
     }
 
-    pub fn get_onchain_proof(&self) -> Option<&Vec<u8>> {
-        self.on_chain_proof.as_ref()
+    pub fn get_onchain_proof(&self) -> Vec<u8> {
+        match &self.on_chain_proof {
+            Some(proof) => proof.clone(),
+            None => vec![0u8; 8],
+        }
     }
 }
 
@@ -225,11 +260,22 @@ mod tests {
         let mut snapshot_data = SnapShotData::<2>::new("CEX_1", entry_csv, asset_csv);
 
         assert!(snapshot_data.user_proofs.is_none());
+        assert!(snapshot_data.on_chain_proof.is_none());
+        let empty_on_chain_proof = snapshot_data.get_onchain_proof();
+        assert_eq!(empty_on_chain_proof, vec![0u8; 8]);
 
         snapshot_data.generate_proofs();
 
-        //  Check the proof for the user at index 15
-        let user_proof = snapshot_data.get_user_proof("AtwIxZHo");
+        //  Check the proof for the user at index 0
+        let user_proof = snapshot_data.get_user_proof("dxGaEAii");
         assert!(user_proof.is_some());
+
+        //  Check the proof for last user
+        let none_user_proof = snapshot_data.get_user_proof("AtwIxZHo");
+        assert!(none_user_proof.is_none());
+
+        // Check updated on-chain proof
+        let on_chain_proof = snapshot_data.get_onchain_proof();
+        assert_eq!(on_chain_proof, vec![16u8; 8]);
     }
 }

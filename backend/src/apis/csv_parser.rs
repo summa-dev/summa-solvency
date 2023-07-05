@@ -1,7 +1,6 @@
 use crate::apis::snapshot_data::Asset;
 use num_bigint::BigInt;
 use serde::Deserialize;
-use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 use std::path::Path;
@@ -15,7 +14,7 @@ struct CsvAsset {
 }
 
 pub fn parse_csv_to_assets<P: AsRef<Path>>(path: P) -> Result<Vec<Asset>, Box<dyn Error>> {
-    let mut asset_map: HashMap<String, Asset> = HashMap::new();
+    let mut assets: Vec<Asset> = Vec::new();
 
     let file = File::open(path)?;
     let mut rdr = csv::ReaderBuilder::new().delimiter(b';').from_reader(file);
@@ -29,24 +28,20 @@ pub fn parse_csv_to_assets<P: AsRef<Path>>(path: P) -> Result<Vec<Asset>, Box<dy
             .map(|balance| BigInt::parse_bytes(balance.as_bytes(), 10).unwrap())
             .collect();
 
-        if let Some(asset) = asset_map.get_mut(&record.name) {
+        // Check if asset with same name already exists in the Vec
+        if let Some(asset) = assets.iter_mut().find(|a| a.name == record.name) {
             asset.pubkeys.push(record.pubkey);
             asset.balances.extend(balances);
             asset.signature.push(record.signature);
         } else {
-            asset_map.insert(
-                record.name.clone(),
-                Asset {
-                    name: record.name,
-                    pubkeys: vec![record.pubkey],
-                    balances,
-                    signature: vec![record.signature],
-                },
-            );
+            assets.push(Asset {
+                name: record.name,
+                pubkeys: vec![record.pubkey],
+                balances,
+                signature: vec![record.signature],
+            });
         }
     }
-
-    let assets: Vec<Asset> = asset_map.values().cloned().collect();
 
     Ok(assets)
 }
@@ -69,11 +64,11 @@ mod tests {
         assert_eq!(assets[0].balances[0], BigInt::from(1500u32));
 
         // Validate the second asset
-        assert_eq!(assets[2].name, "dai");
+        assert_eq!(assets[1].name, "dai");
         assert_eq!(
-            assets[2].pubkeys[0],
+            assets[1].pubkeys[0],
             "0x44d8860b40D632163Cd4A7a8D6CC3A8c0fBbe10d"
         );
-        assert_eq!(assets[2].balances[0], BigInt::from(1000u32));
+        assert_eq!(assets[1].balances[0], BigInt::from(1000u32));
     }
 }
