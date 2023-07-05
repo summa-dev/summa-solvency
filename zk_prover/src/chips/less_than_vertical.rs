@@ -1,5 +1,5 @@
-/* This is a 'vertical' implementation of LTChip
-It reduces the number of advice columns present in the original 'horizontal approach */
+//! This is a 'vertical' implementation of LTChip
+//! It reduces the number of advice columns present in the original 'horizontal approach' available in the zkevm gadgets.
 
 use halo2_proofs::{
     circuit::{Chip, Layouter, Region, Value},
@@ -48,7 +48,12 @@ impl<const N_BYTES: usize> LtVerticalConfig<N_BYTES> {
     }
 }
 
-/// Chip that compares lhs < rhs.
+/// Chip that compares lhs < rhs. It performs the following constraints:
+///
+/// * `lhs - rhs - diff_bytes + lt * range = 0`. When q_enable is 1, this constraint is enforced.
+/// * `lt * (lt - 1) = 0`, i.e. lt is either 0 or 1. When q_enable is 1, this constraint is enforced.
+/// * `diff(cur)` ∈ to `u8` lookup table. Namely `decomposed_value` should be in the `MAX_BITS` range. When q_enable is 1, this constraint is enforced.
+
 #[derive(Clone, Debug)]
 pub struct LtVerticalChip<const N_BYTES: usize> {
     config: LtVerticalConfig<N_BYTES>,
@@ -109,6 +114,7 @@ impl<const N_BYTES: usize> LtVerticalChip<N_BYTES> {
 }
 
 impl<const N_BYTES: usize> LtVerticalInstruction for LtVerticalChip<N_BYTES> {
+    /// From lhs and rhs values, assigns `lt` and `diff_bytes` to the region.
     fn assign(
         &self,
         region: &mut Region<'_, Fp>,
@@ -150,6 +156,7 @@ impl<const N_BYTES: usize> LtVerticalInstruction for LtVerticalChip<N_BYTES> {
         Ok(())
     }
 
+    /// Loads the lookup table for `u8` range check.
     fn load(&self, layouter: &mut impl Layouter<Fp>) -> Result<(), Error> {
         const RANGE: usize = 256;
 
