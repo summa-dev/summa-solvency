@@ -4,7 +4,7 @@
 use halo2_proofs::{
     circuit::{Chip, Layouter, Region, Value},
     halo2curves::{bn256::Fr as Fp, ff::PrimeField},
-    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, VirtualCells},
+    plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector, VirtualCells},
     poly::Rotation,
 };
 
@@ -39,6 +39,8 @@ pub struct LtVerticalConfig<const N_BYTES: usize> {
     pub u8: Column<Fixed>,
     /// Denotes the range within which both lhs and rhs lie.
     pub range: Fp,
+    /// Denotes the selector used to enable the lookup check
+    pub lookup_enable: Selector,
 }
 
 impl<const N_BYTES: usize> LtVerticalConfig<N_BYTES> {
@@ -63,12 +65,13 @@ impl<const N_BYTES: usize> LtVerticalChip<N_BYTES> {
     /// Configures the LtVertical chip.
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
-        q_enable: impl Fn(&mut VirtualCells<'_, Fp>) -> Expression<Fp>,
+        q_enable: impl FnOnce(&mut VirtualCells<'_, Fp>) -> Expression<Fp>,
         lhs: impl FnOnce(&mut VirtualCells<Fp>) -> Expression<Fp>,
         rhs: impl FnOnce(&mut VirtualCells<Fp>) -> Expression<Fp>,
         lt: Column<Advice>,
         diff: Column<Advice>,
         u8: Column<Fixed>,
+        lookup_enable: Selector,
     ) -> LtVerticalConfig<N_BYTES> {
         let range = pow_of_two(N_BYTES * 8);
 
@@ -95,8 +98,8 @@ impl<const N_BYTES: usize> LtVerticalChip<N_BYTES> {
         meta.lookup_any("range check for u8", |meta| {
             let u8_cell = meta.query_advice(diff, Rotation::cur());
             let u8_range = meta.query_fixed(u8, Rotation::cur());
-            let q_enable = q_enable(meta);
-            vec![(q_enable * u8_cell, u8_range)]
+            let lookup_enable = meta.query_selector(lookup_enable);
+            vec![(lookup_enable * u8_cell, u8_range)]
         });
 
         LtVerticalConfig {
@@ -104,6 +107,7 @@ impl<const N_BYTES: usize> LtVerticalChip<N_BYTES> {
             diff,
             range,
             u8,
+            lookup_enable,
         }
     }
 
@@ -233,6 +237,8 @@ mod test {
         }};
     }
 
+    const N_BYTES: usize = 31;
+
     #[test]
     fn row_diff_is_lt() {
         #[derive(Clone, Debug)]
@@ -240,7 +246,7 @@ mod test {
             q_enable: Selector,
             value: Column<Advice>,
             check: Column<Advice>,
-            lt: LtVerticalConfig<31>,
+            lt: LtVerticalConfig<N_BYTES>,
         }
 
         #[derive(Default)]
@@ -260,12 +266,13 @@ mod test {
             }
 
             fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-                let q_enable = meta.complex_selector();
+                let q_enable = meta.selector();
                 let value = meta.advice_column();
                 let check = meta.advice_column();
                 let lt = meta.advice_column();
                 let diff = meta.advice_column();
                 let u8 = meta.fixed_column();
+                let lookup_enable = meta.complex_selector();
 
                 let lt = LtVerticalChip::configure(
                     meta,
@@ -275,6 +282,7 @@ mod test {
                     lt,
                     diff,
                     u8,
+                    lookup_enable,
                 );
 
                 let config = Self::Config {
@@ -349,6 +357,10 @@ mod test {
                             value_prev = *value;
                         }
 
+                        for i in 0..N_BYTES {
+                            config.lt.lookup_enable.enable(&mut region, i + 1)?;
+                        }
+
                         Ok(())
                     },
                 )
@@ -364,7 +376,7 @@ mod test {
         try_test_circuit!(vec![1, 3], vec![true], Ok(()));
         try_test_circuit!(vec![3, 2], vec![false], Ok(()));
 
-        // // error
+        // // // error
         try_test_circuit_error!(vec![5, 4], vec![true]);
         try_test_circuit_error!(vec![4, 3], vec![true]);
         try_test_circuit_error!(vec![3, 2], vec![true]);
@@ -383,7 +395,7 @@ mod test {
             value_a: Column<Advice>,
             value_b: Column<Advice>,
             check: Column<Advice>,
-            lt: LtVerticalConfig<31>,
+            lt: LtVerticalConfig<N_BYTES>,
         }
 
         #[derive(Default)]
@@ -409,6 +421,7 @@ mod test {
                 let lt = meta.advice_column();
                 let diff = meta.advice_column();
                 let u8 = meta.fixed_column();
+                let lookup_enable = meta.complex_selector();
 
                 let lt = LtVerticalChip::configure(
                     meta,
@@ -418,6 +431,7 @@ mod test {
                     lt,
                     diff,
                     u8,
+                    lookup_enable,
                 );
 
                 let config = Self::Config {
@@ -492,6 +506,10 @@ mod test {
                                 Value::known(*value_a),
                                 Value::known(*value_b),
                             )?;
+
+                            for i in 0..N_BYTES {
+                                config.lt.lookup_enable.enable(&mut region, i + 1)?;
+                            }
                         }
 
                         Ok(())
