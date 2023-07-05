@@ -11,9 +11,22 @@ use halo2_proofs::plonk::{
 use halo2_proofs::poly::Rotation;
 use snark_verifier_sdk::CircuitExt;
 
-// L is the length of the hasher input, namely 2 + (2 * N_ASSETS)
-// N_ASSETS is the number of assets in the tree
-// N_BYTES is the range in which the balances should lie
+/// Circuit for verifying solvency, namely that the assets_sum is greater than the sum of the liabilities stored in the merkle sum tree
+///
+/// # Type Parameters
+///
+/// * `L`: The length of the hasher input, namely 2 + (2 * N_ASSETS)
+/// * `N_ASSETS`: The number of assets for which the solvency is verified.
+/// * `N_BYTES`: Range in which the balances should lie
+///
+/// # Fields
+///
+/// * `left_node_hash`: The hash of the penultimate left node of the merkle sum tree
+/// * `left_node_balances`: The balances of the penultimate left node of the merkle sum tree
+/// * `right_node_hash`: The hash of the penultimate right node of the merkle sum tree
+/// * `right_node_balances`: The balances of the penultimate right node of the merkle sum tree
+/// * `assets_sum`: The sum of the assets of the CEX for each asset
+/// * `root_hash`: The root hash of the merkle sum tree
 #[derive(Clone)]
 pub struct SolvencyCircuit<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     pub left_node_hash: Fp,
@@ -27,10 +40,12 @@ pub struct SolvencyCircuit<const L: usize, const N_ASSETS: usize, const N_BYTES:
 impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
     for SolvencyCircuit<L, N_ASSETS, N_BYTES>
 {
+    /// Returns the number of public inputs of the circuit. It is 1 + N_ASSETS, namely the root hash of the merkle sum tree and the sum of the assets of the CEX for each asset
     fn num_instance(&self) -> Vec<usize> {
-        vec![1 + N_ASSETS] // root hash + assets sum
+        vec![1 + N_ASSETS]
     }
 
+    /// Returns the values of the public inputs of the circuit. The first value is the root hash of the merkle sum tree and the remaining values are the sum of the assets of the CEX for each asset
     fn instances(&self) -> Vec<Vec<Fp>> {
         let mut instances = vec![self.root_hash];
         instances.extend(self.assets_sum);
@@ -53,6 +68,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         }
     }
 
+    /// Initializes the circuit with the data of the merkle sum tree (identified by its path) and the assets sum
     pub fn init(path: &str, assets_sum: [Fp; N_ASSETS]) -> Self {
         assert_eq!((N_ASSETS * 2) + 2, L);
 
@@ -75,6 +91,23 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
     }
 }
 
+/// Configuration for the solvency circuit
+/// # Type Parameters
+///
+/// * `L`: The length of the hasher input, namely 2 + (2 * N_ASSETS)
+/// * `N_ASSETS`: The number of assets for which the solvency is verified.
+/// * `N_BYTES`: Range in which the balances should lie
+///
+/// # Fields
+///
+/// * `merkle_sum_tree_config`: Configuration for the merkle sum tree
+/// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 3 and RATE = 2
+/// * `instance`: Instance column used to store the public inputs
+/// * `lt_selector`: Selector to activate the less than constraint
+/// * `lt_config`: Configuration for the less than CHip
+/// 
+/// The circuit performs an additional constraint:
+/// * `lt_enable * (lt_config.is_lt - 1) = 0` (if `lt_enable` is toggled). It basically enforces the result of the less than chip to be 1.
 #[derive(Debug, Clone)]
 pub struct SolvencyConfig<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
@@ -86,7 +119,8 @@ pub struct SolvencyConfig<const L: usize, const N_ASSETS: usize, const N_BYTES: 
 
 impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
     SolvencyConfig<L, N_ASSETS, N_BYTES>
-{
+{   
+    /// Configures the circuit
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
         // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config with WIDTH 3
         let advices: [Column<Advice>; 4] = std::array::from_fn(|_| meta.advice_column());
@@ -146,7 +180,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         }
     }
 
-    // Enforce value in the cell passed as input to be less than the value in the instance column at row `index`.
+    /// Enforces value in the cell passed as input to be less than the value in the instance column at row `index`.
     pub fn enforce_less_than(
         &self,
         mut layouter: impl Layouter<Fp>,
@@ -186,7 +220,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         Ok(())
     }
 
-    // Enforce copy constraint check between input cell and instance column at row passed as input
+    /// Enforces copy constraint check between input cell and instance column at row passed as input
     pub fn expose_public(
         &self,
         mut layouter: impl Layouter<Fp>,

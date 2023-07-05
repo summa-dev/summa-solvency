@@ -18,6 +18,9 @@ use rand::rngs::OsRng;
 use snark_verifier_sdk::CircuitExt;
 use std::fs::File;
 
+/// Generate setup parameters for a circuit of size `k` where 2^k is the number of rows in the circuit.
+/// First checks if the trusted setup parameters are already generated and saved in the `ptau` folder with the name `hermez-raw-k`, if so, it loads them.
+/// If the trusted setup are not found in the `ptau` folder, an unsafe trusted setup is generated and saved there.
 pub fn generate_setup_params(k: u32) -> ParamsKZG<Bn256> {
     let ptau_path = format!("ptau/hermez-raw-{}", k);
 
@@ -40,6 +43,7 @@ pub fn generate_setup_params(k: u32) -> ParamsKZG<Bn256> {
     }
 }
 
+/// Generates a proof given the public setup, the proving key, the initiated circuit and its public inputs.
 pub fn full_prover<C: Circuit<Fp> + CircuitExt<Fp>>(
     params: &ParamsKZG<Bn256>,
     pk: &ProvingKey<G1Affine>,
@@ -66,6 +70,7 @@ pub fn full_prover<C: Circuit<Fp> + CircuitExt<Fp>>(
     proof
 }
 
+/// Verifies a proof given the public setup, the verification key, the proof and the public inputs of the circuit.
 pub fn full_verifier(
     params: &ParamsKZG<Bn256>,
     vk: &VerifyingKey<G1Affine>,
