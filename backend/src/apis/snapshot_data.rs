@@ -29,7 +29,7 @@ const N_BYTES: usize = 31; // 248 / 8
 const N_ASSETS: usize = 2;
 
 #[derive(Debug)]
-struct SnapShotData<const N_ASSETS: usize> {
+struct SnapshotData<const N_ASSETS: usize> {
     exchange_id: String,
     commit_hash: Fp,                          // May change type later
     entries: HashMap<usize, Entry<N_ASSETS>>, // TODO: change to `HashMap<Name, Entry<N_ASSETS>>`
@@ -56,10 +56,10 @@ struct InclusionProof<const N_ASSETS: usize> {
     proof: Vec<u8>,
 }
 
-impl<const N_ASSETS: usize> SnapShotData<N_ASSETS> {
-    pub fn new(exchange_id: &str, entry_csv: &str, asset_csv: &str) -> SnapShotData<N_ASSETS> {
+impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
+    pub fn new(exchange_id: &str, entry_csv: &str, asset_csv: &str) -> SnapshotData<N_ASSETS> {
         let assets = parse_csv_to_assets(asset_csv).unwrap();
-        // TODO: consider panulmate level of node in the `SnapShotData` struct
+        // TODO: consider panulmate level of node in the `SnapshotData` struct
 
         let mst = MerkleSumTree::<N_ASSETS>::new(entry_csv).unwrap();
 
@@ -72,7 +72,7 @@ impl<const N_ASSETS: usize> SnapShotData<N_ASSETS> {
 
         let root_node = mst.root();
 
-        SnapShotData {
+        SnapshotData {
             exchange_id: exchange_id.to_owned(),
             commit_hash: root_node.hash,
             entries,
@@ -244,7 +244,7 @@ mod tests {
     fn test_snapshot_data_initialization() {
         let entry_csv = "src/apis/csv/entry_16.csv";
         let asset_csv = "src/apis/csv/assets_2.csv";
-        let snapshot_data = SnapShotData::<2>::new("CEX_1", entry_csv, asset_csv);
+        let snapshot_data = SnapshotData::<2>::new("CEX_1", entry_csv, asset_csv);
 
         // Check assets
         assert!(snapshot_data.assets[0].name.contains(&"eth".to_string()));
@@ -257,7 +257,7 @@ mod tests {
     fn test_snapshot_data_generate_proof() {
         let entry_csv = "src/apis/csv/entry_16.csv";
         let asset_csv = "src/apis/csv/assets_2.csv";
-        let mut snapshot_data = SnapShotData::<2>::new("CEX_1", entry_csv, asset_csv);
+        let mut snapshot_data = SnapshotData::<2>::new("CEX_1", entry_csv, asset_csv);
 
         assert!(snapshot_data.user_proofs.is_none());
         assert!(snapshot_data.on_chain_proof.is_none());
