@@ -1,10 +1,10 @@
-// The number of CEX asset balances for each user account
+/// The number of CEX asset balances for each user account
 pub const N_ASSETS: usize = 2;
-// A Merkle sum tree helper dimension parameter used to lay out the cells deoending on the number of assets
+/// A Merkle sum tree helper dimension parameter used to lay out the cells deoending on the number of assets
 pub const MST_WIDTH: usize = 3 * (1 + N_ASSETS);
-// Poseidon hasher parameter for Length used in MST nodes (nodes take left hash, left assets, right hash, right assets as inputs)
+/// Poseidon hasher parameter for Length used in MST nodes (nodes take left hash, left assets, right hash, right assets as inputs)
 pub const L_NODE: usize = 2 * (1 + N_ASSETS);
-// Poseidon hasher parameter for Length used in MST entries (aka levaes, they only take one hash and one set of assets as input)
+/// Poseidon hasher parameter for Length used in MST entries (aka levaes, they only take one hash and one set of assets as input)
 pub const L_ENTRY: usize = 1 + N_ASSETS;
-// Overflow limit for the accumulated balances in the proof of solvency
+/// Overflow limit for the accumulated balances in the proof of solvency
 pub const MOD_BITS: usize = 248;

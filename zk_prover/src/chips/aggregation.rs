@@ -5,7 +5,14 @@ use halo2_proofs::{
 };
 use snark_verifier_sdk::halo2::aggregation::AggregationConfig;
 
-/// Wrapper around AggregationConfig that adds a vector of instance columns. Specifically an instance column for each input SNARK of the aggregation circuit.
+/// Wrapper structure around AggregationConfig
+///
+/// The wrapper adds a vector of instance columns. Specifically an instance column for each input SNARK of the aggregation circuit.
+///
+/// # Fields
+///
+/// * `aggregation_config`: The configuration for the inner [snark_verifier_sdk::halo2::aggregation::AggregationConfig]
+/// * `instances`: The instance columns for each input SNARK of the aggregation circuit.
 #[derive(Clone)]
 pub struct WrappedAggregationConfig<const N_SNARK: usize> {
     pub aggregation_config: AggregationConfig,
@@ -13,6 +20,8 @@ pub struct WrappedAggregationConfig<const N_SNARK: usize> {
 }
 
 impl<const N_SNARK: usize> WrappedAggregationConfig<N_SNARK> {
+    /// Configures the WrappedAggregation Chip.
+    /// Note that the aggregation config is configured after having configured the instances. Therefore, the instance column of the aggregation circuit is the last one.
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
         composition_bits: Vec<usize>,
@@ -24,7 +33,6 @@ impl<const N_SNARK: usize> WrappedAggregationConfig<N_SNARK> {
             meta.enable_equality(*instance);
         }
 
-        // Note that the aggregation config is configured after having configured the instances. Therefore, the instance column of the aggregation circuit is the last one
         let aggregation_config =
             AggregationConfig::configure(meta, composition_bits, overflow_bits);
 
@@ -34,7 +42,7 @@ impl<const N_SNARK: usize> WrappedAggregationConfig<N_SNARK> {
         }
     }
 
-    // Enforce copy constraint check between input cell and instance column at row passed as input
+    /// Enforces equality between input cell and instance column at a specific row
     pub fn expose_public(
         &self,
         mut layouter: impl Layouter<Fp>,

@@ -11,6 +11,7 @@ struct CsvEntry {
     balances: String,
 }
 
+/// Parses a CSV file stored at path into a vector of Entries
 pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
     path: P,
 ) -> Result<Vec<Entry<N_ASSETS>>, Box<dyn Error>> {
