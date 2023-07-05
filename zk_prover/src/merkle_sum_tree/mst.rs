@@ -15,6 +15,7 @@ use num_bigint::BigInt;
 /// # Type Parameters
 ///
 /// * `N_ASSETS`: The number of assets for each user account
+#[derive(Debug, Clone)]
 pub struct MerkleSumTree<const N_ASSETS: usize> {
     root: Node<N_ASSETS>,
     nodes: Vec<Vec<Node<N_ASSETS>>>,

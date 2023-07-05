@@ -68,11 +68,9 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         }
     }
 
-    /// Initializes the circuit with the data of the merkle sum tree (identified by its path) and the assets sum
-    pub fn init(path: &str, assets_sum: [Fp; N_ASSETS]) -> Self {
+/// Initializes the circuit with the merkle sum tree and the assets sum
+    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, assets_sum: [Fp; N_ASSETS]) -> Self {
         assert_eq!((N_ASSETS * 2) + 2, L);
-
-        let merkle_sum_tree = MerkleSumTree::<N_ASSETS>::new(path).unwrap();
 
         let (penultimate_node_left, penultimate_node_right) = merkle_sum_tree
             .penultimate_level_data()
