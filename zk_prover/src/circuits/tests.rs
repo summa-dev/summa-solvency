@@ -533,7 +533,7 @@ mod test {
         let proof_calldata =
             gen_evm_proof_shplonk(&params, &pk, circuit.clone(), instances.clone());
 
-        let yul_code_path = "src/contracts/SolvencyVerifier.yul";
+        let yul_code_path = "../contracts/src/SolvencyVerifier.yul";
 
         let deployment_code = gen_evm_verifier_shplonk::<SolvencyCircuit<L, N_ASSETS, N_BYTES>>(
             &params,
@@ -547,7 +547,7 @@ mod test {
             deployment_code.len()
         );
 
-        let sol_code_path = "src/contracts/SolvencyVerifier.sol";
+        let sol_code_path = "../contracts/src/SolvencyVerifier.sol";
 
         write_verifier_sol_from_yul(yul_code_path, sol_code_path).unwrap();
 
