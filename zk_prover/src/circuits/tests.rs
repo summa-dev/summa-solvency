@@ -7,10 +7,7 @@ mod test {
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
         solvency::SolvencyCircuit,
-        utils::{
-            full_prover, full_verifier, gen_proof_solidity_calldata, generate_setup_params,
-            get_verification_cost, write_verifier_sol_from_yul,
-        },
+        utils::{full_prover, full_verifier, generate_setup_params, get_verification_cost},
     };
     use crate::merkle_sum_tree::{MerkleSumTree, N_ASSETS, RANGE_BITS};
     use ark_std::{end_timer, start_timer};
@@ -63,6 +60,7 @@ mod test {
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
         // Note: the dimension of the circuit used to generate the keys must be the same as the dimension of the circuit used to generate the proof
         // In this case, the dimension are represented by the heigth of the merkle tree
+
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
@@ -71,6 +69,34 @@ mod test {
 
         // Only now we can instantiate the circuit with the actual inputs
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+
+        // Generate the proof
+        let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
+
+        // verify the proof to be true
+        assert!(full_verifier(&params, &vk, proof, circuit.instances()));
+    }
+
+    #[test]
+    fn test_valid_solvency_with_full_prover() {
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
+
+        // we generate a universal trusted setup of our own for testing
+        let params = generate_setup_params(10);
+
+        // we generate the verification key and the proving key
+        // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
+        // Note: the dimension of the circuit used to generate the keys must be the same as the dimension of the circuit used to generate the proof
+        let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
+        let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
+
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        // Only now we can instantiate the circuit with the actual inputs
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, assets_sum);
 
         // Generate the proof
         let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
@@ -530,16 +556,15 @@ mod test {
         let num_instances = circuit.num_instance();
         let instances = circuit.instances();
 
-        let proof_calldata =
-            gen_evm_proof_shplonk(&params, &pk, circuit.clone(), instances.clone());
+        let proof_calldata = gen_evm_proof_shplonk(&params, &pk, circuit, instances.clone());
 
-        let yul_code_path = "../contracts/src/SolvencyVerifier.yul";
+        // let yul_code_path = "../contracts/src/SolvencyVerifier.yul";
 
         let deployment_code = gen_evm_verifier_shplonk::<SolvencyCircuit<L, N_ASSETS, N_BYTES>>(
             &params,
             pk.get_vk(),
             num_instances,
-            Some(Path::new(yul_code_path)),
+            None, // Some(Path::new(yul_code_path)),
         );
 
         println!(
@@ -547,14 +572,14 @@ mod test {
             deployment_code.len()
         );
 
-        let sol_code_path = "../contracts/src/SolvencyVerifier.sol";
+        // let sol_code_path = "../contracts/src/SolvencyVerifier.sol";
 
-        write_verifier_sol_from_yul(yul_code_path, sol_code_path).unwrap();
+        // write_verifier_sol_from_yul(yul_code_path, sol_code_path).unwrap();
 
         let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
 
-        let calldata = gen_proof_solidity_calldata(&params, &pk, circuit);
-        println!("calldata {:?}", calldata);
+        // let calldata = gen_proof_solidity_calldata(&params, &pk, circuit);
+        // println!("calldata {:?}", calldata);
 
         assert!(
             (350000..=450000).contains(&gas_cost),
@@ -692,70 +717,6 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 0 }
                 },
             ])
-        );
-    }
-
-    #[test]
-    #[ignore]
-    fn test_valid_solvency_with_full_recursive_prover() {
-        // params for the aggregation circuit
-        let params_agg = generate_setup_params(23);
-
-        // downsize params for our application specific snark
-        let mut params_app = params_agg.clone();
-        params_app.downsize(K);
-
-        // Make the first asset sum more than liabilities sum (556862)
-        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
-
-        // generate the verification key and the proving key for the application circuit, using an empty circuit
-        let circuit_app = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
-
-        let vk_app = keygen_vk(&params_app, &circuit_app).expect("vk generation should not fail");
-        let pk_app =
-            keygen_pk(&params_app, vk_app, &circuit_app).expect("pk generation should not fail");
-
-        let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
-
-        // Only now we can instantiate the circuit with the actual inputs
-        let circuit_app =
-            SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, assets_sum);
-
-        let snark_app = [(); 1]
-            .map(|_| gen_snark_shplonk(&params_app, &pk_app, circuit_app.clone(), None::<&str>));
-
-        const N_SNARK: usize = 1;
-
-        // create aggregation circuit
-        let agg_circuit = WrappedAggregationCircuit::<N_SNARK>::new(&params_agg, snark_app);
-
-        assert_eq!(agg_circuit.instances()[0], circuit_app.instances()[0]);
-
-        let start0 = start_timer!(|| "gen vk & pk");
-        // generate proving key for the aggregation circuit
-        let pk_agg = gen_pk(&params_agg, &agg_circuit.without_witnesses(), None);
-        end_timer!(start0);
-
-        let num_instances = agg_circuit.num_instance();
-        let instances = agg_circuit.instances();
-
-        let proof_calldata =
-            gen_evm_proof_shplonk(&params_agg, &pk_agg, agg_circuit, instances.clone());
-
-        let deployment_code = gen_evm_verifier_shplonk::<WrappedAggregationCircuit<N_SNARK>>(
-            &params_agg,
-            pk_agg.get_vk(),
-            num_instances,
-            Some(Path::new("src/contracts/SolvencyVerifier.yul")),
-        );
-
-        let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
-
-        // assert gas_cost to verify the proof on chain to be between 575000 and 590000
-        assert!(
-            (575000..=590000).contains(&gas_cost),
-            "gas_cost is not within the expected range"
         );
     }
 
