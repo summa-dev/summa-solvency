@@ -25,5 +25,6 @@ jobs:
         cargo fmt
     - name: Run tests
       run: |
+        npm install -g solc
         cd zk_prover
         cargo test --release --features dev-graph -- --nocapture
