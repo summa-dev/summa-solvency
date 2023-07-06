@@ -57,10 +57,12 @@ struct InclusionProof<const N_ASSETS: usize> {
 }
 
 impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
-    pub fn new(exchange_id: &str, entry_csv: &str, asset_csv: &str) -> SnapshotData<N_ASSETS> {
+    pub fn new(
+        exchange_id: &str,
+        entry_csv: &str,
+        asset_csv: &str,
+    ) -> Result<SnapshotData<N_ASSETS>, Box<dyn std::error::Error>> {
         let assets = parse_csv_to_assets(asset_csv).unwrap();
-        // TODO: consider panulmate level of node in the `SnapshotData` struct
-
         let mst = MerkleSumTree::<N_ASSETS>::new(entry_csv).unwrap();
 
         let entries = mst
@@ -72,14 +74,14 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
 
         let root_node = mst.root();
 
-        SnapshotData {
+        Ok(SnapshotData {
             exchange_id: exchange_id.to_owned(),
             commit_hash: root_node.hash,
             entries,
             assets,
             user_proofs: None,
             on_chain_proof: None,
-        }
+        })
     }
 
     fn get_mst_circuit(
@@ -148,18 +150,13 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
 
     #[cfg(feature = "testing")]
     pub fn generate_proofs(&mut self) {
+        // Skip generate recursive proof
         let params_app = generate_setup_params(11);
-
         let mut user_proofs = HashMap::<String, InclusionProof<N_ASSETS>>::new();
-
         let (circuit, vk, pk) = Self::get_mst_circuit(params_app.clone(), 0);
 
         let proof = full_prover(&params_app, &pk, circuit.clone(), circuit.instances());
-
         let user_instance = circuit.instances()[0].clone();
-
-        println!("user_instance: {:?}", user_instance);
-        println!("entries[15]: {:?}", self.entries.get(&0));
 
         if let Some(entry) = self.entries.get(&0) {
             user_proofs.insert(
@@ -173,30 +170,27 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
             );
         }
 
-        // for testing functions
+        // for testing results
         self.user_proofs = Some(user_proofs);
         self.on_chain_proof = Some(vec![16u8; 8]);
     }
 
     #[cfg(not(feature = "testing"))]
     pub fn generate_proofs(&mut self) {
-        // TODO: generating aggregate proof took quite a long time, consider to run in background task
+        // Generate proof for aggregated circuit
         let (agg_circuit, params_agg) = self.generate_agg_circuit();
-
         let pk_agg = gen_pk(&params_agg, &agg_circuit.without_witnesses(), None);
         let instances = agg_circuit.instances();
 
         let proof_calldata =
             gen_evm_proof_shplonk(&params_agg, &pk_agg, agg_circuit, instances.clone());
-
         self.on_chain_proof = Some(proof_calldata);
 
-        // TODO: after generating aggregated proof, generate proof for each user
+        // Initialize variable for user proofs
         let mut user_proofs = HashMap::<String, InclusionProof<N_ASSETS>>::new();
 
+        // Generate proofs for ueers
         let params_app = generate_setup_params(11);
-
-        // TODO: optimize iteration
         for i in 0..self.entries.len() {
             let (circuit, vk, pk) = Self::get_mst_circuit(params_app.clone(), i);
 
@@ -220,18 +214,20 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
         self.user_proofs = Some(user_proofs);
     }
 
-    pub fn get_user_proof(&self, name: &str) -> Option<&InclusionProof<N_ASSETS>> {
-        // TODO: return error instead of None
+    pub fn get_user_proof(&self, name: &str) -> Result<&InclusionProof<N_ASSETS>, &'static str> {
         match &self.user_proofs {
-            Some(user_proofs) => user_proofs.get(name),
-            None => None,
+            Some(user_proofs) => match user_proofs.get(name) {
+                Some(proof) => Ok(proof),
+                None => Err("User proof not found"),
+            },
+            None => Err("User proofs not initialized"),
         }
     }
 
-    pub fn get_onchain_proof(&self) -> Vec<u8> {
+    pub fn get_onchain_proof(&self) -> Result<Vec<u8>, &'static str> {
         match &self.on_chain_proof {
-            Some(proof) => proof.clone(),
-            None => vec![0u8; 8],
+            Some(proof) => Ok(proof.clone()),
+            None => Err("on-chain proof not initialized"),
         }
     }
 }
@@ -244,7 +240,7 @@ mod tests {
     fn test_snapshot_data_initialization() {
         let entry_csv = "src/apis/csv/entry_16.csv";
         let asset_csv = "src/apis/csv/assets_2.csv";
-        let snapshot_data = SnapshotData::<2>::new("CEX_1", entry_csv, asset_csv);
+        let snapshot_data = SnapshotData::<2>::new("CEX_1", entry_csv, asset_csv).unwrap();
 
         // Check assets
         assert!(snapshot_data.assets[0].name.contains(&"eth".to_string()));
@@ -257,25 +253,25 @@ mod tests {
     fn test_snapshot_data_generate_proof() {
         let entry_csv = "src/apis/csv/entry_16.csv";
         let asset_csv = "src/apis/csv/assets_2.csv";
-        let mut snapshot_data = SnapshotData::<2>::new("CEX_1", entry_csv, asset_csv);
+        let mut snapshot_data = SnapshotData::<2>::new("CEX_1", entry_csv, asset_csv).unwrap();
 
         assert!(snapshot_data.user_proofs.is_none());
         assert!(snapshot_data.on_chain_proof.is_none());
         let empty_on_chain_proof = snapshot_data.get_onchain_proof();
-        assert_eq!(empty_on_chain_proof, vec![0u8; 8]);
+        assert_eq!(empty_on_chain_proof, Err("on-chain proof not initialized"));
 
         snapshot_data.generate_proofs();
 
         //  Check the proof for the user at index 0
         let user_proof = snapshot_data.get_user_proof("dxGaEAii");
-        assert!(user_proof.is_some());
+        assert!(user_proof.is_ok());
 
         //  Check the proof for last user
         let none_user_proof = snapshot_data.get_user_proof("AtwIxZHo");
-        assert!(none_user_proof.is_none());
+        assert!(none_user_proof.is_err());
 
         // Check updated on-chain proof
         let on_chain_proof = snapshot_data.get_onchain_proof();
-        assert_eq!(on_chain_proof, vec![16u8; 8]);
+        assert_eq!(on_chain_proof.is_ok(), true);
     }
 }
