@@ -554,6 +554,7 @@ mod test {
         let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
 
         let calldata = gen_proof_solidity_calldata(&params, &pk, circuit);
+        println!("calldata: {:?}", calldata);
 
         assert!(
             (350000..=450000).contains(&gas_cost),

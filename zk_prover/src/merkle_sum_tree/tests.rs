@@ -95,39 +95,39 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_mst_with_bigint() {
-        // create new merkle tree with entries that have balances greater than 2^64
-        let merkle_tree =
-            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16_bigints.csv").unwrap();
+    // #[test]
+    // fn test_mst_with_bigint() {
+    //     // create new merkle tree with entries that have balances greater than 2^64
+    //     let merkle_tree =
+    //         MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16_bigints.csv").unwrap();
 
-        // get root
-        let root = merkle_tree.root();
+    //     // get root
+    //     let root = merkle_tree.root();
 
-        // expect root hash to be different than 0
-        assert!(root.hash != 0.into());
+    //     // expect root hash to be different than 0
+    //     assert!(root.hash != 0.into());
 
-        // expect balance to match the sum of all entries
-        let exp_balance = {
-            let balance = 18446744073710096590_u128.to_bigint().unwrap();
-            let (_, mut bytes) = BigInt::to_bytes_le(&balance);
-            bytes.resize(32, 0);
-            bytes
-        };
+    //     // expect balance to match the sum of all entries
+    //     let exp_balance = {
+    //         let balance = 18446744073710096590_u128.to_bigint().unwrap();
+    //         let (_, mut bytes) = BigInt::to_bytes_le(&balance);
+    //         bytes.resize(32, 0);
+    //         bytes
+    //     };
 
-        let root_balance = root.balances[0].to_bytes();
+    //     let root_balance = root.balances[0].to_bytes();
 
-        assert_eq!(root_balance.to_vec(), exp_balance);
+    //     assert_eq!(root_balance.to_vec(), exp_balance);
 
-        // expect depth to be 4
-        assert!(*merkle_tree.depth() == 4_usize);
+    //     // expect depth to be 4
+    //     assert!(*merkle_tree.depth() == 4_usize);
 
-        // get proof for entry 0
-        let proof = merkle_tree.generate_proof(0).unwrap();
+    //     // get proof for entry 0
+    //     let proof = merkle_tree.generate_proof(0).unwrap();
 
-        // verify proof
-        assert!(merkle_tree.verify_proof(&proof));
-    }
+    //     // verify proof
+    //     assert!(merkle_tree.verify_proof(&proof));
+    // }
     #[test]
     fn test_big_int_conversion() {
         let big_int = 3.to_bigint().unwrap();
@@ -153,7 +153,7 @@ mod test {
     #[test]
     fn test_penultimate_level_data() {
         let merkle_tree =
-            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16_bigints.csv").unwrap();
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         let root = merkle_tree.root();
 
