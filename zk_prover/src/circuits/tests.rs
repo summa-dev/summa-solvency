@@ -530,16 +530,15 @@ mod test {
         let num_instances = circuit.num_instance();
         let instances = circuit.instances();
 
-        let proof_calldata =
-            gen_evm_proof_shplonk(&params, &pk, circuit.clone(), instances.clone());
+        let proof_calldata = gen_evm_proof_shplonk(&params, &pk, circuit, instances.clone());
 
-        let yul_code_path = "../contracts/src/SolvencyVerifier.yul";
+        // let yul_code_path = "../contracts/src/SolvencyVerifier.yul";
 
         let deployment_code = gen_evm_verifier_shplonk::<SolvencyCircuit<L, N_ASSETS, N_BYTES>>(
             &params,
             pk.get_vk(),
             num_instances,
-            Some(Path::new(yul_code_path)),
+            None, // Some(Path::new(yul_code_path)),
         );
 
         println!(
@@ -547,14 +546,13 @@ mod test {
             deployment_code.len()
         );
 
-        let sol_code_path = "../contracts/src/SolvencyVerifier.sol";
+        // let sol_code_path = "../contracts/src/SolvencyVerifier.sol";
 
-        write_verifier_sol_from_yul(yul_code_path, sol_code_path).unwrap();
+        // write_verifier_sol_from_yul(yul_code_path, sol_code_path).unwrap();
 
         let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
 
-        let calldata = gen_proof_solidity_calldata(&params, &pk, circuit);
-        println!("calldata: {:?}", calldata);
+        // let calldata = gen_proof_solidity_calldata(&params, &pk, circuit);
 
         assert!(
             (350000..=450000).contains(&gas_cost),
