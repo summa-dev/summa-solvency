@@ -1,4 +1,6 @@
-use crate::chips::less_than_vertical::{LtVerticalChip, LtVerticalConfig, LtVerticalInstruction};
+use crate::chips::less_than::less_than_vertical::{
+    LtVerticalChip, LtVerticalConfig, LtVerticalInstruction,
+};
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
