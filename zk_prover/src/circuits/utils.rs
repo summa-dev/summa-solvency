@@ -109,7 +109,8 @@ pub fn full_verifier(
     .is_ok()
 }
 
-// patterned after https://github.com/zkonduit/ezkl/blob/main/src/eth.rs#L326-L602
+/// Generate a solidity verifier contract starting from its yul code.
+/// patterned after https://github.com/zkonduit/ezkl/blob/main/src/eth.rs#L326-L602
 fn fix_verifier_sol(yul_code_path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
     let file = File::open(yul_code_path.clone())?;
     let reader = BufReader::new(file);
@@ -390,6 +391,7 @@ fn fix_verifier_sol(yul_code_path: PathBuf) -> Result<String, Box<dyn std::error
     Ok(contract)
 }
 
+/// Generate the proof Solidity calldata for a circuit
 pub fn gen_proof_solidity_calldata<C: Circuit<Fp> + CircuitExt<Fp>>(
     params: &ParamsKZG<Bn256>,
     pk: &ProvingKey<G1Affine>,
@@ -415,6 +417,7 @@ pub fn gen_proof_solidity_calldata<C: Circuit<Fp> + CircuitExt<Fp>>(
     (solidity_proof_calldata, public_inputs)
 }
 
+/// Generates the solidity code for the verification contract starting from the yul code (yul_code_path) and writes it to sol_code_path
 pub fn write_verifier_sol_from_yul(
     yul_code_path: &str,
     sol_code_path: &str,
@@ -427,6 +430,12 @@ pub fn write_verifier_sol_from_yul(
     Ok(())
 }
 
+/// Compiles the verification protcol and returns the cost estimate
+/// num_instance indicates the number of values in the instance column of the circuit. If there are more than one instance column, num_instance is equal to the sum of the number of values in each instance column.
+/// num_commitment is equal to the number of witness polynomials + the number of chunks of the quotient polynomial
+/// num_evaluation is equal to number of evaluations points of the polynomials that are part of the transcript
+/// num_msm indicates the number of msm operations that are part of the protocol
+/// num_pairing indicates the number of pairing operations that are part of the protocol
 pub fn get_verification_cost<C: Circuit<Fp> + CircuitExt<Fp>>(
     params: &ParamsKZG<Bn256>,
     pk: &ProvingKey<G1Affine>,

@@ -117,6 +117,8 @@ mod test {
         let pk_agg = gen_pk(&params_agg, &agg_circuit.without_witnesses(), None);
         end_timer!(start0);
 
+        get_verification_cost(&params_agg, &pk_agg, agg_circuit.clone());
+
         let num_instances = agg_circuit.num_instance();
         let instances = agg_circuit.instances();
 
@@ -129,6 +131,12 @@ mod test {
             num_instances,
             None,
         );
+
+        println!(
+            "deployment_code length: {:?}, should be less than 24576 to be deployable",
+            deployment_code.len()
+        );
+
         let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
 
         // assert gas_cost to verify the proof on chain to be between 575000 and 590000
