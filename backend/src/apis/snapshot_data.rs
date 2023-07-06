@@ -90,6 +90,7 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
 
     fn get_mst_circuit(
         params: ParamsKZG<Bn256>,
+        entry_csv: &str,
         user_index: usize,
     ) -> (
         MstInclusionCircuit<LEVELS, L, N_ASSETS>,
@@ -102,10 +103,8 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let inclusion_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/apis/csv/entry_16.csv", // TODO: optimize this, inefficient to read from file again
-            user_index,
-        );
+        let inclusion_circuit =
+            MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(entry_csv, user_index);
 
         return (inclusion_circuit, vk, pk);
     }
@@ -113,6 +112,7 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
     fn get_solvency_circuit(
         &self,
         params: ParamsKZG<Bn256>,
+        entry_csv: &str,
     ) -> (SolvencyCircuit<L, N_ASSETS, N_BYTES>, ProvingKey<G1Affine>) {
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
@@ -133,13 +133,15 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let solvency_circuit =
-            SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init("src/apis/csv/entry_16.csv", assets_sum); // TODO: get file path from struct or else
+        let solvency_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(entry_csv, assets_sum);
 
         return (solvency_circuit, pk);
     }
 
-    fn generate_agg_circuit(&mut self) -> (WrappedAggregationCircuit<2>, ParamsKZG<Bn256>) {
+    fn generate_agg_circuit(
+        &mut self,
+        entry_csv: &str,
+    ) -> (WrappedAggregationCircuit<2>, ParamsKZG<Bn256>) {
         // TODO: make it background running in future task
         // we generate a universal trusted setup of our own for testing
         let params_agg = generate_setup_params(23);
@@ -149,10 +151,12 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
         params_app.downsize(K);
 
         // solvency proof
-        let (solvency_circuit, solvency_pk) = Self::get_solvency_circuit(&self, params_app.clone());
+        let (solvency_circuit, solvency_pk) =
+            Self::get_solvency_circuit(&self, params_app.clone(), entry_csv);
 
         // user proof
-        let (mst_inclusion_circuit, _, user_pk) = Self::get_mst_circuit(params_app.clone(), 0);
+        let (mst_inclusion_circuit, _, user_pk) =
+            Self::get_mst_circuit(params_app.clone(), entry_csv, 0);
 
         let snark_app = [
             gen_snark_shplonk(&params_app, &user_pk, mst_inclusion_circuit, None::<&str>),
@@ -165,7 +169,7 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
     }
 
     #[cfg(feature = "testing")]
-    pub fn generate_proofs(&mut self) {
+    pub fn generate_proofs(&mut self, entry_csv: &str) {
         // Skip generate recursive proof
         let params_app = generate_setup_params(11);
         let mut user_proofs = HashMap::<String, InclusionProof<N_ASSETS>>::new();
@@ -192,9 +196,9 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
     }
 
     #[cfg(not(feature = "testing"))]
-    pub fn generate_proofs(&mut self) {
+    pub fn generate_proofs(&mut self, entry_csv: &str) {
         // Generate proof for aggregated circuit
-        let (agg_circuit, params_agg) = self.generate_agg_circuit();
+        let (agg_circuit, params_agg) = self.generate_agg_circuit(entry_csv);
         let pk_agg = gen_pk(&params_agg, &agg_circuit.without_witnesses(), None);
         let instances = agg_circuit.instances();
 
@@ -208,7 +212,7 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
         // Generate proofs for ueers
         let params_app = generate_setup_params(11);
         for i in 0..self.entries.len() {
-            let (circuit, vk, pk) = Self::get_mst_circuit(params_app.clone(), i);
+            let (circuit, vk, pk) = Self::get_mst_circuit(params_app.clone(), entry_csv, i);
 
             let proof = full_prover(&params_app, &pk, circuit.clone(), circuit.instances());
 
@@ -276,7 +280,7 @@ mod tests {
         let empty_on_chain_proof = snapshot_data.get_onchain_proof();
         assert_eq!(empty_on_chain_proof, Err("on-chain proof not initialized"));
 
-        snapshot_data.generate_proofs();
+        snapshot_data.generate_proofs(entry_csv);
 
         //  Check the proof for the user at index 0
         let user_proof = snapshot_data.get_user_proof("dxGaEAii");
