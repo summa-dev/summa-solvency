@@ -1,12 +1,15 @@
 #[cfg(test)]
 mod test {
 
+    use std::path::Path;
+
     use crate::circuits::{
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
+        solvency::SolvencyCircuit,
         utils::{full_prover, full_verifier, generate_setup_params},
     };
-    use crate::merkle_sum_tree::N_ASSETS;
+    use crate::merkle_sum_tree::{MerkleSumTree, MOD_BITS, N_ASSETS};
     use ark_std::{end_timer, start_timer};
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
@@ -25,12 +28,16 @@ mod test {
     const LEVELS: usize = 4;
     const L: usize = 2 + (N_ASSETS * 2);
     const K: u32 = 11;
+    const N_BYTES: usize = MOD_BITS / 8;
 
     #[test]
     fn test_valid_merkle_sum_tree() {
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
         for user_index in 0..16 {
             let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-                "src/merkle_sum_tree/csv/entry_16.csv",
+                merkle_sum_tree.clone(),
                 user_index,
             );
 
@@ -56,11 +63,11 @@ mod test {
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
 
         // Generate the proof
         let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
@@ -86,11 +93,11 @@ mod test {
         let pk_app =
             keygen_pk(&params_app, vk_app, &circuit_app).expect("pk generation should not fail");
 
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let snark_app = [(); 1]
             .map(|_| gen_snark_shplonk(&params_app, &pk_app, circuit_app.clone(), None::<&str>));
@@ -145,11 +152,11 @@ mod test {
         let pk_app =
             keygen_pk(&params_app, vk_app, &circuit_app).expect("pk generation should not fail");
 
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let snark_app = [(); 1]
             .map(|_| gen_snark_shplonk(&params_app, &pk_app, circuit_app.clone(), None::<&str>));
@@ -188,10 +195,10 @@ mod test {
     // Passing an invalid root hash in the instance column should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_root_hash() {
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let mut instances = circuit.instances();
         let invalid_root_hash = Fp::from(1000u64);
@@ -229,11 +236,11 @@ mod test {
         let vk = keygen_vk(&params, &circuit).expect("vk should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk should not fail");
 
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let invalid_root_hash = Fp::from(1000u64);
 
@@ -252,10 +259,10 @@ mod test {
     // - the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_invalid_leaf_hash_as_witness() {
-        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let instances = circuit.instances();
 
@@ -295,10 +302,10 @@ mod test {
     // Passing an invalid leaf hash in the instance column should fail the permutation check between the (valid) leaf hash added as part of the witness and the instance column leaf hash
     #[test]
     fn test_invalid_leaf_hash_as_instance() {
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let mut instances = circuit.instances();
         let invalid_leaf_hash = Fp::from(1000u64);
@@ -330,10 +337,11 @@ mod test {
     // - The root hash that doesn't match the expected one.
     #[test]
     fn test_invalid_leaf_balance_as_witness() {
-        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        let mut circuit =
+            MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree.clone(), 0);
 
         // We need to extract the valid instances before invalidating the circuit
         let instances = circuit.instances();
@@ -360,10 +368,7 @@ mod test {
             ])
         );
 
-        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
 
         // We need to extract the valid instances before invalidating the circuit
         let instances = circuit.instances();
@@ -393,10 +398,10 @@ mod test {
     // Passing a non binary index should fail the bool constraint inside "assign nodes hashes per merkle tree level" and "assign nodes balances per asset" region and the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_non_binary_index() {
-        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let instances = circuit.instances();
 
@@ -450,10 +455,10 @@ mod test {
     // Swapping the indices should fail the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_swapping_index() {
-        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let instances = circuit.instances();
 
@@ -477,6 +482,219 @@ mod test {
                     location: FailureLocation::OutsideRegion { row: 1 }
                 },
             ])
+        );
+    }
+
+    // Passing assets_sum that are less than the liabilities sum should not fail the solvency circuit
+    #[test]
+    fn test_valid_liabilities_less_than_assets() {
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        // Make the first asset sum more than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, assets_sum);
+
+        let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        valid_prover.assert_satisfied();
+    }
+
+    // Passing assets sum that is less than the liabilities sum should fail the solvency circuit
+    #[test]
+    fn test_invalid_assets_less_than_liabilities() {
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        // Make the first asset sum less than liabilities sum (556862)
+        let less_than_assets_sum_1st = [Fp::from(556861u64), Fp::from(556863u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            merkle_sum_tree.clone(),
+            less_than_assets_sum_1st,
+        );
+
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+                invalid_prover.verify(),
+                Err(vec![VerifyFailure::ConstraintNotSatisfied {
+                    constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                    location: FailureLocation::InRegion {
+                        region: (13, "enforce input cell to be less than value in instance column at row `index`").into(),
+                        offset: 0
+                    },
+                    cell_values: vec![
+                        // The zero means that is not less than
+                        (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                    ]
+                }])
+            );
+
+        // Make the second asset sum less than liabilities sum (556862)
+        let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            merkle_sum_tree.clone(),
+            less_than_assets_sum_2nd,
+        );
+
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+                invalid_prover.verify(),
+                Err(vec![VerifyFailure::ConstraintNotSatisfied {
+                    constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                    location: FailureLocation::InRegion {
+                        region: (14, "enforce input cell to be less than value in instance column at row `index`").into(),
+                        offset: 0
+                    },
+                    cell_values: vec![
+                        // The zero means that is not less than
+                        (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                    ]
+                }])
+            );
+
+        // Make both the balances less than liabilities sum (556862)
+        let less_than_assets_sum_both = [Fp::from(556861u64), Fp::from(556861u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            merkle_sum_tree,
+            less_than_assets_sum_both,
+        );
+
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+                invalid_prover.verify(),
+                Err(vec![
+                    VerifyFailure::ConstraintNotSatisfied {
+                        constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                        location: FailureLocation::InRegion {
+                            region: (13, "enforce input cell to be less than value in instance column at row `index`").into(),
+                            offset: 0
+                        },
+                        cell_values: vec![
+                            // The zero means that is not less than
+                            (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                        ]
+                    },
+                    VerifyFailure::ConstraintNotSatisfied {
+                        constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+                        location: FailureLocation::InRegion {
+                            region: (14, "enforce input cell to be less than value in instance column at row `index`").into(),
+                            offset: 0
+                        },
+                        cell_values: vec![
+                            // The zero means that is not less than
+                            (((Any::advice(), 4).into(), 0).into(), "0".to_string())
+                        ]
+                    }
+                ])
+            );
+    }
+
+    // Manipulating the liabilities to make it less than the assets sum should fail the solvency circuit because the root hash will not match
+    #[test]
+    fn test_invalid_manipulated_liabilties() {
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        // For the second asset, the assets_sum is less than the liabilities sum (556862)
+        let less_than_assets_sum_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
+
+        let mut circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(
+            merkle_sum_tree,
+            less_than_assets_sum_2nd,
+        );
+
+        // But actually, the CEX tries to manipulate the liabilities sum for the second asset to make it less than the assets sum
+        circuit.left_node_balances[1] = Fp::from(1u64);
+
+        // This should pass the less than constraint but generate a root hash that does not match the one passed in the instance
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (11, "permute state").into(),
+                        offset: 38
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 0 }
+                },
+            ])
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn test_valid_solvency_with_full_recursive_prover() {
+        // params for the aggregation circuit
+        let params_agg = generate_setup_params(23);
+
+        // downsize params for our application specific snark
+        let mut params_app = params_agg.clone();
+        params_app.downsize(K);
+
+        // Make the first asset sum more than liabilities sum (556862)
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        // generate the verification key and the proving key for the application circuit, using an empty circuit
+        let circuit_app = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
+
+        let vk_app = keygen_vk(&params_app, &circuit_app).expect("vk generation should not fail");
+        let pk_app =
+            keygen_pk(&params_app, vk_app, &circuit_app).expect("pk generation should not fail");
+
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        // Only now we can instantiate the circuit with the actual inputs
+        let circuit_app =
+            SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, assets_sum);
+
+        let snark_app = [(); 1]
+            .map(|_| gen_snark_shplonk(&params_app, &pk_app, circuit_app.clone(), None::<&str>));
+
+        const N_SNARK: usize = 1;
+
+        // create aggregation circuit
+        let agg_circuit = WrappedAggregationCircuit::<N_SNARK>::new(&params_agg, snark_app);
+
+        assert_eq!(agg_circuit.instances()[0], circuit_app.instances()[0]);
+
+        let start0 = start_timer!(|| "gen vk & pk");
+        // generate proving key for the aggregation circuit
+        let pk_agg = gen_pk(&params_agg, &agg_circuit.without_witnesses(), None);
+        end_timer!(start0);
+
+        let num_instances = agg_circuit.num_instance();
+        let instances = agg_circuit.instances();
+
+        let proof_calldata =
+            gen_evm_proof_shplonk(&params_agg, &pk_agg, agg_circuit, instances.clone());
+
+        let deployment_code = gen_evm_verifier_shplonk::<WrappedAggregationCircuit<N_SNARK>>(
+            &params_agg,
+            pk_agg.get_vk(),
+            num_instances,
+            Some(Path::new("src/contracts/SolvencyVerifier.yul")),
+        );
+
+        let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
+
+        // assert gas_cost to verify the proof on chain to be between 575000 and 590000
+        assert!(
+            (575000..=590000).contains(&gas_cost),
+            "gas_cost is not within the expected range"
         );
     }
 
@@ -740,20 +958,42 @@ mod test {
 
     #[cfg(feature = "dev-graph")]
     #[test]
-    fn print_merkle_sum_tree() {
+    fn print_mst_inclusion() {
         use plotters::prelude::*;
 
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-            "src/merkle_sum_tree/csv/entry_16.csv",
-            0,
-        );
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let root = BitMapBackend::new("prints/merkle-sum-tree-layout.png", (2048, 16384))
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+
+        let root = BitMapBackend::new("prints/mst-inclusion-layout.png", (2048, 16384))
             .into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root
-            .titled("Merkle Sum Tree Layout", ("sans-serif", 60))
+            .titled("Merkle Sum Tree Inclusion Layout", ("sans-serif", 60))
             .unwrap();
+
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(K, &circuit, &root)
+            .unwrap();
+    }
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_solvency_circuit() {
+        use plotters::prelude::*;
+
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, assets_sum);
+
+        let root =
+            BitMapBackend::new("prints/solvency-layout.png", (2048, 16384)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root.titled("Solvency Layout", ("sans-serif", 60)).unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
             .render(K, &circuit, &root)

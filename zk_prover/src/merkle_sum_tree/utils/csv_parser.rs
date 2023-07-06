@@ -1,4 +1,4 @@
-use crate::merkle_sum_tree::Entry;
+use crate::merkle_sum_tree::{Entry, MOD_BITS};
 use num_bigint::BigInt;
 use serde::Deserialize;
 use std::error::Error;
@@ -11,6 +11,7 @@ struct CsvEntry {
     balances: String,
 }
 
+/// Parses a CSV file stored at path into a vector of Entries
 pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
     path: P,
 ) -> Result<Vec<Entry<N_ASSETS>>, Box<dyn Error>> {
@@ -44,13 +45,13 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
         entries.push(entry);
     }
 
-    // modulus from bn256 curve impl => https://github.com/privacy-scaling-explorations/halo2curves/blob/main/src/bn256/fr.rs#L38
-    const MODULUS_STR: &str = "30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001";
-
-    // Iterate through the balance accumulator and throw error if any balance is larger than the modulus:
+    // Iterate through the balance accumulator and throw error if any balance is not in MOD_BITS range (0, 2 ** 248):
     for balance in balances_acc {
-        if balance > BigInt::parse_bytes(MODULUS_STR.as_bytes(), 16).unwrap() {
-            return Err("Balance is larger than the modulus".into());
+        if balance >= BigInt::from(2).pow(MOD_BITS as u32) {
+            return Err(
+                "Accumulated balance is not in the expected range, proof generation will fail!"
+                    .into(),
+            );
         }
     }
 

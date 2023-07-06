@@ -1,10 +1,12 @@
 use halo2_proofs::{circuit::Value, halo2curves::bn256::Fr as Fp};
 use num_bigint::BigUint;
 
+/// Converts a Field element to a BigUint
 fn fp_to_big_uint(f: Fp) -> BigUint {
     BigUint::from_bytes_le(f.to_bytes().as_slice())
 }
 
+/// Converts a Value<Fp> to a BigUint
 pub fn value_fp_to_big_uint(v: Value<Fp>) -> BigUint {
     let mut inner_value = Fp::zero();
     v.as_ref().map(|f| inner_value = inner_value.add(f));
@@ -12,8 +14,9 @@ pub fn value_fp_to_big_uint(v: Value<Fp>) -> BigUint {
     fp_to_big_uint(inner_value)
 }
 
-// the `bit_len` is related with size of range check table
-// the `number_of_limbs` is related with the number of advice column
+/// Decomposes a BigUint into a vector of Field elements
+/// `number_of_limbs` is the number of chunks to split the BigUint into
+/// `bit_len` is the number of bits in each chunk
 pub fn decompose_bigint_to_ubits(e: &BigUint, number_of_limbs: usize, bit_len: usize) -> Vec<Fp> {
     debug_assert!(bit_len <= 64);
 
@@ -49,8 +52,6 @@ pub fn decompose_bigint_to_ubits(e: &BigUint, number_of_limbs: usize, bit_len: u
 
 #[cfg(test)]
 mod tests {
-    // use halo2_proofs::halo2curves::ff::{PrimeField};
-
     use super::*;
 
     #[test]
