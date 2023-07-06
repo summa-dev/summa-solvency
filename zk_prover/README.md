@@ -62,22 +62,24 @@ Furthermore the benchmarking function `verify_zk_proof_benchmark` will also prin
 
 Run on MacBook Pro 2023, M2 Pro, 32GB RAM, 12 cores
 
+Benches run after PR #80 (`add solidity verifier`). In order to achieve small proof size, to be cheap to verify on-chain. We decreased the RANGE_BITS in which the balances should lie to 64 and reduced the rate of the Poseidon hash function to 1. 
+
 2^15 entries (32768) users, 2 assets
 
 | MST init     |
 | --------     |
-| 2.6274 s     |
+| 2.6274 s (+39.91%)    |
 
 For Merkle Sum Tree Proof of Inclusion circuit
 
 | VK Gen             | Pk Gen              | Proof Generation    | Proof Verification  | Proof Size (bytes) |
 | ------------------ | ------------------- | ------------------- | ------------------- | ------------------ |
-| 172.09 ms (+33.3%) | 63.307 ms (+2.496%) | 285.14 ms (-72.45%) | 4.7232 ms (-40.07%) | 2752   (-73.61%)   |
+| 172.09 ms (- 3.86%) | 98.160 ms (+55.05%.) | 447.11 ms (+56.80%) | 3.2016 ms (-32.22%) | 1760   (-36.05%) |
 
 For Proof of Solvency circuit
 
 | VK Gen               | Pk Gen   | Proof Generation | Proof Verification | Proof Size (bytes) |
 | ------               | ------   | ---------------- | ------------------ | ------------------ |
-| 77.363 ms (-29.44%)  | 30.850 ms (-46.47%) |    145.50ms (-89%)       |    4.5124 ms (-35.15%)       | 2752 (-76.11%)              |
+| 60.968 ms (-21.19%)  | 30.850 ms (-12.49%) |    129.37ms (-11.09%)       |    3.2417 ms (-28.16%)       | 1760 (-36.05%)              |
 
 

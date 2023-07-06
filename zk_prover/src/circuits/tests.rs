@@ -12,7 +12,7 @@ mod test {
             get_verification_cost, write_verifier_sol_from_yul,
         },
     };
-    use crate::merkle_sum_tree::{MerkleSumTree, MOD_BITS, N_ASSETS};
+    use crate::merkle_sum_tree::{MerkleSumTree, N_ASSETS, RANGE_BITS};
     use ark_std::{end_timer, start_timer};
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
@@ -31,7 +31,7 @@ mod test {
     const LEVELS: usize = 4;
     const L: usize = 2 + (N_ASSETS * 2);
     const K: u32 = 11;
-    const N_BYTES: usize = MOD_BITS / 8;
+    const N_BYTES: usize = RANGE_BITS / 8;
 
     #[test]
     fn test_valid_merkle_sum_tree() {
@@ -223,8 +223,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (61, "permute state").into(),
-                        offset: 38
+                        region: (85, "permute state").into(),
+                        offset: 36
                     }
                 },
                 VerifyFailure::Permutation {
@@ -294,8 +294,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (61, "permute state").into(),
-                        offset: 38
+                        region: (85, "permute state").into(),
+                        offset: 36
                     }
                 },
                 VerifyFailure::Permutation {
@@ -368,8 +368,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (61, "permute state").into(),
-                        offset: 38
+                        region: (85, "permute state").into(),
+                        offset: 36
                     }
                 },
                 VerifyFailure::Permutation {
@@ -395,8 +395,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (61, "permute state").into(),
-                        offset: 38
+                        region: (85, "permute state").into(),
+                        offset: 36
                     }
                 },
                 VerifyFailure::Permutation {
@@ -451,8 +451,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (61, "permute state").into(),
-                        offset: 38
+                        region: (85, "permute state").into(),
+                        offset: 36
                     }
                 },
                 VerifyFailure::Permutation {
@@ -484,8 +484,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (61, "permute state").into(),
-                        offset: 38
+                        region: (85, "permute state").into(),
+                        offset: 36
                     }
                 },
                 VerifyFailure::Permutation {
@@ -559,7 +559,7 @@ mod test {
 
         // TO DO: fix gas cost
         assert!(
-            (0..=600000).contains(&gas_cost),
+            (350000..=450000).contains(&gas_cost),
             "gas_cost is not within the expected range"
         );
     }
@@ -585,12 +585,12 @@ mod test {
                 Err(vec![VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((7, "is_lt is 1").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (13, "enforce input cell to be less than value in instance column at row `index`").into(),
-                        offset: 0
+                        region: (19, "enforce input cell to be less than value in instance column at row `index`").into(),
+                        offset: 1
                     },
                     cell_values: vec![
                         // The zero means that is not less than
-                        (((Any::advice(), 2).into(), 0).into(), "0".to_string())
+                        (((Any::advice(), 1).into(), 0).into(), "0".to_string())
                     ]
                 }])
             );
@@ -610,12 +610,12 @@ mod test {
                 Err(vec![VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((7, "is_lt is 1").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (14, "enforce input cell to be less than value in instance column at row `index`").into(),
-                        offset: 0
+                        region: (20, "enforce input cell to be less than value in instance column at row `index`").into(),
+                        offset: 1
                     },
                     cell_values: vec![
                         // The zero means that is not less than
-                        (((Any::advice(), 2).into(), 0).into(), "0".to_string())
+                        (((Any::advice(), 1).into(), 0).into(), "0".to_string())
                     ]
                 }])
             );
@@ -636,23 +636,23 @@ mod test {
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((7, "is_lt is 1").into(), 0, "").into(),
                         location: FailureLocation::InRegion {
-                            region: (13, "enforce input cell to be less than value in instance column at row `index`").into(),
-                            offset: 0
+                            region: (19, "enforce input cell to be less than value in instance column at row `index`").into(),
+                            offset: 1
                         },
                         cell_values: vec![
                             // The zero means that is not less than
-                            (((Any::advice(), 2).into(), 0).into(), "0".to_string())
+                            (((Any::advice(), 1).into(), 0).into(), "0".to_string())
                         ]
                     },
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((7, "is_lt is 1").into(), 0, "").into(),
                         location: FailureLocation::InRegion {
-                            region: (14, "enforce input cell to be less than value in instance column at row `index`").into(),
-                            offset: 0
+                            region: (20, "enforce input cell to be less than value in instance column at row `index`").into(),
+                            offset: 1
                         },
                         cell_values: vec![
                             // The zero means that is not less than
-                            (((Any::advice(), 2).into(), 0).into(), "0".to_string())
+                            (((Any::advice(), 1).into(), 0).into(), "0".to_string())
                         ]
                     }
                 ])
@@ -685,8 +685,8 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (11, "permute state").into(),
-                        offset: 38
+                        region: (17, "permute state").into(),
+                        offset: 36
                     }
                 },
                 VerifyFailure::Permutation {

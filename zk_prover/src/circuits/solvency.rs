@@ -111,7 +111,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
 #[derive(Debug, Clone)]
 pub struct SolvencyConfig<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
-    pub poseidon_config: PoseidonConfig<3, 2, L>,
+    pub poseidon_config: PoseidonConfig<2, 1, L>,
     pub instance: Column<Instance>,
     pub lt_selector: Selector,
     pub lt_config: LtVerticalConfig<N_BYTES>,
@@ -122,23 +122,23 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
 {
     /// Configures the circuit
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
-        // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config with WIDTH 3
-        let advices: [Column<Advice>; 4] = std::array::from_fn(|_| meta.advice_column());
+        // the max number of advices columns needed is #WIDTH + 1 given requirement of the poseidon config
+        let advices: [Column<Advice>; 3] = std::array::from_fn(|_| meta.advice_column());
 
-        // the max number of fixed columns needed is 2 * WIDTH given requirement of the poseidon config with WIDTH 3
-        let fixed_columns: [Column<Fixed>; 6] = std::array::from_fn(|_| meta.fixed_column());
+        // the max number of fixed columns needed is 2 * WIDTH given requirement of the poseidon config
+        let fixed_columns: [Column<Fixed>; 4] = std::array::from_fn(|_| meta.fixed_column());
 
         // we also need 4 selectors - 3 simple selectors and 1 complex selector
         let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
         let complex_selector = meta.complex_selector();
 
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, 3 fixed columns for rc_a and 3 for rc_b
-        let poseidon_config = PoseidonChip::<PoseidonSpec, 3, 2, L>::configure(
+        let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, L>::configure(
             meta,
-            advices[0..3].try_into().unwrap(),
-            advices[3],
-            fixed_columns[0..3].try_into().unwrap(),
-            fixed_columns[3..6].try_into().unwrap(),
+            advices[0..2].try_into().unwrap(),
+            advices[2],
+            fixed_columns[0..2].try_into().unwrap(),
+            fixed_columns[2..4].try_into().unwrap(),
         );
 
         // enable permutation for all the advice columns
@@ -159,10 +159,10 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         let lt_config = LtVerticalChip::configure(
             meta,
             |meta| meta.query_selector(lt_selector),
+            |meta| meta.query_advice(advices[0], Rotation::prev()),
             |meta| meta.query_advice(advices[0], Rotation::cur()),
-            |meta| meta.query_advice(advices[1], Rotation::cur()),
+            advices[1],
             advices[2],
-            advices[3],
             fixed_columns[0],
             complex_selector,
         );
@@ -209,14 +209,14 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
                     || "copy value from instance column",
                     self.instance,
                     index,
-                    self.merkle_sum_tree_config.advice[1],
-                    0,
+                    self.merkle_sum_tree_config.advice[0],
+                    1,
                 )?;
 
                 // enable lt seletor
-                self.lt_selector.enable(&mut region, 0)?;
+                self.lt_selector.enable(&mut region, 1)?;
 
-                lt_chip.assign(&mut region, 0, lhs.value().copied(), rhs.value().copied())?;
+                lt_chip.assign(&mut region, 1, lhs.value().copied(), rhs.value().copied())?;
 
                 Ok(())
             },
@@ -259,7 +259,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
         let merkle_sum_tree_chip =
             MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
         let poseidon_chip =
-            PoseidonChip::<PoseidonSpec, 3, 2, L>::construct(config.poseidon_config.clone());
+            PoseidonChip::<PoseidonSpec, 2, 1, L>::construct(config.poseidon_config.clone());
         let lt_chip = LtVerticalChip::<N_BYTES>::construct(config.lt_config);
 
         // Assign the left penultimate hash and the left penultimate balances

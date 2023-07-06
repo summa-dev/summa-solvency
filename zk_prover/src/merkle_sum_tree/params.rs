@@ -7,4 +7,4 @@ pub const L_NODE: usize = 2 * (1 + N_ASSETS);
 /// Poseidon hasher parameter for Length used in MST entries (aka levaes, they only take one hash and one set of assets as input)
 pub const L_ENTRY: usize = 1 + N_ASSETS;
 /// Overflow limit for the accumulated balances in the proof of solvency
-pub const MOD_BITS: usize = 248;
+pub const RANGE_BITS: usize = 64;
