@@ -1,8 +1,10 @@
+use crate::chips::less_than::less_than_vertical::{
+    LtVerticalChip, LtVerticalConfig, LtVerticalInstruction,
+};
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::merkle_sum_tree::MerkleSumTree;
-use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
@@ -68,7 +70,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         }
     }
 
-/// Initializes the circuit with the merkle sum tree and the assets sum
+    /// Initializes the circuit with the merkle sum tree and the assets sum
     pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, assets_sum: [Fp; N_ASSETS]) -> Self {
         assert_eq!((N_ASSETS * 2) + 2, L);
 
@@ -102,8 +104,8 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
 /// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 3 and RATE = 2
 /// * `instance`: Instance column used to store the public inputs
 /// * `lt_selector`: Selector to activate the less than constraint
-/// * `lt_config`: Configuration for the less than CHip
-/// 
+/// * `lt_config`: Configuration for the less than chip
+///
 /// The circuit performs an additional constraint:
 /// * `lt_enable * (lt_config.is_lt - 1) = 0` (if `lt_enable` is toggled). It basically enforces the result of the less than chip to be 1.
 #[derive(Debug, Clone)]
@@ -112,12 +114,12 @@ pub struct SolvencyConfig<const L: usize, const N_ASSETS: usize, const N_BYTES: 
     pub poseidon_config: PoseidonConfig<3, 2, L>,
     pub instance: Column<Instance>,
     pub lt_selector: Selector,
-    pub lt_config: LtConfig<Fp, N_BYTES>,
+    pub lt_config: LtVerticalConfig<N_BYTES>,
 }
 
 impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
     SolvencyConfig<L, N_ASSETS, N_BYTES>
-{   
+{
     /// Configures the circuit
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
         // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config with WIDTH 3
@@ -126,8 +128,9 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         // the max number of fixed columns needed is 2 * WIDTH given requirement of the poseidon config with WIDTH 3
         let fixed_columns: [Column<Fixed>; 6] = std::array::from_fn(|_| meta.fixed_column());
 
-        // we also need 3 selectors: 2 for the MerkleSumTreeChip and 1 for the LtChip
+        // we also need 4 selectors - 3 simple selectors and 1 complex selector
         let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
+        let complex_selector = meta.complex_selector();
 
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, 3 fixed columns for rc_a and 3 for rc_b
         let poseidon_config = PoseidonChip::<PoseidonSpec, 3, 2, L>::configure(
@@ -153,11 +156,15 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         let lt_selector = selectors[2];
 
         // configure lt chip
-        let lt_config = LtChip::configure(
+        let lt_config = LtVerticalChip::configure(
             meta,
             |meta| meta.query_selector(lt_selector),
             |meta| meta.query_advice(advices[0], Rotation::cur()),
             |meta| meta.query_advice(advices[1], Rotation::cur()),
+            advices[2],
+            advices[3],
+            fixed_columns[0],
+            complex_selector,
         );
 
         // Gate that enforces that the result of the lt chip is 1 at the row in which the lt selector is enabled
@@ -184,7 +191,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         mut layouter: impl Layouter<Fp>,
         input_cell: &AssignedCell<Fp, Fp>,
         index: usize,
-        lt_chip: &LtChip<Fp, N_BYTES>,
+        lt_chip: &LtVerticalChip<N_BYTES>,
     ) -> Result<(), Error> {
         layouter.assign_region(
             || "enforce input cell to be less than value in instance column at row `index`",
@@ -253,7 +260,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
             MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
         let poseidon_chip =
             PoseidonChip::<PoseidonSpec, 3, 2, L>::construct(config.poseidon_config.clone());
-        let lt_chip = LtChip::<Fp, N_BYTES>::construct(config.lt_config);
+        let lt_chip = LtVerticalChip::<N_BYTES>::construct(config.lt_config);
 
         // Assign the left penultimate hash and the left penultimate balances
         let (left_node_hash, left_node_balances) = merkle_sum_tree_chip
