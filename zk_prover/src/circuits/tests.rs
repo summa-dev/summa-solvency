@@ -553,11 +553,8 @@ mod test {
 
         let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
 
-        // get solidity calldata
         let calldata = gen_proof_solidity_calldata(&params, &pk, circuit);
-        println!("calldata: {:?}", calldata);
 
-        // TO DO: fix gas cost
         assert!(
             (350000..=450000).contains(&gas_cost),
             "gas_cost is not within the expected range"

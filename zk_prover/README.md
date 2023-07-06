@@ -82,4 +82,8 @@ For Proof of Solvency circuit
 | ------               | ------   | ---------------- | ------------------ | ------------------ |
 | 60.968 ms (-21.19%)  | 30.850 ms (-12.49%) |    129.37ms (-11.09%)       |    3.2417 ms (-28.16%)       | 1760 (-36.05%)              |
 
+Gas cost to verify proof of solvency 
+
+403991 gas units (run `cargo test --release test_solvency_on_chain_verifier -- --nocapture`)
+
 
