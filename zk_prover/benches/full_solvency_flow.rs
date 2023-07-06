@@ -147,7 +147,7 @@ fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 fn verification_key_gen_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(12);
+    let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
     let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
@@ -165,7 +165,7 @@ fn verification_key_gen_solvency_circuit(_c: &mut Criterion) {
 fn proving_key_gen_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(12);
+    let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
     let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
@@ -184,7 +184,7 @@ fn proving_key_gen_solvency_circuit(_c: &mut Criterion) {
 fn generate_zk_proof_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(12);
+    let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
     let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
@@ -217,7 +217,7 @@ fn generate_zk_proof_solvency_circuit(_c: &mut Criterion) {
 fn verify_zk_proof_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(12);
+    let params: ParamsKZG<Bn256> = generate_setup_params(11);
 
     let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
