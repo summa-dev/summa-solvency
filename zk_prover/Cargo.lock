@@ -4690,6 +4690,7 @@ dependencies = [
  "rand",
  "regex",
  "serde",
+ "snark-verifier",
  "snark-verifier-sdk",
  "tabbycat",
 ]

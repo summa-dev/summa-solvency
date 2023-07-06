@@ -20,6 +20,12 @@ use halo2_proofs::{
 };
 use rand::rngs::OsRng;
 use regex_simple::Regex;
+use snark_verifier::{
+    cost::CostEstimation,
+    pcs::kzg::{Bdfg21, KzgAs},
+    system::halo2::{compile, Config},
+    verifier::plonk::PlonkSuccinctVerifier,
+};
 use snark_verifier_sdk::{evm::gen_evm_proof_shplonk, CircuitExt};
 use std::{
     fs::File,
@@ -419,4 +425,19 @@ pub fn write_verifier_sol_from_yul(
     f.write_all(output.as_bytes())?;
 
     Ok(())
+}
+
+pub fn get_verification_cost<C: Circuit<Fp> + CircuitExt<Fp>>(
+    params: &ParamsKZG<Bn256>,
+    pk: &ProvingKey<G1Affine>,
+    circuit: C,
+) {
+    let protocol = compile(
+        params,
+        pk.get_vk(),
+        Config::kzg().with_num_instance(circuit.num_instance()),
+    );
+
+    let cost = PlonkSuccinctVerifier::<KzgAs<Bn256, Bdfg21>>::estimate_cost(&protocol);
+    dbg!(cost);
 }

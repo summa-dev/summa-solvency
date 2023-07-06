@@ -7,7 +7,10 @@ mod test {
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
         solvency::SolvencyCircuit,
-        utils::{full_prover, full_verifier, generate_setup_params},
+        utils::{
+            full_prover, full_verifier, gen_proof_solidity_calldata, generate_setup_params,
+            get_verification_cost, write_verifier_sol_from_yul,
+        },
     };
     use crate::merkle_sum_tree::{MerkleSumTree, MOD_BITS, N_ASSETS};
     use ark_std::{end_timer, start_timer};
@@ -499,6 +502,58 @@ mod test {
         let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
         valid_prover.assert_satisfied();
+    }
+
+    #[test]
+    fn test_solvency_on_chain_verifier() {
+        let params = generate_setup_params(10);
+
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)];
+
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, assets_sum);
+
+        let pk = gen_pk(&params, &circuit, None);
+
+        get_verification_cost(&params, &pk, circuit.clone());
+
+        let num_instances = circuit.num_instance();
+        let instances = circuit.instances();
+
+        let proof_calldata =
+            gen_evm_proof_shplonk(&params, &pk, circuit.clone(), instances.clone());
+
+        let yul_code_path = "src/contracts/SolvencyVerifier.yul";
+
+        let deployment_code = gen_evm_verifier_shplonk::<SolvencyCircuit<L, N_ASSETS, N_BYTES>>(
+            &params,
+            pk.get_vk(),
+            num_instances,
+            Some(Path::new(yul_code_path)),
+        );
+
+        println!(
+            "deployment_code length: {:?}, should be less than 24576 to be deployable",
+            deployment_code.len()
+        );
+
+        let sol_code_path = "src/contracts/SolvencyVerifier.sol";
+
+        write_verifier_sol_from_yul(yul_code_path, sol_code_path).unwrap();
+
+        let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
+
+        // get solidity calldata
+        let calldata = gen_proof_solidity_calldata(&params, &pk, circuit);
+        println!("calldata: {:?}", calldata);
+
+        // TO DO: fix gas cost
+        assert!(
+            (0..=600000).contains(&gas_cost),
+            "gas_cost is not within the expected range"
+        );
     }
 
     // Passing assets sum that is less than the liabilities sum should fail the solvency circuit
