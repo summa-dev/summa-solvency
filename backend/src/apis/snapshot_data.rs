@@ -173,7 +173,7 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
         // Skip generate recursive proof
         let params_app = generate_setup_params(11);
         let mut user_proofs = HashMap::<String, InclusionProof<N_ASSETS>>::new();
-        let (circuit, vk, pk) = Self::get_mst_circuit(params_app.clone(), 0);
+        let (circuit, vk, pk) = Self::get_mst_circuit(params_app.clone(), entry_csv, 0);
 
         let proof = full_prover(&params_app, &pk, circuit.clone(), circuit.instances());
         let user_instance = circuit.instances()[0].clone();
