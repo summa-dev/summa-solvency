@@ -1,4 +1,8 @@
 use crate::apis::snapshot_data::Asset;
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use halo2_proofs::halo2curves::ff::PrimeField;
+use halo2_proofs::halo2curves::serde::SerdeObject;
+// use halo2_proofs::halo2curves::serde::SerdeObject;
 use num_bigint::BigInt;
 use serde::Deserialize;
 use std::error::Error;
@@ -22,11 +26,26 @@ pub fn parse_csv_to_assets<P: AsRef<Path>>(path: P) -> Result<Vec<Asset>, Box<dy
     for result in rdr.deserialize() {
         let record: CsvAsset = result?;
 
-        let balances: Vec<BigInt> = record
-            .balances
-            .split(',')
-            .map(|balance| BigInt::parse_bytes(balance.as_bytes(), 10).unwrap())
-            .collect();
+        // Calculate the balances and sum_balances at once
+        // let balances: Vec<BigInt> = record
+        //     .balances
+        //     .split(',')
+        //     .map(|balance| BigInt::parse_bytes(balance.as_bytes(), 10).unwrap())
+        //     .collect();
+
+        let mut balances = Vec::new();
+        let mut sum_balances = Fp::zero();
+
+        for balance in record.balances.split(',') {
+            let balance_bigint = BigInt::parse_bytes(balance.as_bytes(), 10)
+                .ok_or_else(|| format!("Failed to parse balance '{}' as BigInt", balance))?;
+
+            let balance_fp = Fp::from_str_vartime(balance)
+                .ok_or_else(|| format!("Failed to convert balance '{}' to Fp", balance))?;
+
+            balances.push(balance_bigint);
+            sum_balances += balance_fp;
+        }
 
         // Check if asset with same name already exists in the Vec
         if let Some(asset) = assets.iter_mut().find(|a| a.name == record.name) {
@@ -38,6 +57,7 @@ pub fn parse_csv_to_assets<P: AsRef<Path>>(path: P) -> Result<Vec<Asset>, Box<dy
                 name: record.name,
                 pubkeys: vec![record.pubkey],
                 balances,
+                sum_balances,
                 signature: vec![record.signature],
             });
         }

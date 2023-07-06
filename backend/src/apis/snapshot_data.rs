@@ -7,7 +7,10 @@ use snark_verifier_sdk::{
 };
 
 use halo2_proofs::{
-    halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
+    halo2curves::{
+        bn256::{Bn256, Fr as Fp, G1Affine},
+        ff::PrimeField,
+    },
     plonk::{keygen_pk, keygen_vk, Circuit, ProvingKey, VerifyingKey},
     poly::{commitment::Params, kzg::commitment::ParamsKZG},
 };
@@ -45,6 +48,7 @@ pub struct Asset {
     pub name: String,
     pub pubkeys: Vec<String>,
     pub balances: Vec<BigInt>,
+    pub sum_balances: Fp,
     pub signature: Vec<String>,
 }
 
@@ -107,18 +111,30 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
     }
 
     fn get_solvency_circuit(
+        &self,
         params: ParamsKZG<Bn256>,
-    ) -> (SolvencyCircuit<L, 2, N_BYTES>, ProvingKey<G1Affine>) {
+    ) -> (SolvencyCircuit<L, N_ASSETS, N_BYTES>, ProvingKey<G1Affine>) {
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
-        let assets_sum = [Fp::from(556863u64), Fp::from(556863u64)]; // TODO: get from self.assets
+        let mut assets_sum = [Fp::from(0u64); N_ASSETS];
+        let asset_names = self
+            .assets
+            .iter()
+            .map(|asset| asset.name.clone())
+            .collect::<Vec<String>>();
+
+        // update asset_sum from assets
+        for asset in &self.assets {
+            let index = asset_names.iter().position(|x| *x == asset.name).unwrap();
+            assets_sum[index] = asset.sum_balances;
+        }
 
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
         let solvency_circuit =
-            SolvencyCircuit::<L, 2, N_BYTES>::init("src/apis/csv/entry_16.csv", assets_sum); // TODO: get file path from struct or else
+            SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init("src/apis/csv/entry_16.csv", assets_sum); // TODO: get file path from struct or else
 
         return (solvency_circuit, pk);
     }
@@ -133,7 +149,7 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
         params_app.downsize(K);
 
         // solvency proof
-        let (solvency_circuit, solvency_pk) = Self::get_solvency_circuit(params_app.clone());
+        let (solvency_circuit, solvency_pk) = Self::get_solvency_circuit(&self, params_app.clone());
 
         // user proof
         let (mst_inclusion_circuit, _, user_pk) = Self::get_mst_circuit(params_app.clone(), 0);
