@@ -30,8 +30,8 @@ struct SnapshotData<
     commit_hash: Fp,
     entries: HashMap<usize, Entry<N_ASSETS>>,
     assets: Vec<Asset>,
-    user_proofs: HashMap<u64, InclusionProof>,
-    on_chain_proof: Option<SolvencyProof<N_ASSETS>>,
+    proofs_of_inclusion: HashMap<u64, InclusionProof>,
+    proof_of_solvency: Option<SolvencyProof<N_ASSETS>>,
 }
 
 #[derive(Debug, Clone)]
@@ -91,8 +91,8 @@ impl<
             commit_hash: root_node.hash,
             entries,
             assets,
-            user_proofs,
-            on_chain_proof: None,
+            proofs_of_inclusion: user_proofs,
+            proof_of_solvency: None,
         })
     }
 
@@ -100,6 +100,7 @@ impl<
         entry_csv: &str,
         user_index: usize,
     ) -> Result<InclusionProof, &'static str> {
+        // TODO: fetch pk from outside. For now, we generate them here
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
         let params = generate_setup_params(K);
 
@@ -133,6 +134,7 @@ impl<
         }
 
         // generate solvency proof
+        // TODO: fetch pk from outside. For now, we generate them here
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
         let params = generate_setup_params(K);
 
@@ -142,7 +144,7 @@ impl<
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(entry_csv, assets_sum);
         let instances = circuit.instances();
 
-        self.on_chain_proof = Some(SolvencyProof::<N_ASSETS> {
+        self.proof_of_solvency = Some(SolvencyProof::<N_ASSETS> {
             penultimate_node_hash: [instances[0][0], instances[0][1]],
             assets_sum,
             vk: vk.to_bytes(halo2_proofs::SerdeFormat::RawBytes),
@@ -153,7 +155,7 @@ impl<
     }
 
     pub fn get_user_proof(&mut self, user_index: u64) -> Result<InclusionProof, &'static str> {
-        let user_proof = self.user_proofs.get(&user_index);
+        let user_proof = self.proofs_of_inclusion.get(&user_index);
         match user_proof {
             Some(proof) => Ok(proof.clone()),
             None => {
@@ -162,14 +164,15 @@ impl<
                     user_index as usize,
                 )
                 .unwrap();
-                self.user_proofs.insert(user_index, user_proof.clone());
+                self.proofs_of_inclusion
+                    .insert(user_index, user_proof.clone());
                 Ok(user_proof)
             }
         }
     }
 
     pub fn get_onchain_proof(&self) -> Result<SolvencyProof<N_ASSETS>, &'static str> {
-        match &self.on_chain_proof {
+        match &self.proof_of_solvency {
             Some(proof) => Ok(proof.clone()),
             None => Err("on-chain proof not initialized"),
         }
@@ -209,7 +212,7 @@ mod tests {
             SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new("CEX_1", entry_csv, asset_csv)
                 .unwrap();
 
-        assert!(snapshot_data.on_chain_proof.is_none());
+        assert!(snapshot_data.proof_of_solvency.is_none());
         let empty_on_chain_proof = snapshot_data.get_onchain_proof();
         assert_eq!(empty_on_chain_proof, Err("on-chain proof not initialized"));
 
@@ -229,11 +232,11 @@ mod tests {
             SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new("CEX_1", entry_csv, asset_csv)
                 .unwrap();
 
-        assert_eq!(snapshot_data.user_proofs.len(), 0);
+        assert_eq!(snapshot_data.proofs_of_inclusion.len(), 0);
 
         // Check updated on-chain proof
         let user_proof = snapshot_data.get_user_proof(0);
         assert!(user_proof.is_ok());
-        assert_eq!(snapshot_data.user_proofs.len(), 1);
+        assert_eq!(snapshot_data.proofs_of_inclusion.len(), 1);
     }
 }
