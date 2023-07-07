@@ -2,7 +2,6 @@ use crate::apis::snapshot_data::Asset;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::halo2curves::ff::PrimeField;
 use halo2_proofs::halo2curves::serde::SerdeObject;
-// use halo2_proofs::halo2curves::serde::SerdeObject;
 use num_bigint::BigInt;
 use serde::Deserialize;
 use std::error::Error;
@@ -25,13 +24,6 @@ pub fn parse_csv_to_assets<P: AsRef<Path>>(path: P) -> Result<Vec<Asset>, Box<dy
 
     for result in rdr.deserialize() {
         let record: CsvAsset = result?;
-
-        // Calculate the balances and sum_balances at once
-        // let balances: Vec<BigInt> = record
-        //     .balances
-        //     .split(',')
-        //     .map(|balance| BigInt::parse_bytes(balance.as_bytes(), 10).unwrap())
-        //     .collect();
 
         let mut balances = Vec::new();
         let mut sum_balances = Fp::zero();

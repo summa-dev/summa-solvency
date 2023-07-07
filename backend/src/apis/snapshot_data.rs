@@ -25,17 +25,23 @@ use summa_solvency::{
     merkle_sum_tree::{Entry, MerkleSumTree},
 };
 
-const LEVELS: usize = 4;
-const L: usize = 2 + (N_ASSETS * 2);
-const K: u32 = 11;
-const N_BYTES: usize = 31; // 248 / 8
-const N_ASSETS: usize = 2;
+// const LEVELS: usize = 4;
+// const L: usize = 2 + (N_ASSETS * 2);
+// const K: u32 = 11;
+// const N_BYTES: usize = 31; // 248 / 8
+// const N_ASSETS: usize = 2;
 
 #[derive(Debug)]
-struct SnapshotData<const N_ASSETS: usize> {
+struct SnapshotData<
+    const LEVELS: usize,
+    const L: usize,
+    const N_ASSETS: usize,
+    const N_BYTES: usize,
+    const K: u32,
+> {
     exchange_id: String,
-    commit_hash: Fp,                          // May change type later
-    entries: HashMap<usize, Entry<N_ASSETS>>, // TODO: change to `HashMap<Name, Entry<N_ASSETS>>`
+    commit_hash: Fp,
+    entries: HashMap<usize, Entry<N_ASSETS>>,
     assets: Vec<Asset>,
     user_proofs: Option<HashMap<Name, InclusionProof<N_ASSETS>>>,
     on_chain_proof: Option<Vec<u8>>,
@@ -60,12 +66,19 @@ struct InclusionProof<const N_ASSETS: usize> {
     proof: Vec<u8>,
 }
 
-impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
+impl<
+        const LEVELS: usize,
+        const L: usize,
+        const N_ASSETS: usize,
+        const N_BYTES: usize,
+        const K: u32,
+    > SnapshotData<LEVELS, L, N_ASSETS, N_BYTES, K>
+{
     pub fn new(
         exchange_id: &str,
         entry_csv: &str,
         asset_csv: &str,
-    ) -> Result<SnapshotData<N_ASSETS>, Box<dyn std::error::Error>> {
+    ) -> Result<SnapshotData<LEVELS, L, N_ASSETS, N_BYTES, K>, Box<dyn std::error::Error>> {
         let assets = parse_csv_to_assets(asset_csv).unwrap();
         let mst = MerkleSumTree::<N_ASSETS>::new(entry_csv).unwrap();
 
@@ -171,7 +184,7 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
     #[cfg(feature = "testing")]
     pub fn generate_proofs(&mut self, entry_csv: &str) {
         // Skip generate recursive proof
-        let params_app = generate_setup_params(11);
+        let params_app = generate_setup_params(K);
         let mut user_proofs = HashMap::<String, InclusionProof<N_ASSETS>>::new();
         let (circuit, vk, pk) = Self::get_mst_circuit(params_app.clone(), entry_csv, 0);
 
@@ -210,7 +223,7 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
         let mut user_proofs = HashMap::<String, InclusionProof<N_ASSETS>>::new();
 
         // Generate proofs for ueers
-        let params_app = generate_setup_params(11);
+        let params_app = generate_setup_params(K);
         for i in 0..self.entries.len() {
             let (circuit, vk, pk) = Self::get_mst_circuit(params_app.clone(), entry_csv, i);
 
@@ -256,11 +269,19 @@ impl<const N_ASSETS: usize> SnapshotData<N_ASSETS> {
 mod tests {
     use super::*;
 
+    const N_ASSETS: usize = 2;
+    const L: usize = 2 + (N_ASSETS * 2);
+    const LEVELS: usize = 4;
+    const N_BYTES: usize = 31;
+    const K: u32 = 11;
+
     #[test]
     fn test_snapshot_data_initialization() {
         let entry_csv = "src/apis/csv/entry_16.csv";
         let asset_csv = "src/apis/csv/assets_2.csv";
-        let snapshot_data = SnapshotData::<2>::new("CEX_1", entry_csv, asset_csv).unwrap();
+        let snapshot_data =
+            SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new("CEX_1", entry_csv, asset_csv)
+                .unwrap();
 
         // Check assets
         assert!(snapshot_data.assets[0].name.contains(&"eth".to_string()));
@@ -273,7 +294,9 @@ mod tests {
     fn test_snapshot_data_generate_proof() {
         let entry_csv = "src/apis/csv/entry_16.csv";
         let asset_csv = "src/apis/csv/assets_2.csv";
-        let mut snapshot_data = SnapshotData::<2>::new("CEX_1", entry_csv, asset_csv).unwrap();
+        let mut snapshot_data =
+            SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new("CEX_1", entry_csv, asset_csv)
+                .unwrap();
 
         assert!(snapshot_data.user_proofs.is_none());
         assert!(snapshot_data.on_chain_proof.is_none());
