@@ -7,10 +7,7 @@ use snark_verifier_sdk::{
 };
 
 use halo2_proofs::{
-    halo2curves::{
-        bn256::{Bn256, Fr as Fp, G1Affine},
-        ff::PrimeField,
-    },
+    halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
     plonk::{keygen_pk, keygen_vk, Circuit, ProvingKey, VerifyingKey},
     poly::{commitment::Params, kzg::commitment::ParamsKZG},
 };
@@ -25,12 +22,6 @@ use summa_solvency::{
     merkle_sum_tree::{Entry, MerkleSumTree},
 };
 
-// const LEVELS: usize = 4;
-// const L: usize = 2 + (N_ASSETS * 2);
-// const K: u32 = 11;
-// const N_BYTES: usize = 31; // 248 / 8
-// const N_ASSETS: usize = 2;
-
 #[derive(Debug)]
 struct SnapshotData<
     const LEVELS: usize,
@@ -44,7 +35,7 @@ struct SnapshotData<
     entries: HashMap<usize, Entry<N_ASSETS>>,
     assets: Vec<Asset>,
     user_proofs: Option<HashMap<Name, InclusionProof<N_ASSETS>>>,
-    on_chain_proof: Option<Vec<u8>>,
+    on_chain_proof: Option<SolvencyProof>,
 }
 
 type Name = String;
@@ -63,6 +54,11 @@ struct InclusionProof<const N_ASSETS: usize> {
     leaf_hash: Fp,
     balances: [BigInt; N_ASSETS],
     vk: Vec<u8>,
+    proof: Vec<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct SolvencyProof {
     proof: Vec<u8>,
 }
 
@@ -205,7 +201,7 @@ impl<
 
         // for testing results
         self.user_proofs = Some(user_proofs);
-        self.on_chain_proof = Some(vec![16u8; 8]);
+        self.on_chain_proof = Some(SolvencyProof { proof: vec![16u8] });
     }
 
     #[cfg(not(feature = "testing"))]
@@ -217,7 +213,9 @@ impl<
 
         let proof_calldata =
             gen_evm_proof_shplonk(&params_agg, &pk_agg, agg_circuit, instances.clone());
-        self.on_chain_proof = Some(proof_calldata);
+        self.on_chain_proof = Some(SolvencyProof {
+            proof: proof_calldata,
+        });
 
         // Initialize variable for user proofs
         let mut user_proofs = HashMap::<String, InclusionProof<N_ASSETS>>::new();
@@ -257,7 +255,7 @@ impl<
         }
     }
 
-    pub fn get_onchain_proof(&self) -> Result<Vec<u8>, &'static str> {
+    pub fn get_onchain_proof(&self) -> Result<SolvencyProof, &'static str> {
         match &self.on_chain_proof {
             Some(proof) => Ok(proof.clone()),
             None => Err("on-chain proof not initialized"),
