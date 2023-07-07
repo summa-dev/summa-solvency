@@ -2,8 +2,9 @@ use num_bigint::BigInt;
 use std::collections::HashMap;
 
 use halo2_proofs::{
-    halo2curves::bn256::Fr as Fp,
-    plonk::{keygen_pk, keygen_vk},
+    halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
+    plonk::{keygen_pk, keygen_vk, ProvingKey, VerifyingKey},
+    poly::kzg::commitment::ParamsKZG,
 };
 use snark_verifier_sdk::CircuitExt;
 
@@ -19,6 +20,12 @@ use summa_solvency::{
 
 use crate::apis::csv_parser::parse_csv_to_assets;
 
+struct MstParamsAndKeys<const LEVELS: usize, const L: usize, const N_ASSETS: usize> {
+    params: ParamsKZG<Bn256>,
+    pk: ProvingKey<G1Affine>,
+    vk: VerifyingKey<G1Affine>,
+}
+
 struct SnapshotData<
     const LEVELS: usize,
     const L: usize,
@@ -29,7 +36,8 @@ struct SnapshotData<
     exchange_id: String,
     mst: MerkleSumTree<N_ASSETS>,
     assets: Vec<Asset>,
-    proofs_of_inclusions: HashMap<u64, InclusionProof>,
+    mst_params_and_keys: MstParamsAndKeys<LEVELS, L, N_ASSETS>,
+    proofs_of_inclusions: HashMap<u64, UserProof>,
     proof_of_solvency: Option<SolvencyProof<N_ASSETS>>,
 }
 
@@ -43,18 +51,30 @@ pub struct Asset {
 }
 
 #[derive(Debug, Clone)]
-struct InclusionProof {
-    // public input
+struct UserProof {
+    // for each user
     leaf_hash: Fp,
-    vk: Vec<u8>,
+    proof: Vec<u8>,
+}
+
+pub struct InclusionProof {
+    // public inputs
+    leaf_hash: Fp,
+    root_hash: Fp,
+    // need for verification
+    vk: VerifyingKey<G1Affine>,
+    pk: ProvingKey<G1Affine>,
     proof: Vec<u8>,
 }
 
 #[derive(Debug, Clone)]
 struct SolvencyProof<const N_ASSETS: usize> {
     // public inputs
-    penultimate_node_hash: [Fp; 2],
+    root_hash: Fp,
     assets_sum: [Fp; N_ASSETS],
+    // need for verification
+    // vk is already exist in the onchain verifier
+    pk: ProvingKey<G1Affine>,
     proof: Vec<u8>,
 }
 
@@ -74,25 +94,26 @@ impl<
         let assets = parse_csv_to_assets(asset_csv).unwrap();
         let mst: MerkleSumTree<N_ASSETS> = MerkleSumTree::<N_ASSETS>::new(entry_csv).unwrap();
 
-        let user_proofs = HashMap::<u64, InclusionProof>::new();
+        let user_proofs = HashMap::<u64, UserProof>::new();
 
-        Ok(SnapshotData {
-            exchange_id: exchange_id.to_owned(),
-            mst,
-            assets,
-            proofs_of_inclusions: user_proofs,
-            proof_of_solvency: None,
-        })
-    }
-
-    fn generate_inclusion_proof(&self, user_index: usize) -> Result<InclusionProof, &'static str> {
-        // TODO: fetch pk from outside. For now, we generate them here
+        // generate params and plonk keys for mst inclusion proof
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
         let params = generate_setup_params(K);
 
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
+        Ok(SnapshotData {
+            exchange_id: exchange_id.to_owned(),
+            mst,
+            assets,
+            mst_params_and_keys: MstParamsAndKeys { params, pk, vk },
+            proofs_of_inclusions: user_proofs,
+            proof_of_solvency: None,
+        })
+    }
+
+    fn generate_inclusion_proof(&self, user_index: usize) -> Result<UserProof, &'static str> {
         let proof = self.mst.generate_proof(user_index).unwrap();
 
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS> {
@@ -110,11 +131,15 @@ impl<
         };
 
         let instances = circuit.instances().clone();
-        let proof = full_prover(&params, &pk, circuit.clone(), instances.clone());
+        let proof = full_prover(
+            &self.mst_params_and_keys.params,
+            &self.mst_params_and_keys.pk,
+            circuit,
+            instances.clone(),
+        );
 
-        Ok(InclusionProof {
+        Ok(UserProof {
             leaf_hash: instances[0][0],
-            vk: vk.to_bytes(halo2_proofs::SerdeFormat::RawBytes),
             proof,
         })
     }
@@ -134,7 +159,6 @@ impl<
         }
 
         // generate solvency proof
-        // TODO: fetch pk from outside. For now, we generate them here
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
         let params = generate_setup_params(K);
 
@@ -158,8 +182,9 @@ impl<
         let instances = circuit.instances();
 
         self.proof_of_solvency = Some(SolvencyProof::<N_ASSETS> {
-            penultimate_node_hash: [instances[0][0], instances[0][1]],
-            assets_sum,
+            root_hash: self.mst.root().hash, // equivalant to instances[0]
+            assets_sum,                      // equivalant to instances[1]
+            pk: pk.clone(),
             proof: full_prover(&params, &pk, circuit.clone(), instances),
         });
 
@@ -169,13 +194,25 @@ impl<
     pub fn get_user_proof(&mut self, user_index: u64) -> Result<InclusionProof, &'static str> {
         let user_proof = self.proofs_of_inclusions.get(&user_index);
         match user_proof {
-            Some(proof) => Ok(proof.clone()),
+            Some(user_proof) => Ok(InclusionProof {
+                leaf_hash: user_proof.leaf_hash,
+                root_hash: self.mst.root().hash,
+                vk: self.mst_params_and_keys.vk.clone(),
+                pk: self.mst_params_and_keys.pk.clone(),
+                proof: user_proof.proof.clone(),
+            }),
             None => {
                 let user_proof =
                     Self::generate_inclusion_proof(&self, user_index as usize).unwrap();
                 self.proofs_of_inclusions
                     .insert(user_index, user_proof.clone());
-                Ok(user_proof)
+                Ok(InclusionProof {
+                    leaf_hash: user_proof.leaf_hash,
+                    root_hash: self.mst.root().hash,
+                    vk: self.mst_params_and_keys.vk.clone(),
+                    pk: self.mst_params_and_keys.pk.clone(),
+                    proof: user_proof.proof,
+                })
             }
         }
     }
