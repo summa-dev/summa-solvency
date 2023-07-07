@@ -1,26 +1,22 @@
-use crate::apis::csv_parser::parse_csv_to_assets;
 use num_bigint::BigInt;
 use std::collections::HashMap;
 
-use snark_verifier_sdk::{
-    evm::gen_evm_proof_shplonk, gen_pk, halo2::gen_snark_shplonk, CircuitExt,
-};
-
 use halo2_proofs::{
-    halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
-    plonk::{keygen_pk, keygen_vk, Circuit, ProvingKey, VerifyingKey},
-    poly::{commitment::Params, kzg::commitment::ParamsKZG},
+    halo2curves::bn256::Fr as Fp,
+    plonk::{keygen_pk, keygen_vk},
 };
+use snark_verifier_sdk::CircuitExt;
 
 use summa_solvency::{
     circuits::{
-        aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
         solvency::SolvencyCircuit,
         utils::{full_prover, generate_setup_params},
     },
     merkle_sum_tree::{Entry, MerkleSumTree},
 };
+
+use crate::apis::csv_parser::parse_csv_to_assets;
 
 #[derive(Debug)]
 struct SnapshotData<
@@ -34,11 +30,9 @@ struct SnapshotData<
     commit_hash: Fp,
     entries: HashMap<usize, Entry<N_ASSETS>>,
     assets: Vec<Asset>,
-    user_proofs: Option<HashMap<Name, InclusionProof<N_ASSETS>>>,
-    on_chain_proof: Option<SolvencyProof>,
+    user_proofs: HashMap<u64, InclusionProof>,
+    on_chain_proof: Option<SolvencyProof<N_ASSETS>>,
 }
-
-type Name = String;
 
 #[derive(Debug, Clone)]
 pub struct Asset {
@@ -49,16 +43,20 @@ pub struct Asset {
     pub signature: Vec<String>,
 }
 
-#[derive(Debug)]
-struct InclusionProof<const N_ASSETS: usize> {
+#[derive(Debug, Clone)]
+struct InclusionProof {
+    // public input
     leaf_hash: Fp,
-    balances: [BigInt; N_ASSETS],
     vk: Vec<u8>,
     proof: Vec<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct SolvencyProof {
+struct SolvencyProof<const N_ASSETS: usize> {
+    // public inputs
+    penultimate_node_hash: [Fp; 2],
+    assets_sum: [Fp; N_ASSETS],
+    vk: Vec<u8>,
     proof: Vec<u8>,
 }
 
@@ -86,45 +84,42 @@ impl<
             .collect::<HashMap<usize, Entry<N_ASSETS>>>();
 
         let root_node = mst.root();
+        let user_proofs = HashMap::<u64, InclusionProof>::new();
 
         Ok(SnapshotData {
             exchange_id: exchange_id.to_owned(),
             commit_hash: root_node.hash,
             entries,
             assets,
-            user_proofs: None,
+            user_proofs,
             on_chain_proof: None,
         })
     }
 
-    fn get_mst_circuit(
-        params: ParamsKZG<Bn256>,
+    fn generate_inclusion_proof(
         entry_csv: &str,
         user_index: usize,
-    ) -> (
-        MstInclusionCircuit<LEVELS, L, N_ASSETS>,
-        VerifyingKey<G1Affine>,
-        ProvingKey<G1Affine>,
-    ) {
+    ) -> Result<InclusionProof, &'static str> {
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+        let params = generate_setup_params(K);
 
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
         // Only now we can instantiate the circuit with the actual inputs
-        let inclusion_circuit =
-            MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(entry_csv, user_index);
+        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(entry_csv, user_index);
+        let instances = circuit.instances().clone();
+        let proof = full_prover(&params, &pk, circuit.clone(), instances.clone());
 
-        return (inclusion_circuit, vk, pk);
+        Ok(InclusionProof {
+            leaf_hash: instances[0][0],
+            vk: vk.to_bytes(halo2_proofs::SerdeFormat::RawBytes),
+            proof,
+        })
     }
 
-    fn get_solvency_circuit(
-        &self,
-        params: ParamsKZG<Bn256>,
-        entry_csv: &str,
-    ) -> (SolvencyCircuit<L, N_ASSETS, N_BYTES>, ProvingKey<G1Affine>) {
-        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
-
+    pub fn generate_solvency_proof(&mut self, entry_csv: &str) -> Result<(), &'static str> {
+        // Prepare public inputs for solvency
         let mut assets_sum = [Fp::from(0u64); N_ASSETS];
         let asset_names = self
             .assets
@@ -132,130 +127,48 @@ impl<
             .map(|asset| asset.name.clone())
             .collect::<Vec<String>>();
 
-        // update asset_sum from assets
         for asset in &self.assets {
             let index = asset_names.iter().position(|x| *x == asset.name).unwrap();
             assets_sum[index] = asset.sum_balances;
         }
 
+        // generate solvency proof
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
+        let params = generate_setup_params(K);
+
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
-        // Only now we can instantiate the circuit with the actual inputs
-        let solvency_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(entry_csv, assets_sum);
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(entry_csv, assets_sum);
+        let instances = circuit.instances();
 
-        return (solvency_circuit, pk);
-    }
-
-    fn generate_agg_circuit(
-        &mut self,
-        entry_csv: &str,
-    ) -> (WrappedAggregationCircuit<2>, ParamsKZG<Bn256>) {
-        // TODO: make it background running in future task
-        // we generate a universal trusted setup of our own for testing
-        let params_agg = generate_setup_params(23);
-
-        // downsize params for our application specific snark
-        let mut params_app = params_agg.clone();
-        params_app.downsize(K);
-
-        // solvency proof
-        let (solvency_circuit, solvency_pk) =
-            Self::get_solvency_circuit(&self, params_app.clone(), entry_csv);
-
-        // user proof
-        let (mst_inclusion_circuit, _, user_pk) =
-            Self::get_mst_circuit(params_app.clone(), entry_csv, 0);
-
-        let snark_app = [
-            gen_snark_shplonk(&params_app, &user_pk, mst_inclusion_circuit, None::<&str>),
-            gen_snark_shplonk(&params_app, &solvency_pk, solvency_circuit, None::<&str>),
-        ];
-
-        // Generate proof for aggregated circuit
-        let agg_circuit = WrappedAggregationCircuit::<2>::new(&params_agg, snark_app);
-        (agg_circuit, params_agg)
-    }
-
-    #[cfg(feature = "testing")]
-    pub fn generate_proofs(&mut self, entry_csv: &str) {
-        // Skip generate recursive proof
-        let params_app = generate_setup_params(K);
-        let mut user_proofs = HashMap::<String, InclusionProof<N_ASSETS>>::new();
-        let (circuit, vk, pk) = Self::get_mst_circuit(params_app.clone(), entry_csv, 0);
-
-        let proof = full_prover(&params_app, &pk, circuit.clone(), circuit.instances());
-        let user_instance = circuit.instances()[0].clone();
-
-        if let Some(entry) = self.entries.get(&0) {
-            user_proofs.insert(
-                entry.username().to_owned(),
-                InclusionProof::<N_ASSETS> {
-                    leaf_hash: user_instance[0],
-                    balances: entry.balances().clone(),
-                    vk: vk.to_bytes(halo2_proofs::SerdeFormat::RawBytes),
-                    proof,
-                },
-            );
-        }
-
-        // for testing results
-        self.user_proofs = Some(user_proofs);
-        self.on_chain_proof = Some(SolvencyProof { proof: vec![16u8] });
-    }
-
-    #[cfg(not(feature = "testing"))]
-    pub fn generate_proofs(&mut self, entry_csv: &str) {
-        // Generate proof for aggregated circuit
-        let (agg_circuit, params_agg) = self.generate_agg_circuit(entry_csv);
-        let pk_agg = gen_pk(&params_agg, &agg_circuit.without_witnesses(), None);
-        let instances = agg_circuit.instances();
-
-        let proof_calldata =
-            gen_evm_proof_shplonk(&params_agg, &pk_agg, agg_circuit, instances.clone());
-        self.on_chain_proof = Some(SolvencyProof {
-            proof: proof_calldata,
+        self.on_chain_proof = Some(SolvencyProof::<N_ASSETS> {
+            penultimate_node_hash: [instances[0][0], instances[0][1]],
+            assets_sum,
+            vk: vk.to_bytes(halo2_proofs::SerdeFormat::RawBytes),
+            proof: full_prover(&params, &pk, circuit.clone(), instances),
         });
 
-        // Initialize variable for user proofs
-        let mut user_proofs = HashMap::<String, InclusionProof<N_ASSETS>>::new();
+        Ok(())
+    }
 
-        // Generate proofs for ueers
-        let params_app = generate_setup_params(K);
-        for i in 0..self.entries.len() {
-            let (circuit, vk, pk) = Self::get_mst_circuit(params_app.clone(), entry_csv, i);
-
-            let proof = full_prover(&params_app, &pk, circuit.clone(), circuit.instances());
-
-            let user_instance = circuit.instances()[0].clone();
-
-            if let Some(entry) = self.entries.get(&i) {
-                user_proofs.insert(
-                    entry.username().to_owned(),
-                    InclusionProof::<N_ASSETS> {
-                        leaf_hash: user_instance[0],
-                        balances: entry.balances().clone(),
-                        vk: vk.to_bytes(halo2_proofs::SerdeFormat::RawBytes),
-                        proof,
-                    },
-                );
+    pub fn get_user_proof(&mut self, user_index: u64) -> Result<InclusionProof, &'static str> {
+        let user_proof = self.user_proofs.get(&user_index);
+        match user_proof {
+            Some(proof) => Ok(proof.clone()),
+            None => {
+                let user_proof = Self::generate_inclusion_proof(
+                    "src/apis/csv/entry_16.csv",
+                    user_index as usize,
+                )
+                .unwrap();
+                self.user_proofs.insert(user_index, user_proof.clone());
+                Ok(user_proof)
             }
         }
-
-        self.user_proofs = Some(user_proofs);
     }
 
-    pub fn get_user_proof(&self, name: &str) -> Result<&InclusionProof<N_ASSETS>, &'static str> {
-        match &self.user_proofs {
-            Some(user_proofs) => match user_proofs.get(name) {
-                Some(proof) => Ok(proof),
-                None => Err("User proof not found"),
-            },
-            None => Err("User proofs not initialized"),
-        }
-    }
-
-    pub fn get_onchain_proof(&self) -> Result<SolvencyProof, &'static str> {
+    pub fn get_onchain_proof(&self) -> Result<SolvencyProof<N_ASSETS>, &'static str> {
         match &self.on_chain_proof {
             Some(proof) => Ok(proof.clone()),
             None => Err("on-chain proof not initialized"),
@@ -289,30 +202,38 @@ mod tests {
     }
 
     #[test]
-    fn test_snapshot_data_generate_proof() {
+    fn test_snapshot_data_generate_solvency_proof() {
         let entry_csv = "src/apis/csv/entry_16.csv";
         let asset_csv = "src/apis/csv/assets_2.csv";
         let mut snapshot_data =
             SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new("CEX_1", entry_csv, asset_csv)
                 .unwrap();
 
-        assert!(snapshot_data.user_proofs.is_none());
         assert!(snapshot_data.on_chain_proof.is_none());
         let empty_on_chain_proof = snapshot_data.get_onchain_proof();
         assert_eq!(empty_on_chain_proof, Err("on-chain proof not initialized"));
 
-        snapshot_data.generate_proofs(entry_csv);
-
-        //  Check the proof for the user at index 0
-        let user_proof = snapshot_data.get_user_proof("dxGaEAii");
-        assert!(user_proof.is_ok());
-
-        //  Check the proof for last user
-        let none_user_proof = snapshot_data.get_user_proof("AtwIxZHo");
-        assert!(none_user_proof.is_err());
+        let result = snapshot_data.generate_solvency_proof(entry_csv);
+        assert_eq!(result.is_ok(), true);
 
         // Check updated on-chain proof
         let on_chain_proof = snapshot_data.get_onchain_proof();
         assert_eq!(on_chain_proof.is_ok(), true);
+    }
+
+    #[test]
+    fn test_snapshot_data_generate_inclusion_proof() {
+        let entry_csv = "src/apis/csv/entry_16.csv";
+        let asset_csv = "src/apis/csv/assets_2.csv";
+        let mut snapshot_data =
+            SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new("CEX_1", entry_csv, asset_csv)
+                .unwrap();
+
+        assert_eq!(snapshot_data.user_proofs.len(), 0);
+
+        // Check updated on-chain proof
+        let user_proof = snapshot_data.get_user_proof(0);
+        assert!(user_proof.is_ok());
+        assert_eq!(snapshot_data.user_proofs.len(), 1);
     }
 }
