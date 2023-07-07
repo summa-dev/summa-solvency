@@ -145,6 +145,10 @@ impl<
     }
 
     pub fn generate_solvency_proof(&mut self) -> Result<(), &'static str> {
+        if self.proof_of_solvency.is_some() {
+            return Err("Solvency proof already exists");
+        }
+
         // Prepare public inputs for solvency
         let mut assets_sum = [Fp::from(0u64); N_ASSETS];
         let asset_names = self
