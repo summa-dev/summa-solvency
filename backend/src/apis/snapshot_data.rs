@@ -14,7 +14,7 @@ use summa_solvency::{
         utils::{full_prover, generate_setup_params},
     },
     merkle_sum_tree::utils::big_int_to_fp,
-    merkle_sum_tree::{Entry, MerkleSumTree},
+    merkle_sum_tree::MerkleSumTree,
 };
 
 use crate::apis::csv_parser::parse_csv_to_assets;
@@ -29,7 +29,7 @@ struct SnapshotData<
     exchange_id: String,
     mst: MerkleSumTree<N_ASSETS>,
     assets: Vec<Asset>,
-    proofs_of_inclusion: HashMap<u64, InclusionProof>,
+    proofs_of_inclusions: HashMap<u64, InclusionProof>,
     proof_of_solvency: Option<SolvencyProof<N_ASSETS>>,
 }
 
@@ -39,7 +39,7 @@ pub struct Asset {
     pub pubkeys: Vec<String>,
     pub balances: Vec<BigInt>,
     pub sum_balances: Fp,
-    pub signature: Vec<String>,
+    pub signatures: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -50,12 +50,11 @@ struct InclusionProof {
     proof: Vec<u8>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 struct SolvencyProof<const N_ASSETS: usize> {
     // public inputs
     penultimate_node_hash: [Fp; 2],
     assets_sum: [Fp; N_ASSETS],
-    vk: Vec<u8>,
     proof: Vec<u8>,
 }
 
@@ -81,7 +80,7 @@ impl<
             exchange_id: exchange_id.to_owned(),
             mst,
             assets,
-            proofs_of_inclusion: user_proofs,
+            proofs_of_inclusions: user_proofs,
             proof_of_solvency: None,
         })
     }
@@ -94,8 +93,6 @@ impl<
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
-        // Only now we can instantiate the circuit with the actual inputs
-        // let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(entry_csv, user_index);
         let proof = self.mst.generate_proof(user_index).unwrap();
 
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS> {
@@ -163,7 +160,6 @@ impl<
         self.proof_of_solvency = Some(SolvencyProof::<N_ASSETS> {
             penultimate_node_hash: [instances[0][0], instances[0][1]],
             assets_sum,
-            vk: vk.to_bytes(halo2_proofs::SerdeFormat::RawBytes),
             proof: full_prover(&params, &pk, circuit.clone(), instances),
         });
 
@@ -171,13 +167,13 @@ impl<
     }
 
     pub fn get_user_proof(&mut self, user_index: u64) -> Result<InclusionProof, &'static str> {
-        let user_proof = self.proofs_of_inclusion.get(&user_index);
+        let user_proof = self.proofs_of_inclusions.get(&user_index);
         match user_proof {
             Some(proof) => Ok(proof.clone()),
             None => {
                 let user_proof =
                     Self::generate_inclusion_proof(&self, user_index as usize).unwrap();
-                self.proofs_of_inclusion
+                self.proofs_of_inclusions
                     .insert(user_index, user_proof.clone());
                 Ok(user_proof)
             }
@@ -225,7 +221,7 @@ mod tests {
 
         assert!(snapshot_data.proof_of_solvency.is_none());
         let empty_on_chain_proof = snapshot_data.get_onchain_proof();
-        assert_eq!(empty_on_chain_proof, Err("on-chain proof not initialized"));
+        assert!(empty_on_chain_proof.is_err());
 
         let result = snapshot_data.generate_solvency_proof();
         assert_eq!(result.is_ok(), true);
@@ -239,11 +235,11 @@ mod tests {
     fn test_snapshot_data_generate_inclusion_proof() {
         let mut snapshot_data = initiate_snapshot_data();
 
-        assert_eq!(snapshot_data.proofs_of_inclusion.len(), 0);
+        assert_eq!(snapshot_data.proofs_of_inclusions.len(), 0);
 
         // Check updated on-chain proof
         let user_proof = snapshot_data.get_user_proof(0);
         assert!(user_proof.is_ok());
-        assert_eq!(snapshot_data.proofs_of_inclusion.len(), 1);
+        assert_eq!(snapshot_data.proofs_of_inclusions.len(), 1);
     }
 }

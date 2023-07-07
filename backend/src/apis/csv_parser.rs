@@ -43,14 +43,14 @@ pub fn parse_csv_to_assets<P: AsRef<Path>>(path: P) -> Result<Vec<Asset>, Box<dy
         if let Some(asset) = assets.iter_mut().find(|a| a.name == record.name) {
             asset.pubkeys.push(record.pubkey);
             asset.balances.extend(balances);
-            asset.signature.push(record.signature);
+            asset.signatures.push(record.signature);
         } else {
             assets.push(Asset {
                 name: record.name,
                 pubkeys: vec![record.pubkey],
                 balances,
                 sum_balances,
-                signature: vec![record.signature],
+                signatures: vec![record.signature],
             });
         }
     }
