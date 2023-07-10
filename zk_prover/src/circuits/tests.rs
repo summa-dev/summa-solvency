@@ -158,11 +158,6 @@ mod test {
             None,
         );
 
-        println!(
-            "deployment_code length: {:?}, should be less than 24576 to be deployable",
-            deployment_code.len()
-        );
-
         let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
 
         // assert gas_cost to verify the proof on chain to be between 575000 and 590000
@@ -558,8 +553,6 @@ mod test {
 
         let proof_calldata = gen_evm_proof_shplonk(&params, &pk, circuit, instances.clone());
 
-        // let yul_code_path = "../contracts/src/SolvencyVerifier.yul";
-
         let deployment_code = gen_evm_verifier_shplonk::<SolvencyCircuit<L, N_ASSETS, N_BYTES>>(
             &params,
             pk.get_vk(),
@@ -572,14 +565,7 @@ mod test {
             deployment_code.len()
         );
 
-        // let sol_code_path = "../contracts/src/SolvencyVerifier.sol";
-
-        // write_verifier_sol_from_yul(yul_code_path, sol_code_path).unwrap();
-
         let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
-
-        // let calldata = gen_proof_solidity_calldata(&params, &pk, circuit);
-        // println!("calldata {:?}", calldata);
 
         assert!(
             (350000..=450000).contains(&gas_cost),
