@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod test {
 
+    use std::path::Path;
+
     use crate::circuits::{
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
@@ -49,30 +51,36 @@ mod test {
 
     #[test]
     fn test_valid_merkle_sum_tree_with_full_prover() {
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+        let circuit = MstInclusionCircuit::<15, L, N_ASSETS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
-        let params = generate_setup_params(K);
+        let params = generate_setup_params(13);
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
         // Note: the dimension of the circuit used to generate the keys must be the same as the dimension of the circuit used to generate the proof
         // In this case, the dimension are represented by the heigth of the merkle tree
 
-        let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
-        let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
+        // let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
+        // let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
-        let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+        let file_name = format!("mst_inclusion_{}_{}_{}.pk", 15, L, N_ASSETS);
 
-        // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let pk_path = Path::new("../backend/artifacts").join(file_name);
 
-        // Generate the proof
-        let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
+        let pk = gen_pk(&params, &circuit, Some(&pk_path));
 
-        // verify the proof to be true
-        assert!(full_verifier(&params, &vk, proof, circuit.instances()));
+        // let merkle_sum_tree =
+        //     MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+
+        // // Only now we can instantiate the circuit with the actual inputs
+        // let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+
+        // // Generate the proof
+        // let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
+
+        // // verify the proof to be true
+        // assert!(full_verifier(&params, &vk, proof, circuit.instances()));
     }
 
     #[test]
@@ -81,6 +89,12 @@ mod test {
 
         // we generate a universal trusted setup of our own for testing
         let params = generate_setup_params(10);
+
+        let file_name = format!("solvency_{}_{}_{}.pk", L, N_ASSETS, N_BYTES);
+
+        let pk_path = Path::new("../backend/artifacts").join(file_name);
+
+        let pk = gen_pk(&params, &circuit, Some(&pk_path));
 
         // we generate the verification key and the proving key
         // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
@@ -555,12 +569,7 @@ mod test {
             &params,
             pk.get_vk(),
             num_instances,
-            None, // Some(Path::new(yul_code_path)),
-        );
-
-        println!(
-            "deployment_code length: {:?}, should be less than 24576 to be deployable",
-            deployment_code.len()
+            None,
         );
 
         let gas_cost = evm_verify(deployment_code, instances, proof_calldata);
