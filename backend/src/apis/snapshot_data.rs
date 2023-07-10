@@ -36,6 +36,7 @@ struct SnapshotData<
     exchange_id: String,
     mst: MerkleSumTree<N_ASSETS>,
     assets: Vec<Asset>,
+    asset_signatures: AssetSignatures,
     mst_params_and_keys: MstParamsAndKeys<LEVELS, L, N_ASSETS>,
     proofs_of_inclusions: HashMap<u64, UserProof>,
     proof_of_solvency: Option<SolvencyProof<N_ASSETS>>,
@@ -47,8 +48,9 @@ pub struct Asset {
     pub pubkeys: Vec<String>,
     pub balances: Vec<BigInt>,
     pub sum_balances: Fp,
-    pub signatures: Vec<String>,
 }
+
+pub type AssetSignatures = HashMap<String, String>;
 
 #[derive(Debug, Clone)]
 struct UserProof {
@@ -91,7 +93,7 @@ impl<
         entry_csv: &str,
         asset_csv: &str,
     ) -> Result<SnapshotData<LEVELS, L, N_ASSETS, N_BYTES, K>, Box<dyn std::error::Error>> {
-        let assets = parse_csv_to_assets(asset_csv).unwrap();
+        let (assets, signatures) = parse_csv_to_assets(asset_csv).unwrap();
         let mst: MerkleSumTree<N_ASSETS> = MerkleSumTree::<N_ASSETS>::new(entry_csv).unwrap();
 
         let user_proofs = HashMap::<u64, UserProof>::new();
@@ -107,6 +109,7 @@ impl<
             exchange_id: exchange_id.to_owned(),
             mst,
             assets,
+            asset_signatures: signatures,
             mst_params_and_keys: MstParamsAndKeys { params, pk, vk },
             proofs_of_inclusions: user_proofs,
             proof_of_solvency: None,
@@ -239,7 +242,7 @@ mod tests {
     const N_BYTES: usize = 31;
     const K: u32 = 11;
 
-    fn initiate_snapshot_data() -> SnapshotData<LEVELS, L, N_ASSETS, N_BYTES, K> {
+    fn initialize_snapshot_data() -> SnapshotData<LEVELS, L, N_ASSETS, N_BYTES, K> {
         let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
         let asset_csv = "src/apis/csv/assets_2.csv";
         SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new("CEX_1", entry_csv, asset_csv).unwrap()
@@ -247,7 +250,7 @@ mod tests {
 
     #[test]
     fn test_snapshot_data_initialization() {
-        let snapshot_data = initiate_snapshot_data();
+        let snapshot_data = initialize_snapshot_data();
 
         // Check assets
         assert!(snapshot_data.assets[0].name.contains(&"eth".to_string()));
@@ -258,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_snapshot_data_generate_solvency_proof() {
-        let mut snapshot_data = initiate_snapshot_data();
+        let mut snapshot_data = initialize_snapshot_data();
 
         assert!(snapshot_data.proof_of_solvency.is_none());
         let empty_on_chain_proof = snapshot_data.get_onchain_proof();
@@ -274,7 +277,7 @@ mod tests {
 
     #[test]
     fn test_snapshot_data_generate_inclusion_proof() {
-        let mut snapshot_data = initiate_snapshot_data();
+        let mut snapshot_data = initialize_snapshot_data();
 
         assert_eq!(snapshot_data.proofs_of_inclusions.len(), 0);
 
@@ -282,5 +285,20 @@ mod tests {
         let user_proof = snapshot_data.get_user_proof(0);
         assert!(user_proof.is_ok());
         assert_eq!(snapshot_data.proofs_of_inclusions.len(), 1);
+    }
+
+    #[test]
+    fn test_snapshot_data_stored_asset_data() {
+        let snapshot_data = initialize_snapshot_data();
+
+        for asset in snapshot_data.assets {
+            for address in asset.pubkeys {
+                assert!(snapshot_data.asset_signatures.get(&address).is_some());
+            }
+        }
+        assert!(snapshot_data
+            .asset_signatures
+            .get("0x0000000000000000000000000000000000000000")
+            .is_none());
     }
 }
