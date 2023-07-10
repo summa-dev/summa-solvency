@@ -1,4 +1,3 @@
-use num_bigint::BigInt;
 use std::collections::HashMap;
 use std::{fs::File, io::BufReader};
 
@@ -8,6 +7,7 @@ use halo2_proofs::{
     poly::kzg::commitment::ParamsKZG,
     SerdeFormat::RawBytes,
 };
+use num_bigint::BigInt;
 use snark_verifier_sdk::CircuitExt;
 
 use summa_solvency::{
@@ -27,7 +27,7 @@ struct MstParamsAndKeys {
     vk: VerifyingKey<G1Affine>,
 }
 
-struct SnapshotData<
+pub struct SnapshotData<
     const LEVELS: usize,
     const L: usize,
     const N_ASSETS: usize,
@@ -54,7 +54,7 @@ pub struct Asset {
 pub type AssetSignatures = HashMap<String, String>;
 
 #[derive(Debug, Clone)]
-struct UserProof {
+pub struct UserProof {
     // for each user
     leaf_hash: Fp,
     proof: Vec<u8>,
@@ -70,7 +70,7 @@ pub struct InclusionProof {
 }
 
 #[derive(Debug, Clone)]
-struct SolvencyProof<const N_ASSETS: usize> {
+pub struct SolvencyProof<const N_ASSETS: usize> {
     // public inputs
     root_hash: Fp,
     assets_sum: [Fp; N_ASSETS],
@@ -249,6 +249,38 @@ impl<
             Some(proof) => Ok(proof.clone()),
             None => Err("on-chain proof not initialized"),
         }
+    }
+
+    pub fn get_root_hash(&self) -> [u8; 32] {
+        self.mst.root().hash.to_bytes()
+    }
+}
+
+impl InclusionProof {
+    pub fn get_leaf_hash(&self) -> Fp {
+        self.leaf_hash.clone()
+    }
+
+    pub fn get_root_hash(&self) -> Fp {
+        self.root_hash.clone()
+    }
+
+    pub fn get_vk(&self) -> VerifyingKey<G1Affine> {
+        self.vk.clone()
+    }
+
+    pub fn get_vk_vec(&self) -> Vec<u8> {
+        self.vk.to_bytes(RawBytes)
+    }
+
+    pub fn get_proof(&self) -> Vec<u8> {
+        self.proof.clone()
+    }
+}
+
+impl<const N_ASSETS: usize> SolvencyProof<N_ASSETS> {
+    pub fn get_root_hash(&self) -> Fp {
+        self.root_hash
     }
 }
 
