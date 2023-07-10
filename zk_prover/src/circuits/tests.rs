@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod test {
 
-    use std::path::Path;
-
     use crate::circuits::{
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,

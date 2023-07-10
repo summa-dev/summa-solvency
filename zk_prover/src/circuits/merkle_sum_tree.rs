@@ -310,7 +310,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
         // expose the last current hash, namely the root hash, as public input
         config.expose_public(layouter.namespace(|| "public root hash"), &current_hash, 1)?;
 
-        // don't need to perform further range check on the balances of the root node as their addends are already constrained to be less than 2^MOD_BITS
+        // don't need to perform further range check on the balances of the root node as their addends are already constrained to be less than 2^RANGE_BITS
         Ok(())
     }
 }
