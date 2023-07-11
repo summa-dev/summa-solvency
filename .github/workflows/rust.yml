@@ -23,7 +23,13 @@ jobs:
       run: |
         cd zk_prover
         cargo fmt
+    - name: Install Solidity
+      run: |
+        sudo add-apt-repository ppa:ethereum/ethereum
+        sudo apt-get update
+        sudo apt-get install solc
+
     - name: Run tests
       run: |
         cd zk_prover
-        cargo test --features dev-graph -- --nocapture
+        cargo test --release --features dev-graph -- --nocapture

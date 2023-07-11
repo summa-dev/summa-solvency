@@ -21,6 +21,16 @@ use snark_verifier_sdk::CircuitExt;
 const BIT_LEN_LIMB: usize = 68;
 const NUMBER_OF_LIMBS: usize = 4;
 
+/// Circuit for verifying ECDSA signatures
+///
+/// # Fields
+///
+/// * `public_key`: The public key of the signer
+/// * `signature`: The signature to be verified (r, s)
+/// * `msg_hash`: The hash of the message to be verified
+/// * `aux_generator`: The auxiliary generator point 
+/// * `window_size`: The window size used when assigning the auxiliary generator point
+
 #[derive(Default, Clone)]
 pub struct EcdsaVerifyCircuit {
     pub public_key: Secp256k1,

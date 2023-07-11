@@ -1,15 +1,22 @@
-// Patterned after [halo2wrong ECDSA](https://github.com/privacy-scaling-explorations/halo2wrong/blob/master/ecdsa/src/ecdsa.rs)
 use ecdsa::ecdsa::EcdsaConfig;
 use halo2_proofs::circuit::{AssignedCell, Layouter};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::Error;
 
+/// Wrapper structure around EcdsaConfig
+///
+/// The wrapper allows to expose the limbs of the public key of the signer to the public.
+///
+/// # Fields
+///
+/// * `pow5_config`: The configuration for the inner [ecdsa::ecdsa::EcdsaConfig]
 #[derive(Debug, Clone)]
 pub struct EcdsaConfigWithInstance {
     pub ecdsa_config: EcdsaConfig,
 }
 
 impl EcdsaConfigWithInstance {
+    /// Exposes the limbs of the public key of the signer to the public.
     pub fn expose_limbs_to_public(
         &self,
         mut layouter: impl Layouter<Fp>,

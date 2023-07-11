@@ -1,8 +1,10 @@
+use crate::chips::less_than::less_than_vertical::{
+    LtVerticalChip, LtVerticalConfig, LtVerticalInstruction,
+};
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::merkle_sum_tree::MerkleSumTree;
-use gadgets::less_than::{LtChip, LtConfig, LtInstruction};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
@@ -11,9 +13,22 @@ use halo2_proofs::plonk::{
 use halo2_proofs::poly::Rotation;
 use snark_verifier_sdk::CircuitExt;
 
-// L is the length of the hasher input, namely 2 + (2 * N_ASSETS)
-// N_ASSETS is the number of assets in the tree
-// N_BYTES is the range in which the balances should lie
+/// Circuit for verifying solvency, namely that the assets_sum is greater than the sum of the liabilities stored in the merkle sum tree
+///
+/// # Type Parameters
+///
+/// * `L`: The length of the hasher input, namely 2 + (2 * N_ASSETS)
+/// * `N_ASSETS`: The number of assets for which the solvency is verified.
+/// * `N_BYTES`: Range in which the balances should lie
+///
+/// # Fields
+///
+/// * `left_node_hash`: The hash of the penultimate left node of the merkle sum tree
+/// * `left_node_balances`: The balances of the penultimate left node of the merkle sum tree
+/// * `right_node_hash`: The hash of the penultimate right node of the merkle sum tree
+/// * `right_node_balances`: The balances of the penultimate right node of the merkle sum tree
+/// * `assets_sum`: The sum of the assets of the CEX for each asset
+/// * `root_hash`: The root hash of the merkle sum tree
 #[derive(Clone)]
 pub struct SolvencyCircuit<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     pub left_node_hash: Fp,
@@ -27,10 +42,12 @@ pub struct SolvencyCircuit<const L: usize, const N_ASSETS: usize, const N_BYTES:
 impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
     for SolvencyCircuit<L, N_ASSETS, N_BYTES>
 {
+    /// Returns the number of public inputs of the circuit. It is 1 + N_ASSETS, namely the root hash of the merkle sum tree and the sum of the assets of the CEX for each asset
     fn num_instance(&self) -> Vec<usize> {
-        vec![1 + N_ASSETS] // root hash + assets sum
+        vec![1 + N_ASSETS]
     }
 
+    /// Returns the values of the public inputs of the circuit. The first value is the root hash of the merkle sum tree and the remaining values are the sum of the assets of the CEX for each asset
     fn instances(&self) -> Vec<Vec<Fp>> {
         let mut instances = vec![self.root_hash];
         instances.extend(self.assets_sum);
@@ -53,10 +70,9 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         }
     }
 
-    pub fn init(path: &str, assets_sum: [Fp; N_ASSETS]) -> Self {
+    /// Initializes the circuit with the merkle sum tree and the assets sum
+    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, assets_sum: [Fp; N_ASSETS]) -> Self {
         assert_eq!((N_ASSETS * 2) + 2, L);
-
-        let merkle_sum_tree = MerkleSumTree::<N_ASSETS>::new(path).unwrap();
 
         let (penultimate_node_left, penultimate_node_right) = merkle_sum_tree
             .penultimate_level_data()
@@ -75,35 +91,54 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
     }
 }
 
+/// Configuration for the solvency circuit
+/// # Type Parameters
+///
+/// * `L`: The length of the hasher input, namely 2 + (2 * N_ASSETS)
+/// * `N_ASSETS`: The number of assets for which the solvency is verified.
+/// * `N_BYTES`: Range in which the balances should lie
+///
+/// # Fields
+///
+/// * `merkle_sum_tree_config`: Configuration for the merkle sum tree
+/// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 3 and RATE = 2
+/// * `instance`: Instance column used to store the public inputs
+/// * `lt_selector`: Selector to activate the less than constraint
+/// * `lt_config`: Configuration for the less than chip
+///
+/// The circuit performs an additional constraint:
+/// * `lt_enable * (lt_config.is_lt - 1) = 0` (if `lt_enable` is toggled). It basically enforces the result of the less than chip to be 1.
 #[derive(Debug, Clone)]
 pub struct SolvencyConfig<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
-    pub poseidon_config: PoseidonConfig<3, 2, L>,
+    pub poseidon_config: PoseidonConfig<2, 1, L>,
     pub instance: Column<Instance>,
     pub lt_selector: Selector,
-    pub lt_config: LtConfig<Fp, N_BYTES>,
+    pub lt_config: LtVerticalConfig<N_BYTES>,
 }
 
 impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
     SolvencyConfig<L, N_ASSETS, N_BYTES>
 {
+    /// Configures the circuit
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
-        // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config with WIDTH 3
-        let advices: [Column<Advice>; 4] = std::array::from_fn(|_| meta.advice_column());
+        // the max number of advices columns needed is #WIDTH + 1 given requirement of the poseidon config
+        let advices: [Column<Advice>; 3] = std::array::from_fn(|_| meta.advice_column());
 
-        // the max number of fixed columns needed is 2 * WIDTH given requirement of the poseidon config with WIDTH 3
-        let fixed_columns: [Column<Fixed>; 6] = std::array::from_fn(|_| meta.fixed_column());
+        // the max number of fixed columns needed is 2 * WIDTH given requirement of the poseidon config
+        let fixed_columns: [Column<Fixed>; 4] = std::array::from_fn(|_| meta.fixed_column());
 
-        // we also need 3 selectors: 2 for the MerkleSumTreeChip and 1 for the LtChip
+        // we also need 4 selectors - 3 simple selectors and 1 complex selector
         let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
+        let complex_selector = meta.complex_selector();
 
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, 3 fixed columns for rc_a and 3 for rc_b
-        let poseidon_config = PoseidonChip::<PoseidonSpec, 3, 2, L>::configure(
+        let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, L>::configure(
             meta,
-            advices[0..3].try_into().unwrap(),
-            advices[3],
-            fixed_columns[0..3].try_into().unwrap(),
-            fixed_columns[3..6].try_into().unwrap(),
+            advices[0..2].try_into().unwrap(),
+            advices[2],
+            fixed_columns[0..2].try_into().unwrap(),
+            fixed_columns[2..4].try_into().unwrap(),
         );
 
         // enable permutation for all the advice columns
@@ -121,11 +156,15 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         let lt_selector = selectors[2];
 
         // configure lt chip
-        let lt_config = LtChip::configure(
+        let lt_config = LtVerticalChip::configure(
             meta,
             |meta| meta.query_selector(lt_selector),
+            |meta| meta.query_advice(advices[0], Rotation::prev()),
             |meta| meta.query_advice(advices[0], Rotation::cur()),
-            |meta| meta.query_advice(advices[1], Rotation::cur()),
+            advices[1],
+            advices[2],
+            fixed_columns[0],
+            complex_selector,
         );
 
         // Gate that enforces that the result of the lt chip is 1 at the row in which the lt selector is enabled
@@ -146,13 +185,13 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         }
     }
 
-    // Enforce value in the cell passed as input to be less than the value in the instance column at row `index`.
+    /// Enforces value in the cell passed as input to be less than the value in the instance column at row `index`.
     pub fn enforce_less_than(
         &self,
         mut layouter: impl Layouter<Fp>,
         input_cell: &AssignedCell<Fp, Fp>,
         index: usize,
-        lt_chip: &LtChip<Fp, N_BYTES>,
+        lt_chip: &LtVerticalChip<N_BYTES>,
     ) -> Result<(), Error> {
         layouter.assign_region(
             || "enforce input cell to be less than value in instance column at row `index`",
@@ -170,14 +209,14 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
                     || "copy value from instance column",
                     self.instance,
                     index,
-                    self.merkle_sum_tree_config.advice[1],
-                    0,
+                    self.merkle_sum_tree_config.advice[0],
+                    1,
                 )?;
 
                 // enable lt seletor
-                self.lt_selector.enable(&mut region, 0)?;
+                self.lt_selector.enable(&mut region, 1)?;
 
-                lt_chip.assign(&mut region, 0, lhs.value().copied(), rhs.value().copied())?;
+                lt_chip.assign(&mut region, 1, lhs.value().copied(), rhs.value().copied())?;
 
                 Ok(())
             },
@@ -186,7 +225,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         Ok(())
     }
 
-    // Enforce copy constraint check between input cell and instance column at row passed as input
+    /// Enforces copy constraint check between input cell and instance column at row passed as input
     pub fn expose_public(
         &self,
         mut layouter: impl Layouter<Fp>,
@@ -220,8 +259,8 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
         let merkle_sum_tree_chip =
             MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
         let poseidon_chip =
-            PoseidonChip::<PoseidonSpec, 3, 2, L>::construct(config.poseidon_config.clone());
-        let lt_chip = LtChip::<Fp, N_BYTES>::construct(config.lt_config);
+            PoseidonChip::<PoseidonSpec, 2, 1, L>::construct(config.poseidon_config.clone());
+        let lt_chip = LtVerticalChip::<N_BYTES>::construct(config.lt_config);
 
         // Assign the left penultimate hash and the left penultimate balances
         let (left_node_hash, left_node_balances) = merkle_sum_tree_chip
