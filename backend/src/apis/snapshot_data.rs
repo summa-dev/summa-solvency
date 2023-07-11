@@ -12,17 +12,16 @@ use snark_verifier_sdk::CircuitExt;
 
 use summa_solvency::{
     circuits::{
-        merkle_sum_tree::MstInclusionCircuit,
-        solvency::SolvencyCircuit,
-        utils::{full_prover, generate_setup_params},
+        merkle_sum_tree::MstInclusionCircuit, solvency::SolvencyCircuit, utils::full_prover,
     },
     merkle_sum_tree::utils::big_int_to_fp,
     merkle_sum_tree::MerkleSumTree,
 };
 
 use crate::apis::csv_parser::parse_csv_to_assets;
+use crate::apis::utils;
 
-struct MstParamsAndKeys<const LEVELS: usize, const L: usize, const N_ASSETS: usize> {
+struct MstParamsAndKeys {
     params: ParamsKZG<Bn256>,
     pk: ProvingKey<G1Affine>,
     vk: VerifyingKey<G1Affine>,
@@ -39,7 +38,7 @@ struct SnapshotData<
     mst: MerkleSumTree<N_ASSETS>,
     assets: Vec<Asset>,
     asset_signatures: AssetSignatures,
-    mst_params_and_keys: MstParamsAndKeys<LEVELS, L, N_ASSETS>,
+    mst_params_and_keys: MstParamsAndKeys,
     proofs_of_inclusions: HashMap<u64, UserProof>,
     proof_of_solvency: Option<SolvencyProof<N_ASSETS>>,
 }
@@ -65,9 +64,8 @@ pub struct InclusionProof {
     // public inputs
     leaf_hash: Fp,
     root_hash: Fp,
-    // need for verification
+    // need for verification in off-chain
     vk: VerifyingKey<G1Affine>,
-    pk: ProvingKey<G1Affine>,
     proof: Vec<u8>,
 }
 
@@ -76,9 +74,7 @@ struct SolvencyProof<const N_ASSETS: usize> {
     // public inputs
     root_hash: Fp,
     assets_sum: [Fp; N_ASSETS],
-    // need for verification
-    // vk is already exist in the onchain verifier
-    pk: ProvingKey<G1Affine>,
+    // proof data for on-chain verifier
     proof: Vec<u8>,
 }
 
@@ -103,7 +99,7 @@ impl<
 
         // generate params and plonk keys for mst inclusion proof
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
-        let params = generate_setup_params(K);
+        let params = utils::get_params(K).unwrap();
 
         if let Some(pk_path) = inclusion_pk_path {
             let pk_file = File::open(pk_path)?;
@@ -189,7 +185,7 @@ impl<
         }
 
         // generate solvency proof
-        let params = generate_setup_params(10);
+        let params = utils::get_params(10).unwrap();
 
         let f = File::open(pk_path).unwrap();
         let mut reader = BufReader::new(f);
@@ -218,7 +214,6 @@ impl<
         self.proof_of_solvency = Some(SolvencyProof::<N_ASSETS> {
             root_hash: self.mst.root().hash, // equivalant to instances[0]
             assets_sum,                      // equivalant to instances[1]
-            pk: pk.clone(),
             proof: full_prover(&params, &pk, circuit.clone(), instances),
         });
 
@@ -232,7 +227,6 @@ impl<
                 leaf_hash: user_proof.leaf_hash,
                 root_hash: self.mst.root().hash,
                 vk: self.mst_params_and_keys.vk.clone(),
-                pk: self.mst_params_and_keys.pk.clone(),
                 proof: user_proof.proof.clone(),
             }),
             None => {
@@ -244,7 +238,6 @@ impl<
                     leaf_hash: user_proof.leaf_hash,
                     root_hash: self.mst.root().hash,
                     vk: self.mst_params_and_keys.vk.clone(),
-                    pk: self.mst_params_and_keys.pk.clone(),
                     proof: user_proof.proof,
                 })
             }
@@ -272,20 +265,26 @@ mod tests {
     fn initialize_snapshot_data(
         load_existing_inclusion_pk: Option<bool>,
     ) -> SnapshotData<LEVELS, L, N_ASSETS, N_BYTES, K> {
+        let exchange_id = "CryptoExchange";
         let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
         let asset_csv = "src/apis/csv/assets_2.csv";
 
         if load_existing_inclusion_pk == Some(true) {
             return SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new(
-                "CEX_1",
+                exchange_id,
                 entry_csv,
                 asset_csv,
                 Some("artifacts/mst_inclusion_4_6_2.pk"),
             )
             .unwrap();
         }
-        SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new("CEX_1", entry_csv, asset_csv, None)
-            .unwrap()
+        SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new(
+            exchange_id,
+            entry_csv,
+            asset_csv,
+            None,
+        )
+        .unwrap()
     }
 
     #[test]
