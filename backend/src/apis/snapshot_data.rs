@@ -19,7 +19,7 @@ use summa_solvency::{
 };
 
 use crate::apis::csv_parser::parse_csv_to_assets;
-use crate::apis::utils;
+use crate::apis::utils::get_params;
 
 struct MstParamsAndKeys {
     params: ParamsKZG<Bn256>,
@@ -99,7 +99,7 @@ impl<
 
         // Get params from existing ptau file then generate proving key if the `inclusion_pk_path` not provided.
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
-        let params = utils::get_params(K).unwrap();
+        let params = get_params(K).unwrap();
 
         if let Some(pk_path) = inclusion_pk_path {
             let pk_file = File::open(pk_path)?;
@@ -185,7 +185,7 @@ impl<
         }
 
         // Generate solvency proof
-        let params = utils::get_params(10).unwrap();
+        let params = get_params(10).unwrap();
 
         let f = File::open(pk_path).unwrap();
         let mut reader = BufReader::new(f);
