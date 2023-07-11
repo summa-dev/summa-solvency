@@ -2,7 +2,7 @@ mod entry;
 mod mst;
 mod params;
 mod tests;
-mod utils;
+pub mod utils;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
 pub use params::{L_ENTRY, L_NODE, MST_WIDTH, N_ASSETS, RANGE_BITS};
