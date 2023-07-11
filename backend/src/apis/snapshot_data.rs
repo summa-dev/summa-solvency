@@ -1,10 +1,12 @@
 use num_bigint::BigInt;
 use std::collections::HashMap;
+use std::{fs::File, io::BufReader};
 
 use halo2_proofs::{
     halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
     plonk::{keygen_pk, keygen_vk, ProvingKey, VerifyingKey},
     poly::kzg::commitment::ParamsKZG,
+    SerdeFormat::RawBytes,
 };
 use snark_verifier_sdk::CircuitExt;
 
@@ -92,6 +94,7 @@ impl<
         exchange_id: &str,
         entry_csv: &str,
         asset_csv: &str,
+        inclusion_pk_path: Option<&str>,
     ) -> Result<SnapshotData<LEVELS, L, N_ASSETS, N_BYTES, K>, Box<dyn std::error::Error>> {
         let (assets, signatures) = parse_csv_to_assets(asset_csv).unwrap();
         let mst: MerkleSumTree<N_ASSETS> = MerkleSumTree::<N_ASSETS>::new(entry_csv).unwrap();
@@ -101,6 +104,26 @@ impl<
         // generate params and plonk keys for mst inclusion proof
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
         let params = generate_setup_params(K);
+
+        if let Some(pk_path) = inclusion_pk_path {
+            let pk_file = File::open(pk_path)?;
+            let mut reader = BufReader::new(pk_file);
+            let pk = ProvingKey::<G1Affine>::read::<_, MstInclusionCircuit<LEVELS, L, N_ASSETS>>(
+                &mut reader,
+                RawBytes,
+            )?;
+            let vk = pk.get_vk().clone();
+
+            return Ok(SnapshotData {
+                exchange_id: exchange_id.to_owned(),
+                mst,
+                assets,
+                asset_signatures: signatures,
+                mst_params_and_keys: MstParamsAndKeys { params, pk, vk },
+                proofs_of_inclusions: user_proofs,
+                proof_of_solvency: None,
+            });
+        }
 
         let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
         let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
@@ -147,7 +170,7 @@ impl<
         })
     }
 
-    pub fn generate_solvency_proof(&mut self) -> Result<(), &'static str> {
+    pub fn generate_solvency_proof(&mut self, pk_path: &str) -> Result<(), &'static str> {
         if self.proof_of_solvency.is_some() {
             return Err("Solvency proof already exists");
         }
@@ -166,11 +189,15 @@ impl<
         }
 
         // generate solvency proof
-        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
-        let params = generate_setup_params(K);
+        let params = generate_setup_params(10);
 
-        let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
-        let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
+        let f = File::open(pk_path).unwrap();
+        let mut reader = BufReader::new(f);
+        let pk = ProvingKey::<G1Affine>::read::<_, SolvencyCircuit<L, N_ASSETS, N_BYTES>>(
+            &mut reader,
+            RawBytes,
+        )
+        .unwrap();
 
         let (penultimate_node_left, penultimate_node_right) = &self
             .mst
@@ -239,18 +266,31 @@ mod tests {
     const N_ASSETS: usize = 2;
     const L: usize = 2 + (N_ASSETS * 2);
     const LEVELS: usize = 4;
-    const N_BYTES: usize = 31;
+    const N_BYTES: usize = 64 / 8;
     const K: u32 = 11;
 
-    fn initialize_snapshot_data() -> SnapshotData<LEVELS, L, N_ASSETS, N_BYTES, K> {
+    fn initialize_snapshot_data(
+        load_existing_inclusion_pk: Option<bool>,
+    ) -> SnapshotData<LEVELS, L, N_ASSETS, N_BYTES, K> {
         let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
         let asset_csv = "src/apis/csv/assets_2.csv";
-        SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new("CEX_1", entry_csv, asset_csv).unwrap()
+
+        if load_existing_inclusion_pk == Some(true) {
+            return SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new(
+                "CEX_1",
+                entry_csv,
+                asset_csv,
+                Some("artifacts/mst_inclusion_4_6_2.pk"),
+            )
+            .unwrap();
+        }
+        SnapshotData::<LEVELS, L, N_ASSETS, N_BYTES, K>::new("CEX_1", entry_csv, asset_csv, None)
+            .unwrap()
     }
 
     #[test]
     fn test_snapshot_data_initialization() {
-        let snapshot_data = initialize_snapshot_data();
+        let snapshot_data = initialize_snapshot_data(None);
 
         // Check assets
         assert!(snapshot_data.assets[0].name.contains(&"eth".to_string()));
@@ -261,13 +301,14 @@ mod tests {
 
     #[test]
     fn test_snapshot_data_generate_solvency_proof() {
-        let mut snapshot_data = initialize_snapshot_data();
+        let proving_key_path = "artifacts/solvency_6_2_8.pk";
+        let mut snapshot_data = initialize_snapshot_data(None);
 
         assert!(snapshot_data.proof_of_solvency.is_none());
         let empty_on_chain_proof = snapshot_data.get_onchain_proof();
         assert!(empty_on_chain_proof.is_err());
 
-        let result = snapshot_data.generate_solvency_proof();
+        let result = snapshot_data.generate_solvency_proof(proving_key_path);
         assert_eq!(result.is_ok(), true);
 
         // Check updated on-chain proof
@@ -277,7 +318,19 @@ mod tests {
 
     #[test]
     fn test_snapshot_data_generate_inclusion_proof() {
-        let mut snapshot_data = initialize_snapshot_data();
+        let mut snapshot_data = initialize_snapshot_data(None);
+
+        assert_eq!(snapshot_data.proofs_of_inclusions.len(), 0);
+
+        // Check updated on-chain proof
+        let user_proof = snapshot_data.get_user_proof(0);
+        assert!(user_proof.is_ok());
+        assert_eq!(snapshot_data.proofs_of_inclusions.len(), 1);
+    }
+
+    #[test]
+    fn test_snapshot_data_generate_inclusion_proof_with_external_proving_key() {
+        let mut snapshot_data = initialize_snapshot_data(Some(bool::from(true)));
 
         assert_eq!(snapshot_data.proofs_of_inclusions.len(), 0);
 
@@ -289,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_snapshot_data_stored_asset_data() {
-        let snapshot_data = initialize_snapshot_data();
+        let snapshot_data = initialize_snapshot_data(None);
 
         for asset in snapshot_data.assets {
             for address in asset.pubkeys {
