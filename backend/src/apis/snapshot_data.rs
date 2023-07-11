@@ -39,7 +39,7 @@ struct SnapshotData<
     assets: Vec<Asset>,
     asset_signatures: AssetSignatures,
     mst_params_and_keys: MstParamsAndKeys,
-    proofs_of_inclusions: HashMap<u64, UserProof>,
+    proofs_of_inclusion: HashMap<u64, UserProof>,
     proof_of_solvency: Option<SolvencyProof<N_ASSETS>>,
 }
 
@@ -97,7 +97,7 @@ impl<
 
         let user_proofs = HashMap::<u64, UserProof>::new();
 
-        // generate params and plonk keys for mst inclusion proof
+        // Get params from existing ptau file then generate proving key if the `inclusion_pk_path` not provided.
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
         let params = utils::get_params(K).unwrap();
 
@@ -116,7 +116,7 @@ impl<
                 assets,
                 asset_signatures: signatures,
                 mst_params_and_keys: MstParamsAndKeys { params, pk, vk },
-                proofs_of_inclusions: user_proofs,
+                proofs_of_inclusion: user_proofs,
                 proof_of_solvency: None,
             });
         }
@@ -130,7 +130,7 @@ impl<
             assets,
             asset_signatures: signatures,
             mst_params_and_keys: MstParamsAndKeys { params, pk, vk },
-            proofs_of_inclusions: user_proofs,
+            proofs_of_inclusion: user_proofs,
             proof_of_solvency: None,
         })
     }
@@ -184,7 +184,7 @@ impl<
             assets_sum[index] = asset.sum_balances;
         }
 
-        // generate solvency proof
+        // Generate solvency proof
         let params = utils::get_params(10).unwrap();
 
         let f = File::open(pk_path).unwrap();
@@ -221,7 +221,7 @@ impl<
     }
 
     pub fn get_user_proof(&mut self, user_index: u64) -> Result<InclusionProof, &'static str> {
-        let user_proof = self.proofs_of_inclusions.get(&user_index);
+        let user_proof = self.proofs_of_inclusion.get(&user_index);
         match user_proof {
             Some(user_proof) => Ok(InclusionProof {
                 leaf_hash: user_proof.leaf_hash,
@@ -232,7 +232,7 @@ impl<
             None => {
                 let user_proof =
                     Self::generate_inclusion_proof(&self, user_index as usize).unwrap();
-                self.proofs_of_inclusions
+                self.proofs_of_inclusion
                     .insert(user_index, user_proof.clone());
                 Ok(InclusionProof {
                     leaf_hash: user_proof.leaf_hash,
@@ -319,24 +319,24 @@ mod tests {
     fn test_snapshot_data_generate_inclusion_proof() {
         let mut snapshot_data = initialize_snapshot_data(None);
 
-        assert_eq!(snapshot_data.proofs_of_inclusions.len(), 0);
+        assert_eq!(snapshot_data.proofs_of_inclusion.len(), 0);
 
         // Check updated on-chain proof
         let user_proof = snapshot_data.get_user_proof(0);
         assert!(user_proof.is_ok());
-        assert_eq!(snapshot_data.proofs_of_inclusions.len(), 1);
+        assert_eq!(snapshot_data.proofs_of_inclusion.len(), 1);
     }
 
     #[test]
     fn test_snapshot_data_generate_inclusion_proof_with_external_proving_key() {
         let mut snapshot_data = initialize_snapshot_data(Some(bool::from(true)));
 
-        assert_eq!(snapshot_data.proofs_of_inclusions.len(), 0);
+        assert_eq!(snapshot_data.proofs_of_inclusion.len(), 0);
 
         // Check updated on-chain proof
         let user_proof = snapshot_data.get_user_proof(0);
         assert!(user_proof.is_ok());
-        assert_eq!(snapshot_data.proofs_of_inclusions.len(), 1);
+        assert_eq!(snapshot_data.proofs_of_inclusion.len(), 1);
     }
 
     #[test]
