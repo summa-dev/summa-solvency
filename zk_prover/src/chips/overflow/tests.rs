@@ -88,21 +88,21 @@ impl AddChip {
 }
 
 #[derive(Debug, Clone)]
-pub struct OverflowCheckTestConfig<const MAX_BITS: u8, const MOD_BITS: usize> {
+pub struct OverflowCheckTestConfig<const MAX_BITS: u8, const RANGE_BITS: usize> {
     pub addchip_config: AddConfig,
-    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, MOD_BITS>,
+    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, RANGE_BITS>,
 }
 
 #[derive(Default, Clone, Debug)]
-struct OverflowCheckTestCircuit<const MAX_BITS: u8, const MOD_BITS: usize> {
+struct OverflowCheckTestCircuit<const MAX_BITS: u8, const RANGE_BITS: usize> {
     pub a: Fp,
     pub b: Fp,
 }
 
-impl<const MAX_BITS: u8, const MOD_BITS: usize> Circuit<Fp>
-    for OverflowCheckTestCircuit<MAX_BITS, MOD_BITS>
+impl<const MAX_BITS: u8, const RANGE_BITS: usize> Circuit<Fp>
+    for OverflowCheckTestCircuit<MAX_BITS, RANGE_BITS>
 {
-    type Config = OverflowCheckTestConfig<MAX_BITS, MOD_BITS>;
+    type Config = OverflowCheckTestConfig<MAX_BITS, RANGE_BITS>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -126,7 +126,7 @@ impl<const MAX_BITS: u8, const MOD_BITS: usize> Circuit<Fp>
         // we need 1 complex selector for the lookup check
         let toggle_lookup_check = meta.complex_selector();
 
-        let overflow_check_config = OverflowChip::<MAX_BITS, MOD_BITS>::configure(
+        let overflow_check_config = OverflowChip::<MAX_BITS, RANGE_BITS>::configure(
             meta,
             a,
             b,

@@ -11,7 +11,7 @@ use summa_solvency::{
         solvency::SolvencyCircuit,
         utils::{full_prover, full_verifier, generate_setup_params},
     },
-    merkle_sum_tree::{MerkleSumTree, MOD_BITS},
+    merkle_sum_tree::{MerkleSumTree, RANGE_BITS},
 };
 
 const SAMPLE_SIZE: usize = 10;
@@ -19,7 +19,7 @@ const LEVELS: usize = 15;
 const N_ASSETS: usize = 2;
 const PATH_NAME: &str = "two_assets";
 const L: usize = 2 + (N_ASSETS * 2);
-const N_BYTES: usize = MOD_BITS / 8;
+const N_BYTES: usize = RANGE_BITS / 8;
 
 fn build_mstree(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
@@ -44,7 +44,7 @@ fn build_mstree(_c: &mut Criterion) {
 fn verification_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(12);
+    let params: ParamsKZG<Bn256> = generate_setup_params(13);
 
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
@@ -62,7 +62,7 @@ fn verification_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
 fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(12);
+    let params: ParamsKZG<Bn256> = generate_setup_params(13);
 
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
@@ -81,7 +81,7 @@ fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
 fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(12);
+    let params: ParamsKZG<Bn256> = generate_setup_params(13);
 
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
@@ -112,7 +112,7 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(12);
+    let params: ParamsKZG<Bn256> = generate_setup_params(13);
 
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 

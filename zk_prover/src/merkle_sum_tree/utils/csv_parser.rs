@@ -1,4 +1,4 @@
-use crate::merkle_sum_tree::{Entry, MOD_BITS};
+use crate::merkle_sum_tree::{Entry, RANGE_BITS};
 use num_bigint::BigInt;
 use serde::Deserialize;
 use std::error::Error;
@@ -45,9 +45,9 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
         entries.push(entry);
     }
 
-    // Iterate through the balance accumulator and throw error if any balance is not in MOD_BITS range (0, 2 ** 248):
+    // Iterate through the balance accumulator and throw error if any balance is not in RANGE_BITS range (0, 2 ** RANGE_BITS):
     for balance in balances_acc {
-        if balance >= BigInt::from(2).pow(MOD_BITS as u32) {
+        if balance >= BigInt::from(2).pow(RANGE_BITS as u32) {
             return Err(
                 "Accumulated balance is not in the expected range, proof generation will fail!"
                     .into(),
