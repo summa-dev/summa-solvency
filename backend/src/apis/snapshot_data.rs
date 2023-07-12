@@ -2,6 +2,7 @@ use num_bigint::BigInt;
 use std::collections::HashMap;
 use std::{fs::File, io::BufReader};
 
+use ethers::types::{Bytes, U256};
 use halo2_proofs::{
     halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
     plonk::{keygen_pk, keygen_vk, ProvingKey, VerifyingKey},
@@ -12,7 +13,9 @@ use snark_verifier_sdk::CircuitExt;
 
 use summa_solvency::{
     circuits::{
-        merkle_sum_tree::MstInclusionCircuit, solvency::SolvencyCircuit, utils::full_prover,
+        merkle_sum_tree::MstInclusionCircuit,
+        solvency::SolvencyCircuit,
+        utils::{full_prover, gen_proof_solidity_calldata},
     },
     merkle_sum_tree::utils::big_int_to_fp,
     merkle_sum_tree::MerkleSumTree,
@@ -27,7 +30,7 @@ struct MstParamsAndKeys {
     vk: VerifyingKey<G1Affine>,
 }
 
-struct SnapshotData<
+pub struct SnapshotData<
     const LEVELS: usize,
     const L: usize,
     const N_ASSETS: usize,
@@ -61,21 +64,17 @@ struct UserProof {
 }
 
 pub struct InclusionProof {
-    // public inputs
-    leaf_hash: Fp,
-    root_hash: Fp,
-    // need for verification in off-chain
-    vk: VerifyingKey<G1Affine>,
     proof: Vec<u8>,
 }
 
 #[derive(Debug, Clone)]
-struct SolvencyProof<const N_ASSETS: usize> {
+pub struct SolvencyProof<const N_ASSETS: usize> {
     // public inputs
     root_hash: Fp,
     assets_sum: [Fp; N_ASSETS],
+    public_inputs: Vec<U256>, // for generaiting solidity calldata
     // proof data for on-chain verifier
-    proof: Vec<u8>,
+    proof_calldata: Bytes,
 }
 
 impl<
@@ -95,7 +94,7 @@ impl<
         let (assets, signatures) = parse_csv_to_assets(asset_csv).unwrap();
         let mst: MerkleSumTree<N_ASSETS> = MerkleSumTree::<N_ASSETS>::new(entry_csv).unwrap();
 
-        let user_proofs = HashMap::<u64, UserProof>::new();
+        let mst_inclusion_proof = HashMap::<u64, UserProof>::new();
 
         // Get params from existing ptau file then generate proving key if the `inclusion_pk_path` not provided.
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
@@ -116,7 +115,7 @@ impl<
                 assets,
                 asset_signatures: signatures,
                 mst_params_and_keys: MstParamsAndKeys { params, pk, vk },
-                proofs_of_inclusion: user_proofs,
+                proofs_of_inclusion: mst_inclusion_proof,
                 proof_of_solvency: None,
             });
         }
@@ -130,7 +129,7 @@ impl<
             assets,
             asset_signatures: signatures,
             mst_params_and_keys: MstParamsAndKeys { params, pk, vk },
-            proofs_of_inclusion: user_proofs,
+            proofs_of_inclusion: mst_inclusion_proof,
             proof_of_solvency: None,
         })
     }
@@ -209,46 +208,52 @@ impl<
             root_hash: self.mst.root().hash,
         };
 
-        let instances = circuit.instances();
+        let (proof_calldata, public_inputs) = gen_proof_solidity_calldata(&params, &pk, circuit);
 
         self.proof_of_solvency = Some(SolvencyProof::<N_ASSETS> {
             root_hash: self.mst.root().hash, // equivalant to instances[0]
             assets_sum,                      // equivalant to instances[1]
-            proof: full_prover(&params, &pk, circuit.clone(), instances),
+            public_inputs,
+            proof_calldata,
         });
 
         Ok(())
     }
 
-    pub fn get_user_proof(&mut self, user_index: u64) -> Result<InclusionProof, &'static str> {
-        let user_proof = self.proofs_of_inclusion.get(&user_index);
-        match user_proof {
-            Some(user_proof) => Ok(InclusionProof {
-                leaf_hash: user_proof.leaf_hash,
-                root_hash: self.mst.root().hash,
-                vk: self.mst_params_and_keys.vk.clone(),
-                proof: user_proof.proof.clone(),
+    pub fn get_mst_inclusion_proof(
+        &mut self,
+        user_index: u64,
+    ) -> Result<InclusionProof, &'static str> {
+        let mst_inclusion_proof = self.proofs_of_inclusion.get(&user_index);
+        match mst_inclusion_proof {
+            Some(proof) => Ok(InclusionProof {
+                proof: proof.proof.clone(),
             }),
             None => {
-                let user_proof =
-                    Self::generate_inclusion_proof(&self, user_index as usize).unwrap();
-                self.proofs_of_inclusion
-                    .insert(user_index, user_proof.clone());
-                Ok(InclusionProof {
-                    leaf_hash: user_proof.leaf_hash,
-                    root_hash: self.mst.root().hash,
-                    vk: self.mst_params_and_keys.vk.clone(),
-                    proof: user_proof.proof,
-                })
+                let proof = Self::generate_inclusion_proof(&self, user_index as usize).unwrap();
+                self.proofs_of_inclusion.insert(user_index, proof.clone());
+                Ok(InclusionProof { proof: proof.proof })
             }
         }
     }
 
-    pub fn get_onchain_proof(&self) -> Result<SolvencyProof<N_ASSETS>, &'static str> {
+    pub fn get_solvency_proof(&self) -> Result<SolvencyProof<N_ASSETS>, &'static str> {
         match &self.proof_of_solvency {
             Some(proof) => Ok(proof.clone()),
-            None => Err("on-chain proof not initialized"),
+            None => Err("solvency proof not initialized"),
         }
+    }
+}
+
+impl InclusionProof {
+    pub fn get_proof(&self) -> Vec<u8> {
+        self.proof.clone()
+    }
+}
+
+impl<const N_ASSETS: usize> SolvencyProof<N_ASSETS> {
+    pub fn get_root_hash(&self) -> Fp {
+        self.root_hash
     }
 }
 
@@ -304,15 +309,15 @@ mod tests {
         let mut snapshot_data = initialize_snapshot_data(None);
 
         assert!(snapshot_data.proof_of_solvency.is_none());
-        let empty_on_chain_proof = snapshot_data.get_onchain_proof();
+        let empty_on_chain_proof = snapshot_data.get_solvency_proof();
         assert!(empty_on_chain_proof.is_err());
 
         let result = snapshot_data.generate_solvency_proof(proving_key_path);
         assert_eq!(result.is_ok(), true);
 
-        // Check updated on-chain proof
-        let on_chain_proof = snapshot_data.get_onchain_proof();
-        assert_eq!(on_chain_proof.is_ok(), true);
+        // Check updated solvency proof
+        let solvency_proof = snapshot_data.get_solvency_proof();
+        assert_eq!(solvency_proof.is_ok(), true);
     }
 
     #[test]
@@ -321,9 +326,9 @@ mod tests {
 
         assert_eq!(snapshot_data.proofs_of_inclusion.len(), 0);
 
-        // Check updated on-chain proof
-        let user_proof = snapshot_data.get_user_proof(0);
-        assert!(user_proof.is_ok());
+        // Check MST inclusion proof is updated
+        let mst_inclusion_proof = snapshot_data.get_mst_inclusion_proof(0);
+        assert!(mst_inclusion_proof.is_ok());
         assert_eq!(snapshot_data.proofs_of_inclusion.len(), 1);
     }
 
@@ -333,9 +338,9 @@ mod tests {
 
         assert_eq!(snapshot_data.proofs_of_inclusion.len(), 0);
 
-        // Check updated on-chain proof
-        let user_proof = snapshot_data.get_user_proof(0);
-        assert!(user_proof.is_ok());
+        // Check MST inclusion proof is updated
+        let mst_inclusion_proof = snapshot_data.get_mst_inclusion_proof(0);
+        assert!(mst_inclusion_proof.is_ok());
         assert_eq!(snapshot_data.proofs_of_inclusion.len(), 1);
     }
 

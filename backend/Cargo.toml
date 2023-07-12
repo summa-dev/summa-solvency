@@ -12,3 +12,18 @@ csv = "1.2.2"
 num-bigint = "0.4.3"
 serde = "1.0.166"
 snark-verifier-sdk = { git = "https://github.com/privacy-scaling-explorations/snark-verifier", version = "0.1.1" }
+ethers = { version = "2.0.7", default_features = false, features = ["ethers-solc"] }
+bincode = "1.3.3"
+dialoguer = "0.10.4"
+
+[[bin]]
+name ="summa-prover"
+path = "src/bin/cli_prover.rs"
+
+[[bin]]
+name ="summa-verifier"
+path = "src/bin/cli_verifier.rs"
+
+[lib]
+name = "summa_backend"
+path = "src/lib.rs"
