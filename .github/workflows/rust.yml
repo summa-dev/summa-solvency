@@ -24,10 +24,6 @@ jobs:
       run: |
         cd zk_prover
         cargo build --verbose
-    - name: Format
-      run: |
-        cd zk_prover
-        cargo fmt
     - name: Install Solidity
       run: |
         sudo add-apt-repository ppa:ethereum/ethereum
