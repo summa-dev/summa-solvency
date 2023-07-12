@@ -2,15 +2,13 @@ use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
-use crate::merkle_sum_tree::{big_int_to_fp, MerkleSumTree, RANGE_BITS};
+use crate::merkle_sum_tree::{big_int_to_fp, MerkleSumTree};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
     Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Instance, Selector,
 };
 use snark_verifier_sdk::CircuitExt;
-
-const MAX_BITS: u8 = 8;
 
 /// Circuit for verifying inclusion of a leaf_hash inside a merkle sum tree with a given root.
 ///
@@ -109,7 +107,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize>
 pub struct MstInclusionConfig<const L: usize, const N_ASSETS: usize> {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
     pub poseidon_config: PoseidonConfig<2, 1, L>,
-    pub overflow_check_config: OverflowCheckConfig<MAX_BITS, RANGE_BITS>,
+    pub overflow_check_config: OverflowCheckConfig<8>,
     pub instance: Column<Instance>,
 }
 
@@ -148,7 +146,7 @@ impl<const L: usize, const N_ASSETS: usize> MstInclusionConfig<L, N_ASSETS> {
             selectors[0..2].try_into().unwrap(),
         );
 
-        let overflow_check_config = OverflowChip::<MAX_BITS, RANGE_BITS>::configure(
+        let overflow_check_config = OverflowChip::<8>::configure(
             meta,
             advices[0],
             advices[1],
@@ -205,7 +203,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
         let poseidon_chip =
             PoseidonChip::<PoseidonSpec, 2, 1, L>::construct(config.poseidon_config.clone());
         let overflow_check_chip =
-            OverflowChip::<MAX_BITS, RANGE_BITS>::construct(config.overflow_check_config.clone());
+            OverflowChip::<8>::construct(config.overflow_check_config.clone());
 
         // Assign the leaf hash and the leaf balances
         let (mut current_hash, mut current_balances) = merkle_sum_tree_chip
@@ -310,7 +308,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize> Circuit<Fp>
         // expose the last current hash, namely the root hash, as public input
         config.expose_public(layouter.namespace(|| "public root hash"), &current_hash, 1)?;
 
-        // perform range check on the balances of the root to make sure these lie in the 2^RANGE_BITS range
+        // perform range check on the balances of the root to make sure these lie in the 2^64 range
         for balance in current_balances.iter() {
             overflow_check_chip.assign(
                 layouter.namespace(|| "overflow check root balance"),

@@ -9,8 +9,7 @@ use std::fmt::Debug;
 ///
 /// # Type Parameters
 ///
-/// * `MAX_BITS`: Number of bits of each chunk in which the value to be checked is decomposed into.
-/// * `RANGE_BITS`: Range in which the value to be checked should be.
+/// * `N_BYTES`: Number of bytes in which the value to be check should lie
 ///
 /// # Fields
 ///
@@ -20,7 +19,7 @@ use std::fmt::Debug;
 /// * `toggle_decomposed_value_check`: Selector to toggle the equality check between the decomposed value and the value.
 /// * `toggle_lookup_check`: Selector to toggle the lookup check.
 #[derive(Debug, Clone)]
-pub struct OverflowCheckConfig<const MAX_BITS: u8, const RANGE_BITS: usize> {
+pub struct OverflowCheckConfig<const N_BYTES: usize> {
     pub a: Column<Advice>,
     pub b: Column<Advice>,
     pub range: Column<Fixed>,
@@ -28,29 +27,18 @@ pub struct OverflowCheckConfig<const MAX_BITS: u8, const RANGE_BITS: usize> {
     pub toggle_lookup_check: Selector,
 }
 
-/// Chip that verifies that the value to be checked doesn't overflow the range specified by `RANGE_BITS`.
+/// Chip that verifies that the value to be checked doesn't overflow the range specified by `N_BYTES`.
 /// Contains the following constraints:
 /// * `value` = `decomposed_value_sum` (if `toggle_decomposed_value_check` is toggled)
-/// * `decomposed_value` ∈ to `MAX_BITS` lookup table (if `toggle_lookup_check` is toggled). Namely `decomposed_value` should be in the `MAX_BITS` range
+/// * `decomposed_value` ∈ to `u8` lookup table (if `toggle_lookup_check` is toggled). Namely `decomposed_value` should be in the `u8` range
 #[derive(Debug, Clone)]
-pub struct OverflowChip<const MAX_BITS: u8, const RANGE_BITS: usize> {
-    config: OverflowCheckConfig<MAX_BITS, RANGE_BITS>,
+pub struct OverflowChip<const N_BYTES: usize> {
+    config: OverflowCheckConfig<N_BYTES>,
 }
 
-impl<const MAX_BITS: u8, const RANGE_BITS: usize> OverflowChip<MAX_BITS, RANGE_BITS> {
+impl<const N_BYTES: usize> OverflowChip<N_BYTES> {
     /// Constructs a new Overflow Chip given an OverflowCheckConfig
-    pub fn construct(config: OverflowCheckConfig<MAX_BITS, RANGE_BITS>) -> Self {
-        let num_rows = RANGE_BITS / MAX_BITS as usize;
-        let remainder = RANGE_BITS % MAX_BITS as usize;
-
-        // Check if RANGE_BITS is not evenly divisible by MAX_BITS
-        if remainder != 0 {
-            eprintln!(
-                "Warning: RANGE_BITS ({}) is not evenly divisible by MAX_BITS ({}). Number of rows is {}.\nIs this intended?",
-                RANGE_BITS, MAX_BITS, num_rows
-            );
-        }
-
+    pub fn construct(config: OverflowCheckConfig<N_BYTES>) -> Self {
         Self { config }
     }
 
@@ -62,9 +50,7 @@ impl<const MAX_BITS: u8, const RANGE_BITS: usize> OverflowChip<MAX_BITS, RANGE_B
         range: Column<Fixed>,
         toggle_decomposed_value_check: Selector,
         toggle_lookup_check: Selector,
-    ) -> OverflowCheckConfig<MAX_BITS, RANGE_BITS> {
-        let num_rows = RANGE_BITS / MAX_BITS as usize;
-
+    ) -> OverflowCheckConfig<N_BYTES> {
         meta.create_gate(
             "equality check between decomposed_value and value",
             |meta| {
@@ -72,7 +58,7 @@ impl<const MAX_BITS: u8, const RANGE_BITS: usize> OverflowChip<MAX_BITS, RANGE_B
 
                 let value = meta.query_advice(a, Rotation::cur());
 
-                let decomposed_value_vec: Vec<Expression<Fp>> = (0..num_rows)
+                let decomposed_value_vec: Vec<Expression<Fp>> = (0..N_BYTES)
                     .map(|i| meta.query_advice(b, Rotation(i as i32)))
                     .collect();
 
@@ -80,13 +66,13 @@ impl<const MAX_BITS: u8, const RANGE_BITS: usize> OverflowChip<MAX_BITS, RANGE_B
                 let multiplier = |pos: usize| {
                     let mut shift_chunk = Fp::one();
                     for _ in 1..pos {
-                        shift_chunk *= Fp::from(1 << MAX_BITS);
+                        shift_chunk *= Fp::from(1 << 8);
                     }
                     Expression::Constant(shift_chunk)
                 };
 
                 // We are performing an important calculation here to check for overflow in finite field numbers.
-                // A single range table is utilized which applies `1 << MAX_BITS` to decompose the column 'b' for range checking.
+                // A single range table is utilized which applies `1 << 8` to decompose the column 'b' for range checking.
                 //
                 // the decomposed values would be represented as follows:
                 //
@@ -102,11 +88,11 @@ impl<const MAX_BITS: u8, const RANGE_BITS: usize> OverflowChip<MAX_BITS, RANGE_B
                 // During the iteration process in fold, the following would be the values of `acc`:
                 // iteration 0: acc = decomposed_value_vec[1] * ( 1 << 8 ) + decomposed_value_vec[2]
                 // iteration 1: acc = decomposed_value_vec[0] * ( 1 << 16 ) + decomposed_value_vec[1] * ( 1 << 8 ) + decomposed_value_vec[2]
-                let decomposed_value_sum = (0..=num_rows - 2).fold(
+                let decomposed_value_sum = (0..=N_BYTES - 2).fold(
                     // decomposed value at right-most advice columnis is least significant byte
-                    decomposed_value_vec[num_rows - 1].clone(),
+                    decomposed_value_vec[N_BYTES - 1].clone(),
                     |acc, i| {
-                        let cursor = num_rows - i;
+                        let cursor = N_BYTES - i;
                         acc + (decomposed_value_vec[i].clone() * multiplier(cursor))
                     },
                 );
@@ -134,7 +120,7 @@ impl<const MAX_BITS: u8, const RANGE_BITS: usize> OverflowChip<MAX_BITS, RANGE_B
         }
     }
 
-    /// Assigns the value to be checked to the chip by splitting it into `RANGE_BITS / MAX_BITS` chunks.
+    /// Assigns the value to be checked to the chip by splitting it into `N_BYTES` chunks.
     pub fn assign(
         &self,
         mut layouter: impl Layouter<Fp>,
@@ -147,16 +133,14 @@ impl<const MAX_BITS: u8, const RANGE_BITS: usize> OverflowChip<MAX_BITS, RANGE_B
                     .toggle_decomposed_value_check
                     .enable(&mut region, 0)?;
 
-                let num_rows = RANGE_BITS / MAX_BITS as usize;
-
                 // Assign input value to the cell inside the region
                 value.copy_advice(|| "assign value", &mut region, self.config.a, 0)?;
 
                 // Just used helper function for decomposing. In other halo2 application used functions based on Field.
                 let decomposed_values: Vec<Fp> = decompose_bigint_to_ubits(
                     &value_fp_to_big_uint(value.value().copied()),
-                    num_rows,
-                    MAX_BITS as usize,
+                    N_BYTES,
+                    8 as usize,
                 ) as Vec<Fp>;
 
                 // Note that, decomposed result is little edian. So, we need to reverse it.
@@ -176,12 +160,12 @@ impl<const MAX_BITS: u8, const RANGE_BITS: usize> OverflowChip<MAX_BITS, RANGE_B
         )
     }
 
-    /// Loads the lookup table with values from `0` to `2^MAX_BITS - 1`
+    /// Loads the lookup table with values from `0` to `2^8 - 1`
     pub fn load(&self, layouter: &mut impl Layouter<Fp>) -> Result<(), Error> {
-        let range = 1 << (MAX_BITS as usize);
+        let range = 1 << (8 as usize);
 
         layouter.assign_region(
-            || format!("load range check table of {} bits", MAX_BITS),
+            || format!("load range check table of {} bits", 8),
             |mut region| {
                 for i in 0..range {
                     region.assign_fixed(

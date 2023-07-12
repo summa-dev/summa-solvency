@@ -30,7 +30,7 @@ use snark_verifier_sdk::CircuitExt;
 /// * `assets_sum`: The sum of the assets of the CEX for each asset
 /// * `root_hash`: The root hash of the merkle sum tree
 #[derive(Clone)]
-pub struct SolvencyCircuit<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> {
+pub struct SolvencyCircuit<const L: usize, const N_ASSETS: usize> {
     pub left_node_hash: Fp,
     pub left_node_balances: [Fp; N_ASSETS],
     pub right_node_hash: Fp,
@@ -39,9 +39,7 @@ pub struct SolvencyCircuit<const L: usize, const N_ASSETS: usize, const N_BYTES:
     pub root_hash: Fp,
 }
 
-impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
-    for SolvencyCircuit<L, N_ASSETS, N_BYTES>
-{
+impl<const L: usize, const N_ASSETS: usize> CircuitExt<Fp> for SolvencyCircuit<L, N_ASSETS> {
     /// Returns the number of public inputs of the circuit. It is 1 + N_ASSETS, namely the root hash of the merkle sum tree and the sum of the assets of the CEX for each asset
     fn num_instance(&self) -> Vec<usize> {
         vec![1 + N_ASSETS]
@@ -55,9 +53,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
     }
 }
 
-impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
-    SolvencyCircuit<L, N_ASSETS, N_BYTES>
-{
+impl<const L: usize, const N_ASSETS: usize> SolvencyCircuit<L, N_ASSETS> {
     pub fn init_empty() -> Self {
         assert_eq!((N_ASSETS * 2) + 2, L);
         Self {
@@ -109,17 +105,15 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
 /// The circuit performs an additional constraint:
 /// * `lt_enable * (lt_config.is_lt - 1) = 0` (if `lt_enable` is toggled). It basically enforces the result of the less than chip to be 1.
 #[derive(Debug, Clone)]
-pub struct SolvencyConfig<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> {
+pub struct SolvencyConfig<const L: usize, const N_ASSETS: usize> {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
     pub poseidon_config: PoseidonConfig<2, 1, L>,
     pub instance: Column<Instance>,
     pub lt_selector: Selector,
-    pub lt_config: LtVerticalConfig<N_BYTES>,
+    pub lt_config: LtVerticalConfig<8>,
 }
 
-impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
-    SolvencyConfig<L, N_ASSETS, N_BYTES>
-{
+impl<const L: usize, const N_ASSETS: usize> SolvencyConfig<L, N_ASSETS> {
     /// Configures the circuit
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
         // the max number of advices columns needed is #WIDTH + 1 given requirement of the poseidon config
@@ -191,7 +185,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         mut layouter: impl Layouter<Fp>,
         input_cell: &AssignedCell<Fp, Fp>,
         index: usize,
-        lt_chip: &LtVerticalChip<N_BYTES>,
+        lt_chip: &LtVerticalChip<8>,
     ) -> Result<(), Error> {
         layouter.assign_region(
             || "enforce input cell to be less than value in instance column at row `index`",
@@ -236,10 +230,8 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
     }
 }
 
-impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
-    for SolvencyCircuit<L, N_ASSETS, N_BYTES>
-{
-    type Config = SolvencyConfig<L, N_ASSETS, N_BYTES>;
+impl<const L: usize, const N_ASSETS: usize> Circuit<Fp> for SolvencyCircuit<L, N_ASSETS> {
+    type Config = SolvencyConfig<L, N_ASSETS>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -247,7 +239,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        SolvencyConfig::<L, N_ASSETS, N_BYTES>::configure(meta)
+        SolvencyConfig::<L, N_ASSETS>::configure(meta)
     }
 
     fn synthesize(
@@ -260,7 +252,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
             MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
         let poseidon_chip =
             PoseidonChip::<PoseidonSpec, 2, 1, L>::construct(config.poseidon_config.clone());
-        let lt_chip = LtVerticalChip::<N_BYTES>::construct(config.lt_config);
+        let lt_chip = LtVerticalChip::<8>::construct(config.lt_config);
 
         // Assign the left penultimate hash and the left penultimate balances
         let (left_node_hash, left_node_balances) = merkle_sum_tree_chip
