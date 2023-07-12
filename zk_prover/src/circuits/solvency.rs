@@ -101,7 +101,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
 /// # Fields
 ///
 /// * `merkle_sum_tree_config`: Configuration for the merkle sum tree
-/// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 3 and RATE = 2
+/// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1
 /// * `instance`: Instance column used to store the public inputs
 /// * `lt_selector`: Selector to activate the less than constraint
 /// * `lt_config`: Configuration for the less than chip
@@ -132,7 +132,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
         let complex_selector = meta.complex_selector();
 
-        // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, 3 fixed columns for rc_a and 3 for rc_b
+        // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, #WIDTH fixed columns for rc_a and #WIDTH for rc_b
         let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, L>::configure(
             meta,
             advices[0..2].try_into().unwrap(),

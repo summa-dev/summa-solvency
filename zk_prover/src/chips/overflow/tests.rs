@@ -117,7 +117,6 @@ impl<const MAX_BITS: u8, const RANGE_BITS: usize> Circuit<Fp>
 
         let b = meta.advice_column();
 
-        // the max number of fixed columns needed is 2 * WIDTH given requirement of the poseidon config with WIDTH 3
         let range = meta.fixed_column();
 
         // we need 1 selector for the decomposed value check

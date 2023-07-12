@@ -3,9 +3,6 @@ use crate::merkle_sum_tree::{L_ENTRY, L_NODE};
 use halo2_gadgets::poseidon::primitives::{self as poseidon, ConstantLength};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
-const WIDTH: usize = 2;
-const RATE: usize = 1;
-
 pub fn poseidon_node<const N_ASSETS: usize>(
     l1: Fp,
     l2: [Fp; N_ASSETS],
@@ -19,8 +16,7 @@ pub fn poseidon_node<const N_ASSETS: usize>(
     hash_inputs[N_ASSETS + 1] = r1;
     hash_inputs[N_ASSETS + 2..2 * N_ASSETS + 2].copy_from_slice(&r2);
 
-    poseidon::Hash::<Fp, PoseidonSpec, ConstantLength<L_NODE>, WIDTH, RATE>::init()
-        .hash(hash_inputs)
+    poseidon::Hash::<Fp, PoseidonSpec, ConstantLength<L_NODE>, 2, 1>::init().hash(hash_inputs)
 }
 
 pub fn poseidon_entry<const N_ASSETS: usize>(left: Fp, right: [Fp; N_ASSETS]) -> Fp {
@@ -29,6 +25,5 @@ pub fn poseidon_entry<const N_ASSETS: usize>(left: Fp, right: [Fp; N_ASSETS]) ->
     hash_inputs[0] = left;
     hash_inputs[1..N_ASSETS + 1].copy_from_slice(&right);
 
-    poseidon::Hash::<Fp, PoseidonSpec, ConstantLength<L_ENTRY>, WIDTH, RATE>::init()
-        .hash(hash_inputs)
+    poseidon::Hash::<Fp, PoseidonSpec, ConstantLength<L_ENTRY>, 2, 1>::init().hash(hash_inputs)
 }

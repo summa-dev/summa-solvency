@@ -101,7 +101,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize>
 /// # Fields
 ///
 /// * `merkle_sum_tree_config`: Configuration for the merkle sum tree
-/// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 3 and RATE = 2
+/// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1
 /// * `overflow_check_config`: Configuration for the overflow check chip
 /// * `instance`: Instance column used to store the public inputs
 
