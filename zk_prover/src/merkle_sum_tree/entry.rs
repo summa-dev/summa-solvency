@@ -21,7 +21,11 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
         })
     }
 
-    pub fn compute_leaf(&self) -> Node<N_ASSETS> {
+    pub fn compute_leaf(&self) -> Node<N_ASSETS>
+    where
+        [(); N_ASSETS + 1]: Sized,
+        
+    {
         Node {
             hash: poseidon_entry::<N_ASSETS>(
                 big_int_to_fp(&self.username_to_big_int),

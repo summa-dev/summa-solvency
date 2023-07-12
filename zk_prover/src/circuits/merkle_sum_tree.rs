@@ -65,7 +65,10 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize>
     }
 
     /// Initializes the circuit with the merkle sum tree and the index of the user of which the inclusion is to be verified.
-    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, user_index: usize) -> Self {
+    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, user_index: usize) -> Self
+    where
+        [(); N_ASSETS + 1]:,
+    {
         assert_eq!((N_ASSETS * 2) + 2, L);
 
         let proof = merkle_sum_tree.generate_proof(user_index).unwrap();

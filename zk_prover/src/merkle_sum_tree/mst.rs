@@ -5,7 +5,7 @@ use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use num_bigint::BigInt;
 
 /// Merkle Sum Tree Data Structure.
-/// 
+///
 /// A Merkle Sum Tree is a binary Merkle Tree with the following properties:
 /// * Each Entry of a Merkle Sum Tree is a pair of a username and #N_ASSETS balances.
 /// * Each Leaf Node contains a hash and #N_ASSETS balances. The hash is equal to `H(username, balance[0], balance[1], ... balance[N_ASSETS])`.
@@ -31,7 +31,11 @@ impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
     /// `username;balances`
     ///
     /// `dxGaEAii;11888,41163`
-    pub fn new(path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(path: &str) -> Result<Self, Box<dyn std::error::Error>>
+    where
+        [(); N_ASSETS + 1]: Sized,
+        [(); 2 * (1 + N_ASSETS)]: Sized,
+    {
         let entries = parse_csv_to_entries(path)?;
         let depth = (entries.len() as f64).log2().ceil() as usize;
 
@@ -82,7 +86,10 @@ impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
     }
 
     /// Returns the index of the user with the given username and balances in the tree
-    pub fn index_of(&self, username: &str, balances: [BigInt; N_ASSETS]) -> Option<usize> {
+    pub fn index_of(&self, username: &str, balances: [BigInt; N_ASSETS]) -> Option<usize>
+    where
+        [(); N_ASSETS + 1]: Sized,
+    {
         index_of(username, balances, &self.nodes)
     }
 
@@ -92,7 +99,11 @@ impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
     }
 
     /// Verifies a MerkleProof
-    pub fn verify_proof(&self, proof: &MerkleProof<N_ASSETS>) -> bool {
+    pub fn verify_proof(&self, proof: &MerkleProof<N_ASSETS>) -> bool
+    where
+        [(); N_ASSETS + 1]: Sized,
+        [(); 2 * (1 + N_ASSETS)]: Sized,
+    {
         verify_proof(proof)
     }
 }
