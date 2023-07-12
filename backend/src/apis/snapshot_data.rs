@@ -91,20 +91,24 @@ impl<
         entry_csv: &str,
         asset_csv: &str,
         inclusion_pk_path: Option<&str>,
-    ) -> Result<SnapshotData<LEVELS, L, N_ASSETS, N_BYTES, K>, Box<dyn std::error::Error>> {
+    ) -> Result<SnapshotData<LEVELS, L, N_ASSETS, N_BYTES, K>, Box<dyn std::error::Error>>
+    where
+        [(); N_ASSETS + 1]:,
+        [(); 2 * (1 + N_ASSETS)]:,
+    {
         let (assets, signatures) = parse_csv_to_assets(asset_csv).unwrap();
         let mst: MerkleSumTree<N_ASSETS> = MerkleSumTree::<N_ASSETS>::new(entry_csv).unwrap();
 
         let user_proofs = HashMap::<u64, UserProof>::new();
 
         // Get params from existing ptau file then generate proving key if the `inclusion_pk_path` not provided.
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init_empty();
         let params = get_params(K).unwrap();
 
         if let Some(pk_path) = inclusion_pk_path {
             let pk_file = File::open(pk_path)?;
             let mut reader = BufReader::new(pk_file);
-            let pk = ProvingKey::<G1Affine>::read::<_, MstInclusionCircuit<LEVELS, L, N_ASSETS>>(
+            let pk = ProvingKey::<G1Affine>::read::<_, MstInclusionCircuit<LEVELS, N_ASSETS>>(
                 &mut reader,
                 RawBytes,
             )?;
@@ -135,10 +139,14 @@ impl<
         })
     }
 
-    fn generate_inclusion_proof(&self, user_index: usize) -> Result<UserProof, &'static str> {
+    fn generate_inclusion_proof(&self, user_index: usize) -> Result<UserProof, &'static str>
+    where
+        [(); N_ASSETS + 1]:,
+        [(); 2 * (1 + N_ASSETS)]:,
+    {
         let proof = self.mst.generate_proof(user_index).unwrap();
 
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS> {
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS> {
             leaf_hash: proof.entry.compute_leaf().hash,
             leaf_balances: proof
                 .entry
@@ -166,7 +174,10 @@ impl<
         })
     }
 
-    pub fn generate_solvency_proof(&mut self, pk_path: &str) -> Result<(), &'static str> {
+    pub fn generate_solvency_proof(&mut self, pk_path: &str) -> Result<(), &'static str>
+    where
+        [(); 2 * (1 + N_ASSETS)]:,
+    {
         if self.proof_of_solvency.is_some() {
             return Err("Solvency proof already exists");
         }
@@ -189,18 +200,16 @@ impl<
 
         let f = File::open(pk_path).unwrap();
         let mut reader = BufReader::new(f);
-        let pk = ProvingKey::<G1Affine>::read::<_, SolvencyCircuit<L, N_ASSETS, N_BYTES>>(
-            &mut reader,
-            RawBytes,
-        )
-        .unwrap();
+        let pk =
+            ProvingKey::<G1Affine>::read::<_, SolvencyCircuit<N_ASSETS>>(&mut reader, RawBytes)
+                .unwrap();
 
         let (penultimate_node_left, penultimate_node_right) = &self
             .mst
             .penultimate_level_data()
             .expect("Failed to retrieve penultimate level data");
 
-        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES> {
+        let circuit = SolvencyCircuit::<N_ASSETS> {
             left_node_hash: penultimate_node_left.hash,
             left_node_balances: penultimate_node_left.balances,
             right_node_hash: penultimate_node_right.hash,
@@ -220,7 +229,11 @@ impl<
         Ok(())
     }
 
-    pub fn get_user_proof(&mut self, user_index: u64) -> Result<InclusionProof, &'static str> {
+    pub fn get_user_proof(&mut self, user_index: u64) -> Result<InclusionProof, &'static str>
+    where
+        [(); N_ASSETS + 1]:,
+        [(); 2 * (1 + N_ASSETS)]:,
+    {
         let user_proof = self.proofs_of_inclusion.get(&user_index);
         match user_proof {
             Some(user_proof) => Ok(InclusionProof {
