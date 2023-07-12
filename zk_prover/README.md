@@ -31,6 +31,10 @@ The benchmarking included the following areas:
 - Proving Key Gen for MstInclusion Circuit
 - ZK Proof Generation for MstInclusion Circuit
 - ZK Proof Verification for MstInclusion Circuit
+- Verification Key Gen for Solvency Circuit
+- Proving Key Gen for Solvency Circuit
+- ZK Proof Generation for Solvency Circuit
+- ZK Proof Verification for Solvency Circuit
 
 In order to run the benchmarking, we provide a set of dummy `username, balances` entries formatted in csv files. The csv files can be downloaded as follows 
 
