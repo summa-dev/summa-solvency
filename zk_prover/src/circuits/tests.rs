@@ -25,7 +25,6 @@ mod test {
 
     const N_ASSETS: usize = 2;
     const LEVELS: usize = 4;
-    const L: usize = 2 + (N_ASSETS * 2);
     const K: u32 = 11;
 
     #[test]
@@ -34,10 +33,8 @@ mod test {
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         for user_index in 0..16 {
-            let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(
-                merkle_sum_tree.clone(),
-                user_index,
-            );
+            let circuit =
+                MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree.clone(), user_index);
 
             let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
@@ -49,7 +46,7 @@ mod test {
 
     #[test]
     fn test_valid_merkle_sum_tree_with_full_prover() {
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
         let params = generate_setup_params(K);
@@ -66,7 +63,7 @@ mod test {
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
         // Generate the proof
         let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
@@ -114,7 +111,7 @@ mod test {
         params_app.downsize(K);
 
         // generate the verification key and the proving key for the application circuit, using an empty circuit
-        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+        let circuit_app = MstInclusionCircuit::<LEVELS, N_ASSETS>::init_empty();
 
         let vk_app = keygen_vk(&params_app, &circuit_app).expect("vk generation should not fail");
         let pk_app =
@@ -124,7 +121,7 @@ mod test {
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let circuit_app = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let snark_app = [(); 1]
             .map(|_| gen_snark_shplonk(&params_app, &pk_app, circuit_app.clone(), None::<&str>));
@@ -176,7 +173,7 @@ mod test {
         params_app.downsize(K);
 
         // generate the verification key and the proving key for the application circuit, using an empty circuit
-        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+        let circuit_app = MstInclusionCircuit::<LEVELS, N_ASSETS>::init_empty();
 
         let vk_app = keygen_vk(&params_app, &circuit_app).expect("vk generation should not fail");
         let pk_app =
@@ -186,7 +183,7 @@ mod test {
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let circuit_app = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let snark_app = [(); 1]
             .map(|_| gen_snark_shplonk(&params_app, &pk_app, circuit_app.clone(), None::<&str>));
@@ -228,7 +225,7 @@ mod test {
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let mut instances = circuit.instances();
         let invalid_root_hash = Fp::from(1000u64);
@@ -256,7 +253,7 @@ mod test {
 
     #[test]
     fn test_invalid_root_hash_as_instance_with_full_prover() {
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init_empty();
 
         // we generate a universal trusted setup of our own for testing
         let params = generate_setup_params(K);
@@ -270,7 +267,7 @@ mod test {
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let invalid_root_hash = Fp::from(1000u64);
 
@@ -292,7 +289,7 @@ mod test {
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let instances = circuit.instances();
 
@@ -335,7 +332,7 @@ mod test {
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let mut instances = circuit.instances();
         let invalid_leaf_hash = Fp::from(1000u64);
@@ -370,8 +367,7 @@ mod test {
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let mut circuit =
-            MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree.clone(), 0);
+        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree.clone(), 0);
 
         // We need to extract the valid instances before invalidating the circuit
         let instances = circuit.instances();
@@ -398,7 +394,7 @@ mod test {
             ])
         );
 
-        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
         // We need to extract the valid instances before invalidating the circuit
         let instances = circuit.instances();
@@ -431,7 +427,7 @@ mod test {
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let instances = circuit.instances();
 
@@ -488,7 +484,7 @@ mod test {
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let mut circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let instances = circuit.instances();
 
@@ -956,7 +952,7 @@ mod test {
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
         let root = BitMapBackend::new("prints/mst-inclusion-layout.png", (2048, 16384))
             .into_drawing_area();
