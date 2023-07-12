@@ -38,7 +38,7 @@ async function main() {
   // Adding the new deployment to the previous deployments, indexed by network ID
   const newDeployment = {
     // Getting the contract address
-    address: summa.target,
+    address: summa.address,
   };
   const deployments = {
     ...deploymentsJson,
@@ -51,27 +51,29 @@ async function main() {
     deploymentsStringified
   );
 
-  //Copy the ABI over to the backend src directory
-  const abi = summa.interface.format();
-  let abiJson: any = {};
-  try {
-    const abiRaw = fs.readFileSync("../backend/src/contracts/contractAbi.json");
-    abiJson = JSON.parse(abiRaw);
-    if (abiJson[hre.network.config.chainId ?? 0])
-      delete abiJson[hre.network.config.chainId ?? 0];
-  } catch (error) {
-    console.log("No previous ABI found");
-  }
-  const abiNew = {
-    [hre.network.config.chainId ?? 0]: abi,
-  };
-  const abiFinal = {
-    ...abiJson,
-    ...abiNew,
-  };
-  const abiStringified = JSON.stringify(abiFinal);
-  //Save the ABIs
-  fs.writeFileSync("../backend/src/contracts/contractAbi.json", abiStringified);
+  //TODO copy the ABI from `artifacts/src/Summa.sol/Summa.json` to `backend/src/contracts/contractAbi.json`
+
+  // const abi = JSON.parse(summa.interface.format(FormatTypes.json).toString());
+  // console.log(abi);
+  // let abiJson: any = {};
+  // try {
+  //   const abiRaw = fs.readFileSync("../backend/src/contracts/contractAbi.json");
+  //   abiJson = JSON.parse(abiRaw);
+  //   if (abiJson[hre.network.config.chainId ?? 0])
+  //     delete abiJson[hre.network.config.chainId ?? 0];
+  // } catch (error) {
+  //   console.log("No previous ABI found");
+  // }
+  // const abiNew = {
+  //   [hre.network.config.chainId ?? 0]: abi,
+  // };
+  // const abiFinal = {
+  //   ...abiJson,
+  //   ...abiNew,
+  // };
+  // const abiStringified = JSON.stringify(abiFinal);
+  // //Save the ABIs
+  // fs.writeFileSync("../backend/src/contracts/contractAbi.json", abiStringified);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
