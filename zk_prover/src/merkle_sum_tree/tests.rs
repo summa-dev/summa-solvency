@@ -2,8 +2,10 @@
 mod test {
 
     use crate::merkle_sum_tree::utils::{big_int_to_fp, poseidon_node};
-    use crate::merkle_sum_tree::{Entry, MerkleSumTree, N_ASSETS};
+    use crate::merkle_sum_tree::{Entry, MerkleSumTree};
     use num_bigint::{BigInt, ToBigInt};
+
+    const N_ASSETS: usize = 2;
 
     #[test]
     fn test_mst() {
