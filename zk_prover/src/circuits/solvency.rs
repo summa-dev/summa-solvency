@@ -17,7 +17,6 @@ use snark_verifier_sdk::CircuitExt;
 ///
 /// # Type Parameters
 ///
-/// * `L`: The length of the hasher input, namely 2 + (2 * N_ASSETS)
 /// * `N_ASSETS`: The number of assets for which the solvency is verified.
 /// * `N_BYTES`: Range in which the balances should lie
 ///
@@ -90,7 +89,6 @@ impl<const N_ASSETS: usize> SolvencyCircuit<N_ASSETS> {
 /// Configuration for the solvency circuit
 /// # Type Parameters
 ///
-/// * `L`: The length of the hasher input, namely 2 + (2 * N_ASSETS)
 /// * `N_ASSETS`: The number of assets for which the solvency is verified.
 /// * `N_BYTES`: Range in which the balances should lie
 ///
