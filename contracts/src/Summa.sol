@@ -70,18 +70,18 @@ contract Summa is Ownable {
     /**
      * @dev Submit proof of solvency for a CEX
      * @param erc20ContractAddresses The addresses of the ERC20 token contracts that the CEX holds (e.g., USDT, USDC, DAI)
-     * @param balancesToProve The balances to prove. ETH balance should be the first element, followed by ERC20 balances in the order of erc20ContractAddresses
+     * @param assetSums The total asset sums to prove. ETH balance should be the first element, followed by ERC20 balances in the order of erc20ContractAddresses
      * @param mstRoot The root of the Merkle sum tree
      * @param proof The ZK proof
      */
     function submitProofOfSolvency(
         address[] memory erc20ContractAddresses,
-        uint256[] memory balancesToProve,
+        uint256[] memory assetSums,
         uint256 mstRoot,
         bytes memory proof
     ) public {
         require(
-            erc20ContractAddresses.length == balancesToProve.length - 1 &&
+            erc20ContractAddresses.length == assetSums.length - 1 &&
                 erc20ContractAddresses.length > 0,
             "ERC20 addresses and balances count mismatch"
         );
@@ -100,22 +100,22 @@ contract Summa is Ownable {
         }
 
         require(
-            totalETHBalance >= balancesToProve[0],
+            totalETHBalance >= assetSums[0],
             "Actual ETH balance is less than the proven balance"
         );
 
         for (uint i = 0; i < erc20ContractAddresses.length; i++) {
             require(
-                erc20Balances[i] >= balancesToProve[i + 1],
+                erc20Balances[i] >= assetSums[i + 1],
                 "Actual ERC20 balance is less than the proven balance"
             );
         }
 
-        uint256[] memory inputs = new uint256[](balancesToProve.length + 1);
+        uint256[] memory inputs = new uint256[](assetSums.length + 1);
         inputs[0] = mstRoot;
 
-        for (uint i = 0; i < balancesToProve.length; i++) {
-            inputs[i + 1] = balancesToProve[i];
+        for (uint i = 0; i < assetSums.length; i++) {
+            inputs[i + 1] = assetSums[i];
         }
 
         // Verify ZK proof
