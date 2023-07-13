@@ -3358,6 +3358,7 @@ name = "summa-backend"
 version = "0.1.0"
 dependencies = [
  "csv",
+ "ethers",
  "halo2_proofs",
  "num-bigint",
  "serde",

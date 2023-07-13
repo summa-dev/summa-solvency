@@ -12,3 +12,4 @@ csv = "1.2.2"
 num-bigint = "0.4.3"
 serde = "1.0.166"
 snark-verifier-sdk = { git = "https://github.com/privacy-scaling-explorations/snark-verifier", version = "0.1.1" }
+ethers = { version = "2.0.7", default_features = false, features = ["ethers-solc"] }
