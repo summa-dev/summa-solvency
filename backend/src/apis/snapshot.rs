@@ -18,6 +18,7 @@ use summa_solvency::{
 };
 
 use crate::apis::csv_parser::parse_wallet_csv;
+use crate::apis::fetch::fetch_asset_sums;
 use crate::apis::utils::generate_setup_artifacts;
 
 pub struct Snapshot<
@@ -66,7 +67,6 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
 
         let mst: MerkleSumTree<N_ASSETS> = MerkleSumTree::<N_ASSETS>::new(entry_csv_path).unwrap();
 
-        // Initialize empty circuits
         let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
         let solvency_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
@@ -114,11 +114,22 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
 
     fn generate_proof_of_solvency(
         &self,
-        assets_addresses: Vec<String>,
+        asset_contract_addresses: Vec<String>,
     ) -> Result<(SolvencyProof, Vec<String>), &'static str> {
-        // TODO: integrate with the real fetch_cex_assets_sum function
-        // let assets_sum = fetch_cex_assets_sum(self.addresses, assets_addresses);
-        let assets_sum: [Fp; N_ASSETS] = [Fp::from(556863u64); N_ASSETS]; // temporary asset sum
+        let assets_sum = fetch_asset_sums(
+            self.proof_of_wallet_ownership.addresses.clone(),
+            asset_contract_addresses.clone(),
+        )
+        .unwrap();
+
+        println!("assets_sum: {:?}", assets_sum);
+
+        let assets_sum: [Fp; N_ASSETS] = assets_sum
+            .iter()
+            .map(|x| Fp::from(*x))
+            .collect::<Vec<Fp>>()
+            .try_into()
+            .unwrap();
 
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(self.mst.clone(), assets_sum);
 
@@ -141,7 +152,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
                 proof_calldata: calldata.0,
                 public_inputs: calldata.1,
             },
-            assets_addresses,
+            asset_contract_addresses,
         ))
     }
 
@@ -220,7 +231,11 @@ mod tests {
     fn test_generate_solvency_proof() {
         let snapshot = initialize_snapshot();
 
-        let asset_addresses = snapshot.proof_of_wallet_ownership.addresses.clone();
+        let asset_addresses: Vec<String> = vec![
+            "0x03f5522f5cfd40a759487aa9cbc1253b39f35a9f".to_string(), // ERC20 token address
+            "0xfc971429218b7d11ed63093971712ed504e9ce87".to_string(), // ERC20 token address
+        ];
+
         let calldata = snapshot
             .generate_proof_of_solvency(asset_addresses.clone())
             .unwrap();
@@ -236,7 +251,7 @@ mod tests {
         let inclusion_proof = snapshot.generate_inclusion_proof(0).unwrap();
         let public_inputs = inclusion_proof.get_public_inputs();
 
-        assert_eq!(public_inputs.len(), 1); // 1 instance 
+        assert_eq!(public_inputs.len(), 1); // 1 instance
         assert_eq!(public_inputs[0].len(), 2); // 2 values
     }
 }
