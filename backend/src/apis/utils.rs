@@ -16,7 +16,7 @@ pub fn generate_setup_artifacts<C: Circuit<Fp> + CircuitExt<Fp>>(
     k: u32,
     circuit: C,
 ) -> Result<SetupArtifcats, &'static str> {
-    let metadata = std::fs::metadata(params_path.clone());
+    let metadata = std::fs::metadata(params_path);
 
     if metadata.is_err() {
         Err("ptau file not found, download the ptau from https://github.com/han0110/halo2-kzg-srs")

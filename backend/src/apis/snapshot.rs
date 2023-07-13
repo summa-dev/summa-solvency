@@ -25,9 +25,7 @@ pub struct Snapshot<
     const L: usize,
     const N_ASSETS: usize,
     const N_BYTES: usize,
-    const K: u32,
 > {
-    pub exchange_id: String,
     mst: MerkleSumTree<N_ASSETS>,
     pub proof_of_wallet_ownership: WalletOwnershipProof,
     trusted_setup: [SetupArtifcats; 2], // the first trusted setup relates to MstInclusionCircuit, the second related to SolvencyCircuit
@@ -50,26 +48,20 @@ pub struct MstInclusionProof {
 }
 
 pub struct WalletOwnershipProof {
-    addresses: Vec<String>,
+    pub addresses: Vec<String>,
     signatures: Vec<String>,
     message: String,
 }
 
-impl<
-        const LEVELS: usize,
-        const L: usize,
-        const N_ASSETS: usize,
-        const N_BYTES: usize,
-        const K: u32,
-    > Snapshot<LEVELS, L, N_ASSETS, N_BYTES, K>
+impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
+    Snapshot<LEVELS, L, N_ASSETS, N_BYTES>
 {
     pub fn new(
-        exchange_id: String,
         entry_csv_path: &str,
         wallet_csv_path: &str,
         message: String,
         params_path: &str,
-    ) -> Result<Snapshot<LEVELS, L, N_ASSETS, N_BYTES, K>, Box<dyn std::error::Error>> {
+    ) -> Result<Snapshot<LEVELS, L, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>> {
         let (addresses, signatures) = parse_wallet_csv(wallet_csv_path).unwrap();
 
         let mst: MerkleSumTree<N_ASSETS> = MerkleSumTree::<N_ASSETS>::new(entry_csv_path).unwrap();
@@ -96,7 +88,6 @@ impl<
         };
 
         Ok(Snapshot {
-            exchange_id,
             mst,
             proof_of_wallet_ownership,
             trusted_setup,
@@ -127,7 +118,7 @@ impl<
     ) -> Result<(SolvencyProof, Vec<String>), &'static str> {
         // TODO: integrate with the real fetch_cex_assets_sum function
         // let assets_sum = fetch_cex_assets_sum(self.addresses, assets_addresses);
-        let assets_sum: [Fp; N_ASSETS] = [Fp::zero(); N_ASSETS]; // temporary asset sum
+        let assets_sum: [Fp; N_ASSETS] = [Fp::from(556863u64); N_ASSETS]; // temporary asset sum
 
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(self.mst.clone(), assets_sum);
 
@@ -193,15 +184,12 @@ mod tests {
     const L: usize = 2 + (N_ASSETS * 2);
     const LEVELS: usize = 4;
     const N_BYTES: usize = 64 / 8;
-    const K: u32 = 11;
 
-    fn initialize_snapshot() -> Snapshot<LEVELS, L, N_ASSETS, N_BYTES, K> {
-        let exchange_id = "CryptoExchange";
+    fn initialize_snapshot() -> Snapshot<LEVELS, L, N_ASSETS, N_BYTES> {
         let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
         let asset_csv = "src/apis/csv/wallet_2.csv";
 
-        Snapshot::<LEVELS, L, N_ASSETS, N_BYTES, K>::new(
-            exchange_id.to_string(),
+        Snapshot::<LEVELS, L, N_ASSETS, N_BYTES>::new(
             entry_csv,
             asset_csv,
             "signed by CryptoExchange".to_string(),
@@ -224,7 +212,8 @@ mod tests {
         let yul_meta = std::fs::metadata(yul_output_path);
         assert!(yul_meta.is_ok());
 
-        // TODO: delete the generated files for tests
+        std::fs::remove_file(yul_output_path).expect("Failed to remove Yul output file");
+        std::fs::remove_file(sol_output_path).expect("Failed to remove Sol output file");
     }
 
     #[test]
@@ -232,11 +221,12 @@ mod tests {
         let snapshot = initialize_snapshot();
 
         let asset_addresses = snapshot.proof_of_wallet_ownership.addresses.clone();
-        let sovency_proof = snapshot
-            .generate_proof_of_solvency(asset_addresses)
+        let calldata = snapshot
+            .generate_proof_of_solvency(asset_addresses.clone())
             .unwrap();
 
-        println!("calldata: {:?}", sovency_proof.0.proof_calldata);
+        assert_eq!(calldata.0.public_inputs.len(), 1 + N_ASSETS);
+        assert_eq!(calldata.1.len(), asset_addresses.len());
     }
 
     #[test]
@@ -246,6 +236,7 @@ mod tests {
         let inclusion_proof = snapshot.generate_inclusion_proof(0).unwrap();
         let public_inputs = inclusion_proof.get_public_inputs();
 
-        assert_eq!(public_inputs.len(), 1);
+        assert_eq!(public_inputs.len(), 1); // 1 instance 
+        assert_eq!(public_inputs[0].len(), 2); // 2 values
     }
 }
