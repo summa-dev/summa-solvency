@@ -35,6 +35,7 @@ mod tests {
 
     #[test]
     fn test_parse_csv_to_assets() {
+        // these signatures are from contracts/test/Summa.ts
         let path = "src/apis/csv/wallet_2.csv";
         let (assets, signatures) = parse_wallet_csv(path).unwrap();
 

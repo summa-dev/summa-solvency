@@ -59,11 +59,11 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
 {
     pub fn new(
         entry_csv_path: &str,
-        wallet_csv_path: &str,
+        signature_csv_path: &str,
         message: String,
         params_path: &str,
     ) -> Result<Snapshot<LEVELS, L, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>> {
-        let (addresses, signatures) = parse_wallet_csv(wallet_csv_path).unwrap();
+        let (addresses, signatures) = parse_wallet_csv(signature_csv_path).unwrap();
 
         let mst: MerkleSumTree<N_ASSETS> = MerkleSumTree::<N_ASSETS>::new(entry_csv_path).unwrap();
 
@@ -198,12 +198,12 @@ mod tests {
 
     fn initialize_snapshot() -> Snapshot<LEVELS, L, N_ASSETS, N_BYTES> {
         let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
-        let asset_csv = "src/apis/csv/wallet_2.csv";
+        let signature_csv = "src/apis/csv/signatures.csv";
 
         Snapshot::<LEVELS, L, N_ASSETS, N_BYTES>::new(
             entry_csv,
-            asset_csv,
-            "signed by CryptoExchange".to_string(),
+            signature_csv,
+            "Summa proof of solvency for CryptoExchange".to_string(),
             "ptau/hermez-raw-11",
         )
         .unwrap()
