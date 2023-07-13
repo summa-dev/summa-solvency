@@ -122,8 +122,6 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         )
         .unwrap();
 
-        println!("assets_sum: {:?}", assets_sum);
-
         let assets_sum: [Fp; N_ASSETS] = assets_sum
             .iter()
             .map(|x| Fp::from(*x))
@@ -232,8 +230,8 @@ mod tests {
         let snapshot = initialize_snapshot();
 
         let asset_addresses: Vec<String> = vec![
-            "0x03f5522f5cfd40a759487aa9cbc1253b39f35a9f".to_string(), // ERC20 token address
-            "0xfc971429218b7d11ed63093971712ed504e9ce87".to_string(), // ERC20 token address
+            "0xe65267e87ed6fff28ff0d6edc39865d1d66274f5".to_string(), // ERC20 token address
+            "0x220b71671b649c03714da9c621285943f3cbcdc6".to_string(), // ERC20 token address
         ];
 
         let calldata = snapshot

@@ -1,4 +1,5 @@
 use base64::encode;
+use ethers::solc::resolver::print;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
 use std::error::Error;
@@ -96,12 +97,9 @@ fn filter_balances_by_token_contracts(
 ) -> Result<Vec<u64>, &'static str> {
     let mut balances = Vec::new();
     for contract in asset_contract_addresses {
-        if let Some(item) = response
-            .data
-            .items
-            .iter()
-            .find(|&item| item.contract_address == *contract)
-        {
+        if let Some(item) = response.data.items.iter().find(|&item| {
+            item.contract_address.to_ascii_lowercase() == contract.to_ascii_lowercase()
+        }) {
             match item.balance.parse::<u64>() {
                 Ok(num) => balances.push(num),
                 Err(e) => println!("Failed to parse string: {}", e),
@@ -137,7 +135,7 @@ mod tests {
         let address_1 = "0xe4D9621321e77B499392801d08Ed68Ec5175f204".to_string(); // this is an address with 0 usdc and 0.010910762665574143 ETH
         let address_2 = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1".to_string(); // this is an address with 0.000001 USDC usdc and 1 wei
 
-        let usdc_contract = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
+        let usdc_contract = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48".to_string();
         let eth_contract = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee".to_string();
 
         let balances = fetch_asset_sums(

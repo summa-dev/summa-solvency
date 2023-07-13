@@ -36,14 +36,14 @@ mod tests {
     #[test]
     fn test_parse_csv_to_assets() {
         // these signatures are from contracts/test/Summa.ts
-        let path = "src/apis/csv/wallet_2.csv";
+        let path = "src/apis/csv/signatures.csv";
         let (assets, signatures) = parse_wallet_csv(path).unwrap();
 
-        assert_eq!(assets[0], "0x627306090abaB3A6e1400e9345bC60c78a8BEf57");
+        assert_eq!(assets[0], "0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
 
         assert_eq!(
             signatures[0],
-            "3045022100c12a7d54972f26d4f4766b8ad5d7a3d7cfe1b5ce3c1e1a9116a6a25db11d8d7a0220476fc1d66f673f52f9dd8c637f62f6e4e2a31dbca5f65fddbca9f3faff9f6d6b"
+            "0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c"
         );
     }
 }
