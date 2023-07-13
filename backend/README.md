@@ -1,20 +1,36 @@
-# Backend for Summa with CLI
+# Backend
 
- The application includes CLI tools for Centralized Exchange (CEX) operators and users to generate and verify proofs, using structures like `SummaSigner` and `Snapshot`. 
- 
- Detailed documentation and additional features will be added in the future.
+This directory contains the backend implementation for the Summa Proof of Solvency protocol. 
+
+The core datastructure is the `Snapshot` struct, a data container for:
+
+- the CEX liabilities, represented via a `MerkleSumTree`
+- the CEX wallets, represented via the `WalletOwnershipProof` struct.
+- the Trusted Setup parameters for the `MstInclusionCircuit` and `SolvencyCircuit` zk circuits.
+
+Furthermore, the `Snapshot` struct contains the following methods:
+
+- `generate_solvency_verifier` -> write the Solidity Verifier contract (for the `SolvencyProof`) to a file
+- `generate_proof_of_solvency` -> generate the `SolvencyProof` for the current snapshot to be verified on-chain
+- `generate_inclusion_proof` -> generate the `MstInclusionProof` for a specific user for the current snapshot to be verified off-chain
 
 ## Prerequisites
 
-For the CLI application to work correctly, you need to download the Powers of Tau files.
-
-You can find these important files at https://github.com/han0110/halo2-kzg-srs and they should be placed in a `ptau` folder.
-
-To run the tests, you need to download two specific ptau files, `hermez-raw-10` and `hermez-raw-11`. You can download these files with the following steps:
+In order to initialize the Snapshot, you need to download the Powers of Tau files. These are the trusted setup parameters needed to build the zk circuits. You can find such files at https://github.com/han0110/halo2-kzg-srs, download it 
 
 ```
-mkdir ptau
-cd ptau
-wget https://trusted-setup-halo2kzg.s3.eu-central-1.amazonaws.com/hermez-raw-10
 wget https://trusted-setup-halo2kzg.s3.eu-central-1.amazonaws.com/hermez-raw-11
+```
+
+and pass the path to the file to the `Snapshot::new` method.
+
+Furthermore, the `generate_proof_of_solvency` method requires to fetch data about the balances of the wallets of the CEX. This data is fetched using the Covalent API. In order to use this method, you need to create an `.env` file and store the `COVALENT_API_KEY` there. You can get an API key at https://www.covalenthq.com/platform/.
+
+## Usage
+
+To build the binary executable and test it
+
+```
+cargo build
+cargo test --release -- --nocapture
 ```

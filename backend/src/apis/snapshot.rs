@@ -154,7 +154,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         ))
     }
 
-    fn generate_inclusion_proof(
+    fn generate_proof_of_inclusion(
         &self,
         user_index: usize,
     ) -> Result<MstInclusionProof, &'static str> {
@@ -219,7 +219,9 @@ mod tests {
             .unwrap();
 
         let yul_meta = std::fs::metadata(yul_output_path);
+        let sol_meta = std::fs::metadata(sol_output_path);
         assert!(yul_meta.is_ok());
+        assert!(sol_meta.is_ok());
 
         std::fs::remove_file(yul_output_path).expect("Failed to remove Yul output file");
         std::fs::remove_file(sol_output_path).expect("Failed to remove Sol output file");
@@ -246,7 +248,7 @@ mod tests {
     fn test_generate_inclusion_proof() {
         let snapshot = initialize_snapshot();
 
-        let inclusion_proof = snapshot.generate_inclusion_proof(0).unwrap();
+        let inclusion_proof = snapshot.generate_proof_of_inclusion(0).unwrap();
         let public_inputs = inclusion_proof.get_public_inputs();
 
         assert_eq!(public_inputs.len(), 1); // 1 instance

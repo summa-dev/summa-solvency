@@ -59,7 +59,7 @@ async fn fetch_balances_per_addr(
     dotenv::dotenv().ok();
 
     // Access API key from the environment
-    let api_key = std::env::var("API_KEY").unwrap();
+    let api_key = std::env::var("COVALENT_API_KEY").unwrap();
 
     // Add `Content-Type` header
     headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
