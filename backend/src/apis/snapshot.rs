@@ -118,7 +118,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
     }
 
     // For generating onchain verifier contract
-    fn generate_solvency_verifier(
+    pub fn generate_solvency_verifier(
         &self,
         yul_output_path: &str,
         sol_output_path: &str,
@@ -135,7 +135,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         Ok(())
     }
 
-    fn generate_proof_of_solvency(
+    pub fn generate_proof_of_solvency(
         &self,
         asset_contract_addresses: Vec<String>,
     ) -> Result<(SolvencyProof, Vec<String>), &'static str> {
@@ -170,7 +170,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         ))
     }
 
-    fn generate_proof_of_inclusion(
+    pub fn generate_proof_of_inclusion(
         &self,
         user_index: usize,
     ) -> Result<MstInclusionProof, &'static str> {
@@ -190,7 +190,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         })
     }
 
-    fn get_proof_of_account_ownership(&self) -> &AccountOwnershipProof {
+    pub fn get_proof_of_account_ownership(&self) -> &AccountOwnershipProof {
         &self.proof_of_account_ownership
     }
 }
