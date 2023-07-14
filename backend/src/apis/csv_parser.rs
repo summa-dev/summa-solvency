@@ -10,7 +10,7 @@ struct CsvWallet {
     signature: String,
 }
 
-pub fn parse_wallet_csv<P: AsRef<Path>>(
+pub fn parse_signature_csv<P: AsRef<Path>>(
     path: P,
 ) -> Result<(Vec<String>, Vec<String>), Box<dyn Error>> {
     let file = File::open(path)?;
@@ -37,7 +37,7 @@ mod tests {
     fn test_parse_csv_to_assets() {
         // these signatures are from contracts/test/Summa.ts
         let path = "src/apis/csv/signatures.csv";
-        let (assets, signatures) = parse_wallet_csv(path).unwrap();
+        let (assets, signatures) = parse_signature_csv(path).unwrap();
 
         assert_eq!(assets[0], "0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
 

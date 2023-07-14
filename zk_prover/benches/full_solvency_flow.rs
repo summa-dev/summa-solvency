@@ -198,10 +198,10 @@ fn generate_zk_proof_solvency_circuit(_c: &mut Criterion) {
 
     let merkle_sum_tree = MerkleSumTree::<N_ASSETS>::new(&csv_file).unwrap();
 
-    let assets_sum = merkle_sum_tree.root().balances.map(|x| x + Fp::from(1));
+    let asset_sums = merkle_sum_tree.root().balances.map(|x| x + Fp::from(1));
 
     // Only now we can instantiate the circuit with the actual inputs
-    let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, assets_sum);
+    let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, asset_sums);
 
     let bench_name = format!(
         "generate zk proof - tree of 2 power of {} entries with {} assets solvency circuit",
@@ -231,10 +231,10 @@ fn verify_zk_proof_solvency_circuit(_c: &mut Criterion) {
 
     let merkle_sum_tree = MerkleSumTree::<N_ASSETS>::new(&csv_file).unwrap();
 
-    let assets_sum = merkle_sum_tree.root().balances.map(|x| x + Fp::from(1));
+    let asset_sums = merkle_sum_tree.root().balances.map(|x| x + Fp::from(1));
 
     // Only now we can instantiate the circuit with the actual inputs
-    let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, assets_sum);
+    let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, asset_sums);
 
     let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
 

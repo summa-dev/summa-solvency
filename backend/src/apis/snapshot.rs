@@ -17,7 +17,7 @@ use summa_solvency::{
     merkle_sum_tree::MerkleSumTree,
 };
 
-use crate::apis::csv_parser::parse_wallet_csv;
+use crate::apis::csv_parser::parse_signature_csv;
 use crate::apis::fetch::fetch_asset_sums;
 use crate::apis::utils::generate_setup_artifacts;
 
@@ -28,7 +28,7 @@ pub struct Snapshot<
     const N_BYTES: usize,
 > {
     mst: MerkleSumTree<N_ASSETS>,
-    pub proof_of_wallet_ownership: WalletOwnershipProof,
+    proof_of_account_ownership: AccountOwnershipProof,
     trusted_setup: [SetupArtifcats; 2], // the first trusted setup relates to MstInclusionCircuit, the second related to SolvencyCircuit
 }
 
@@ -38,17 +38,40 @@ pub(crate) type SetupArtifcats = (
     VerifyingKey<G1Affine>,
 );
 
+#[derive(Debug, Clone)]
 pub struct SolvencyProof {
     public_inputs: Vec<U256>,
     proof_calldata: Bytes,
 }
 
+impl SolvencyProof {
+    pub fn get_public_inputs(&self) -> &Vec<U256> {
+        &self.public_inputs
+    }
+
+    pub fn get_proof_calldata(&self) -> &Bytes {
+        &self.proof_calldata
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct MstInclusionProof {
     public_inputs: Vec<Vec<Fp>>,
     proof: Vec<u8>,
 }
 
-pub struct WalletOwnershipProof {
+impl MstInclusionProof {
+    pub fn get_public_inputs(&self) -> &Vec<Vec<Fp>> {
+        &self.public_inputs
+    }
+
+    pub fn get_proof(&self) -> &Vec<u8> {
+        &self.proof
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AccountOwnershipProof {
     pub addresses: Vec<String>,
     signatures: Vec<String>,
     message: String,
@@ -63,7 +86,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         message: String,
         params_path: &str,
     ) -> Result<Snapshot<LEVELS, L, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>> {
-        let (addresses, signatures) = parse_wallet_csv(signature_csv_path).unwrap();
+        let (addresses, signatures) = parse_signature_csv(signature_csv_path).unwrap();
 
         let mst: MerkleSumTree<N_ASSETS> = MerkleSumTree::<N_ASSETS>::new(entry_csv_path).unwrap();
 
@@ -81,7 +104,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
             solvency_setup_artifacts_artifacts,
         ];
 
-        let proof_of_wallet_ownership = WalletOwnershipProof {
+        let proof_of_account_ownership = AccountOwnershipProof {
             addresses,
             signatures,
             message,
@@ -89,7 +112,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
 
         Ok(Snapshot {
             mst,
-            proof_of_wallet_ownership,
+            proof_of_account_ownership,
             trusted_setup,
         })
     }
@@ -116,28 +139,21 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         &self,
         asset_contract_addresses: Vec<String>,
     ) -> Result<(SolvencyProof, Vec<String>), &'static str> {
-        let assets_sum = fetch_asset_sums(
-            self.proof_of_wallet_ownership.addresses.clone(),
+        // For each asset, identified by its contract address, fetch the sum of all balances owned by the accounts contained in the snapshot
+        let asset_sums = fetch_asset_sums(
+            self.proof_of_account_ownership.addresses.clone(),
             asset_contract_addresses.clone(),
         )
         .unwrap();
 
-        let assets_sum: [Fp; N_ASSETS] = assets_sum
+        let asset_sums: [Fp; N_ASSETS] = asset_sums
             .iter()
             .map(|x| Fp::from(*x))
             .collect::<Vec<Fp>>()
             .try_into()
             .unwrap();
 
-        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(self.mst.clone(), assets_sum);
-
-        // TODO: check necessary
-        let _proof = full_prover(
-            &self.trusted_setup[1].0,
-            &self.trusted_setup[1].1,
-            circuit.clone(),
-            circuit.instances(),
-        );
+        let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(self.mst.clone(), asset_sums);
 
         let calldata = gen_proof_solidity_calldata(
             &self.trusted_setup[1].0,
@@ -173,15 +189,9 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
             proof,
         })
     }
-}
 
-impl MstInclusionProof {
-    pub fn get_proof(&self) -> Vec<u8> {
-        self.proof.clone()
-    }
-
-    pub fn get_public_inputs(&self) -> Vec<Vec<Fp>> {
-        self.public_inputs.clone()
+    fn get_proof_of_account_ownership(&self) -> &AccountOwnershipProof {
+        &self.proof_of_account_ownership
     }
 }
 

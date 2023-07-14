@@ -13,7 +13,7 @@ use halo2_proofs::plonk::{
 use halo2_proofs::poly::Rotation;
 use snark_verifier_sdk::CircuitExt;
 
-/// Circuit for verifying solvency, namely that the assets_sum is greater than the sum of the liabilities stored in the merkle sum tree
+/// Circuit for verifying solvency, namely that the asset_sums is greater than the sum of the liabilities stored in the merkle sum tree
 ///
 /// # Type Parameters
 ///
@@ -27,7 +27,7 @@ use snark_verifier_sdk::CircuitExt;
 /// * `left_node_balances`: The balances of the penultimate left node of the merkle sum tree
 /// * `right_node_hash`: The hash of the penultimate right node of the merkle sum tree
 /// * `right_node_balances`: The balances of the penultimate right node of the merkle sum tree
-/// * `assets_sum`: The sum of the assets of the CEX for each asset
+/// * `asset_sums`: The sum of the assets of the CEX for each asset
 /// * `root_hash`: The root hash of the merkle sum tree
 #[derive(Clone)]
 pub struct SolvencyCircuit<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> {
@@ -35,7 +35,7 @@ pub struct SolvencyCircuit<const L: usize, const N_ASSETS: usize, const N_BYTES:
     pub left_node_balances: [Fp; N_ASSETS],
     pub right_node_hash: Fp,
     pub right_node_balances: [Fp; N_ASSETS],
-    pub assets_sum: [Fp; N_ASSETS],
+    pub asset_sums: [Fp; N_ASSETS],
     pub root_hash: Fp,
 }
 
@@ -50,7 +50,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
     /// Returns the values of the public inputs of the circuit. The first value is the root hash of the merkle sum tree and the remaining values are the sum of the assets of the CEX for each asset
     fn instances(&self) -> Vec<Vec<Fp>> {
         let mut instances = vec![self.root_hash];
-        instances.extend(self.assets_sum);
+        instances.extend(self.asset_sums);
         vec![instances]
     }
 }
@@ -65,13 +65,13 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
             left_node_balances: [Fp::zero(); N_ASSETS],
             right_node_hash: Fp::zero(),
             right_node_balances: [Fp::zero(); N_ASSETS],
-            assets_sum: [Fp::zero(); N_ASSETS],
+            asset_sums: [Fp::zero(); N_ASSETS],
             root_hash: Fp::zero(),
         }
     }
 
     /// Initializes the circuit with the merkle sum tree and the assets sum
-    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, assets_sum: [Fp; N_ASSETS]) -> Self {
+    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, asset_sums: [Fp; N_ASSETS]) -> Self {
         assert_eq!((N_ASSETS * 2) + 2, L);
 
         let (penultimate_node_left, penultimate_node_right) = merkle_sum_tree
@@ -85,7 +85,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
             left_node_balances: penultimate_node_left.balances,
             right_node_hash: penultimate_node_right.hash,
             right_node_balances: penultimate_node_right.balances,
-            assets_sum,
+            asset_sums,
             root_hash,
         }
     }
