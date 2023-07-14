@@ -15,19 +15,25 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Build
+    - name: Build zk prover
       run: |
         cd zk_prover
         cargo build --verbose
-    - name: Format
-      run: |
-        cd zk_prover
-        cargo fmt
 
     - name: Install solc
       run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
 
-    - name: Run tests
+    - name: Test Zk Prover
       run: |
         cd zk_prover
         cargo test --release --features dev-graph -- --nocapture
+
+    - name: Build backend
+      run: |
+        cd backend
+        cargo build --verbose
+
+    - name: Test backend
+      run: |
+        cd backend
+        cargo test --release -- --nocapture
