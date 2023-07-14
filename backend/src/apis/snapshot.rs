@@ -72,7 +72,7 @@ impl MstInclusionProof {
 
 #[derive(Debug, Clone)]
 pub struct AccountOwnershipProof {
-    pub addresses: Vec<String>,
+    addresses: Vec<String>,
     signatures: Vec<String>,
     message: String,
 }

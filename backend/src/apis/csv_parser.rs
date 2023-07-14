@@ -5,8 +5,8 @@ use std::path::Path;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-struct CsvWallet {
-    pubkey: String,
+struct Record {
+    address: String,
     signature: String,
 }
 
@@ -17,16 +17,16 @@ pub fn parse_signature_csv<P: AsRef<Path>>(
     let mut rdr = csv::ReaderBuilder::new().delimiter(b';').from_reader(file);
 
     let mut signatures = Vec::<String>::new();
-    let mut pubkey = Vec::<String>::new();
+    let mut addresses = Vec::<String>::new();
 
     for result in rdr.deserialize() {
-        let record: CsvWallet = result?;
+        let record: Record = result?;
 
         signatures.push(record.signature);
-        pubkey.push(record.pubkey);
+        addresses.push(record.address);
     }
 
-    Ok((pubkey, signatures))
+    Ok((addresses, signatures))
 }
 
 #[cfg(test)]
@@ -37,9 +37,9 @@ mod tests {
     fn test_parse_csv_to_assets() {
         // these signatures are from contracts/test/Summa.ts
         let path = "src/apis/csv/signatures.csv";
-        let (assets, signatures) = parse_signature_csv(path).unwrap();
+        let (addresses, signatures) = parse_signature_csv(path).unwrap();
 
-        assert_eq!(assets[0], "0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
+        assert_eq!(addresses[0], "0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
 
         assert_eq!(
             signatures[0],

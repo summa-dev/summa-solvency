@@ -1,5 +1,4 @@
 use base64::encode;
-use ethers::solc::resolver::print;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::Deserialize;
 use std::error::Error;
@@ -22,7 +21,7 @@ struct Item {
     contract_address: String,
 }
 
-/// This function takes a list of asset contracts, a list of addresses and returns the aggregated balance of these address PER EACH asset
+/// This function takes a list of asset contracts addresses, a list of addresses and returns the aggregated balance of these address PER EACH asset
 pub fn fetch_asset_sums(
     addresses: Vec<String>,
     asset_contract_addresses: Vec<String>,
@@ -96,9 +95,9 @@ fn filter_balances_by_token_contracts(
     response: &Response,
 ) -> Result<Vec<u64>, &'static str> {
     let mut balances = Vec::new();
-    for contract in asset_contract_addresses {
+    for contract_adddress in asset_contract_addresses {
         if let Some(item) = response.data.items.iter().find(|&item| {
-            item.contract_address.to_ascii_lowercase() == contract.to_ascii_lowercase()
+            item.contract_address.to_ascii_lowercase() == contract_adddress.to_ascii_lowercase()
         }) {
             match item.balance.parse::<u64>() {
                 Ok(num) => balances.push(num),
@@ -126,8 +125,8 @@ mod tests {
         let balances =
             fetch_balances_per_addr(address, [usdc_contract, eth_contract].to_vec()).unwrap();
 
-        assert_eq!(balances[0], 0); // usdc
-        assert_eq!(balances[1], 10910762665574143); // wei
+        assert_eq!(balances[0], 0); // balance for usdc
+        assert_eq!(balances[1], 10910762665574143); // balance for wei
     }
 
     #[test]
@@ -138,13 +137,13 @@ mod tests {
         let usdc_contract = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48".to_string();
         let eth_contract = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee".to_string();
 
-        let balances = fetch_asset_sums(
+        let asset_sums = fetch_asset_sums(
             [address_1, address_2].to_vec(),
             [usdc_contract, eth_contract].to_vec(),
         )
         .unwrap();
 
-        assert_eq!(balances[0], 1); // usdc
-        assert_eq!(balances[1], 10910762665574144); // wei
+        assert_eq!(asset_sums[0], 1); // asset sum for usdc
+        assert_eq!(asset_sums[1], 10910762665574144); // asset sum for wei
     }
 }
