@@ -34,6 +34,8 @@ jobs:
         cargo build --verbose
 
     - name: Test backend
+      env:
+        COVALENT_API_KEY: ${{ secrets.COVALENT_API_KEY }}
       run: |
         cd backend
         cargo test --release -- --nocapture
