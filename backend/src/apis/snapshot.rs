@@ -72,7 +72,7 @@ impl MstInclusionProof {
 
 #[derive(Debug, Clone)]
 pub struct AccountOwnershipProof {
-    addresses: Vec<String>,
+    pub addresses: Vec<String>,
     signatures: Vec<String>,
     message: String,
 }
@@ -138,20 +138,26 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
     pub fn generate_proof_of_solvency(
         &self,
         asset_contract_addresses: Vec<String>,
+        asset_sum: Option<[Fp; N_ASSETS]>,
     ) -> Result<(SolvencyProof, Vec<String>), &'static str> {
         // For each asset, identified by its contract address, fetch the sum of all balances owned by the accounts contained in the snapshot
-        let asset_sums = fetch_asset_sums(
-            self.proof_of_account_ownership.addresses.clone(),
-            asset_contract_addresses.clone(),
-        )
-        .unwrap();
+        let asset_sums: [Fp; N_ASSETS] = match asset_sum {
+            Some(sum) => sum,
+            None => {
+                let fetched_asset_sums = fetch_asset_sums(
+                    self.proof_of_account_ownership.addresses.clone(),
+                    asset_contract_addresses.clone(),
+                )
+                .map_err(|_| "Could not fetch asset sums")?;
 
-        let asset_sums: [Fp; N_ASSETS] = asset_sums
-            .iter()
-            .map(|x| Fp::from(*x))
-            .collect::<Vec<Fp>>()
-            .try_into()
-            .unwrap();
+                fetched_asset_sums
+                    .iter()
+                    .map(|x| Fp::from(*x))
+                    .collect::<Vec<Fp>>()
+                    .try_into()
+                    .map_err(|_| "Failed to convert asset sums to Fp")?
+            }
+        };
 
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(self.mst.clone(), asset_sums);
 
@@ -255,7 +261,7 @@ mod tests {
         ];
 
         let calldata = snapshot
-            .generate_proof_of_solvency(asset_addresses.clone())
+            .generate_proof_of_solvency(asset_addresses.clone(), None)
             .unwrap();
 
         assert_eq!(calldata.0.public_inputs.len(), 1 + N_ASSETS);
