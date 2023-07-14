@@ -72,9 +72,23 @@ impl MstInclusionProof {
 
 #[derive(Debug, Clone)]
 pub struct AccountOwnershipProof {
-    pub addresses: Vec<String>,
+    addresses: Vec<String>,
     signatures: Vec<String>,
     message: String,
+}
+
+impl AccountOwnershipProof {
+    pub fn get_addresses(&self) -> &Vec<String> {
+        &self.addresses
+    }
+
+    pub fn get_signatures(&self) -> &Vec<String> {
+        &self.signatures
+    }
+
+    pub fn get_message(&self) -> &String {
+        &self.message
+    }
 }
 
 impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
