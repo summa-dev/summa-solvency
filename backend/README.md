@@ -13,6 +13,8 @@ Furthermore, the `Snapshot` struct contains the following methods:
 - `generate_solvency_verifier` -> write the Solidity Verifier contract (for the `SolvencyProof`) to a file
 - `generate_proof_of_solvency` -> generate the `SolvencyProof` for the current snapshot to be verified on-chain
 - `generate_inclusion_proof` -> generate the `MstInclusionProof` for a specific user for the current snapshot to be verified off-chain
+- `get_account_onwership_proof` -> generate the `AccountOwnership` for a specific user for the current snapshot to be verified off-chain
+
 
 ## Prerequisites
 

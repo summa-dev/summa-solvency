@@ -264,4 +264,18 @@ mod tests {
         assert_eq!(public_inputs.len(), 1); // 1 instance
         assert_eq!(public_inputs[0].len(), 2); // 2 values
     }
+
+    #[test]
+    fn test_get_proof_of_account_ownership() {
+        let snapshot = initialize_snapshot();
+
+        let proof_of_account_ownership = snapshot.get_proof_of_account_ownership();
+
+        assert_eq!(proof_of_account_ownership.addresses.len(), 3);
+        assert_eq!(proof_of_account_ownership.signatures.len(), 3);
+        assert_eq!(
+            proof_of_account_ownership.message,
+            "Summa proof of solvency for CryptoExchange".to_string()
+        );
+    }
 }
