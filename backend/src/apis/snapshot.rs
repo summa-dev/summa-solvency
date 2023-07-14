@@ -193,6 +193,14 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
     pub fn get_proof_of_account_ownership(&self) -> &AccountOwnershipProof {
         &self.proof_of_account_ownership
     }
+
+    pub fn get_trusted_setup_for_mst_inclusion(&self) -> &SetupArtifcats {
+        &self.trusted_setup[0]
+    }
+
+    pub fn get_trusted_setup_for_solvency(&self) -> &SetupArtifcats {
+        &self.trusted_setup[1]
+    }
 }
 
 #[cfg(test)]
