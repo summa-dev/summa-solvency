@@ -15,10 +15,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Build zk prover
-      run: |
-        cd zk_prover
-        cargo build --verbose
 
     - name: Install solc
       run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
@@ -27,11 +23,6 @@ jobs:
       run: |
         cd zk_prover
         cargo test --release --features dev-graph -- --nocapture
-
-    - name: Build backend
-      run: |
-        cd backend
-        cargo build --verbose
 
     - name: Test backend
       env:
