@@ -107,8 +107,13 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
         let solvency_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
+        // get k from ptau file name
+        let parts: Vec<&str> = params_path.split("-").collect();
+        let last_part = parts.last().unwrap();
+        let k = last_part.parse::<u32>().unwrap();
+        
         let mst_inclusion_setup_artifacts: SetupArtifcats =
-            generate_setup_artifacts(params_path, 11, mst_inclusion_circuit).unwrap();
+            generate_setup_artifacts(params_path, k, mst_inclusion_circuit).unwrap();
 
         let solvency_setup_artifacts_artifacts =
             generate_setup_artifacts(params_path, 10, solvency_circuit).unwrap();
