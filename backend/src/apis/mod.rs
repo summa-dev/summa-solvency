@@ -1,3 +1,4 @@
 mod csv_parser;
-mod snapshot_data;
+mod fetch;
+pub mod snapshot;
 mod utils;

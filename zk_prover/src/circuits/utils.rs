@@ -400,6 +400,7 @@ pub fn gen_proof_solidity_calldata<C: Circuit<Fp> + CircuitExt<Fp>>(
     let instances = circuit.instances();
 
     let pf_time = start_timer!(|| "Creating proof");
+    // To generate the proof calldata, make sure you have installed `solc`
     let proof_calldata = gen_evm_proof_shplonk(params, pk, circuit, instances.clone());
     end_timer!(pf_time);
 

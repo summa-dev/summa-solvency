@@ -10,5 +10,11 @@ summa-solvency = { path = "../zk_prover" }
 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_04_20"}
 csv = "1.2.2"
 num-bigint = "0.4.3"
-serde = "1.0.166"
+serde = { version = "1.0.166", features = ["derive"] }
 snark-verifier-sdk = { git = "https://github.com/privacy-scaling-explorations/snark-verifier", version = "0.1.1" }
+ethers = { version = "2.0.7", default_features = false, features = ["ethers-solc"] }
+reqwest = { version = "0.11", features = ["json"] }
+serde_json = "1.0.64"
+tokio = { version = "1.7.1", features = ["full"] }
+base64 = "0.13"
+dotenv = "0.15.0"
