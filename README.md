@@ -6,6 +6,7 @@ A monorepo for Summa, zk proof of solvency protocol
 
 - `zk_prover`: Halo2 based zk prover for Summa
 - `contracts`: Solidity smart contracts for Summa
+- `backend` : Rust API to interact with Summa
 
 ## License
 
