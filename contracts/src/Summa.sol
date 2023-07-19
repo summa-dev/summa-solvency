@@ -41,12 +41,9 @@ contract Summa is Ownable {
             "CEX addresses and signatures count mismatch"
         );
 
-        for (uint i = 0; i < _cexAddresses.length; i++) {
-            if (i >= cexAddresses.length) {
-                cexAddresses.push(_cexAddresses[i]);
-            } else if (_cexAddresses[i] != cexAddresses[i]) {
-                cexAddresses[i] = _cexAddresses[i];
-            }
+        address[] memory newCexAddresses = new address[](_cexAddresses.length);
+
+        for (uint i = 0; i < _cexAddresses.length; ++i) {
             address recoveredPubKey = keccak256(abi.encode(message))
                 .toEthSignedMessageHash()
                 .recover(cexSignatures[i]);
@@ -54,15 +51,10 @@ contract Summa is Ownable {
                 _cexAddresses[i] == recoveredPubKey,
                 "Invalid signer for ETH address"
             );
+            newCexAddresses[i] = _cexAddresses[i];
         }
 
-        // Since we're always rewriting the old array with the new values, we need to make sure that we remove any leftovers if the new set of addresses is smaller than the old one
-        // TODO - explore some gas-efficient ways of maintaining this array
-        if (_cexAddresses.length < cexAddresses.length) {
-            for (uint i = _cexAddresses.length; i < cexAddresses.length; i++) {
-                cexAddresses.pop();
-            }
-        }
+        cexAddresses = newCexAddresses;
 
         emit ExchangeAddressesSubmitted(cexAddresses);
     }
