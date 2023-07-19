@@ -41,8 +41,6 @@ contract Summa is Ownable {
             "CEX addresses and signatures count mismatch"
         );
 
-        address[] memory newCexAddresses = new address[](_cexAddresses.length);
-
         for (uint i = 0; i < _cexAddresses.length; ++i) {
             address recoveredPubKey = keccak256(abi.encode(message))
                 .toEthSignedMessageHash()
@@ -51,10 +49,9 @@ contract Summa is Ownable {
                 _cexAddresses[i] == recoveredPubKey,
                 "Invalid signer for ETH address"
             );
-            newCexAddresses[i] = _cexAddresses[i];
         }
 
-        cexAddresses = newCexAddresses;
+        cexAddresses = _cexAddresses;
 
         emit ExchangeAddressesSubmitted(cexAddresses);
     }
