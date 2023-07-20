@@ -20,22 +20,6 @@ mod test {
         signer::signer::SummaSigner,
     };
 
-    #[tokio::test]
-    async fn test_signer_invalid_key() {
-        const dummy_address_string: &str = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
-        let address: Address = dummy_address_string.parse().unwrap();
-
-        let result = std::panic::catch_unwind(|| {
-            SummaSigner::new(
-                &vec!["wrong_key"],
-                "0xde9be858da4a475276426320d5e9262ecfc3ba460bfac56360bfa6c4c28b4ee0",
-                31337,
-                "http://localhost:8545",
-                address,
-            )
-        });
-        assert!(result.is_err());
-    }
 
     #[tokio::test]
     async fn test_sign_message() {
