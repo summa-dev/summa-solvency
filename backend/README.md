@@ -1,6 +1,6 @@
 # Backend
 
-This directory contains the backend implementation for the Summa Proof of Solvency protocol.
+This directory contains the backend implementation for the Summa Proof of Solvency protocol. 
 
 The core datastructure is the `Snapshot` struct, a data container for:
 
