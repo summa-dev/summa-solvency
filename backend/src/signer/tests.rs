@@ -111,15 +111,6 @@ mod test {
         let decimal_amount = U256::from(whole_amount) * U256::exp10(decimals as usize);
         let mint_call = mock_erc20.mint(cex_addr_2, decimal_amount);
         assert!(mint_call.send().await.is_ok());
-        let erc20_balance = mock_erc20
-            .balance_of(
-                "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc"
-                    .parse()
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        println!("ERC20 balance: {:?}", erc20_balance);
         
         let summa_signer = SummaSigner::new(
             &vec![
