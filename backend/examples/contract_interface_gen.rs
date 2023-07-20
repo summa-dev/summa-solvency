@@ -10,7 +10,7 @@ fn main() {
         std::fs::remove_file(&contract_out_file);
     }
 
-    Abigen::new("Summa", "./src/contracts/contractAbi.json")
+    Abigen::new("Summa", "./src/contracts/Summa.json")
         .unwrap()
         .format(true)
         .generate()

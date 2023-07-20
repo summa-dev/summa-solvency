@@ -1,14 +1,10 @@
-use crate::contracts::generated::summa_contract::{ProofOfSolvencySubmittedFilter, Summa};
+use crate::contracts::generated::summa_contract::Summa;
 use ethers::{
     abi::{encode, Token},
-    prelude::{
-        k256::{schnorr::SigningKey, Secp256k1},
-        stream::EventStream,
-        ContractError, Event, SignerMiddleware,
-    },
-    providers::{FilterWatcher, Http, Provider, StreamExt},
-    signers::{LocalWallet, Signer, Wallet, WalletError},
-    types::{Address, Log, Signature},
+    prelude::SignerMiddleware,
+    providers::{Http, Middleware, Provider},
+    signers::{LocalWallet, Signer, WalletError},
+    types::{Address, Signature},
     utils::keccak256,
 };
 use futures::future::join_all;
@@ -22,18 +18,20 @@ pub struct SummaSigner {
 }
 
 impl SummaSigner {
-    pub fn initialize(
-        private_keys: Vec<&str>,
+    pub fn new(
+        private_keys: &[&str],
         main_signer_key: &str,
         chain_id: u64,
         rpc_url: &str,
         address: Address,
-    ) -> Result<SummaSigner, WalletError> {
-        let wallet: LocalWallet = LocalWallet::from_str(&main_signer_key).unwrap();
+    ) -> Self {
+        let wallet: LocalWallet = LocalWallet::from_str(main_signer_key).unwrap();
 
         let provider = Provider::<Http>::try_from(rpc_url).unwrap();
-        let client = SignerMiddleware::new(provider, wallet.with_chain_id(chain_id));
-        let client2 = Arc::new(client);
+        let client = Arc::new(SignerMiddleware::new(
+            provider,
+            wallet.with_chain_id(chain_id),
+        ));
 
         // An example of how to retrieve the contract address from the deployments.json file
         // let payload = Self::read_payload_from_file("./src/contracts/deployments.json").unwrap();
@@ -46,14 +44,14 @@ impl SummaSigner {
 
         // let address: Address = summa_address.parse().unwrap();
 
-        let contract = Summa::new(address, client2);
-        Ok(SummaSigner {
+        let contract = Summa::new(address, client);
+        Self {
             signing_wallets: private_keys
                 .iter()
-                .map(|private_key| LocalWallet::from_str(&private_key).unwrap())
+                .map(|private_key| LocalWallet::from_str(private_key).unwrap())
                 .collect(),
             summa_contract: contract,
-        })
+        }
     }
 
     fn read_payload_from_file<P: AsRef<Path>>(path: P) -> Result<Value, Box<dyn Error>> {
@@ -89,30 +87,38 @@ impl SummaSigner {
         Ok(join_all(signature_futures).await)
     }
 
-    pub async fn submitProofOfSolvency(
+    pub async fn submit_proof_of_address_ownership(
         &self,
-        exchange_id: String,
         cex_addresses: Vec<ethers::types::H160>,
         cex_signatures: Vec<ethers::types::Bytes>,
+        message: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        self.summa_contract
+            .submit_proof_of_account_ownership(cex_addresses, cex_signatures, message.to_owned())
+            .send()
+            .await
+            .unwrap();
+
+        Ok(())
+    }
+
+    pub async fn submit_proof_of_solvency(
+        &self,
         erc_20_contract_addresses: Vec<ethers::types::H160>,
         balances_to_prove: Vec<ethers::types::U256>,
         mst_root: ethers::types::U256,
         proof: ethers::types::Bytes,
-    ) {
-        let result = self
-            .summa_contract
-            .submit_proof_of_solvency(
-                exchange_id,
-                cex_addresses,
-                cex_signatures,
-                erc_20_contract_addresses,
-                balances_to_prove,
-                mst_root,
-                proof,
-            )
-            .await
-            .unwrap_err();
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let submit_proof_of_solvency = &self.summa_contract.submit_proof_of_solvency(
+            erc_20_contract_addresses,
+            balances_to_prove,
+            mst_root,
+            proof,
+        );
+        let tx = submit_proof_of_solvency.send().await.unwrap();
 
-        println!("{:?}", result.decode_revert::<String>().unwrap());
+        tx.await.unwrap();
+
+        Ok(())
     }
 }

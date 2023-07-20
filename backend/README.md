@@ -1,6 +1,6 @@
 # Backend
 
-This directory contains the backend implementation for the Summa Proof of Solvency protocol. 
+This directory contains the backend implementation for the Summa Proof of Solvency protocol.
 
 The core datastructure is the `Snapshot` struct, a data container for:
 
@@ -15,10 +15,9 @@ Furthermore, the `Snapshot` struct contains the following methods:
 - `generate_inclusion_proof` -> generate the `MstInclusionProof` for a specific user for the current snapshot to be verified off-chain
 - `get_account_onwership_proof` -> generate the `AccountOwnership` for a specific user for the current snapshot to be verified off-chain
 
-
 ## Prerequisites
 
-In order to initialize the Snapshot, you need to download the Powers of Tau files. These are the trusted setup parameters needed to build the zk circuits. You can find such files at https://github.com/han0110/halo2-kzg-srs, download it 
+In order to initialize the Snapshot, you need to download the Powers of Tau files. These are the trusted setup parameters needed to build the zk circuits. You can find such files at https://github.com/han0110/halo2-kzg-srs, download it
 
 ```
 wget https://trusted-setup-halo2kzg.s3.eu-central-1.amazonaws.com/hermez-raw-11
@@ -36,3 +35,11 @@ To build the binary executable and test it
 cargo build
 cargo test --release -- --nocapture
 ```
+
+To generate the Rust contract interfaces from the ABI files, run:
+
+```
+cargo run --example contract_interface_gen
+```
+
+The [Summa contract ABI json](./src/contracts/Summa.json) is updated when the contract is deployed from the [contracts subproject](./../contracts/README.md).

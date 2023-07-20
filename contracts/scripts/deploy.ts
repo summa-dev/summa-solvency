@@ -51,29 +51,10 @@ async function main() {
     deploymentsStringified
   );
 
-  //TODO copy the ABI from `artifacts/src/Summa.sol/Summa.json` to `backend/src/contracts/contractAbi.json`
-
-  // const abi = JSON.parse(summa.interface.format(FormatTypes.json).toString());
-  // console.log(abi);
-  // let abiJson: any = {};
-  // try {
-  //   const abiRaw = fs.readFileSync("../backend/src/contracts/contractAbi.json");
-  //   abiJson = JSON.parse(abiRaw);
-  //   if (abiJson[hre.network.config.chainId ?? 0])
-  //     delete abiJson[hre.network.config.chainId ?? 0];
-  // } catch (error) {
-  //   console.log("No previous ABI found");
-  // }
-  // const abiNew = {
-  //   [hre.network.config.chainId ?? 0]: abi,
-  // };
-  // const abiFinal = {
-  //   ...abiJson,
-  //   ...abiNew,
-  // };
-  // const abiStringified = JSON.stringify(abiFinal);
-  // //Save the ABIs
-  // fs.writeFileSync("../backend/src/contracts/contractAbi.json", abiStringified);
+  //Copy the ABI from `artifacts/src/Summa.sol/Summa.json` to `backend/src/contracts/Summa.json`
+  const abi = require("../artifacts/src/Summa.sol/Summa.json");
+  const abiStringified = JSON.stringify(abi);
+  fs.writeFileSync("../backend/src/contracts/Summa.json", abiStringified);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

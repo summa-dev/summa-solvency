@@ -1,2 +1,2 @@
-mod signer;
+pub(crate) mod signer;
 mod tests;

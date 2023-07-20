@@ -12,7 +12,6 @@ name = "contract_interface_gen"
 summa-solvency = { path = "../zk_prover" }
 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_04_20"}
 csv = "1.2.2"
-ethers = "2.0.7"
 futures = "0.3.28"
 num-bigint = "0.4.3"
 serde = { version = "1.0.166", features = ["derive"] }
