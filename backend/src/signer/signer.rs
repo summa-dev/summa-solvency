@@ -93,11 +93,12 @@ impl SummaSigner {
         cex_signatures: Vec<ethers::types::Bytes>,
         message: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        self.summa_contract
-            .submit_proof_of_account_ownership(cex_addresses, cex_signatures, message.to_owned())
-            .send()
-            .await
-            .unwrap();
+        let submit_proof_of_account_ownership_call = &self
+            .summa_contract
+            .submit_proof_of_account_ownership(cex_addresses, cex_signatures, message.to_owned());
+        let tx = submit_proof_of_account_ownership_call.send().await.unwrap();
+
+        tx.await.unwrap();
 
         Ok(())
     }
@@ -109,13 +110,13 @@ impl SummaSigner {
         mst_root: ethers::types::U256,
         proof: ethers::types::Bytes,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let submit_proof_of_solvency = &self.summa_contract.submit_proof_of_solvency(
+        let submit_proof_of_solvency_call = &self.summa_contract.submit_proof_of_solvency(
             erc_20_contract_addresses,
             balances_to_prove,
             mst_root,
             proof,
         );
-        let tx = submit_proof_of_solvency.send().await.unwrap();
+        let tx = submit_proof_of_solvency_call.send().await.unwrap();
 
         tx.await.unwrap();
 
