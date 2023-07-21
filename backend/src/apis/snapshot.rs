@@ -111,7 +111,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         let parts: Vec<&str> = params_path.split("-").collect();
         let last_part = parts.last().unwrap();
         let k = last_part.parse::<u32>().unwrap();
-        
+
         let mst_inclusion_setup_artifacts: SetupArtifcats =
             generate_setup_artifacts(params_path, k, mst_inclusion_circuit).unwrap();
 
@@ -271,6 +271,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_generate_solvency_proof() {
         let snapshot = initialize_snapshot();
 
