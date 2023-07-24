@@ -36,10 +36,4 @@ cargo build
 SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" cargo test --release -- --nocapture
 ```
 
-To generate the Rust contract interfaces from the ABI files, run:
-
-```
-cargo run --example contract_interface_gen
-```
-
-The [Summa contract ABI json](./src/contracts/Summa.json) is updated when the contract is deployed from the [contracts subproject](./../contracts/README.md).
+The contract Rust interfaces are built by the [buildscript](./build.rs) from the JSON ABI. The [Summa contract ABI json](./src/contracts/Summa.json) is updated when the contract is deployed from the [contracts subproject](./../contracts/README.md).
