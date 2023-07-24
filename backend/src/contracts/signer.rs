@@ -2,7 +2,7 @@ use crate::contracts::generated::summa_contract::Summa;
 use ethers::{
     abi::{encode, Token},
     prelude::SignerMiddleware,
-    providers::{Http, Middleware, Provider},
+    providers::{Http, Provider},
     signers::{LocalWallet, Signer, WalletError},
     types::{Address, Signature},
     utils::keccak256,
@@ -18,6 +18,13 @@ pub struct SummaSigner {
 }
 
 impl SummaSigner {
+    /// Creates a new SummaSigner instance
+    /// # Arguments
+    /// * `private_keys` - A list of the private keys of the accounts holding the exchange assets
+    /// * `main_signer_key` - The private key of wallet that will interact with the chain on behalf of the exchange
+    /// * `chain_id` - The chain id of the network
+    /// * `rpc_url` - The RPC URL of the network
+    /// * `address` - The address of the Summa contract
     pub fn new(
         private_keys: &[&str],
         main_signer_key: &str,

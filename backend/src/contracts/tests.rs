@@ -3,21 +3,19 @@ mod test {
     use std::{time::Duration, sync::Arc};
 
     use ethers::{
-        abi::Address,
         prelude::{ContractFactory, SignerMiddleware},
         providers::{Http, Middleware, Provider, StreamExt},
         signers::{LocalWallet, Signer},
-        types::{U256, Filter},
+        types::{U256, Filter, Address},
         utils::{Anvil},
     };
 
     use crate::{
-        contracts::generated::{
+        contracts::{generated::{
             mock_erc20::{self, MockERC20, MOCKERC20_ABI, MOCKERC20_BYTECODE},
             summa_contract::{ProofOfSolvencySubmittedFilter, Summa, ExchangeAddressesSubmittedFilter},
             verifier::SolvencyVerifier,
-        },
-        signer::signer::SummaSigner,
+        }, signer::SummaSigner},
     };
 
 
@@ -25,38 +23,14 @@ mod test {
     async fn test_sign_message() {
         let anvil = Anvil::new().spawn();
 
-        let wallet: LocalWallet = anvil.keys()[0].clone().into();
-
-        let provider = Provider::<Http>::try_from(anvil.endpoint())
-            .unwrap()
-            .interval(Duration::from_millis(10u64));
-
-        let client = Arc::new(SignerMiddleware::new(
-            provider,
-            wallet.with_chain_id(anvil.chain_id()),
-        ));
-
-        let client_clone = Arc::clone(&client);
-
-        let mock_erc20 = MockERC20::deploy::<()>(client, ())
-            .unwrap()
-            .send()
-            .await
-            .unwrap();
-
-        let summa_contract = Summa::deploy(client_clone, mock_erc20.address())
-            .unwrap()
-            .send()
-            .await
-            .unwrap();
-
         let signer = SummaSigner::new(
             //Account #1
             &vec!["0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"],
             "0xde9be858da4a475276426320d5e9262ecfc3ba460bfac56360bfa6c4c28b4ee0",
             31337,
             anvil.endpoint().as_str(),
-            summa_contract.address(),
+            //Verifier deployment is not necessary for this test
+            Address::random(),
         );
 
         let signatures = signer.generate_signatures().await.unwrap();

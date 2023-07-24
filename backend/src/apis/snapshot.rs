@@ -271,7 +271,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_generate_solvency_proof() {
         let snapshot = initialize_snapshot();
 

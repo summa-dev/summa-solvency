@@ -115,7 +115,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
     fn test_fetch_balances_per_addr() {
         // this is an address with 0 usdc and 0.010910762665574143 ETH
         let address = "0xe4D9621321e77B499392801d08Ed68Ec5175f204".to_string();
@@ -131,7 +130,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_fetch_asset_sums() {
         let address_1 = "0xe4D9621321e77B499392801d08Ed68Ec5175f204".to_string(); // this is an address with 0 usdc and 0.010910762665574143 ETH
         let address_2 = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1".to_string(); // this is an address with 0.000001 USDC usdc and 1 wei
