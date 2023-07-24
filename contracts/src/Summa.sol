@@ -4,7 +4,6 @@ pragma solidity ^0.8.18;
 // Uncomment this line to use console.log
 //import "hardhat/console.sol";
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -15,7 +14,7 @@ interface IVerifier {
     ) external view returns (bool);
 }
 
-contract Summa is Ownable {
+contract Summa {
     using ECDSA for bytes32;
 
     IVerifier private immutable verifier;
