@@ -33,22 +33,21 @@ fn main() {
     let mut encoded = Vec::new();
     file.read_to_end(&mut encoded).unwrap();
 
-    // There are two public inputs, root_hash and leaf hash.
-    // the root hash is publicly shared, but leaf hash is not.
-    // Only the user can fetch the leaf hash with their name(username) and balances.
-    //
-    // And the verifier should have access to the username and balances
+    // There are two public inputs, root_hash and leaf_hash.
+    // The root_hash is publicly shared, but the leaf_hash is not.
+    // Only the user can verify the leaf_hash using their name (username) and balances.
+    // The verifier should have access to both the username and balances.
     //
     // root_hash = 0x02e021d9bf99c5bd7267488b6a7a5cf5f7d00222a41b6a9b971899c44089e0c5
     let root_hash = "1300633067792667740851197998552728163078912135282962223512949070409098715333";
 
     let proof: Vec<u8> = bincode::deserialize(&encoded[..]).unwrap();
 
-    // Most important thing is that the user should verify the leaf hash using their username and balances.
+    // Importantly, the user should verify the leaf hash using their username and balances.
     let user_name = "dxGaEAii".to_string();
     let balances_usize = vec![11888, 41163];
 
-    // leaf_hash = 0x0e113acd03b98f0bab0ef6f577245d5d008cbcc19ef2dab3608aa4f37f72a407
+    // index 0 user's leaf_hash : 0x0e113acd03b98f0bab0ef6f577245d5d008cbcc19ef2dab3608aa4f37f72a407
     let leaf_hash = generate_leaf_hash::<2>(user_name, balances_usize.clone());
 
     let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
@@ -61,5 +60,10 @@ fn main() {
         proof,
         vec![vec![leaf_hash, Fp::from_str_vartime(root_hash).unwrap()]],
     );
-    println!("Verification result: {}", verification_result);
+
+    // Given the proper inputs (`root_hash` and `leaf_hash`), the proof is valid.
+    println!(
+        "Verifying the proof result for User #0: {}",
+        verification_result
+    );
 }
