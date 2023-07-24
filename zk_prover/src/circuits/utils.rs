@@ -33,11 +33,32 @@ use std::{
     path::PathBuf,
 };
 
-/// Generate setup parameters for a circuit of size `k` where 2^k is the number of rows in the circuit.
-/// First checks if the trusted setup parameters are already generated and saved in the `ptau` folder with the name `hermez-raw-k`, if so, it loads them.
-/// If the trusted setup are not found in the `ptau` folder, an unsafe trusted setup is generated and saved there.
-pub fn generate_setup_params(k: u32) -> ParamsKZG<Bn256> {
-    let ptau_path = format!("ptau/hermez-raw-{}", k);
+/// Generate setup artifacts for a circuit of size `k`, where 2^k represents the number of rows in the circuit.
+/// This function first checks if the trusted setup parameters are already generated and saved in the `ptau` folder with the name `hermez-raw-k`.
+///
+/// If the trusted setup parameters are not found, the function performs an unsafe trusted setup to generate the necessary parameters
+/// If the provided `k` value is larger than the `k` value of the loaded parameters, an error is returned, as the provided `k` is too large.
+/// Otherwise, if the `k` value is smaller than the `k` value of the loaded parameters, the parameters are downsized to fit the requested `k`.
+pub fn generate_setup_artifacts<C: Circuit<Fp> + CircuitExt<Fp>>(
+    k: u32,
+    params_path: Option<&str>,
+    circuit: C,
+) -> Result<
+    (
+        ParamsKZG<Bn256>,
+        ProvingKey<G1Affine>,
+        VerifyingKey<G1Affine>,
+    ),
+    &'static str,
+> {
+    let mut ptau_path = format!("ptau/hermez-raw-{}", k);
+
+    match params_path {
+        Some(path) => {
+            ptau_path = path.to_string();
+        }
+        _ => {}
+    }
 
     let metadata = std::fs::metadata(ptau_path.clone());
 
@@ -47,14 +68,38 @@ pub fn generate_setup_params(k: u32) -> ParamsKZG<Bn256> {
         let timer = start_timer!(|| "Creating params");
         let params = ParamsKZG::<Bn256>::setup(k, OsRng);
         end_timer!(timer);
-        params
+        if params.k() < k {
+            return Err("k is too large for the given params");
+        }
+        Ok((
+            params.clone(),
+            keygen_pk(
+                &params,
+                keygen_vk(&params, &circuit).expect("vk generation should not fail"),
+                &circuit,
+            )
+            .expect("pk generation should not fail"),
+            keygen_vk(&params, &circuit).expect("vk generation should not fail"),
+        ))
     } else {
         println!("ptau file found");
         let timer = start_timer!(|| "Creating params");
         let mut params_fs = File::open(ptau_path).expect("couldn't load params");
         let params = ParamsKZG::<Bn256>::read(&mut params_fs).expect("Failed to read params");
         end_timer!(timer);
-        params
+        if params.k() < k {
+            return Err("k is too large for the given params");
+        }
+        Ok((
+            params.clone(),
+            keygen_pk(
+                &params,
+                keygen_vk(&params, &circuit).expect("vk generation should not fail"),
+                &circuit,
+            )
+            .expect("pk generation should not fail"),
+            keygen_vk(&params, &circuit).expect("vk generation should not fail"),
+        ))
     }
 }
 

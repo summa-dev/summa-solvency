@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use halo2_proofs::{
-    halo2curves::bn256::{Bn256, Fr as Fp},
-    plonk::{keygen_pk, keygen_vk},
+    halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
+    plonk::{keygen_pk, keygen_vk, ProvingKey},
     poly::kzg::commitment::ParamsKZG,
 };
 use snark_verifier_sdk::CircuitExt;
@@ -9,7 +9,7 @@ use summa_solvency::{
     circuits::merkle_sum_tree::MstInclusionCircuit,
     circuits::{
         solvency::SolvencyCircuit,
-        utils::{full_prover, full_verifier, generate_setup_params},
+        utils::{full_prover, full_verifier, generate_setup_artifacts},
     },
     merkle_sum_tree::{MerkleSumTree, RANGE_BITS},
 };
@@ -44,9 +44,9 @@ fn build_mstree(_c: &mut Criterion) {
 fn verification_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(13);
-
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+
+    let (params, _, _) = generate_setup_artifacts(13, None, empty_circuit.clone()).unwrap();
 
     let bench_name = format!(
         "gen verification key for 2 power of {} entries with {} assets mst inclusion circuit",
@@ -62,11 +62,10 @@ fn verification_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
 fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(13);
-
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
-    let vk = keygen_vk(&params, &empty_circuit).expect("vk generation should not fail");
+empty_circuit.clone()let (params, _, vk) = generate_setup_artifacts(13, None, empty_circuit.clone()).unwrap();
+
     let bench_name = format!(
         "gen proving key for 2 power of {} entries with {} assets mst inclusion circuit",
         LEVELS, N_ASSETS
@@ -81,12 +80,9 @@ fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
 fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(13);
-
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
-    let vk = keygen_vk(&params, &empty_circuit).expect("vk generation should not fail");
-    let pk = keygen_pk(&params, vk, &empty_circuit).expect("pk generation should not fail");
+    let (params, pk, vk) = generate_setup_artifacts(13, None, empty_circuit).unwrap();
 
     let csv_file = format!(
         "benches/csv/{}/{}_entry_2_{}.csv",
@@ -112,12 +108,9 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(13);
-
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
-    let vk = keygen_vk(&params, &empty_circuit).expect("vk generation should not fail");
-    let pk = keygen_pk(&params, vk.clone(), &empty_circuit).expect("pk generation should not fail");
+    let (params, pk, vk) = generate_setup_artifacts(13, None, empty_circuit).unwrap();
 
     let csv_file = format!(
         "benches/csv/{}/{}_entry_2_{}.csv",
@@ -147,9 +140,9 @@ fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 fn verification_key_gen_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(11);
-
     let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
+
+    let (params, _, _) = generate_setup_artifacts(11, None, empty_circuit.clone()).unwrap();
 
     let bench_name = format!(
         "gen verification key for 2 power of {} entries with {} assets solvency circuit",
@@ -165,11 +158,10 @@ fn verification_key_gen_solvency_circuit(_c: &mut Criterion) {
 fn proving_key_gen_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(11);
-
     let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
-    let vk = keygen_vk(&params, &empty_circuit).expect("vk generation should not fail");
+    let (params, _, vk) = generate_setup_artifacts(11, None, empty_circuit.clone()).unwrap();
+
     let bench_name = format!(
         "gen proving key for 2 power of {} entries with {} assets solvency circuit",
         LEVELS, N_ASSETS
@@ -184,12 +176,9 @@ fn proving_key_gen_solvency_circuit(_c: &mut Criterion) {
 fn generate_zk_proof_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(11);
-
     let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
-    let vk = keygen_vk(&params, &empty_circuit).expect("vk generation should not fail");
-    let pk = keygen_pk(&params, vk, &empty_circuit).expect("pk generation should not fail");
+    let (params, pk, vk) = generate_setup_artifacts(11, None, empty_circuit).unwrap();
 
     let csv_file = format!(
         "benches/csv/{}/{}_entry_2_{}.csv",
@@ -217,12 +206,9 @@ fn generate_zk_proof_solvency_circuit(_c: &mut Criterion) {
 fn verify_zk_proof_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let params: ParamsKZG<Bn256> = generate_setup_params(11);
-
     let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
-    let vk = keygen_vk(&params, &empty_circuit).expect("vk generation should not fail");
-    let pk = keygen_pk(&params, vk.clone(), &empty_circuit).expect("pk generation should not fail");
+    let (params, pk, vk) = generate_setup_artifacts(11, None, empty_circuit).unwrap();
 
     let csv_file = format!(
         "benches/csv/{}/{}_entry_2_{}.csv",
