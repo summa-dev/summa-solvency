@@ -33,17 +33,6 @@ impl SummaSigner {
             wallet.with_chain_id(chain_id),
         ));
 
-        // An example of how to retrieve the contract address from the deployments.json file
-        // let payload = Self::read_payload_from_file("./src/contracts/deployments.json").unwrap();
-        // let deployment_address: &Value = &payload.as_object().unwrap()
-        //     [chain_id.to_string().as_str()]
-        // .as_object()
-        // .unwrap()["address"];
-
-        // let summa_address: &str = deployment_address.as_str().unwrap();
-
-        // let address: Address = summa_address.parse().unwrap();
-
         let contract = Summa::new(address, client);
         Self {
             signing_wallets: private_keys
@@ -54,34 +43,42 @@ impl SummaSigner {
         }
     }
 
-    fn read_payload_from_file<P: AsRef<Path>>(path: P) -> Result<Value, Box<dyn Error>> {
+    pub fn get_deployment_address<P: AsRef<Path>>(
+        path: P,
+        chain_id: u64,
+    ) -> Result<Address, Box<dyn Error>> {
         // Open file in RO mode with buffer
         let file = File::open(path)?;
         let reader = BufReader::new(file);
 
         // Read the JSON contents of the file
-        let u: Value = serde_json::from_reader(reader)?;
+        let payload: Value = serde_json::from_reader(reader)?;
 
-        Ok(u)
+        // Retrieve the contract address from the deployments.json file
+        let deployment_address: &Value = &payload.as_object().unwrap()
+            [chain_id.to_string().as_str()]
+        .as_object()
+        .unwrap()["address"];
+
+        let summa_address: &str = deployment_address.as_str().unwrap();
+
+        let address: Address = summa_address.parse().unwrap();
+
+        Ok(address)
     }
 
-    async fn sign_message(wallet: &LocalWallet, exchange_id: &str) -> Signature {
-        let encoded_message = encode(&[
-            Token::String("Summa proof of solvency for ".to_owned()),
-            Token::String(exchange_id.to_owned()),
-        ]);
+    async fn sign_message(wallet: &LocalWallet, message: &str) -> Signature {
+        let encoded_message = encode(&[Token::String(message.to_owned())]);
         let hashed_message = keccak256(encoded_message);
         wallet.sign_message(hashed_message).await.unwrap()
     }
 
-    pub async fn generate_signatures(
-        &self,
-        exchange_id: &str,
-    ) -> Result<Vec<Signature>, WalletError> {
+    pub async fn generate_signatures(&self) -> Result<Vec<Signature>, WalletError> {
+        let message = std::env::var("SIGNATURE_VERIFICATION_MESSAGE").unwrap();
         let signature_futures: Vec<_> = self
             .signing_wallets
             .iter()
-            .map(|wallet| Self::sign_message(wallet, exchange_id))
+            .map(|wallet| Self::sign_message(wallet, &message))
             .collect();
 
         Ok(join_all(signature_futures).await)

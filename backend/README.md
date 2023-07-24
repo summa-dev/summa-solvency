@@ -1,6 +1,6 @@
 # Backend
 
-This directory contains the backend implementation for the Summa Proof of Solvency protocol. 
+This directory contains the backend implementation for the Summa Proof of Solvency protocol.
 
 The core datastructure is the `Snapshot` struct, a data container for:
 
@@ -33,7 +33,7 @@ To build the binary executable and test it
 
 ```
 cargo build
-cargo test --release -- --nocapture
+SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" cargo test --release -- --nocapture
 ```
 
 To generate the Rust contract interfaces from the ABI files, run:

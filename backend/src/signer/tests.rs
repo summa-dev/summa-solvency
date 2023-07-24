@@ -59,10 +59,10 @@ mod test {
             summa_contract.address(),
         );
 
-        let signatures = signer.generate_signatures("CryptoExchange").await.unwrap();
+        let signatures = signer.generate_signatures().await.unwrap();
         assert_eq!(signatures.len(), 1);
         //Signature produced by the account #1
-        assert_eq!(signatures[0].to_string(), "ea576c302228671c074bdf26fbd757d9c64016aa9974eaeb911274d1458a49f05aa5d4b9df5c0a4a68d2256bea8a6c762130e538b41f47fd54b2cbbdccd6a9de1c");
+        assert_eq!(signatures[0].to_string(), "089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b");
         drop(anvil);
     }
 
