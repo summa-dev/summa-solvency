@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod test {
 
-    use crate::merkle_sum_tree::utils::{big_int_to_fp, poseidon_node};
+    use crate::merkle_sum_tree::utils::{big_uint_to_fp, poseidon_node};
     use crate::merkle_sum_tree::{Entry, MerkleSumTree, N_ASSETS};
-    use num_bigint::{BigInt, ToBigInt};
+    use num_bigint::{BigUint, ToBigUint};
 
     #[test]
     fn test_mst() {
@@ -40,7 +40,7 @@ mod test {
         assert_eq!(
             merkle_tree.index_of(
                 "AtwIxZHo",
-                [35479.to_bigint().unwrap(), 31699.to_bigint().unwrap()]
+                [35479.to_biguint().unwrap(), 31699.to_biguint().unwrap()]
             ),
             Some(15)
         );
@@ -49,7 +49,7 @@ mod test {
         assert_eq!(
             merkle_tree.index_of(
                 "AtwHHHHo",
-                [35478.to_bigint().unwrap(), 35478.to_bigint().unwrap()]
+                [35478.to_biguint().unwrap(), 35478.to_biguint().unwrap()]
             ),
             None
         );
@@ -67,7 +67,7 @@ mod test {
         let mut proof_invalid_1 = proof.clone();
         proof_invalid_1.entry = Entry::new(
             "AtwIxZHo".to_string(),
-            [35479.to_bigint().unwrap(), 35479.to_bigint().unwrap()],
+            [35479.to_biguint().unwrap(), 35479.to_biguint().unwrap()],
         )
         .unwrap();
         assert!(!merkle_tree.verify_proof(&proof_invalid_1));
@@ -97,16 +97,16 @@ mod test {
 
     #[test]
     fn test_big_int_conversion() {
-        let big_int = 3.to_bigint().unwrap();
-        let fp = big_int_to_fp(&big_int);
+        let big_int = 3.to_biguint().unwrap();
+        let fp = big_uint_to_fp(&big_int);
 
         assert_eq!(fp, 3.into());
 
-        let big_int_over_64 = (18446744073709551616_i128).to_bigint().unwrap();
-        let fp_2 = big_int_to_fp(&big_int_over_64);
+        let big_int_over_64 = (18446744073709551616_i128).to_biguint().unwrap();
+        let fp_2 = big_uint_to_fp(&big_int_over_64);
 
         let big_int_to_bytes = {
-            let (_, mut bytes) = BigInt::to_bytes_le(&big_int_over_64);
+            let mut bytes = BigUint::to_bytes_le(&big_int_over_64);
             bytes.resize(32, 0);
             bytes
         };

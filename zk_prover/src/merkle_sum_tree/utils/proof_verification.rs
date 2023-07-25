@@ -1,4 +1,4 @@
-use crate::merkle_sum_tree::utils::{big_int_to_fp, create_middle_node::create_middle_node};
+use crate::merkle_sum_tree::utils::{big_uint_to_fp, create_middle_node::create_middle_node};
 use crate::merkle_sum_tree::{MerkleProof, Node};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
@@ -8,7 +8,7 @@ pub fn verify_proof<const N_ASSETS: usize>(proof: &MerkleProof<N_ASSETS>) -> boo
         .entry
         .balances()
         .iter()
-        .map(big_int_to_fp)
+        .map(big_uint_to_fp)
         .collect::<Vec<Fp>>();
 
     for i in 0..proof.sibling_hashes.len() {

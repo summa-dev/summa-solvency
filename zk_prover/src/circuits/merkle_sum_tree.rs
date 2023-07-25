@@ -2,7 +2,7 @@ use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
-use crate::merkle_sum_tree::{big_int_to_fp, MerkleSumTree, RANGE_BITS};
+use crate::merkle_sum_tree::{big_uint_to_fp, MerkleSumTree, RANGE_BITS};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
@@ -82,7 +82,7 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize>
                 .entry
                 .balances()
                 .iter()
-                .map(big_int_to_fp)
+                .map(big_uint_to_fp)
                 .collect::<Vec<_>>(),
             path_element_hashes: proof.sibling_hashes,
             path_element_balances: proof.sibling_sums,
