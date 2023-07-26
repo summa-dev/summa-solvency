@@ -2,9 +2,9 @@ name: Rust
 
 on:
   push:
-    branches: [ "*" ]
+    branches: ["*"]
   pull_request:
-    branches: [ "*" ]
+    branches: ["*"]
 
 env:
   CARGO_TERM_COLOR: always
@@ -14,19 +14,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Install solc
-      run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
+      - name: Install solc
+        run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
 
-    - name: Test Zk Prover
-      run: |
-        cd zk_prover
-        cargo test --release --features dev-graph -- --nocapture
+      - name: Test Zk Prover
+        run: |
+          cd zk_prover
+          cargo test --release --features dev-graph -- --nocapture
 
-    - name: Test backend
-      env:
-        COVALENT_API_KEY: ${{ secrets.COVALENT_API_KEY }}
-      run: |
-        cd backend
-        cargo test --release -- --nocapture
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Test backend
+        env:
+          COVALENT_API_KEY: ${{ secrets.COVALENT_API_KEY }}
+          SIGNATURE_VERIFICATION_MESSAGE: "Summa proof of solvency for CryptoExchange"
+        run: |
+          cd backend
+          cargo test --release -- --nocapture
