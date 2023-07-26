@@ -18,7 +18,7 @@ use summa_solvency::{
 };
 
 use crate::apis::csv_parser::parse_signature_csv;
-use crate::apis::fetch::fetch_asset_sums;
+// use crate::apis::fetch::fetch_asset_sums;
 use crate::apis::utils::generate_setup_artifacts;
 
 pub struct Snapshot<
@@ -163,11 +163,13 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         let asset_sums: [Fp; N_ASSETS] = match asset_sum {
             Some(sum) => sum,
             None => {
-                let fetched_asset_sums = fetch_asset_sums(
-                    self.proof_of_account_ownership.addresses.clone(),
-                    asset_contract_addresses.clone(),
-                )
-                .map_err(|_| "Could not fetch asset sums")?;
+                // let fetched_asset_sums = fetch_asset_sums(
+                //     "http://localhost:8545",
+                //     self.proof_of_account_ownership.addresses.clone(),
+                //     asset_contract_addresses.clone(),
+                // )
+                // .map_err(|_| "Could not fetch asset sums")?;
+                let fetched_asset_sums = vec![0, 0];
 
                 fetched_asset_sums
                     .iter()

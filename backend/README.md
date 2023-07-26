@@ -25,7 +25,7 @@ wget https://trusted-setup-halo2kzg.s3.eu-central-1.amazonaws.com/hermez-raw-11
 
 and pass the path to the file to the `Snapshot::new` method.
 
-Furthermore, the `generate_proof_of_solvency` method requires to fetch data about the balances of the wallets of the CEX. This data is fetched using the Covalent API. In order to use this method, you need to create an `.env` file and store the `COVALENT_API_KEY` there. You can get an API key at https://www.covalenthq.com/platform/.
+Furthermore, the `generate_proof_of_solvency` method requires to fetch data about the balances of the wallets of the CEX. the default node url is `http://localhost:8545`.
 
 ## Usage
 

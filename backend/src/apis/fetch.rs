@@ -1,7 +1,20 @@
-use base64::encode;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+// use base64::encode;
+use std::{error::Error, marker::PhantomData, str::FromStr, sync::Arc};
+
+use ethers::{
+    abi::Address,
+    contract::{builders::ContractCall, Contract, ContractError},
+    prelude::{FunctionCall, SignerMiddleware},
+    providers::{Http, Middleware, Provider, StreamExt},
+    signers::{LocalWallet, Signer},
+    types::{Bytes, U256},
+};
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use serde::Deserialize;
-use std::error::Error;
+
+use crate::contracts;
+use contracts::generated::mock_erc20::MockERC20;
 
 #[derive(Deserialize, Debug)]
 /// This is the root level of the JSON response. It contains a data field, which corresponds to the "data" field in the JSON.
@@ -21,131 +34,94 @@ struct Item {
     contract_address: String,
 }
 
-/// This function takes a list of asset contracts addresses, a list of addresses and returns the aggregated balance of these address PER EACH asset
-pub fn fetch_asset_sums(
-    addresses: Vec<String>,
-    asset_contract_addresses: Vec<String>,
-) -> Result<Vec<u64>, Box<dyn Error>> {
-    // create asset sums vector
-    let mut asset_sums: Vec<u64> = Vec::new();
+pub trait BalanceFromContract<M: Middleware> {
+    fn get_balance_from_contract(&self, account: Address) -> FunctionCall<Arc<M>, M, U256>;
+}
 
-    // for each address in addresses vector call fetch_balances_per_addr and increment the asset_sums vector
-    for address in addresses {
-        let balances = fetch_balances_per_addr(address.clone(), asset_contract_addresses.clone())?;
-        for (i, balance) in balances.iter().enumerate() {
-            if asset_sums.len() <= i {
-                asset_sums.push(*balance);
-            } else {
-                let sum = asset_sums[i] + balance;
-                asset_sums[i] = sum;
-            }
-        }
-    }
-
-    Ok(asset_sums)
+fn update_balance(mut accumulator: Fp, balance: U256) -> Fp {
+    let mut u8_balance = [0u8; 32];
+    balance.to_little_endian(&mut u8_balance);
+    accumulator += Fp::from_bytes(&u8_balance).unwrap();
+    accumulator
 }
 
 /// This function takes a list of token contracts, an address and returns the balances of that address for the queried contracts.
-#[tokio::main]
-async fn fetch_balances_per_addr(
-    address: String,
-    asset_contract_addresses: Vec<String>,
-) -> Result<Vec<u64>, Box<dyn Error>> {
-    // Create a header map
-    let mut headers = HeaderMap::new();
+async fn fetch_balances_per_addr<'a, M: Middleware + 'a>(
+    client: SignerMiddleware<Provider<Http>, LocalWallet>,
+    contracts: Vec<Box<dyn BalanceFromContract<M> + Send>>,
+    asset_addresses: Vec<&'a str>,
+) -> Result<Vec<Fp>, Box<dyn Error>> {
+    // TODO: client connection check before fetching.
+    let mut result: Vec<Fp> = Vec::new();
 
-    // Load .env file
-    dotenv::dotenv().ok();
+    // First fetch eth balance over all addresses
+    let mut sum_eth_balance = Fp::zero();
 
-    // Access API key from the environment
-    let api_key = std::env::var("COVALENT_API_KEY").unwrap();
-
-    // Add `Content-Type` header
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-
-    // Add `Authorization` header
-    let auth_value = format!("Basic {}", encode(api_key));
-    headers.insert(AUTHORIZATION, HeaderValue::from_str(&auth_value)?);
-
-    // Form URL
-    let url = format!(
-        "https://api.covalenthq.com/v1/eth-mainnet/address/{}/balances_v2/",
-        address
-    );
-
-    // Send a GET request to the API
-    let res = reqwest::Client::new()
-        .get(&url)
-        .headers(headers)
-        .send()
-        .await?
-        .json::<Response>()
-        .await?;
-
-    // Get balances for the specific tokens
-    let filtered_balances =
-        filter_balances_by_token_contracts(asset_contract_addresses, &res).unwrap();
-
-    Ok(filtered_balances)
-}
-
-/// This function filters out only the balances corresponding to an asset listed in asset_contract_addresses.
-fn filter_balances_by_token_contracts(
-    asset_contract_addresses: Vec<String>,
-    response: &Response,
-) -> Result<Vec<u64>, &'static str> {
-    let mut balances = Vec::new();
-    for contract_adddress in asset_contract_addresses {
-        if let Some(item) = response.data.items.iter().find(|&item| {
-            item.contract_address.to_ascii_lowercase() == contract_adddress.to_ascii_lowercase()
-        }) {
-            match item.balance.parse::<u64>() {
-                Ok(num) => balances.push(num),
-                Err(e) => println!("Failed to parse string: {}", e),
-            }
-        } else {
-            balances.push(0 as u64);
-        }
+    for address in asset_addresses.clone() {
+        let addr = Address::from_str(address).unwrap();
+        let eth_balance: U256 = client.get_balance(addr, None).await.unwrap();
+        sum_eth_balance = update_balance(sum_eth_balance, eth_balance);
     }
-    Ok(balances)
+    result.push(sum_eth_balance);
+
+    // Most in case, the number of contracts is less than the number of asset addresses
+    // Iterating over contracts first is more efficient
+    let mut sum_erc_balance = Fp::zero();
+    for contract in &contracts {
+        for address in asset_addresses.clone() {
+            let addr = Address::from_str(address).unwrap();
+            let erc_balance = contract
+                .get_balance_from_contract(addr)
+                .call()
+                .await
+                .unwrap();
+            sum_erc_balance = update_balance(sum_erc_balance, erc_balance);
+        }
+        result.push(sum_erc_balance)
+    }
+
+    Ok(result)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    #[ignore]
-    fn test_fetch_balances_per_addr() {
-        // this is an address with 0 usdc and 0.010910762665574143 ETH
-        let address = "0xe4D9621321e77B499392801d08Ed68Ec5175f204".to_string();
+    #[tokio::test]
+    async fn test_fetch_asset_sums() {
+        // Have to implement `get_erc20_balance` for `contracts` input in `fetch_balances_per_addr`
+        impl<M: Middleware> BalanceFromContract<M> for MockERC20<M> {
+            fn get_balance_from_contract(&self, account: Address) -> FunctionCall<Arc<M>, M, U256> {
+                self.balance_of(account)
+            }
+        }
 
-        let usdc_contract = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48".to_string();
-        let eth_contract = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee".to_string();
+        let private_key =
+            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80".to_string();
+        let provider_url = "http://localhost:8545".to_string();
 
-        let balances =
-            fetch_balances_per_addr(address, [usdc_contract, eth_contract].to_vec()).unwrap();
+        let wallet: LocalWallet = LocalWallet::from_str(&private_key).unwrap();
+        let provider = Provider::<Http>::try_from(provider_url).unwrap();
 
-        assert_eq!(balances[0], 0); // balance for usdc
-        assert_eq!(balances[1], 10910762665574143); // balance for wei
-    }
+        let client = SignerMiddleware::new(provider, wallet.with_chain_id(31337u32));
+        let mock_erc_20_address =
+            Address::from_str("0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0").unwrap();
+        let mock_erc_20_contract = MockERC20::new(mock_erc_20_address, Arc::new(client.clone()));
 
-    #[test]
-    #[ignore]
-    fn test_fetch_asset_sums() {
-        let address_1 = "0xe4D9621321e77B499392801d08Ed68Ec5175f204".to_string(); // this is an address with 0 usdc and 0.010910762665574143 ETH
-        let address_2 = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1".to_string(); // this is an address with 0.000001 USDC usdc and 1 wei
+        // Each account has 185621 wei(total eth balance sum divided by 3)
+        // 0x90F79bf6EB2c4f870365E785982E1f101E93b906 has 164236 MockERC20 Token
+        let addresses = vec![
+            "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+            "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+            "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+        ];
 
-        let usdc_contract = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48".to_string();
-        let eth_contract = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee".to_string();
+        let asset_sums =
+            fetch_balances_per_addr(client, vec![Box::new(mock_erc_20_contract)], addresses)
+                .await
+                .unwrap();
 
-        let asset_sums = fetch_asset_sums(
-            [address_1, address_2].to_vec(),
-            [usdc_contract, eth_contract].to_vec(),
-        )
-        .unwrap();
-
-        assert_eq!(asset_sums[0], 1); // asset sum for usdc
-        assert_eq!(asset_sums[1], 10910762665574144); // asset sum for wei
+        assert_eq!(asset_sums[0], Fp::from(556863));
+        assert_eq!(asset_sums[1], Fp::from(556863));
     }
 }
