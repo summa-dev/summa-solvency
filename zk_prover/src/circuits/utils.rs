@@ -5,7 +5,7 @@ use halo2_proofs::{
         bn256::{Bn256, Fr as Fp, G1Affine},
         ff::PrimeField,
     },
-    plonk::{create_proof, verify_proof, Circuit, ProvingKey, VerifyingKey},
+    plonk::{create_proof, keygen_pk, keygen_vk, verify_proof, Circuit, ProvingKey, VerifyingKey},
     poly::{
         commitment::{Params, ParamsProver},
         kzg::{
