@@ -7,14 +7,16 @@ pub use summa::*;
     clippy::upper_case_acronyms,
     clippy::type_complexity,
     dead_code,
-    non_camel_case_types,
+    non_camel_case_types
 )]
 pub mod summa {
     #[rustfmt::skip]
     const __ABI: &str = "[{\"inputs\":[{\"internalType\":\"contract IVerifier\",\"name\":\"_verifier\",\"type\":\"address\",\"components\":[]}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"cexAddresses\",\"type\":\"address[]\",\"components\":[],\"indexed\":false}],\"type\":\"event\",\"name\":\"ExchangeAddressesSubmitted\",\"outputs\":[],\"anonymous\":false},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\",\"components\":[],\"indexed\":true},{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\",\"components\":[],\"indexed\":true}],\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"outputs\":[],\"anonymous\":false},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"mstRoot\",\"type\":\"uint256\",\"components\":[],\"indexed\":true}],\"type\":\"event\",\"name\":\"ProofOfSolvencySubmitted\",\"outputs\":[],\"anonymous\":false},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\",\"components\":[]}],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"cexAddresses\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\",\"components\":[]}]},{\"inputs\":[],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\",\"components\":[]}]},{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"renounceOwnership\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"_cexAddresses\",\"type\":\"address[]\",\"components\":[]},{\"internalType\":\"bytes[]\",\"name\":\"cexSignatures\",\"type\":\"bytes[]\",\"components\":[]},{\"internalType\":\"string\",\"name\":\"message\",\"type\":\"string\",\"components\":[]}],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"submitProofOfAccountOwnership\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"erc20ContractAddresses\",\"type\":\"address[]\",\"components\":[]},{\"internalType\":\"uint256[]\",\"name\":\"assetSums\",\"type\":\"uint256[]\",\"components\":[]},{\"internalType\":\"uint256\",\"name\":\"mstRoot\",\"type\":\"uint256\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\",\"components\":[]}],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"submitProofOfSolvency\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\",\"components\":[]}],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"transferOwnership\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"uint256[]\",\"name\":\"publicInputs\",\"type\":\"uint256[]\",\"components\":[]}],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"verifyZkProof\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\",\"components\":[]}]}]";
     ///The parsed JSON ABI of the contract.
-    pub static SUMMA_ABI: ::ethers::contract::Lazy<::ethers::core::abi::Abi> = ::ethers::contract::Lazy::new(||
-    ::ethers::core::utils::__serde_json::from_str(__ABI).expect("ABI is always valid"));
+    pub static SUMMA_ABI: ::ethers::contract::Lazy<::ethers::core::abi::Abi> =
+        ::ethers::contract::Lazy::new(|| {
+            ::ethers::core::utils::__serde_json::from_str(__ABI).expect("ABI is always valid")
+        });
     #[rustfmt::skip]
     const __BYTECODE: &[u8] = &[
         96,
@@ -5241,9 +5243,8 @@ pub mod summa {
         51,
     ];
     ///The bytecode of the contract.
-    pub static SUMMA_BYTECODE: ::ethers::core::types::Bytes = ::ethers::core::types::Bytes::from_static(
-        __BYTECODE,
-    );
+    pub static SUMMA_BYTECODE: ::ethers::core::types::Bytes =
+        ::ethers::core::types::Bytes::from_static(__BYTECODE);
     #[rustfmt::skip]
     const __DEPLOYED_BYTECODE: &[u8] = &[
         96,
@@ -10242,9 +10243,8 @@ pub mod summa {
         51,
     ];
     ///The deployed bytecode of the contract.
-    pub static SUMMA_DEPLOYED_BYTECODE: ::ethers::core::types::Bytes = ::ethers::core::types::Bytes::from_static(
-        __DEPLOYED_BYTECODE,
-    );
+    pub static SUMMA_DEPLOYED_BYTECODE: ::ethers::core::types::Bytes =
+        ::ethers::core::types::Bytes::from_static(__DEPLOYED_BYTECODE);
     pub struct Summa<M>(::ethers::contract::Contract<M>);
     impl<M> ::core::clone::Clone for Summa<M> {
         fn clone(&self) -> Self {
@@ -10264,7 +10264,9 @@ pub mod summa {
     }
     impl<M> ::core::fmt::Debug for Summa<M> {
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-            f.debug_tuple(stringify!(Summa)).field(&self.address()).finish()
+            f.debug_tuple(stringify!(Summa))
+                .field(&self.address())
+                .finish()
         }
     }
     impl<M: ::ethers::providers::Middleware> Summa<M> {
@@ -10274,13 +10276,11 @@ pub mod summa {
             address: T,
             client: ::std::sync::Arc<M>,
         ) -> Self {
-            Self(
-                ::ethers::contract::Contract::new(
-                    address.into(),
-                    SUMMA_ABI.clone(),
-                    client,
-                ),
-            )
+            Self(::ethers::contract::Contract::new(
+                address.into(),
+                SUMMA_ABI.clone(),
+                client,
+            ))
         }
         /// Constructs the general purpose `Deployer` instance based on the provided constructor arguments and sends it.
         /// Returns a new instance of a deployer that returns an instance of this contract after sending the transaction
@@ -10325,10 +10325,7 @@ pub mod summa {
         pub fn cex_addresses(
             &self,
             p0: ::ethers::core::types::U256,
-        ) -> ::ethers::contract::builders::ContractCall<
-            M,
-            ::ethers::core::types::Address,
-        > {
+        ) -> ::ethers::contract::builders::ContractCall<M, ::ethers::core::types::Address> {
             self.0
                 .method_hash([106, 86, 80, 225], p0)
                 .expect("method not found (this should never happen)")
@@ -10336,18 +10333,13 @@ pub mod summa {
         ///Calls the contract's `owner` (0x8da5cb5b) function
         pub fn owner(
             &self,
-        ) -> ::ethers::contract::builders::ContractCall<
-            M,
-            ::ethers::core::types::Address,
-        > {
+        ) -> ::ethers::contract::builders::ContractCall<M, ::ethers::core::types::Address> {
             self.0
                 .method_hash([141, 165, 203, 91], ())
                 .expect("method not found (this should never happen)")
         }
         ///Calls the contract's `renounceOwnership` (0x715018a6) function
-        pub fn renounce_ownership(
-            &self,
-        ) -> ::ethers::contract::builders::ContractCall<M, ()> {
+        pub fn renounce_ownership(&self) -> ::ethers::contract::builders::ContractCall<M, ()> {
             self.0
                 .method_hash([113, 80, 24, 166], ())
                 .expect("method not found (this should never happen)")
@@ -10360,10 +10352,7 @@ pub mod summa {
             message: ::std::string::String,
         ) -> ::ethers::contract::builders::ContractCall<M, ()> {
             self.0
-                .method_hash(
-                    [18, 185, 17, 129],
-                    (cex_addresses, cex_signatures, message),
-                )
+                .method_hash([18, 185, 17, 129], (cex_addresses, cex_signatures, message))
                 .expect("method not found (this should never happen)")
         }
         ///Calls the contract's `submitProofOfSolvency` (0xed18348f) function
@@ -10413,11 +10402,8 @@ pub mod summa {
         ///Gets the contract's `OwnershipTransferred` event
         pub fn ownership_transferred_filter(
             &self,
-        ) -> ::ethers::contract::builders::Event<
-            ::std::sync::Arc<M>,
-            M,
-            OwnershipTransferredFilter,
-        > {
+        ) -> ::ethers::contract::builders::Event<::std::sync::Arc<M>, M, OwnershipTransferredFilter>
+        {
             self.0.event()
         }
         ///Gets the contract's `ProofOfSolvencySubmitted` event
@@ -10434,11 +10420,11 @@ pub mod summa {
         pub fn events(
             &self,
         ) -> ::ethers::contract::builders::Event<::std::sync::Arc<M>, M, SummaEvents> {
-            self.0.event_with_filter(::core::default::Default::default())
+            self.0
+                .event_with_filter(::core::default::Default::default())
         }
     }
-    impl<M: ::ethers::providers::Middleware> From<::ethers::contract::Contract<M>>
-    for Summa<M> {
+    impl<M: ::ethers::providers::Middleware> From<::ethers::contract::Contract<M>> for Summa<M> {
         fn from(contract: ::ethers::contract::Contract<M>) -> Self {
             Self::new(contract.address(), contract.client())
         }
@@ -10451,7 +10437,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethevent(
         name = "ExchangeAddressesSubmitted",
@@ -10468,7 +10454,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethevent(
         name = "OwnershipTransferred",
@@ -10488,7 +10474,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethevent(
         name = "ProofOfSolvencySubmitted",
@@ -10527,9 +10513,7 @@ pub mod summa {
                 Self::ExchangeAddressesSubmittedFilter(element) => {
                     ::core::fmt::Display::fmt(element, f)
                 }
-                Self::OwnershipTransferredFilter(element) => {
-                    ::core::fmt::Display::fmt(element, f)
-                }
+                Self::OwnershipTransferredFilter(element) => ::core::fmt::Display::fmt(element, f),
                 Self::ProofOfSolvencySubmittedFilter(element) => {
                     ::core::fmt::Display::fmt(element, f)
                 }
@@ -10560,7 +10544,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "cexAddresses", abi = "cexAddresses(uint256)")]
     pub struct CexAddressesCall(pub ::ethers::core::types::U256);
@@ -10573,7 +10557,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "owner", abi = "owner()")]
     pub struct OwnerCall;
@@ -10586,7 +10570,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "renounceOwnership", abi = "renounceOwnership()")]
     pub struct RenounceOwnershipCall;
@@ -10599,7 +10583,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(
         name = "submitProofOfAccountOwnership",
@@ -10619,7 +10603,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(
         name = "submitProofOfSolvency",
@@ -10640,7 +10624,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "transferOwnership", abi = "transferOwnership(address)")]
     pub struct TransferOwnershipCall {
@@ -10655,7 +10639,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     #[ethcall(name = "verifyZkProof", abi = "verifyZkProof(bytes,uint256[])")]
     pub struct VerifyZkProofCall {
@@ -10678,40 +10662,35 @@ pub mod summa {
             data: impl AsRef<[u8]>,
         ) -> ::core::result::Result<Self, ::ethers::core::abi::AbiError> {
             let data = data.as_ref();
-            if let Ok(decoded)
-                = <CexAddressesCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <CexAddressesCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::CexAddresses(decoded));
             }
-            if let Ok(decoded)
-                = <OwnerCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <OwnerCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::Owner(decoded));
             }
-            if let Ok(decoded)
-                = <RenounceOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(
-                    data,
-                ) {
+            if let Ok(decoded) =
+                <RenounceOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::RenounceOwnership(decoded));
             }
-            if let Ok(decoded)
-                = <SubmitProofOfAccountOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(
-                    data,
-                ) {
+            if let Ok(decoded) =
+                <SubmitProofOfAccountOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::SubmitProofOfAccountOwnership(decoded));
             }
-            if let Ok(decoded)
-                = <SubmitProofOfSolvencyCall as ::ethers::core::abi::AbiDecode>::decode(
-                    data,
-                ) {
+            if let Ok(decoded) =
+                <SubmitProofOfSolvencyCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::SubmitProofOfSolvency(decoded));
             }
-            if let Ok(decoded)
-                = <TransferOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(
-                    data,
-                ) {
+            if let Ok(decoded) =
+                <TransferOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::TransferOwnership(decoded));
             }
-            if let Ok(decoded)
-                = <VerifyZkProofCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded) = <VerifyZkProofCall as ::ethers::core::abi::AbiDecode>::decode(data)
+            {
                 return Ok(Self::VerifyZkProof(decoded));
             }
             Err(::ethers::core::abi::Error::InvalidData.into())
@@ -10720,25 +10699,17 @@ pub mod summa {
     impl ::ethers::core::abi::AbiEncode for SummaCalls {
         fn encode(self) -> Vec<u8> {
             match self {
-                Self::CexAddresses(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
+                Self::CexAddresses(element) => ::ethers::core::abi::AbiEncode::encode(element),
                 Self::Owner(element) => ::ethers::core::abi::AbiEncode::encode(element),
-                Self::RenounceOwnership(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
+                Self::RenounceOwnership(element) => ::ethers::core::abi::AbiEncode::encode(element),
                 Self::SubmitProofOfAccountOwnership(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
                 Self::SubmitProofOfSolvency(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
-                Self::TransferOwnership(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
-                Self::VerifyZkProof(element) => {
-                    ::ethers::core::abi::AbiEncode::encode(element)
-                }
+                Self::TransferOwnership(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::VerifyZkProof(element) => ::ethers::core::abi::AbiEncode::encode(element),
             }
         }
     }
@@ -10751,9 +10722,7 @@ pub mod summa {
                 Self::SubmitProofOfAccountOwnership(element) => {
                     ::core::fmt::Display::fmt(element, f)
                 }
-                Self::SubmitProofOfSolvency(element) => {
-                    ::core::fmt::Display::fmt(element, f)
-                }
+                Self::SubmitProofOfSolvency(element) => ::core::fmt::Display::fmt(element, f),
                 Self::TransferOwnership(element) => ::core::fmt::Display::fmt(element, f),
                 Self::VerifyZkProof(element) => ::core::fmt::Display::fmt(element, f),
             }
@@ -10803,7 +10772,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct CexAddressesReturn(pub ::ethers::core::types::Address);
     ///Container type for all return fields from the `owner` function with signature `owner()` and selector `0x8da5cb5b`
@@ -10815,7 +10784,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct OwnerReturn(pub ::ethers::core::types::Address);
     ///Container type for all return fields from the `verifyZkProof` function with signature `verifyZkProof(bytes,uint256[])` and selector `0xe691ad33`
@@ -10827,7 +10796,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash
+        Hash,
     )]
     pub struct VerifyZkProofReturn(pub bool);
 }
