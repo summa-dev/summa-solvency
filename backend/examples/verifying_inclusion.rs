@@ -78,6 +78,11 @@ fn main() {
 
     let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
+    // The CEX can serve the params and vk by using the get_trusted_setup_for_mst_inclusion() method from the snapshot instance, as shown below:
+    // let (params, _, vk) = snapshot.get_trusted_setup_for_mst_inclusion();
+    //
+    // However, on the user side, creating a snapshot is not possible due to the lack of the entry.csv and signature.csv files.
+    // Therefore, we can generate the artifacts from the ptau file with a specified k, which is the same number used while generating the proof.
     let (params, _, vk) = generate_setup_artifacts(ptau_path, 11, mst_inclusion_circuit).unwrap();
 
     let verification_result: bool = full_verifier(
