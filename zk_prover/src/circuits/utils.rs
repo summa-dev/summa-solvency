@@ -1,3 +1,9 @@
+use std::{
+    fs::File,
+    io::{BufRead, BufReader, Write},
+    path::PathBuf,
+};
+
 use ark_std::{end_timer, start_timer};
 use ethers::types::{Bytes, U256};
 use halo2_proofs::{
@@ -27,14 +33,8 @@ use snark_verifier::{
     verifier::plonk::PlonkSuccinctVerifier,
 };
 use snark_verifier_sdk::{evm::gen_evm_proof_shplonk, CircuitExt};
-use std::{
-    fs::File,
-    io::{BufRead, BufReader, Write},
-    path::PathBuf,
-};
 
 /// Generate setup artifacts for a circuit of size `k`, where 2^k represents the number of rows in the circuit.
-/// This function first checks if the trusted setup parameters are already generated and saved in the `ptau` folder with the name `hermez-raw-k`.
 ///
 /// If the trusted setup parameters are not found, the function performs an unsafe trusted setup to generate the necessary parameters
 /// If the provided `k` value is larger than the `k` value of the loaded parameters, an error is returned, as the provided `k` is too large.
@@ -51,56 +51,30 @@ pub fn generate_setup_artifacts<C: Circuit<Fp> + CircuitExt<Fp>>(
     ),
     &'static str,
 > {
-    let mut ptau_path = format!("ptau/hermez-raw-{}", k);
+    let params: ParamsKZG<Bn256>;
 
     match params_path {
         Some(path) => {
-            ptau_path = path.to_string();
+            let timer = start_timer!(|| "Creating params");
+            let mut params_fs = File::open(path).expect("couldn't load params");
+            params = ParamsKZG::<Bn256>::read(&mut params_fs).expect("Failed to read params");
+            end_timer!(timer);
+
+            if params.k() < k {
+                return Err("k is too large for the given params");
+            }
         }
-        _ => {}
+        None => {
+            let timer = start_timer!(|| "Creating params");
+            params = ParamsKZG::<Bn256>::setup(k, OsRng);
+            end_timer!(timer);
+        }
     }
 
-    let metadata = std::fs::metadata(ptau_path.clone());
+    let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
+    let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
 
-    if metadata.is_err() {
-        println!("ptau file not found, generating a trusted setup of our own. If needed, download the ptau from https://github.com/han0110/halo2-kzg-srs");
-        // start timer
-        let timer = start_timer!(|| "Creating params");
-        let params = ParamsKZG::<Bn256>::setup(k, OsRng);
-        end_timer!(timer);
-        if params.k() < k {
-            return Err("k is too large for the given params");
-        }
-        Ok((
-            params.clone(),
-            keygen_pk(
-                &params,
-                keygen_vk(&params, &circuit).expect("vk generation should not fail"),
-                &circuit,
-            )
-            .expect("pk generation should not fail"),
-            keygen_vk(&params, &circuit).expect("vk generation should not fail"),
-        ))
-    } else {
-        println!("ptau file found");
-        let timer = start_timer!(|| "Creating params");
-        let mut params_fs = File::open(ptau_path).expect("couldn't load params");
-        let params = ParamsKZG::<Bn256>::read(&mut params_fs).expect("Failed to read params");
-        end_timer!(timer);
-        if params.k() < k {
-            return Err("k is too large for the given params");
-        }
-        Ok((
-            params.clone(),
-            keygen_pk(
-                &params,
-                keygen_vk(&params, &circuit).expect("vk generation should not fail"),
-                &circuit,
-            )
-            .expect("pk generation should not fail"),
-            keygen_vk(&params, &circuit).expect("vk generation should not fail"),
-        ))
-    }
+    Ok((params, pk, vk))
 }
 
 /// Generates a proof given the public setup, the proving key, the initiated circuit and its public inputs.

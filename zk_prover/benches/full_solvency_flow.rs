@@ -1,8 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use halo2_proofs::{
-    halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
-    plonk::{keygen_pk, keygen_vk, ProvingKey},
-    poly::kzg::commitment::ParamsKZG,
+    halo2curves::bn256::Fr as Fp,
+    plonk::{keygen_pk, keygen_vk},
 };
 use snark_verifier_sdk::CircuitExt;
 use summa_solvency::{
@@ -64,7 +63,7 @@ fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
 
     let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
-empty_circuit.clone()let (params, _, vk) = generate_setup_artifacts(13, None, empty_circuit.clone()).unwrap();
+    let (params, _, vk) = generate_setup_artifacts(13, None, empty_circuit.clone()).unwrap();
 
     let bench_name = format!(
         "gen proving key for 2 power of {} entries with {} assets mst inclusion circuit",
