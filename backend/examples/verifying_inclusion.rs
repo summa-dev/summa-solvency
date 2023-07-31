@@ -7,9 +7,8 @@ use summa_solvency::{
     merkle_sum_tree::Entry,
 };
 
-// This is the purpose of the example
-// When the user receives their `leaf_hash`, the user must verify the `leaf_hash` from their `balances` and `username`.
-// The CEX may only provide `balances` and `username` to the user without `leaf_hash`. In this case, the user will have to generate `leaf_hash` themselves.
+// The CEX may only provide `balances` and `username` to the user without `leaf_hash`.
+// In this case, the user will have to generate `leaf_hash` themselves with this method.
 fn generate_leaf_hash<const N_ASSETS: usize>(user_name: String, balances: Vec<usize>) -> Fp {
     // Convert usize to BigInt for the `Entry` struct
     let balances_big_int: Vec<BigInt> = balances.into_iter().map(BigInt::from).collect();
@@ -63,12 +62,15 @@ fn main() {
     // Importantly, the user should verify the leaf hash using their username and balances.
     let user_name = "dxGaEAii".to_string();
     let balances_usize = vec![11888, 41163];
+
+    // index 0 user's leaf_hash : 0x0e113acd03b98f0bab0ef6f577245d5d008cbcc19ef2dab3608aa4f37f72a407
     let leaf_hash = Fp::from_str_vartime(
         "6362822108736413915574850018842190920390136280184018644072260166743334495239",
     )
     .unwrap();
 
-    // index 0 user's leaf_hash : 0x0e113acd03b98f0bab0ef6f577245d5d008cbcc19ef2dab3608aa4f37f72a407
+    // This is the purpose of the example
+    // When the user receives their `leaf_hash`, the user must verify the `leaf_hash` from their `balances` and `username`.
     assert_eq!(
         leaf_hash,
         generate_leaf_hash::<2>(user_name.clone(), balances_usize.clone())
