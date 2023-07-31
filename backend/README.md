@@ -37,3 +37,16 @@ SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" carg
 ```
 
 The contract Rust interfaces are built by the [buildscript](./build.rs) from the JSON ABI. The [Summa contract ABI json](./src/contracts/Summa.json) is updated when the contract is deployed from the [contracts subproject](./../contracts/README.md).
+
+## Example
+
+In the `example/verifying_inclusion.rs`, you can find code for verifying the `leaf_hash` on the user side.
+
+You can run the command like this:
+
+`> cargo run --example verifying_inclusion`
+
+The example will generate a proof for the user at index 0, and then it will pass only the `proof` data to the user side (within the same example file).
+
+On the user side, the proof is verified with the `leaf_hash` that is verified by the user themselves.
+
