@@ -25,13 +25,14 @@ fn main() {
     const N_ASSETS: usize = 2;
 
     let ptau_path = "./ptau/hermez-raw-11";
-    let signarue_csv_path = "./examples/signatures.csv";
+    let signature_csv_path = "./examples/signatures.csv";
     let entry_csv_path = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
 
-    // Generate the Merkle Sum Tree and then initialize the circuit.
+    // CEX Generate the Merkle Sum Tree and then initialize the circuit.
+    // Note that `signature_csv` is empty because this is only needed to generate π of Solvency, which is not the case here.
     let snapshot = Snapshot::<4, 6, 2, 8>::new(
         &entry_csv_path,
-        &signarue_csv_path,
+        &signature_csv_path,
         "Summa proof of solvency for CryptoExchange".to_string(),
         &ptau_path,
     )
