@@ -51,7 +51,7 @@ pub fn generate_setup_artifacts<C: Circuit<Fp> + CircuitExt<Fp>>(
     ),
     &'static str,
 > {
-    let params: ParamsKZG<Bn256>;
+    let mut params: ParamsKZG<Bn256>;
 
     match params_path {
         Some(path) => {
@@ -62,6 +62,12 @@ pub fn generate_setup_artifacts<C: Circuit<Fp> + CircuitExt<Fp>>(
 
             if params.k() < k {
                 return Err("k is too large for the given params");
+            }
+
+            if params.k() > k {
+                let timer = start_timer!(|| "Downsizing params");
+                params.downsize(k);
+                end_timer!(timer);
             }
         }
         None => {
