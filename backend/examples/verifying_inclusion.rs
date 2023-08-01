@@ -1,9 +1,12 @@
 use halo2_proofs::halo2curves::{bn256::Fr as Fp, ff::PrimeField};
-use num_bigint::BigInt;
+use num_bigint::BigUint;
 
-use summa_backend::apis::{snapshot::Snapshot, utils::generate_setup_artifacts};
+use summa_backend::apis::snapshot::Snapshot;
 use summa_solvency::{
-    circuits::{merkle_sum_tree::MstInclusionCircuit, utils::full_verifier},
+    circuits::{
+        merkle_sum_tree::MstInclusionCircuit,
+        utils::{full_verifier, generate_setup_artifacts},
+    },
     merkle_sum_tree::Entry,
 };
 
@@ -11,10 +14,10 @@ use summa_solvency::{
 // In this case, the user will have to generate `leaf_hash` themselves with this method.
 fn generate_leaf_hash<const N_ASSETS: usize>(user_name: String, balances: Vec<usize>) -> Fp {
     // Convert usize to BigInt for the `Entry` struct
-    let balances_big_int: Vec<BigInt> = balances.into_iter().map(BigInt::from).collect();
+    let balances_big_uint: Vec<BigUint> = balances.into_iter().map(BigUint::from).collect();
 
     let entry: Entry<N_ASSETS> =
-        Entry::new(user_name, balances_big_int.try_into().unwrap()).unwrap();
+        Entry::new(user_name, balances_big_uint.try_into().unwrap()).unwrap();
 
     entry.compute_leaf().hash
 }
@@ -84,7 +87,8 @@ fn main() {
     //
     // However, on the user side, creating a snapshot is not possible due to the lack of the entry.csv and signature.csv files.
     // Therefore, we can generate the artifacts from the ptau file with a specified k, which is the same number used while generating the proof.
-    let (params, _, vk) = generate_setup_artifacts(ptau_path, 11, mst_inclusion_circuit).unwrap();
+    let (params, _, vk) =
+        generate_setup_artifacts(11, Some(ptau_path), mst_inclusion_circuit).unwrap();
 
     let verification_result: bool = full_verifier(
         &params,
