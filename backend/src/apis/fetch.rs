@@ -24,9 +24,6 @@ pub async fn fetch_asset_sums<'a, M: Middleware + 'a>(
     token_contracts: Vec<Box<dyn TokenBalance<M> + Send>>,
     exchange_addresses: Vec<H160>,
 ) -> Result<Vec<U256>, Box<dyn Error>> {
-    // For checking connectivity
-    client.get_block_number().await?;
-
     let mut result: Vec<U256> = Vec::new();
 
     let mut get_balance_futures = Vec::new();
@@ -58,8 +55,6 @@ pub async fn fetch_asset_sums<'a, M: Middleware + 'a>(
 mod tests {
     use super::*;
 
-    use ethers::utils::Anvil;
-
     use crate::contracts::tests::initialize_anvil;
     use contracts::generated::mock_erc20::MockERC20;
 
@@ -72,11 +67,7 @@ mod tests {
             }
         }
 
-        let anvil: ethers::utils::AnvilInstance = Anvil::new()
-            .mnemonic("test test test test test test test test test test test junk")
-            .spawn();
-
-        let (cex_addr_1, cex_addr_2, client, mock_erc20) = initialize_anvil(&anvil).await;
+        let (anvil, cex_addr_1, cex_addr_2, client, mock_erc20) = initialize_anvil().await;
 
         let asset_sums = fetch_asset_sums(
             client.clone(),
@@ -88,5 +79,7 @@ mod tests {
 
         assert_eq!(asset_sums[0], U256::from(556864));
         assert_eq!(asset_sums[1], U256::from(556863));
+
+        drop(anvil);
     }
 }

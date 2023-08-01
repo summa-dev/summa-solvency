@@ -5,37 +5,49 @@ use ethers::{
     providers::{Http, Middleware, Provider},
     signers::{LocalWallet, Signer},
     types::{H160, U256},
+    utils::{Anvil, AnvilInstance},
 };
+use tokio::time;
 
 use crate::contracts::generated::mock_erc20::{MockERC20, MOCKERC20_ABI, MOCKERC20_BYTECODE};
 
-pub async fn initialize_anvil(
-    anvil: &ethers::utils::AnvilInstance,
-) -> (
+// Setup test conditions on the anvil instance
+pub async fn initialize_anvil() -> (
+    AnvilInstance,
     H160,
     H160,
     Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
     MockERC20<SignerMiddleware<Provider<Http>, LocalWallet>>,
 ) {
+    let anvil: ethers::utils::AnvilInstance = Anvil::new()
+        .mnemonic("test test test test test test test test test test test junk")
+        .spawn();
+
+    // Extracting two exchange addresses from the Anvil instance
     let cex_addr_1 = anvil.addresses()[1];
     let cex_addr_2 = anvil.addresses()[2];
+
+    // Setup wallet from the first key in the Anvil and an HTTP provider with a 10ms interval from the Anvil endpoint
     let wallet: LocalWallet = anvil.keys()[0].clone().into();
     let provider = Provider::<Http>::try_from(anvil.endpoint())
         .unwrap()
         .interval(Duration::from_millis(10u64));
 
+    // Creating a client by wrapping the provider with a signing middleware and the Anvil chainid
     let client = Arc::new(SignerMiddleware::new(
         provider,
         wallet.with_chain_id(anvil.chain_id()),
     ));
 
+    // Creating a factory to deploy a mock ERC20 contract
     let factory = ContractFactory::new(
         MOCKERC20_ABI.to_owned(),
         MOCKERC20_BYTECODE.to_owned(),
         Arc::clone(&client),
     );
 
-    // send RPC requests with `anvil_setBalance` method via provider to adjust balance of `cex_addr_1` and `cex_addr_2`
+    // Send RPC requests with `anvil_setBalance` method via provider to adjust balance of `cex_addr_1` and `cex_addr_2`
+    // This is for meeting `proof_of_solvency` test conditions
     for addr in [cex_addr_1, cex_addr_2].to_vec() {
         let _res = client
             .provider()
@@ -43,14 +55,19 @@ pub async fn initialize_anvil(
             .await;
     }
 
+    // Deploy Mock ERC20 contract
     let mock_erc20_deployment = factory.deploy(()).unwrap().send().await.unwrap();
 
+    // Creating an interface for the deployed mock ERC20 contract
     let mock_erc20 = MockERC20::new(mock_erc20_deployment.address(), Arc::clone(&client));
 
+    // Mint some token to `cex_addr_2`
     let mint_call = mock_erc20.mint(cex_addr_2, U256::from(556863));
     assert!(mint_call.send().await.is_ok());
 
-    return (cex_addr_1, cex_addr_2, client, mock_erc20);
+    time::sleep(Duration::from_millis(500)).await;
+
+    return (anvil, cex_addr_1, cex_addr_2, client, mock_erc20);
 }
 
 mod test {
@@ -96,11 +113,7 @@ mod test {
 
     #[tokio::test]
     async fn test_submit_proof_of_solvency() {
-        let anvil: ethers::utils::AnvilInstance = Anvil::new()
-            .mnemonic("test test test test test test test test test test test junk")
-            .spawn();
-
-        let (cex_addr_1, cex_addr_2, client, mock_erc20) = initialize_anvil(&anvil).await;
+        let (anvil, cex_addr_1, cex_addr_2, client, mock_erc20) = initialize_anvil().await;
 
         let verifer_contract = SolvencyVerifier::deploy(Arc::clone(&client), ())
             .unwrap()
