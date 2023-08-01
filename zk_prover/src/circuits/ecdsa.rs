@@ -28,7 +28,7 @@ const NUMBER_OF_LIMBS: usize = 4;
 /// * `public_key`: The public key of the signer
 /// * `signature`: The signature to be verified (r, s)
 /// * `msg_hash`: The hash of the message to be verified
-/// * `aux_generator`: The auxiliary generator point 
+/// * `aux_generator`: The auxiliary generator point
 /// * `window_size`: The window size used when assigning the auxiliary generator point
 
 #[derive(Default, Clone)]

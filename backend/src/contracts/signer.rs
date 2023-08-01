@@ -9,7 +9,9 @@ use ethers::{
 };
 use futures::future::join_all;
 use serde_json::Value;
-use std::{error::Error, fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc};
+use std::{
+    error::Error, fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc, time::Duration,
+};
 
 #[derive(Debug)]
 pub struct SummaSigner {
@@ -34,7 +36,10 @@ impl SummaSigner {
     ) -> Self {
         let wallet: LocalWallet = LocalWallet::from_str(main_signer_key).unwrap();
 
-        let provider = Provider::<Http>::try_from(rpc_url).unwrap();
+        // let provider = Provider::<Http>::try_from(rpc_url).unwrap();
+        let provider = Provider::<Http>::try_from(rpc_url)
+            .unwrap()
+            .interval(Duration::from_millis(10u64));
         let client = Arc::new(SignerMiddleware::new(
             provider,
             wallet.with_chain_id(chain_id),

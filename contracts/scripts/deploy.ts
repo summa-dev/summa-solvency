@@ -21,20 +21,6 @@ async function main() {
 
   console.log(`Summa deployed to ${summa.address}`);
   
-  const signers = await ethers.getSigners();
-  
-  for (let i = 1; i < 4; i++) {
-    console.log(signers[i].address);
-    await ethers.provider.send("hardhat_setBalance", [signers[i].address, "0x2d515"])
-  }
-
-  const mockERC20 = await ethers.deployContract("MockERC20");
-  await mockERC20.deployed();
-
-  console.log(`MockERC20 deployed to ${mockERC20.address}`);
-  await mockERC20.mint("0x90F79bf6EB2c4f870365E785982E1f101E93b906", 556863);
-
-  // Save deployments to JSON file
   let deploymentsJson: Deployments = {};
   const fs = require("fs");
   try {

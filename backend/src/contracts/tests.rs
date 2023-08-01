@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use ethers::{
     prelude::{ContractFactory, SignerMiddleware},
-    providers::{Http, Provider},
+    providers::{Http, Middleware, Provider},
     signers::{LocalWallet, Signer},
     types::{H160, U256},
 };
@@ -35,6 +35,14 @@ pub async fn initialize_anvil(
         Arc::clone(&client),
     );
 
+    // send RPC requests with `anvil_setBalance` method via provider to adjust balance of `cex_addr_1` and `cex_addr_2`
+    for addr in [cex_addr_1, cex_addr_2].to_vec() {
+        let _res = client
+            .provider()
+            .request::<(H160, U256), ()>("anvil_setBalance", (addr, U256::from(278432)))
+            .await;
+    }
+
     let mock_erc20_deployment = factory.deploy(()).unwrap().send().await.unwrap();
 
     let mock_erc20 = MockERC20::new(mock_erc20_deployment.address(), Arc::clone(&client));
@@ -49,6 +57,7 @@ mod test {
     use std::sync::Arc;
 
     use ethers::{
+        providers::Middleware,
         types::{Address, Filter, U256},
         utils::Anvil,
     };
@@ -115,6 +124,7 @@ mod test {
             anvil.endpoint().as_str(),
             summa_contract.address(),
         );
+
         let result =  summa_signer.submit_proof_of_address_ownership(
                     vec![cex_addr_1, cex_addr_2],
                     vec![

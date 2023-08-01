@@ -5,7 +5,7 @@ use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use num_bigint::BigInt;
 
 /// Merkle Sum Tree Data Structure.
-/// 
+///
 /// A Merkle Sum Tree is a binary Merkle Tree with the following properties:
 /// * Each Entry of a Merkle Sum Tree is a pair of a username and #N_ASSETS balances.
 /// * Each Leaf Node contains a hash and #N_ASSETS balances. The hash is equal to `H(username, balance[0], balance[1], ... balance[N_ASSETS])`.
