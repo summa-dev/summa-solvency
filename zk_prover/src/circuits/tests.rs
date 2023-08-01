@@ -5,7 +5,7 @@ mod test {
         aggregation::WrappedAggregationCircuit,
         merkle_sum_tree::MstInclusionCircuit,
         solvency::SolvencyCircuit,
-        utils::{full_prover, full_verifier, generate_setup_params, get_verification_cost},
+        utils::{full_prover, full_verifier, generate_setup_artifacts, get_verification_cost},
     };
     use crate::merkle_sum_tree::{MerkleSumTree, N_ASSETS, RANGE_BITS};
     use ark_std::{end_timer, start_timer};
@@ -51,16 +51,13 @@ mod test {
     fn test_valid_merkle_sum_tree_with_full_prover() {
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
-        // we generate a universal trusted setup of our own for testing
-        let params = generate_setup_params(K);
-
-        // we generate the verification key and the proving key
-        // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
-        // Note: the dimension of the circuit used to generate the keys must be the same as the dimension of the circuit used to generate the proof
-        // In this case, the dimension are represented by the heigth of the merkle tree
-
-        let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
-        let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
+        // Generate a universal trusted setup for testing purposes.
+        //
+        // The verification key (vk) and the proving key (pk) are then generated.
+        // An empty circuit is used here to emphasize that the circuit inputs are not relevant when generating the keys.
+        // Important: The dimensions of the circuit used to generate the keys must match those of the circuit used to generate the proof.
+        // In this case, the dimensions are represented by the height of the Merkle tree.
+        let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
 
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
@@ -79,14 +76,11 @@ mod test {
     fn test_valid_solvency_with_full_prover() {
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
 
-        // we generate a universal trusted setup of our own for testing
-        let params = generate_setup_params(10);
-
-        // we generate the verification key and the proving key
-        // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
-        // Note: the dimension of the circuit used to generate the keys must be the same as the dimension of the circuit used to generate the proof
-        let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
-        let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
+        // The verification key (vk) and the proving key (pk) are then generated.
+        // An empty circuit is used here to emphasize that the circuit inputs are not relevant when generating the keys.
+        // Important: The dimensions of the circuit used to generate the keys must match those of the circuit used to generate the proof.
+        // In this case, the dimensions are represented by the height of the Merkle tree.
+        let (params, pk, vk) = generate_setup_artifacts(10, None, circuit).unwrap();
 
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
@@ -107,14 +101,13 @@ mod test {
     #[ignore]
     fn test_valid_merkle_sum_tree_with_full_recursive_prover() {
         // params for the aggregation circuit
-        let params_agg = generate_setup_params(21);
+        // generate the verification key and the proving key for the application circuit, using an empty circuit
+        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+        let (params_agg, _, _) = generate_setup_artifacts(21, None, circuit_app.clone()).unwrap();
 
         // downsize params for our application specific snark
         let mut params_app = params_agg.clone();
         params_app.downsize(K);
-
-        // generate the verification key and the proving key for the application circuit, using an empty circuit
-        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
         let vk_app = keygen_vk(&params_app, &circuit_app).expect("vk generation should not fail");
         let pk_app =
@@ -169,7 +162,9 @@ mod test {
     #[ignore]
     fn test_invalid_merkle_sum_tree_with_full_recursive_prover() {
         // params for the aggregation circuit
-        let params_agg = generate_setup_params(21);
+        // generate the verification key and the proving key for the application circuit, using an empty circuit
+        let circuit_app = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+        let (params_agg, _, _) = generate_setup_artifacts(21, None, circuit_app).unwrap();
 
         // downsize params for our application specific snark
         let mut params_app = params_agg.clone();
@@ -258,13 +253,8 @@ mod test {
     fn test_invalid_root_hash_as_instance_with_full_prover() {
         let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
 
-        // we generate a universal trusted setup of our own for testing
-        let params = generate_setup_params(K);
-
-        // we generate the verification key and the proving key
-        // we use an empty circuit just to enphasize that the circuit input are not relevant when generating the keys
-        let vk = keygen_vk(&params, &circuit).expect("vk should not fail");
-        let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk should not fail");
+        // generate a universal trusted setup for testing, along with the verification key (vk) and the proving key (pk).
+        let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
 
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
@@ -533,8 +523,6 @@ mod test {
 
     #[test]
     fn test_solvency_on_chain_verifier() {
-        let params = generate_setup_params(10);
-
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
@@ -542,7 +530,8 @@ mod test {
 
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, asset_sums);
 
-        let pk = gen_pk(&params, &circuit, None);
+        // generate a universal trusted setup for testing, along with the verification key (vk) and the proving key (pk).
+        let (params, pk, _) = generate_setup_artifacts(10, None, circuit.clone()).unwrap();
 
         get_verification_cost(&params, &pk, circuit.clone());
 

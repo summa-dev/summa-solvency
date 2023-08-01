@@ -153,7 +153,7 @@ impl<const MAX_BITS: u8, const RANGE_BITS: usize> OverflowChip<MAX_BITS, RANGE_B
                 value.copy_advice(|| "assign value", &mut region, self.config.a, 0)?;
 
                 // Just used helper function for decomposing. In other halo2 application used functions based on Field.
-                let decomposed_values: Vec<Fp> = decompose_bigint_to_ubits(
+                let decomposed_values: Vec<Fp> = decompose_biguint_to_ubits(
                     &value_fp_to_big_uint(value.value().copied()),
                     num_rows,
                     MAX_BITS as usize,

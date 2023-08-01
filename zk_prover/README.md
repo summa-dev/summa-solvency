@@ -20,7 +20,8 @@ cargo doc --no-deps --open
 
 ## Powers of Tau Trusted Setup 
 
-In order to test the circuits with a real trusted setup, you need to download the powers of tau files. The powers of tau files can be downloaded from https://github.com/han0110/halo2-kzg-srs and placed in a `ptau` folder. For example, by adding `hermez-raw-9` to the `ptau` folder at root level, the circuit tests will take it as a setup to generate the parameters -> see `generate_setup_params` in [utils](./src/circuits/utils.rs). If no `ptau` folder is found, the tests will generate a new setup from a randomly generated value. This latter approach is not recommended for production.
+For testing purposes, it's not necessary to download the `ptau` file. The `generate_setup_artifacts` function can manage this by generating a new setup from a randomly generated value. This automated generation process is intended for testing and development convenience, and it should not be used in production.
+For real-world situations, you must provide the path of a specific `ptau` file to the `generate_setup_artifacts`. The circuit will use the randomness from the given file. You can find an example that initializes a `Snapshot` instance [here](https://github.com/summa-dev/summa-solvency/blob/11d4fce5d18f6175804aa792fc9fc5ac27bf5c00/backend/src/apis/snapshot.rs#L115-L116) in the backend.
 
 ## Benches 
 
