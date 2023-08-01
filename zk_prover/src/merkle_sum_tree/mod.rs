@@ -24,4 +24,4 @@ pub struct Node<const N_ASSETS: usize> {
 
 pub use entry::Entry;
 pub use mst::MerkleSumTree;
-pub use utils::{big_int_to_fp, big_intify_username};
+pub use utils::{big_intify_username, big_uint_to_fp};

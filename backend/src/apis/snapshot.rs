@@ -12,14 +12,16 @@ use summa_solvency::{
     circuits::{
         merkle_sum_tree::MstInclusionCircuit,
         solvency::SolvencyCircuit,
-        utils::{full_prover, gen_proof_solidity_calldata, write_verifier_sol_from_yul},
+        utils::{
+            full_prover, gen_proof_solidity_calldata, generate_setup_artifacts,
+            write_verifier_sol_from_yul,
+        },
     },
     merkle_sum_tree::MerkleSumTree,
 };
 
 use crate::apis::csv_parser::parse_signature_csv;
 use crate::apis::fetch::fetch_asset_sums;
-use crate::apis::utils::generate_setup_artifacts;
 
 pub struct Snapshot<
     const LEVELS: usize,
@@ -113,10 +115,10 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         let k = last_part.parse::<u32>().unwrap();
 
         let mst_inclusion_setup_artifacts: SetupArtifcats =
-            generate_setup_artifacts(params_path, k, mst_inclusion_circuit).unwrap();
+            generate_setup_artifacts(k, Some(params_path), mst_inclusion_circuit).unwrap();
 
         let solvency_setup_artifacts_artifacts =
-            generate_setup_artifacts(params_path, 10, solvency_circuit).unwrap();
+            generate_setup_artifacts(10, Some(params_path), solvency_circuit).unwrap();
 
         let trusted_setup = [
             mst_inclusion_setup_artifacts,

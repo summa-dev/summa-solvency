@@ -2,10 +2,10 @@ use crate::merkle_sum_tree::utils::{
     build_merkle_tree_from_entries, create_proof, index_of, parse_csv_to_entries, verify_proof,
 };
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
-use num_bigint::BigInt;
+use num_bigint::BigUint;
 
 /// Merkle Sum Tree Data Structure.
-/// 
+///
 /// A Merkle Sum Tree is a binary Merkle Tree with the following properties:
 /// * Each Entry of a Merkle Sum Tree is a pair of a username and #N_ASSETS balances.
 /// * Each Leaf Node contains a hash and #N_ASSETS balances. The hash is equal to `H(username, balance[0], balance[1], ... balance[N_ASSETS])`.
@@ -82,7 +82,7 @@ impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
     }
 
     /// Returns the index of the user with the given username and balances in the tree
-    pub fn index_of(&self, username: &str, balances: [BigInt; N_ASSETS]) -> Option<usize> {
+    pub fn index_of(&self, username: &str, balances: [BigUint; N_ASSETS]) -> Option<usize> {
         index_of(username, balances, &self.nodes)
     }
 
