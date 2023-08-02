@@ -32,15 +32,15 @@ pub trait LtVerticalInstruction {
 #[derive(Clone, Copy, Debug)]
 pub struct LtVerticalConfig<const N_BYTES: usize> {
     /// Denotes the lt outcome. If lhs < rhs then lt == 1, otherwise lt == 0.
-    pub lt: Column<Advice>,
+    lt: Column<Advice>,
     /// Denotes the bytes representation of the difference between lhs and rhs.
-    pub diff: Column<Advice>,
+    diff: Column<Advice>,
     /// Denotes the range within which each byte should lie.
-    pub u8: Column<Fixed>,
+    u8: Column<Fixed>,
     /// Denotes the range within which both lhs and rhs lie.
-    pub range: Fp,
+    range: Fp,
     /// Denotes the selector used to enable the lookup check
-    pub lookup_enable: Selector,
+    lookup_enable: Selector,
 }
 
 impl<const N_BYTES: usize> LtVerticalConfig<N_BYTES> {

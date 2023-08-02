@@ -20,11 +20,11 @@ use std::fmt::Debug;
 /// * `toggle_lookup_check`: Selector to toggle the lookup check.
 #[derive(Debug, Clone)]
 pub struct OverflowCheckConfig<const N_BYTES: usize> {
-    pub a: Column<Advice>,
-    pub b: Column<Advice>,
-    pub range: Column<Fixed>,
-    pub toggle_decomposed_value_check: Selector,
-    pub toggle_lookup_check: Selector,
+    a: Column<Advice>,
+    b: Column<Advice>,
+    range: Column<Fixed>,
+    toggle_decomposed_value_check: Selector,
+    toggle_lookup_check: Selector,
 }
 
 /// Chip that verifies that the value to be checked doesn't overflow the range specified by `N_BYTES`.
