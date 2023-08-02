@@ -7,21 +7,22 @@ fn main() {
         .unwrap()
         .join("src/contracts/generated/summa_contract.rs");
     if contract_out_file.exists() {
-        let _ = std::fs::remove_file(&contract_out_file);
+        std::fs::remove_file(&contract_out_file).unwrap();
     }
 
-    let _ = Abigen::new("Summa", "./src/contracts/Summa.json")
+    Abigen::new("Summa", "./src/contracts/Summa.json")
         .unwrap()
         .format(true)
         .generate()
         .unwrap()
-        .write_to_file(contract_out_file);
+        .write_to_file(contract_out_file)
+        .unwrap();
 
     let mod_out_file: PathBuf = std::env::current_dir()
         .unwrap()
         .join("src/contracts/generated/mod.rs");
     if mod_out_file.exists() {
-        let _ = std::fs::remove_file(&mod_out_file);
+        std::fs::remove_file(&mod_out_file).unwrap();
     }
 
     let mut mod_file = OpenOptions::new()
@@ -38,27 +39,29 @@ fn main() {
         .unwrap()
         .join("src/contracts/generated/mock_erc20.rs");
     if contract_out_file.exists() {
-        let _ = std::fs::remove_file(&contract_out_file);
+        std::fs::remove_file(&contract_out_file).unwrap();
     }
 
-    let _ = Abigen::new("MockERC20", "./src/contracts/MockERC20.json")
+    Abigen::new("MockERC20", "./src/contracts/MockERC20.json")
         .unwrap()
         .format(true)
         .generate()
         .unwrap()
-        .write_to_file(contract_out_file);
+        .write_to_file(contract_out_file)
+        .unwrap();
 
     let contract_out_file = std::env::current_dir()
         .unwrap()
         .join("src/contracts/generated/verifier.rs");
     if contract_out_file.exists() {
-        let _ = std::fs::remove_file(&contract_out_file);
+        std::fs::remove_file(&contract_out_file).unwrap();
     }
 
-    let _ = Abigen::new("SolvencyVerifier", "./src/contracts/Verifier.json")
+    Abigen::new("SolvencyVerifier", "./src/contracts/Verifier.json")
         .unwrap()
         .format(true)
         .generate()
         .unwrap()
-        .write_to_file(contract_out_file);
+        .write_to_file(contract_out_file)
+        .unwrap();
 }
