@@ -7,10 +7,10 @@ fn main() {
         .unwrap()
         .join("src/contracts/generated/summa_contract.rs");
     if contract_out_file.exists() {
-        std::fs::remove_file(&contract_out_file);
+        let _ = std::fs::remove_file(&contract_out_file);
     }
 
-    Abigen::new("Summa", "./src/contracts/Summa.json")
+    let _ = Abigen::new("Summa", "./src/contracts/Summa.json")
         .unwrap()
         .format(true)
         .generate()
@@ -21,7 +21,7 @@ fn main() {
         .unwrap()
         .join("src/contracts/generated/mod.rs");
     if mod_out_file.exists() {
-        std::fs::remove_file(&mod_out_file);
+        let _ = std::fs::remove_file(&mod_out_file);
     }
 
     let mut mod_file = OpenOptions::new()
@@ -38,10 +38,10 @@ fn main() {
         .unwrap()
         .join("src/contracts/generated/mock_erc20.rs");
     if contract_out_file.exists() {
-        std::fs::remove_file(&contract_out_file);
+        let _ = std::fs::remove_file(&contract_out_file);
     }
 
-    Abigen::new("MockERC20", "./src/contracts/MockERC20.json")
+    let _ = Abigen::new("MockERC20", "./src/contracts/MockERC20.json")
         .unwrap()
         .format(true)
         .generate()
@@ -52,10 +52,10 @@ fn main() {
         .unwrap()
         .join("src/contracts/generated/verifier.rs");
     if contract_out_file.exists() {
-        std::fs::remove_file(&contract_out_file);
+        let _ = std::fs::remove_file(&contract_out_file);
     }
 
-    Abigen::new("SolvencyVerifier", "./src/contracts/Verifier.json")
+    let _ = Abigen::new("SolvencyVerifier", "./src/contracts/Verifier.json")
         .unwrap()
         .format(true)
         .generate()
