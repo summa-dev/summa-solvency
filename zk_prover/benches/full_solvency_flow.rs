@@ -10,15 +10,13 @@ use summa_solvency::{
         solvency::SolvencyCircuit,
         utils::{full_prover, full_verifier, generate_setup_artifacts},
     },
-    merkle_sum_tree::{MerkleSumTree, RANGE_BITS},
+    merkle_sum_tree::MerkleSumTree,
 };
 
 const SAMPLE_SIZE: usize = 10;
 const LEVELS: usize = 15;
 const N_ASSETS: usize = 2;
 const PATH_NAME: &str = "two_assets";
-const L: usize = 2 + (N_ASSETS * 2);
-const N_BYTES: usize = RANGE_BITS / 8;
 
 fn build_mstree(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
@@ -43,7 +41,7 @@ fn build_mstree(_c: &mut Criterion) {
 fn verification_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init_empty();
 
     let (params, _, _) = generate_setup_artifacts(13, None, empty_circuit.clone()).unwrap();
 
@@ -61,7 +59,7 @@ fn verification_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
 fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init_empty();
 
     let (params, _, vk) = generate_setup_artifacts(13, None, empty_circuit.clone()).unwrap();
 
@@ -79,7 +77,7 @@ fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
 fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init_empty();
 
     let (params, pk, vk) = generate_setup_artifacts(13, None, empty_circuit).unwrap();
 
@@ -91,7 +89,7 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let merkle_sum_tree = MerkleSumTree::<N_ASSETS>::new(&csv_file).unwrap();
 
     // Only now we can instantiate the circuit with the actual inputs
-    let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
     let bench_name = format!(
         "generate zk proof - tree of 2 power of {} entries with {} assets mst inclusion circuit",
@@ -107,7 +105,7 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init_empty();
 
     let (params, pk, vk) = generate_setup_artifacts(13, None, empty_circuit).unwrap();
 
@@ -119,7 +117,7 @@ fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let merkle_sum_tree = MerkleSumTree::<N_ASSETS>::new(&csv_file).unwrap();
 
     // Only now we can instantiate the circuit with the actual inputs
-    let circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init(merkle_sum_tree, 0);
+    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
     let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
 
@@ -139,7 +137,7 @@ fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 fn verification_key_gen_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
+    let empty_circuit = SolvencyCircuit::<N_ASSETS>::init_empty();
 
     let (params, _, _) = generate_setup_artifacts(11, None, empty_circuit.clone()).unwrap();
 
@@ -157,7 +155,7 @@ fn verification_key_gen_solvency_circuit(_c: &mut Criterion) {
 fn proving_key_gen_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
+    let empty_circuit = SolvencyCircuit::<N_ASSETS>::init_empty();
 
     let (params, _, vk) = generate_setup_artifacts(11, None, empty_circuit.clone()).unwrap();
 
@@ -175,7 +173,7 @@ fn proving_key_gen_solvency_circuit(_c: &mut Criterion) {
 fn generate_zk_proof_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
+    let empty_circuit = SolvencyCircuit::<N_ASSETS>::init_empty();
 
     let (params, pk, vk) = generate_setup_artifacts(11, None, empty_circuit).unwrap();
 
@@ -189,7 +187,7 @@ fn generate_zk_proof_solvency_circuit(_c: &mut Criterion) {
     let asset_sums = merkle_sum_tree.root().balances.map(|x| x + Fp::from(1));
 
     // Only now we can instantiate the circuit with the actual inputs
-    let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, asset_sums);
+    let circuit = SolvencyCircuit::<N_ASSETS>::init(merkle_sum_tree, asset_sums);
 
     let bench_name = format!(
         "generate zk proof - tree of 2 power of {} entries with {} assets solvency circuit",
@@ -205,7 +203,7 @@ fn generate_zk_proof_solvency_circuit(_c: &mut Criterion) {
 fn verify_zk_proof_solvency_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init_empty();
+    let empty_circuit = SolvencyCircuit::<N_ASSETS>::init_empty();
 
     let (params, pk, vk) = generate_setup_artifacts(11, None, empty_circuit).unwrap();
 
@@ -219,7 +217,7 @@ fn verify_zk_proof_solvency_circuit(_c: &mut Criterion) {
     let asset_sums = merkle_sum_tree.root().balances.map(|x| x + Fp::from(1));
 
     // Only now we can instantiate the circuit with the actual inputs
-    let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(merkle_sum_tree, asset_sums);
+    let circuit = SolvencyCircuit::<N_ASSETS>::init(merkle_sum_tree, asset_sums);
 
     let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
 

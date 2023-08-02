@@ -407,7 +407,7 @@ fn fix_verifier_sol(yul_code_path: PathBuf) -> Result<String, Box<dyn std::error
 
     // using a boxed Write trait object here to show it works for any Struct impl'ing Write
     // you may also use a std::fs::File here
-    let mut write: Box<&mut dyn std::fmt::Write> = Box::new(&mut contract);
+    let write: Box<&mut dyn std::fmt::Write> = Box::new(&mut contract);
 
     for line in modified_lines[16..modified_lines.len() - 7].iter() {
         write!(write, "{}", line).unwrap();

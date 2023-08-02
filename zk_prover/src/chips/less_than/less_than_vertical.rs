@@ -54,7 +54,7 @@ impl<const N_BYTES: usize> LtVerticalConfig<N_BYTES> {
 ///
 /// * `lhs - rhs - diff_bytes + lt * range = 0`. When q_enable is 1, this constraint is enforced.
 /// * `lt * (lt - 1) = 0`, i.e. lt is either 0 or 1. When q_enable is 1, this constraint is enforced.
-/// * `diff(cur)` ∈ to `u8` lookup table. Namely `decomposed_value` should be in the `MAX_BITS` range. When q_enable is 1, this constraint is enforced.
+/// * `diff(cur)` ∈ to `u8` lookup table. Namely `decomposed_value` should be in the `u8` range. When q_enable is 1, this constraint is enforced.
 
 #[derive(Clone, Debug)]
 pub struct LtVerticalChip<const N_BYTES: usize> {

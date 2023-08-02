@@ -6,7 +6,10 @@ use crate::merkle_sum_tree::Node;
 pub fn create_middle_node<const N_ASSETS: usize>(
     child_l: &Node<N_ASSETS>,
     child_r: &Node<N_ASSETS>,
-) -> Node<N_ASSETS> {
+) -> Node<N_ASSETS>
+where
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
+{
     let mut balances_sum = [Fp::zero(); N_ASSETS];
     for (i, balance) in balances_sum.iter_mut().enumerate() {
         *balance = child_l.balances[i] + child_r.balances[i];

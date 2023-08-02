@@ -32,6 +32,10 @@ The benchmarking included the following areas:
 - Proving Key Gen for MstInclusion Circuit
 - ZK Proof Generation for MstInclusion Circuit
 - ZK Proof Verification for MstInclusion Circuit
+- Verification Key Gen for Solvency Circuit
+- Proving Key Gen for Solvency Circuit
+- ZK Proof Generation for Solvency Circuit
+- ZK Proof Verification for Solvency Circuit
 
 In order to run the benchmarking, we provide a set of dummy `username, balances` entries formatted in csv files. The csv files can be downloaded as follows 
 
@@ -63,7 +67,7 @@ Furthermore the benchmarking function `verify_zk_proof_benchmark` will also prin
 
 Run on MacBook Pro 2023, M2 Pro, 32GB RAM, 12 cores
 
-Benches run after PR #80 (`add solidity verifier`). In order to achieve small proof size, to be cheap to verify on-chain. We decreased the RANGE_BITS in which the balances should lie to 64 and reduced the rate of the Poseidon hash function to 1. 
+Benches run after PR #80 (`add solidity verifier`). In order to achieve small proof size, to be cheap to verify on-chain. We decreased the range in which the balances should lie to 64 and reduced the rate of the Poseidon hash function to 1. 
 
 2^15 entries (32768) users, 2 assets
 

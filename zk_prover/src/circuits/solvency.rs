@@ -17,7 +17,6 @@ use snark_verifier_sdk::CircuitExt;
 ///
 /// # Type Parameters
 ///
-/// * `L`: The length of the hasher input, namely 2 + (2 * N_ASSETS)
 /// * `N_ASSETS`: The number of assets for which the solvency is verified.
 /// * `N_BYTES`: Range in which the balances should lie
 ///
@@ -30,7 +29,7 @@ use snark_verifier_sdk::CircuitExt;
 /// * `asset_sums`: The sum of the assets of the CEX for each asset
 /// * `root_hash`: The root hash of the merkle sum tree
 #[derive(Clone)]
-pub struct SolvencyCircuit<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> {
+pub struct SolvencyCircuit<const N_ASSETS: usize> {
     pub left_node_hash: Fp,
     pub left_node_balances: [Fp; N_ASSETS],
     pub right_node_hash: Fp,
@@ -39,8 +38,9 @@ pub struct SolvencyCircuit<const L: usize, const N_ASSETS: usize, const N_BYTES:
     pub root_hash: Fp,
 }
 
-impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
-    for SolvencyCircuit<L, N_ASSETS, N_BYTES>
+impl<const N_ASSETS: usize> CircuitExt<Fp> for SolvencyCircuit<N_ASSETS>
+where
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     /// Returns the number of public inputs of the circuit. It is 1 + N_ASSETS, namely the root hash of the merkle sum tree and the sum of the assets of the CEX for each asset
     fn num_instance(&self) -> Vec<usize> {
@@ -55,11 +55,8 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
     }
 }
 
-impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
-    SolvencyCircuit<L, N_ASSETS, N_BYTES>
-{
+impl<const N_ASSETS: usize> SolvencyCircuit<N_ASSETS> {
     pub fn init_empty() -> Self {
-        assert_eq!((N_ASSETS * 2) + 2, L);
         Self {
             left_node_hash: Fp::zero(),
             left_node_balances: [Fp::zero(); N_ASSETS],
@@ -72,8 +69,6 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
 
     /// Initializes the circuit with the merkle sum tree and the assets sum
     pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, asset_sums: [Fp; N_ASSETS]) -> Self {
-        assert_eq!((N_ASSETS * 2) + 2, L);
-
         let (penultimate_node_left, penultimate_node_right) = merkle_sum_tree
             .penultimate_level_data()
             .expect("Failed to retrieve penultimate level data");
@@ -94,14 +89,13 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
 /// Configuration for the solvency circuit
 /// # Type Parameters
 ///
-/// * `L`: The length of the hasher input, namely 2 + (2 * N_ASSETS)
 /// * `N_ASSETS`: The number of assets for which the solvency is verified.
 /// * `N_BYTES`: Range in which the balances should lie
 ///
 /// # Fields
 ///
 /// * `merkle_sum_tree_config`: Configuration for the merkle sum tree
-/// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 3 and RATE = 2
+/// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1
 /// * `instance`: Instance column used to store the public inputs
 /// * `lt_selector`: Selector to activate the less than constraint
 /// * `lt_config`: Configuration for the less than chip
@@ -109,16 +103,20 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
 /// The circuit performs an additional constraint:
 /// * `lt_enable * (lt_config.is_lt - 1) = 0` (if `lt_enable` is toggled). It basically enforces the result of the less than chip to be 1.
 #[derive(Debug, Clone)]
-pub struct SolvencyConfig<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> {
+pub struct SolvencyConfig<const N_ASSETS: usize>
+where
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
+{
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
-    pub poseidon_config: PoseidonConfig<2, 1, L>,
+    pub poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
     pub instance: Column<Instance>,
     pub lt_selector: Selector,
-    pub lt_config: LtVerticalConfig<N_BYTES>,
+    pub lt_config: LtVerticalConfig<8>,
 }
 
-impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
-    SolvencyConfig<L, N_ASSETS, N_BYTES>
+impl<const N_ASSETS: usize> SolvencyConfig<N_ASSETS>
+where
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     /// Configures the circuit
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
@@ -132,8 +130,8 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
         let complex_selector = meta.complex_selector();
 
-        // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, 3 fixed columns for rc_a and 3 for rc_b
-        let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, L>::configure(
+        // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, #WIDTH fixed columns for rc_a and #WIDTH for rc_b
+        let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::configure(
             meta,
             advices[0..2].try_into().unwrap(),
             advices[2],
@@ -191,7 +189,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
         mut layouter: impl Layouter<Fp>,
         input_cell: &AssignedCell<Fp, Fp>,
         index: usize,
-        lt_chip: &LtVerticalChip<N_BYTES>,
+        lt_chip: &LtVerticalChip<8>,
     ) -> Result<(), Error> {
         layouter.assign_region(
             || "enforce input cell to be less than value in instance column at row `index`",
@@ -236,10 +234,11 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize>
     }
 }
 
-impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
-    for SolvencyCircuit<L, N_ASSETS, N_BYTES>
+impl<const N_ASSETS: usize> Circuit<Fp> for SolvencyCircuit<N_ASSETS>
+where
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
-    type Config = SolvencyConfig<L, N_ASSETS, N_BYTES>;
+    type Config = SolvencyConfig<N_ASSETS>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -247,7 +246,7 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        SolvencyConfig::<L, N_ASSETS, N_BYTES>::configure(meta)
+        SolvencyConfig::<N_ASSETS>::configure(meta)
     }
 
     fn synthesize(
@@ -258,9 +257,10 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
         // build auxiliary chips
         let merkle_sum_tree_chip =
             MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
-        let poseidon_chip =
-            PoseidonChip::<PoseidonSpec, 2, 1, L>::construct(config.poseidon_config.clone());
-        let lt_chip = LtVerticalChip::<N_BYTES>::construct(config.lt_config);
+        let poseidon_chip = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::construct(
+            config.poseidon_config.clone(),
+        );
+        let lt_chip = LtVerticalChip::<8>::construct(config.lt_config);
 
         // Assign the left penultimate hash and the left penultimate balances
         let (left_node_hash, left_node_balances) = merkle_sum_tree_chip
@@ -309,7 +309,8 @@ impl<const L: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
             .map(|x| x.to_owned())
             .collect();
 
-        let hash_input: [AssignedCell<Fp, Fp>; L] = match hash_input_vec.try_into() {
+        let hash_input: [AssignedCell<Fp, Fp>; 2 * (1 + N_ASSETS)] = match hash_input_vec.try_into()
+        {
             Ok(arr) => arr,
             Err(_) => panic!("Failed to convert Vec to Array"),
         };

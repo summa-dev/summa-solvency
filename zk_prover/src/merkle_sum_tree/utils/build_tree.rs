@@ -7,7 +7,11 @@ pub fn build_merkle_tree_from_entries<const N_ASSETS: usize>(
     entries: &[Entry<N_ASSETS>],
     depth: usize,
     nodes: &mut Vec<Vec<Node<N_ASSETS>>>,
-) -> Result<Node<N_ASSETS>, Box<dyn std::error::Error>> {
+) -> Result<Node<N_ASSETS>, Box<dyn std::error::Error>>
+where
+    [usize; N_ASSETS + 1]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
+{
     let n = entries.len();
 
     let mut tree: Vec<Vec<Node<N_ASSETS>>> = Vec::with_capacity(depth + 1);
@@ -47,7 +51,9 @@ pub fn build_merkle_tree_from_entries<const N_ASSETS: usize>(
 fn build_leaves_level<const N_ASSETS: usize>(
     entries: &[Entry<N_ASSETS>],
     tree: &mut [Vec<Node<N_ASSETS>>],
-) {
+) where
+    [usize; N_ASSETS + 1]: Sized,
+{
     // Compute the leaves in parallel
     let mut handles = vec![];
     let chunk_size = (entries.len() + num_cpus::get() - 1) / num_cpus::get();
@@ -75,7 +81,9 @@ fn build_middle_level<const N_ASSETS: usize>(
     level: usize,
     tree: &mut [Vec<Node<N_ASSETS>>],
     n: usize,
-) {
+) where
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
+{
     let nodes_in_level = (n + (1 << level) - 1) / (1 << level);
 
     let mut handles = vec![];

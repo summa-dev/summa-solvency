@@ -1,3 +1,4 @@
+#![feature(generic_const_exprs)]
 use halo2_proofs::halo2curves::{bn256::Fr as Fp, ff::PrimeField};
 use num_bigint::BigUint;
 
@@ -12,7 +13,10 @@ use summa_solvency::{
 
 // The CEX may only provide `balances` and `username` to the user without `leaf_hash`.
 // In this case, the user will have to generate `leaf_hash` themselves with this method.
-fn generate_leaf_hash<const N_ASSETS: usize>(user_name: String, balances: Vec<usize>) -> Fp {
+fn generate_leaf_hash<const N_ASSETS: usize>(user_name: String, balances: Vec<usize>) -> Fp
+where
+    [usize; N_ASSETS + 1]: Sized,
+{
     // Convert usize to BigInt for the `Entry` struct
     let balances_big_uint: Vec<BigUint> = balances.into_iter().map(BigUint::from).collect();
 
@@ -24,7 +28,6 @@ fn generate_leaf_hash<const N_ASSETS: usize>(user_name: String, balances: Vec<us
 
 fn main() {
     const LEVELS: usize = 4;
-    const L: usize = 6;
     const N_ASSETS: usize = 2;
 
     let ptau_path = "./ptau/hermez-raw-11";
@@ -33,7 +36,7 @@ fn main() {
 
     // CEX Generate the Merkle Sum Tree and then initialize the circuit.
     // Note that `signature_csv` is empty because this is only needed to generate π of Solvency, which is not the case here.
-    let snapshot = Snapshot::<4, 6, 2, 8>::new(
+    let snapshot = Snapshot::<LEVELS, N_ASSETS>::new(
         &entry_csv_path,
         &signature_csv_path,
         "Summa proof of solvency for CryptoExchange".to_string(),
@@ -77,10 +80,10 @@ fn main() {
     // When the user receives their `leaf_hash`, the user must verify the `leaf_hash` from their `balances` and `username`.
     assert_eq!(
         leaf_hash,
-        generate_leaf_hash::<2>(user_name.clone(), balances_usize.clone())
+        generate_leaf_hash::<N_ASSETS>(user_name.clone(), balances_usize.clone())
     );
 
-    let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, L, N_ASSETS>::init_empty();
+    let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init_empty();
 
     // The CEX can serve the params and vk by using the get_trusted_setup_for_mst_inclusion() method from the snapshot instance, as shown below:
     // let (params, _, vk) = snapshot.get_trusted_setup_for_mst_inclusion();
