@@ -7,7 +7,7 @@ fn main() {
         .unwrap()
         .join("src/contracts/generated/summa_contract.rs");
     if contract_out_file.exists() {
-        std::fs::remove_file(&contract_out_file);
+        std::fs::remove_file(&contract_out_file).unwrap();
     }
 
     Abigen::new("Summa", "./src/contracts/Summa.json")
@@ -15,13 +15,14 @@ fn main() {
         .format(true)
         .generate()
         .unwrap()
-        .write_to_file(contract_out_file);
+        .write_to_file(contract_out_file)
+        .unwrap();
 
     let mod_out_file: PathBuf = std::env::current_dir()
         .unwrap()
         .join("src/contracts/generated/mod.rs");
     if mod_out_file.exists() {
-        std::fs::remove_file(&mod_out_file);
+        std::fs::remove_file(&mod_out_file).unwrap();
     }
 
     let mut mod_file = OpenOptions::new()
@@ -38,7 +39,7 @@ fn main() {
         .unwrap()
         .join("src/contracts/generated/mock_erc20.rs");
     if contract_out_file.exists() {
-        std::fs::remove_file(&contract_out_file);
+        std::fs::remove_file(&contract_out_file).unwrap();
     }
 
     Abigen::new("MockERC20", "./src/contracts/MockERC20.json")
@@ -46,13 +47,14 @@ fn main() {
         .format(true)
         .generate()
         .unwrap()
-        .write_to_file(contract_out_file);
+        .write_to_file(contract_out_file)
+        .unwrap();
 
     let contract_out_file = std::env::current_dir()
         .unwrap()
         .join("src/contracts/generated/verifier.rs");
     if contract_out_file.exists() {
-        std::fs::remove_file(&contract_out_file);
+        std::fs::remove_file(&contract_out_file).unwrap();
     }
 
     Abigen::new("SolvencyVerifier", "./src/contracts/Verifier.json")
@@ -60,5 +62,6 @@ fn main() {
         .format(true)
         .generate()
         .unwrap()
-        .write_to_file(contract_out_file);
+        .write_to_file(contract_out_file)
+        .unwrap();
 }

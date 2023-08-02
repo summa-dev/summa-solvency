@@ -20,7 +20,7 @@ async function main() {
   await summa.deployed();
 
   console.log(`Summa deployed to ${summa.address}`);
-
+  
   let deploymentsJson: Deployments = {};
   const fs = require("fs");
   try {
