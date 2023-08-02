@@ -161,7 +161,6 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
         asset_contract_addresses: Vec<String>,
         asset_sums: [Fp; N_ASSETS],
     ) -> Result<(SolvencyProof, Vec<String>), &'static str> {
-        // For each asset, identified by its contract address, fetch the sum of all balances owned by the accounts contained in the snapshot
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(self.mst.clone(), asset_sums);
 
         let calldata = gen_proof_solidity_calldata(

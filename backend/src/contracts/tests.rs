@@ -46,7 +46,7 @@ pub async fn initialize_anvil() -> (
         Arc::clone(&client),
     );
 
-    // Send RPC requests with `anvil_setBalance` method via provider to adjust balance of `cex_addr_1` and `cex_addr_2`
+    // Send RPC requests with `anvil_setBalance` method via provider to set ETH balance of `cex_addr_1` and `cex_addr_2`
     // This is for meeting `proof_of_solvency` test conditions
     for addr in [cex_addr_1, cex_addr_2].to_vec() {
         let _res = client

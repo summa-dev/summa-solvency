@@ -36,7 +36,6 @@ impl SummaSigner {
     ) -> Self {
         let wallet: LocalWallet = LocalWallet::from_str(main_signer_key).unwrap();
 
-        // let provider = Provider::<Http>::try_from(rpc_url).unwrap();
         let provider = Provider::<Http>::try_from(rpc_url)
             .unwrap()
             .interval(Duration::from_millis(10u64));
