@@ -15,7 +15,7 @@ use summa_solvency::{
 // In this case, the user will have to generate `leaf_hash` themselves with this method.
 fn generate_leaf_hash<const N_ASSETS: usize>(user_name: String, balances: Vec<usize>) -> Fp
 where
-    [(); N_ASSETS + 1]: Sized,
+    [usize; N_ASSETS + 1]: Sized,
 {
     // Convert usize to BigInt for the `Entry` struct
     let balances_big_uint: Vec<BigUint> = balances.into_iter().map(BigUint::from).collect();

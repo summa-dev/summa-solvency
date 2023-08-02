@@ -9,7 +9,7 @@ pub fn poseidon_node<const N_ASSETS: usize>(
     r2: [Fp; N_ASSETS],
 ) -> Fp
 where
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     let mut hash_inputs: [Fp; 2 * (1 + N_ASSETS)] = [Fp::zero(); 2 * (1 + N_ASSETS)];
 
@@ -24,7 +24,7 @@ where
 
 pub fn poseidon_entry<const N_ASSETS: usize>(left: Fp, right: [Fp; N_ASSETS]) -> Fp
 where
-    [(); N_ASSETS + 1]: Sized,
+    [usize; N_ASSETS + 1]: Sized,
 {
     let mut hash_inputs: [Fp; N_ASSETS + 1] = [Fp::zero(); N_ASSETS + 1];
 

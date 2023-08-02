@@ -7,7 +7,7 @@ pub fn index_of<const N_ASSETS: usize>(
     nodes: &[Vec<Node<N_ASSETS>>],
 ) -> Option<usize>
 where
-    [(); N_ASSETS + 1]: Sized,
+    [usize; N_ASSETS + 1]: Sized,
 {
     let entry: Entry<N_ASSETS> = Entry::new(username.to_string(), balances).unwrap();
     let leaf = entry.compute_leaf();

@@ -33,8 +33,8 @@ impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
     /// `dxGaEAii;11888,41163`
     pub fn new(path: &str) -> Result<Self, Box<dyn std::error::Error>>
     where
-        [(); N_ASSETS + 1]: Sized,
-        [(); 2 * (1 + N_ASSETS)]: Sized,
+        [usize; N_ASSETS + 1]: Sized,
+        [usize; 2 * (1 + N_ASSETS)]: Sized,
     {
         let entries = parse_csv_to_entries(path)?;
         let depth = (entries.len() as f64).log2().ceil() as usize;
@@ -88,7 +88,7 @@ impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
     /// Returns the index of the user with the given username and balances in the tree
     pub fn index_of(&self, username: &str, balances: [BigUint; N_ASSETS]) -> Option<usize>
     where
-        [(); N_ASSETS + 1]: Sized,
+        [usize; N_ASSETS + 1]: Sized,
     {
         index_of(username, balances, &self.nodes)
     }
@@ -101,8 +101,8 @@ impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
     /// Verifies a MerkleProof
     pub fn verify_proof(&self, proof: &MerkleProof<N_ASSETS>) -> bool
     where
-        [(); N_ASSETS + 1]: Sized,
-        [(); 2 * (1 + N_ASSETS)]: Sized,
+        [usize; N_ASSETS + 1]: Sized,
+        [usize; 2 * (1 + N_ASSETS)]: Sized,
     {
         verify_proof(proof)
     }

@@ -90,8 +90,8 @@ impl AccountOwnershipProof {
 
 impl<const LEVELS: usize, const N_ASSETS: usize> Snapshot<LEVELS, N_ASSETS>
 where
-    [(); N_ASSETS + 1]: Sized,
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; N_ASSETS + 1]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     pub fn new(
         entry_csv_path: &str,

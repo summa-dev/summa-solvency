@@ -4,8 +4,8 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
 pub fn verify_proof<const N_ASSETS: usize>(proof: &MerkleProof<N_ASSETS>) -> bool
 where
-    [(); N_ASSETS + 1]: Sized,
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; N_ASSETS + 1]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     let mut node = proof.entry.compute_leaf();
     let mut balances = proof

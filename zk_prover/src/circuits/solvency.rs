@@ -40,7 +40,7 @@ pub struct SolvencyCircuit<const N_ASSETS: usize> {
 
 impl<const N_ASSETS: usize> CircuitExt<Fp> for SolvencyCircuit<N_ASSETS>
 where
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     /// Returns the number of public inputs of the circuit. It is 1 + N_ASSETS, namely the root hash of the merkle sum tree and the sum of the assets of the CEX for each asset
     fn num_instance(&self) -> Vec<usize> {
@@ -105,7 +105,7 @@ impl<const N_ASSETS: usize> SolvencyCircuit<N_ASSETS> {
 #[derive(Debug, Clone)]
 pub struct SolvencyConfig<const N_ASSETS: usize>
 where
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
     pub poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
@@ -116,7 +116,7 @@ where
 
 impl<const N_ASSETS: usize> SolvencyConfig<N_ASSETS>
 where
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     /// Configures the circuit
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
@@ -236,7 +236,7 @@ where
 
 impl<const N_ASSETS: usize> Circuit<Fp> for SolvencyCircuit<N_ASSETS>
 where
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     type Config = SolvencyConfig<N_ASSETS>;
     type FloorPlanner = SimpleFloorPlanner;

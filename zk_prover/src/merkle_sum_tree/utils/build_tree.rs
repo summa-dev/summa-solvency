@@ -9,8 +9,8 @@ pub fn build_merkle_tree_from_entries<const N_ASSETS: usize>(
     nodes: &mut Vec<Vec<Node<N_ASSETS>>>,
 ) -> Result<Node<N_ASSETS>, Box<dyn std::error::Error>>
 where
-    [(); N_ASSETS + 1]: Sized,
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; N_ASSETS + 1]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     let n = entries.len();
 
@@ -52,7 +52,7 @@ fn build_leaves_level<const N_ASSETS: usize>(
     entries: &[Entry<N_ASSETS>],
     tree: &mut [Vec<Node<N_ASSETS>>],
 ) where
-    [(); N_ASSETS + 1]: Sized,
+    [usize; N_ASSETS + 1]: Sized,
 {
     // Compute the leaves in parallel
     let mut handles = vec![];
@@ -82,7 +82,7 @@ fn build_middle_level<const N_ASSETS: usize>(
     tree: &mut [Vec<Node<N_ASSETS>>],
     n: usize,
 ) where
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     let nodes_in_level = (n + (1 << level) - 1) / (1 << level);
 

@@ -8,7 +8,7 @@ pub fn create_middle_node<const N_ASSETS: usize>(
     child_r: &Node<N_ASSETS>,
 ) -> Node<N_ASSETS>
 where
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     let mut balances_sum = [Fp::zero(); N_ASSETS];
     for (i, balance) in balances_sum.iter_mut().enumerate() {

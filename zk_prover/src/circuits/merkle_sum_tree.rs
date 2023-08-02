@@ -37,7 +37,7 @@ pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize> {
 impl<const LEVELS: usize, const N_ASSETS: usize> CircuitExt<Fp>
     for MstInclusionCircuit<LEVELS, N_ASSETS>
 where
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     /// Returns the number of public inputs of the circuit. It is 2, namely the laef hash to be verified inclusion of and the root hash of the merkle sum tree.
     fn num_instance(&self) -> Vec<usize> {
@@ -64,7 +64,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_A
     /// Initializes the circuit with the merkle sum tree and the index of the user of which the inclusion is to be verified.
     pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, user_index: usize) -> Self
     where
-        [(); N_ASSETS + 1]:,
+        [usize; N_ASSETS + 1]:,
     {
         let proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
@@ -103,7 +103,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_A
 #[derive(Debug, Clone)]
 pub struct MstInclusionConfig<const N_ASSETS: usize>
 where
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
     pub poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
@@ -113,7 +113,7 @@ where
 
 impl<const N_ASSETS: usize> MstInclusionConfig<N_ASSETS>
 where
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
         // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config
@@ -183,7 +183,7 @@ where
 impl<const LEVELS: usize, const N_ASSETS: usize> Circuit<Fp>
     for MstInclusionCircuit<LEVELS, N_ASSETS>
 where
-    [(); 2 * (1 + N_ASSETS)]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     type Config = MstInclusionConfig<N_ASSETS>;
     type FloorPlanner = SimpleFloorPlanner;
