@@ -17,7 +17,7 @@ pub fn value_fp_to_big_uint(v: Value<Fp>) -> BigUint {
 /// Decomposes a BigUint into a vector of Field elements
 /// `number_of_limbs` is the number of chunks to split the BigUint into
 /// `bit_len` is the number of bits in each chunk
-pub fn decompose_bigint_to_ubits(e: &BigUint, number_of_limbs: usize, bit_len: usize) -> Vec<Fp> {
+pub fn decompose_biguint_to_ubits(e: &BigUint, number_of_limbs: usize, bit_len: usize) -> Vec<Fp> {
     debug_assert!(bit_len <= 64);
 
     let mut e = e.iter_u64_digits();
@@ -65,7 +65,7 @@ mod tests {
         ]);
 
         let biguint_max = fp_to_big_uint(max_minus_one);
-        let decomposed_max = decompose_bigint_to_ubits(&biguint_max, 22, 12);
+        let decomposed_max = decompose_biguint_to_ubits(&biguint_max, 22, 12);
 
         let expected_values = [
             "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -109,7 +109,7 @@ mod tests {
         ]);
 
         let biguint_max_u250 = fp_to_big_uint(max_u250);
-        let decomposed = decompose_bigint_to_ubits(&biguint_max_u250, 10, 25);
+        let decomposed = decompose_biguint_to_ubits(&biguint_max_u250, 10, 25);
 
         let expected = "0x0000000000000000000000000000000000000000000000000000000001ffffff";
         for value in decomposed.iter() {
@@ -129,7 +129,7 @@ mod tests {
         ]);
 
         let biguint_max_u251 = fp_to_big_uint(max_u251);
-        let decomposed = decompose_bigint_to_ubits(&biguint_max_u251, 21, 12);
+        let decomposed = decompose_biguint_to_ubits(&biguint_max_u251, 21, 12);
 
         let expected = "0x0000000000000000000000000000000000000000000000000000000000000fff";
         for value in decomposed.iter() {

@@ -1,3 +1,9 @@
+use std::{
+    fs::File,
+    io::{BufRead, BufReader, Write},
+    path::PathBuf,
+};
+
 use ark_std::{end_timer, start_timer};
 use ethers::types::{Bytes, U256};
 use halo2_proofs::{
@@ -5,7 +11,7 @@ use halo2_proofs::{
         bn256::{Bn256, Fr as Fp, G1Affine},
         ff::PrimeField,
     },
-    plonk::{create_proof, verify_proof, Circuit, ProvingKey, VerifyingKey},
+    plonk::{create_proof, keygen_pk, keygen_vk, verify_proof, Circuit, ProvingKey, VerifyingKey},
     poly::{
         commitment::{Params, ParamsProver},
         kzg::{
@@ -27,35 +33,54 @@ use snark_verifier::{
     verifier::plonk::PlonkSuccinctVerifier,
 };
 use snark_verifier_sdk::{evm::gen_evm_proof_shplonk, CircuitExt};
-use std::{
-    fs::File,
-    io::{BufRead, BufReader, Write},
-    path::PathBuf,
-};
 
-/// Generate setup parameters for a circuit of size `k` where 2^k is the number of rows in the circuit.
-/// First checks if the trusted setup parameters are already generated and saved in the `ptau` folder with the name `hermez-raw-k`, if so, it loads them.
-/// If the trusted setup are not found in the `ptau` folder, an unsafe trusted setup is generated and saved there.
-pub fn generate_setup_params(k: u32) -> ParamsKZG<Bn256> {
-    let ptau_path = format!("ptau/hermez-raw-{}", k);
+/// Generate setup artifacts for a circuit of size `k`, where 2^k represents the number of rows in the circuit.
+///
+/// If the trusted setup parameters are not found, the function performs an unsafe trusted setup to generate the necessary parameters
+/// If the provided `k` value is larger than the `k` value of the loaded parameters, an error is returned, as the provided `k` is too large.
+/// Otherwise, if the `k` value is smaller than the `k` value of the loaded parameters, the parameters are downsized to fit the requested `k`.
+pub fn generate_setup_artifacts<C: Circuit<Fp> + CircuitExt<Fp>>(
+    k: u32,
+    params_path: Option<&str>,
+    circuit: C,
+) -> Result<
+    (
+        ParamsKZG<Bn256>,
+        ProvingKey<G1Affine>,
+        VerifyingKey<G1Affine>,
+    ),
+    &'static str,
+> {
+    let mut params: ParamsKZG<Bn256>;
 
-    let metadata = std::fs::metadata(ptau_path.clone());
+    match params_path {
+        Some(path) => {
+            let timer = start_timer!(|| "Creating params");
+            let mut params_fs = File::open(path).expect("couldn't load params");
+            params = ParamsKZG::<Bn256>::read(&mut params_fs).expect("Failed to read params");
+            end_timer!(timer);
 
-    if metadata.is_err() {
-        println!("ptau file not found, generating a trusted setup of our own. If needed, download the ptau from https://github.com/han0110/halo2-kzg-srs");
-        // start timer
-        let timer = start_timer!(|| "Creating params");
-        let params = ParamsKZG::<Bn256>::setup(k, OsRng);
-        end_timer!(timer);
-        params
-    } else {
-        println!("ptau file found");
-        let timer = start_timer!(|| "Creating params");
-        let mut params_fs = File::open(ptau_path).expect("couldn't load params");
-        let params = ParamsKZG::<Bn256>::read(&mut params_fs).expect("Failed to read params");
-        end_timer!(timer);
-        params
+            if params.k() < k {
+                return Err("k is too large for the given params");
+            }
+
+            if params.k() > k {
+                let timer = start_timer!(|| "Downsizing params");
+                params.downsize(k);
+                end_timer!(timer);
+            }
+        }
+        None => {
+            let timer = start_timer!(|| "Creating params");
+            params = ParamsKZG::<Bn256>::setup(k, OsRng);
+            end_timer!(timer);
+        }
     }
+
+    let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
+    let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
+
+    Ok((params, pk, vk))
 }
 
 /// Generates a proof given the public setup, the proving key, the initiated circuit and its public inputs.
@@ -382,7 +407,7 @@ fn fix_verifier_sol(yul_code_path: PathBuf) -> Result<String, Box<dyn std::error
 
     // using a boxed Write trait object here to show it works for any Struct impl'ing Write
     // you may also use a std::fs::File here
-    let mut write: Box<&mut dyn std::fmt::Write> = Box::new(&mut contract);
+    let write: Box<&mut dyn std::fmt::Write> = Box::new(&mut contract);
 
     for line in modified_lines[16..modified_lines.len() - 7].iter() {
         write!(write, "{}", line).unwrap();
@@ -400,6 +425,7 @@ pub fn gen_proof_solidity_calldata<C: Circuit<Fp> + CircuitExt<Fp>>(
     let instances = circuit.instances();
 
     let pf_time = start_timer!(|| "Creating proof");
+    // To generate the proof calldata, make sure you have installed `solc`
     let proof_calldata = gen_evm_proof_shplonk(params, pk, circuit, instances.clone());
     end_timer!(pf_time);
 

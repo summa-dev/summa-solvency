@@ -1,5 +1,5 @@
 use crate::merkle_sum_tree::Entry;
-use num_bigint::BigInt;
+use num_bigint::BigUint;
 use serde::Deserialize;
 use std::error::Error;
 use std::fs::File;
@@ -21,7 +21,7 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
         .delimiter(b';') // The fields are separated by a semicolon
         .from_reader(file);
 
-    let mut balances_acc: Vec<BigInt> = vec![BigInt::from(0); N_ASSETS];
+    let mut balances_acc: Vec<BigUint> = vec![BigUint::from(0 as usize); N_ASSETS];
 
     for result in rdr.deserialize() {
         let record: CsvEntry = result?;
@@ -29,10 +29,10 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
         // Split the balances string into separate balance strings
         let balance_strs: Vec<&str> = record.balances.split(',').collect();
 
-        // Parse each balance string as a BigInt
-        let balances_big_int: Vec<BigInt> = balance_strs
+        // Parse each balance string as a BigUint
+        let balances_big_int: Vec<BigUint> = balance_strs
             .into_iter()
-            .map(|balance_str| BigInt::parse_bytes(balance_str.as_bytes(), 10).unwrap())
+            .map(|balance_str| BigUint::parse_bytes(balance_str.as_bytes(), 10).unwrap())
             .collect();
 
         balances_acc = balances_acc
@@ -47,7 +47,7 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
 
     // Iterate through the balance accumulator and throw error if any balance is not in range 0, 2 ** 64:
     for balance in balances_acc {
-        if balance >= BigInt::from(2).pow(64 as u32) {
+        if balance >= BigUint::from(2 as usize).pow(64 as u32) {
             return Err(
                 "Accumulated balance is not in the expected range, proof generation will fail!"
                     .into(),
