@@ -159,27 +159,8 @@ impl<const LEVELS: usize, const L: usize, const N_ASSETS: usize, const N_BYTES: 
     pub fn generate_proof_of_solvency(
         &self,
         asset_contract_addresses: Vec<String>,
-        asset_sum: Option<[Fp; N_ASSETS]>,
+        asset_sums: [Fp; N_ASSETS],
     ) -> Result<(SolvencyProof, Vec<String>), &'static str> {
-        // For each asset, identified by its contract address, fetch the sum of all balances owned by the accounts contained in the snapshot
-        let asset_sums: [Fp; N_ASSETS] = match asset_sum {
-            Some(sum) => sum,
-            None => {
-                let fetched_asset_sums = fetch_asset_sums(
-                    self.proof_of_account_ownership.addresses.clone(),
-                    asset_contract_addresses.clone(),
-                )
-                .map_err(|_| "Could not fetch asset sums")?;
-
-                fetched_asset_sums
-                    .iter()
-                    .map(|x| Fp::from(*x))
-                    .collect::<Vec<Fp>>()
-                    .try_into()
-                    .map_err(|_| "Failed to convert asset sums to Fp")?
-            }
-        };
-
         let circuit = SolvencyCircuit::<L, N_ASSETS, N_BYTES>::init(self.mst.clone(), asset_sums);
 
         let calldata = gen_proof_solidity_calldata(
@@ -273,7 +254,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     fn test_generate_solvency_proof() {
         let snapshot = initialize_snapshot();
 
@@ -282,8 +262,13 @@ mod tests {
             "0x220b71671b649c03714da9c621285943f3cbcdc6".to_string(), // ERC20 token address
         ];
 
-        let calldata = snapshot
-            .generate_proof_of_solvency(asset_addresses.clone(), None)
+        // In this test, we assume that the balances of the accounts in the snapshot are 556863 for both assets
+        // In a live environment, Should fetch balances from on-chain via `fetch_asset_sums` method in `fetch.rs`.
+        let calldata: (SolvencyProof, Vec<String>) = snapshot
+            .generate_proof_of_solvency(
+                asset_addresses.clone(),
+                [Fp::from(556863), Fp::from(556863)],
+            )
             .unwrap();
 
         assert_eq!(calldata.0.public_inputs.len(), 1 + N_ASSETS);

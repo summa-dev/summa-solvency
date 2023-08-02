@@ -1,3 +1,3 @@
 pub mod generated;
 pub(crate) mod signer;
-mod tests;
+pub(crate) mod tests;
