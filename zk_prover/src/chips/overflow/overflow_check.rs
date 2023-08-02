@@ -161,7 +161,7 @@ impl<const N_BYTES: usize> OverflowChip<N_BYTES> {
     }
 
     /// Loads the lookup table with values from `0` to `2^8 - 1`
-    pub fn load(&self, layouter: &mut impl Layouter<Fp>) -> Result<(), Error> {
+    pub fn load(&self, mut layouter: impl Layouter<Fp>) -> Result<(), Error> {
         let range = 1 << (8 as usize);
 
         layouter.assign_region(
