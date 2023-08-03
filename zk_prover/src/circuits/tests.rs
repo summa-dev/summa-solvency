@@ -892,7 +892,7 @@ mod test {
 
         let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
-        let root = BitMapBackend::new("prints/mst-inclusion-layout.png", (2048, 16384))
+        let root = BitMapBackend::new("prints/mst-inclusion-layout.png", (2048, 32768))
             .into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root
@@ -917,7 +917,7 @@ mod test {
         let circuit = SolvencyCircuit::<N_ASSETS>::init(merkle_sum_tree, asset_sums);
 
         let root =
-            BitMapBackend::new("prints/solvency-layout.png", (2048, 16384)).into_drawing_area();
+            BitMapBackend::new("prints/solvency-layout.png", (2048, 32768)).into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root.titled("Solvency Layout", ("sans-serif", 60)).unwrap();
 
@@ -960,7 +960,7 @@ mod test {
 
         let circuit = EcdsaVerifyCircuit::init(public_key, r, s, msg_hash);
 
-        let root = BitMapBackend::new("prints/ecdsa-layout.png", (2048, 16384)).into_drawing_area();
+        let root = BitMapBackend::new("prints/ecdsa-layout.png", (2048, 32768)).into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root.titled("ECDSA Layout", ("sans-serif", 60)).unwrap();
 
