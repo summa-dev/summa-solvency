@@ -84,69 +84,25 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         }
     }
 
-    /// Assigns the entry hash and balances to the tree following this layout on a single column and returns the assigned cells:
-    ///
-    /// | a |
-    /// | -- |
-    /// | entry hash |
-    /// | entry_balance_0 |
-    /// | entry_balance_1 |
-    /// | ... |
-    /// | entry_balance_N |
-    pub fn assign_entry_hash_and_balances(
+    /// Generic method to assign a value to a cell in the witness table to advice column `column_index` and offset `offset`.
+    pub fn assign_value(
         &self,
         mut layouter: impl Layouter<Fp>,
-        entry_hash: Fp,
-        entry_balances: &[Fp],
-    ) -> Result<(AssignedCell<Fp, Fp>, Vec<AssignedCell<Fp, Fp>>), Error> {
-        let (entry_hash_cell, entry_balance_cells) = layouter.assign_region(
-            || "assign entry hash",
-            |mut region| {
-                let hash = region.assign_advice(
-                    || "entry hash",
-                    self.config.advice[0],
-                    0,
-                    || Value::known(entry_hash),
-                )?;
-
-                let balances: Vec<AssignedCell<Fp, Fp>> = (0..N_ASSETS)
-                    .map(|i| {
-                        region.assign_advice(
-                            || "entry balances",
-                            self.config.advice[0],
-                            i + 1,
-                            || Value::known(entry_balances[i]),
-                        )
-                    })
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                Ok((hash, balances))
-            },
-        )?;
-
-        Ok((entry_hash_cell, entry_balance_cells))
-    }
-
-    // Assigns the swap bit to a cell and returns it
-    pub fn assing_swap_bit(
-        &self,
-        mut layouter: impl Layouter<Fp>,
-        swap_bit: Fp,
+        value: Fp,
+        column_index: usize,
+        offset: usize,
     ) -> Result<AssignedCell<Fp, Fp>, Error> {
-        let swap_bit_cell = layouter.assign_region(
-            || "assign swap bit",
+        layouter.assign_region(
+            || "assign value",
             |mut region| {
-                let swap_bit_cell = region.assign_advice(
-                    || "swap bit",
-                    self.config.advice[0],
-                    0,
-                    || Value::known(swap_bit),
-                )?;
-
-                Ok(swap_bit_cell)
+                region.assign_advice(
+                    || "value",
+                    self.config.advice[column_index],
+                    offset,
+                    || Value::known(value),
+                )
             },
-        )?;
-        Ok(swap_bit_cell)
+        )
     }
 
     /// Assign the hashes for node in a region following this layout on 3 advice columns:

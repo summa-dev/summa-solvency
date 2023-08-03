@@ -21,6 +21,16 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
         })
     }
 
+    pub fn init_empty() -> Self {
+        let empty_balances: [BigUint; N_ASSETS] = std::array::from_fn(|_| BigUint::from(0u32));
+
+        Entry {
+            username_to_big_int: BigUint::from(0u32),
+            balances: empty_balances,
+            username: "".to_string(),
+        }
+    }
+
     pub fn compute_leaf(&self) -> Node<N_ASSETS>
     where
         [usize; N_ASSETS + 1]: Sized,

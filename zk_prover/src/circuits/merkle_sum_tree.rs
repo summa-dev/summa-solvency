@@ -2,7 +2,7 @@ use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
-use crate::merkle_sum_tree::{big_uint_to_fp, MerkleSumTree};
+use crate::merkle_sum_tree::{big_uint_to_fp, Entry, MerkleSumTree};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
@@ -19,15 +19,13 @@ use snark_verifier_sdk::CircuitExt;
 ///
 /// # Fields
 ///
-/// * `leaf_hash`: The hash of the leaf to be verified inclusion of
-/// * `leaf_balances`: The balances of the leaf to be verified inclusion of. The length of this vector is N_ASSETS
+/// * `entry`: The entry to be verified inclusion of.
 /// * `path_element_hashes`: The hashes of the path elements from the leaf to root. The length of this vector is LEVELS
 /// * `path_element_balances`: The balances of the path elements from the leaf to the root. The length of this vector is LEVELS
 /// * `path_indices`: The boolean indices of the path elements from the leaf to the root. 0 indicates that the element is on the right to the path, 1 indicates that the element is on the left to the path. The length of this vector is LEVELS
 #[derive(Clone)]
 pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize> {
-    pub leaf_hash: Fp,
-    pub leaf_balances: Vec<Fp>,
+    pub entry: Entry<N_ASSETS>,
     pub path_element_hashes: Vec<Fp>,
     pub path_element_balances: Vec<[Fp; N_ASSETS]>,
     pub path_indices: Vec<Fp>,
@@ -38,6 +36,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize> CircuitExt<Fp>
     for MstInclusionCircuit<LEVELS, N_ASSETS>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
+    [usize; N_ASSETS + 1]: Sized,
 {
     /// Returns the number of public inputs of the circuit. It is 2, namely the laef hash to be verified inclusion of and the root hash of the merkle sum tree.
     fn num_instance(&self) -> Vec<usize> {
@@ -45,15 +44,14 @@ where
     }
     /// Returns the values of the public inputs of the circuit. Namely the leaf hash to be verified inclusion of and the root hash of the merkle sum tree.
     fn instances(&self) -> Vec<Vec<Fp>> {
-        vec![vec![self.leaf_hash, self.root_hash]]
+        vec![vec![self.entry.compute_leaf().hash, self.root_hash]]
     }
 }
 
 impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_ASSETS> {
     pub fn init_empty() -> Self {
         Self {
-            leaf_hash: Fp::zero(),
-            leaf_balances: vec![Fp::zero(); N_ASSETS],
+            entry: Entry::init_empty(),
             path_element_hashes: vec![Fp::zero(); LEVELS],
             path_element_balances: vec![[Fp::zero(); N_ASSETS]; LEVELS],
             path_indices: vec![Fp::zero(); LEVELS],
@@ -73,13 +71,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_A
         assert_eq!(proof.sibling_sums.len(), LEVELS);
 
         Self {
-            leaf_hash: proof.entry.compute_leaf().hash,
-            leaf_balances: proof
-                .entry
-                .balances()
-                .iter()
-                .map(big_uint_to_fp)
-                .collect::<Vec<_>>(),
+            entry: proof.entry,
             path_element_hashes: proof.sibling_hashes,
             path_element_balances: proof.sibling_sums,
             path_indices: proof.path_indices,
@@ -96,7 +88,8 @@ impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_A
 /// # Fields
 ///
 /// * `merkle_sum_tree_config`: Configuration for the merkle sum tree
-/// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1
+/// * `poseidon_entry_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1 and input length of 1 + N_ASSETS. Needed to perform the hashing from the entry to the leaf.
+/// * `poseidon_middle_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1 and input length of 2 * (1 + N_ASSETS). Needed to perform hashings from the leaf to the root.
 /// * `overflow_check_config`: Configuration for the overflow check chip
 /// * `instance`: Instance column used to store the public inputs
 
@@ -106,7 +99,8 @@ where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
-    pub poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
+    pub poseidon_entry_config: PoseidonConfig<2, 1, { 1 + N_ASSETS }>,
+    pub poseidon_middle_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
     pub overflow_check_config: OverflowCheckConfig<8>,
     pub instance: Column<Instance>,
 }
@@ -128,14 +122,23 @@ where
         // we need 1 complex selector for the lookup check
         let toggle_lookup_check = meta.complex_selector();
 
-        // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, #WIDTH fixed columns for rc_a and #WIDTH for rc_b
-        let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::configure(
+        let poseidon_entry_config = PoseidonChip::<PoseidonSpec, 2, 1, { 1 + N_ASSETS }>::configure(
             meta,
             advices[0..2].try_into().unwrap(),
             advices[2],
             fixed_columns[0..2].try_into().unwrap(),
             fixed_columns[2..4].try_into().unwrap(),
         );
+
+        // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, #WIDTH fixed columns for rc_a and #WIDTH for rc_b
+        let poseidon_middle_config =
+            PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::configure(
+                meta,
+                advices[0..2].try_into().unwrap(),
+                advices[2],
+                fixed_columns[0..2].try_into().unwrap(),
+                fixed_columns[2..4].try_into().unwrap(),
+            );
 
         // enable permutation for all the advice columns
         for col in &advices {
@@ -163,7 +166,8 @@ where
 
         Self {
             merkle_sum_tree_config,
-            poseidon_config,
+            poseidon_entry_config,
+            poseidon_middle_config,
             overflow_check_config,
             instance,
         }
@@ -205,19 +209,59 @@ where
         // build auxiliary chips
         let merkle_sum_tree_chip =
             MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
-        let poseidon_chip = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::construct(
-            config.poseidon_config.clone(),
+
+        let poseidon_entry_chip = PoseidonChip::<PoseidonSpec, 2, 1, { 1 + N_ASSETS }>::construct(
+            config.poseidon_entry_config.clone(),
         );
+
+        let poseidon_middle_chip =
+            PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::construct(
+                config.poseidon_middle_config.clone(),
+            );
+
         let overflow_check_chip =
             OverflowChip::<8>::construct(config.overflow_check_config.clone());
 
-        // Assign the leaf hash and the leaf balances
-        let (mut current_hash, mut current_balances) = merkle_sum_tree_chip
-            .assign_entry_hash_and_balances(
-                layouter.namespace(|| "assign leaf hash and balances"),
-                self.leaf_hash,
-                &self.leaf_balances,
+        // Assign the entry username
+        let username = merkle_sum_tree_chip.assign_value(
+            layouter.namespace(|| "assign entry username"),
+            big_uint_to_fp(self.entry.username_to_big_int()),
+            0,
+            0,
+        )?;
+
+        // Assign the entry balances
+        let mut current_balances = vec![];
+
+        for i in 0..N_ASSETS {
+            let balance = merkle_sum_tree_chip.assign_value(
+                layouter.namespace(|| format!("assign entry balance {}", i)),
+                big_uint_to_fp(&self.entry.balances()[i]),
+                1,
+                0,
             )?;
+            current_balances.push(balance);
+        }
+
+        // Perform the hashing to username and balances to obtain the leaf hash
+        // create an hash_input array of length 1 + N_ASSETS that contains the entry username and the entry balances
+        let entry_hasher_input_vec: Vec<AssignedCell<Fp, Fp>> = [username]
+            .iter()
+            .chain(current_balances.iter())
+            .map(|x| x.to_owned())
+            .collect();
+
+        let entry_hasher_input: [AssignedCell<Fp, Fp>; 1 + N_ASSETS] =
+            match entry_hasher_input_vec.try_into() {
+                Ok(arr) => arr,
+                Err(_) => panic!("Failed to convert Vec to Array"),
+            };
+
+        // compute the entry hash
+        let mut current_hash = poseidon_entry_chip.hash(
+            layouter.namespace(|| "perform poseidon entry hash"),
+            entry_hasher_input,
+        )?;
 
         // expose the first current hash, namely the leaf hash, as public input
         config.expose_public(layouter.namespace(|| "public leaf hash"), &current_hash, 0)?;
@@ -229,9 +273,11 @@ where
             let namespace_prefix = format!("level {}", level);
 
             // For each level assign the index to the circuit
-            let swap_bit_level = merkle_sum_tree_chip.assing_swap_bit(
+            let swap_bit_level = merkle_sum_tree_chip.assign_value(
                 layouter.namespace(|| format!("{}: assign swap bit", namespace_prefix)),
                 self.path_indices[level],
+                0,
+                0,
             )?;
 
             // For each level assign the hashes to the circuit
@@ -287,8 +333,8 @@ where
                 right_balances.push(right_balance);
             }
 
-            // create an hash_input array of length L that contains the left hash, the left balances, the right hash and the right balances
-            let hash_input_vec: Vec<AssignedCell<Fp, Fp>> = [hash_left_current]
+            // create an hash_input array of length  2 * (1 + N_ASSETS)  that contains the left hash, the left balances, the right hash and the right balances
+            let middle_hasher_input_vec: Vec<AssignedCell<Fp, Fp>> = [hash_left_current]
                 .iter()
                 .chain(left_balances.iter())
                 .chain([hash_right_current].iter())
@@ -296,16 +342,16 @@ where
                 .map(|x| x.to_owned())
                 .collect();
 
-            let hash_input: [AssignedCell<Fp, Fp>; 2 * (1 + N_ASSETS)] =
-                match hash_input_vec.try_into() {
+            let middle_hasher_input: [AssignedCell<Fp, Fp>; 2 * (1 + N_ASSETS)] =
+                match middle_hasher_input_vec.try_into() {
                     Ok(arr) => arr,
                     Err(_) => panic!("Failed to convert Vec to Array"),
                 };
 
             // compute the next hash
-            let computed_hash = poseidon_chip.hash(
+            let computed_hash = poseidon_middle_chip.hash(
                 layouter.namespace(|| format!("{}: perform poseidon hash", namespace_prefix)),
-                hash_input,
+                middle_hasher_input,
             )?;
 
             current_balances = next_balances;
