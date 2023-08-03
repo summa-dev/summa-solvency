@@ -7,7 +7,7 @@ use num_bigint::BigUint;
 /// It contains the username and the balances of the user.
 #[derive(Clone, Debug)]
 pub struct Entry<const N_ASSETS: usize> {
-    username_to_big_int: BigUint,
+    username_to_big_uint: BigUint,
     balances: [BigUint; N_ASSETS],
     username: String,
 }
@@ -15,7 +15,7 @@ pub struct Entry<const N_ASSETS: usize> {
 impl<const N_ASSETS: usize> Entry<N_ASSETS> {
     pub fn new(username: String, balances: [BigUint; N_ASSETS]) -> Result<Self, &'static str> {
         Ok(Entry {
-            username_to_big_int: big_intify_username(&username),
+            username_to_big_uint: big_intify_username(&username),
             balances,
             username,
         })
@@ -25,7 +25,7 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
         let empty_balances: [BigUint; N_ASSETS] = std::array::from_fn(|_| BigUint::from(0u32));
 
         Entry {
-            username_to_big_int: BigUint::from(0u32),
+            username_to_big_uint: BigUint::from(0u32),
             balances: empty_balances,
             username: "".to_string(),
         }
@@ -37,7 +37,7 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
     {
         Node {
             hash: poseidon_entry::<N_ASSETS>(
-                big_uint_to_fp(&self.username_to_big_int),
+                big_uint_to_fp(&self.username_to_big_uint),
                 self.balances
                     .iter()
                     .map(big_uint_to_fp)
@@ -60,8 +60,8 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
         &self.balances
     }
 
-    pub fn username_to_big_int(&self) -> &BigUint {
-        &self.username_to_big_int
+    pub fn username_to_big_uint(&self) -> &BigUint {
+        &self.username_to_big_uint
     }
 
     pub fn username(&self) -> &str {

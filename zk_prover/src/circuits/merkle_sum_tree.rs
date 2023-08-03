@@ -225,7 +225,7 @@ where
         // Assign the entry username
         let username = merkle_sum_tree_chip.assign_value(
             layouter.namespace(|| "assign entry username"),
-            big_uint_to_fp(self.entry.username_to_big_int()),
+            big_uint_to_fp(self.entry.username_to_big_uint()),
             0,
             0,
         )?;
