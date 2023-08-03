@@ -98,9 +98,9 @@ mod test {
     }
 
     #[test]
-    fn test_big_int_conversion() {
-        let big_int = 3.to_biguint().unwrap();
-        let fp = big_uint_to_fp(&big_int);
+    fn test_big_uint_conversion() {
+        let big_uint = 3.to_biguint().unwrap();
+        let fp = big_uint_to_fp(&big_uint);
 
         assert_eq!(fp, 3.into());
 
