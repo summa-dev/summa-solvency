@@ -227,7 +227,7 @@ where
             layouter.namespace(|| "assign entry username"),
             big_uint_to_fp(self.entry.username_to_big_uint()),
             0,
-            0,
+            "entry username",
         )?;
 
         // Assign the entry balances
@@ -238,7 +238,7 @@ where
                 layouter.namespace(|| format!("assign entry balance {}", i)),
                 big_uint_to_fp(&self.entry.balances()[i]),
                 1,
-                0,
+                "entry balance",
             )?;
             current_balances.push(balance);
         }
@@ -277,7 +277,7 @@ where
                 layouter.namespace(|| format!("{}: assign swap bit", namespace_prefix)),
                 self.path_indices[level],
                 0,
-                0,
+                "swap bit",
             )?;
 
             // For each level assign the hashes to the circuit

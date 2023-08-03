@@ -275,7 +275,7 @@ where
             layouter.namespace(|| "assign penultimate left node hash"),
             self.left_node_hash,
             0,
-            0,
+            "left node hash",
         )?;
 
         let left_node_balances = self
@@ -287,7 +287,7 @@ where
                     layouter.namespace(|| format!("assign entry balance {}", i)),
                     *balance,
                     1,
-                    0,
+                    "left node balance",
                 )
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -297,7 +297,7 @@ where
             layouter.namespace(|| "assign swap bit"),
             Fp::from(0),
             2,
-            0,
+            "swap bit",
         )?;
 
         // assign penultimate nodes hashes according to the swap bit
