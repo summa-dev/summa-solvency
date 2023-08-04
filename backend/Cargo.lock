@@ -728,12 +728,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dotenv"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
-
-[[package]]
 name = "dunce"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -744,33 +738,7 @@ name = "ecc"
 version = "0.1.0"
 source = "git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2023_04_20#f72db265aa3cebe297c9b9816e940d0e1d400886"
 dependencies = [
- "integer 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2023_04_20)",
- "num-bigint",
- "num-integer",
- "num-traits",
- "rand",
- "subtle",
-]
-
-[[package]]
-name = "ecc"
-version = "0.1.0"
-source = "git+https://github.com/privacy-scaling-explorations/halo2wrong#2367335deb71737ac022da0b1a3623aea8642109"
-dependencies = [
- "integer 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong)",
- "num-bigint",
- "num-integer",
- "num-traits",
- "rand",
- "subtle",
-]
-
-[[package]]
-name = "ecdsa"
-version = "0.1.0"
-source = "git+https://github.com/privacy-scaling-explorations/halo2wrong#2367335deb71737ac022da0b1a3623aea8642109"
-dependencies = [
- "ecc 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong)",
+ "integer",
  "num-bigint",
  "num-integer",
  "num-traits",
@@ -916,7 +884,7 @@ dependencies = [
 [[package]]
 name = "eth-types"
 version = "0.1.0"
-source = "git+https://github.com/privacy-scaling-explorations/zkevm-circuits#0403a04aa8219f1be65afc82ebb0d6d7818846af"
+source = "git+https://github.com/privacy-scaling-explorations/zkevm-circuits#d6128b16303e2bad7763d404eeaeea8fa056d78b"
 dependencies = [
  "ethers-core",
  "ethers-signers",
@@ -1432,7 +1400,7 @@ dependencies = [
 [[package]]
 name = "gadgets"
 version = "0.1.0"
-source = "git+https://github.com/privacy-scaling-explorations/zkevm-circuits#0403a04aa8219f1be65afc82ebb0d6d7818846af"
+source = "git+https://github.com/privacy-scaling-explorations/zkevm-circuits#d6128b16303e2bad7763d404eeaeea8fa056d78b"
 dependencies = [
  "digest 0.7.6",
  "eth-types",
@@ -1584,17 +1552,6 @@ dependencies = [
 name = "halo2wrong"
 version = "0.1.0"
 source = "git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2023_04_20#f72db265aa3cebe297c9b9816e940d0e1d400886"
-dependencies = [
- "halo2_proofs",
- "num-bigint",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "halo2wrong"
-version = "0.1.0"
-source = "git+https://github.com/privacy-scaling-explorations/halo2wrong#2367335deb71737ac022da0b1a3623aea8642109"
 dependencies = [
  "halo2_proofs",
  "num-bigint",
@@ -1869,20 +1826,7 @@ name = "integer"
 version = "0.1.0"
 source = "git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2023_04_20#f72db265aa3cebe297c9b9816e940d0e1d400886"
 dependencies = [
- "maingate 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2023_04_20)",
- "num-bigint",
- "num-integer",
- "num-traits",
- "rand",
- "subtle",
-]
-
-[[package]]
-name = "integer"
-version = "0.1.0"
-source = "git+https://github.com/privacy-scaling-explorations/halo2wrong#2367335deb71737ac022da0b1a3623aea8642109"
-dependencies = [
- "maingate 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong)",
+ "maingate",
  "num-bigint",
  "num-integer",
  "num-traits",
@@ -1949,7 +1893,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cadb76004ed8e97623117f3df85b17aaa6626ab0b0831e6573f104df16cd1bcc"
 dependencies = [
  "cfg-if",
- "ecdsa 0.16.7",
+ "ecdsa",
  "elliptic-curve",
  "once_cell",
  "sha2 0.10.7",
@@ -2089,20 +2033,7 @@ name = "maingate"
 version = "0.1.0"
 source = "git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2023_04_20#f72db265aa3cebe297c9b9816e940d0e1d400886"
 dependencies = [
- "halo2wrong 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2023_04_20)",
- "num-bigint",
- "num-integer",
- "num-traits",
- "rand",
- "subtle",
-]
-
-[[package]]
-name = "maingate"
-version = "0.1.0"
-source = "git+https://github.com/privacy-scaling-explorations/halo2wrong#2367335deb71737ac022da0b1a3623aea8642109"
-dependencies = [
- "halo2wrong 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong)",
+ "halo2wrong",
  "num-bigint",
  "num-integer",
  "num-traits",
@@ -3368,7 +3299,7 @@ name = "snark-verifier"
 version = "0.1.0"
 source = "git+https://github.com/privacy-scaling-explorations/snark-verifier#27f8b205d64dfe960ffc8bce1891da491dec54c9"
 dependencies = [
- "ecc 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2023_04_20)",
+ "ecc",
  "halo2_proofs",
  "halo2curves",
  "hex",
@@ -3391,7 +3322,7 @@ source = "git+https://github.com/privacy-scaling-explorations/snark-verifier#27f
 dependencies = [
  "ark-std",
  "bincode",
- "ecc 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2023_04_20)",
+ "ecc",
  "ethereum-types",
  "halo2_proofs",
  "halo2curves",
@@ -3522,7 +3453,6 @@ dependencies = [
  "base64 0.13.1",
  "bincode",
  "csv",
- "dotenv",
  "ethers",
  "futures",
  "halo2_proofs",
@@ -3541,15 +3471,12 @@ version = "0.1.0"
 dependencies = [
  "ark-std",
  "csv",
- "ecc 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong)",
- "ecdsa 0.1.0",
  "ethers",
  "gadgets",
  "halo2_gadgets",
  "halo2_proofs",
  "hex",
  "itertools",
- "maingate 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2023_04_20)",
  "num-bigint",
  "num_cpus",
  "rand",

@@ -13,8 +13,8 @@ use halo2_proofs::poly::Rotation;
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeConfig {
     pub advice: [Column<Advice>; 3],
-    pub bool_and_swap_selector: Selector,
-    pub sum_selector: Selector,
+    bool_and_swap_selector: Selector,
+    sum_selector: Selector,
 }
 
 /// Chip that performs various constraints related to a Merkle Sum Tree data structure such as:
