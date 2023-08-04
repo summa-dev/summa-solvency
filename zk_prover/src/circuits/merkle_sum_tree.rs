@@ -1,7 +1,7 @@
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
-use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
+use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
 use crate::merkle_sum_tree::{big_uint_to_fp, MerkleSumTree};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
@@ -97,7 +97,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_A
 ///
 /// * `merkle_sum_tree_config`: Configuration for the merkle sum tree
 /// * `poseidon_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1
-/// * `overflow_check_config`: Configuration for the overflow check chip
+/// * `range_check_config`: Configuration for the range check chip
 /// * `instance`: Instance column used to store the public inputs
 
 #[derive(Debug, Clone)]
@@ -107,7 +107,7 @@ where
 {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
     pub poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
-    pub overflow_check_config: OverflowCheckConfig<8>,
+    pub range_check_config: RangeCheckConfig<8>,
     pub instance: Column<Instance>,
 }
 
@@ -119,13 +119,13 @@ where
         // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config
         let advices: [Column<Advice>; 3] = std::array::from_fn(|_| meta.advice_column());
 
-        // we need 2 * WIDTH fixed columns for poseidon config + 1 for the overflow check chip
+        // we need 2 * WIDTH fixed columns for poseidon config + 1 for the range check chip
         let fixed_columns: [Column<Fixed>; 5] = std::array::from_fn(|_| meta.fixed_column());
 
-        // we also need 2 selectors for the MerkleSumTreeChip and 1 for the overflow check chip
+        // we also need 2 selectors for the MerkleSumTreeChip and 1 for the range check chip
         let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
 
-        // we need 1 complex selector for the lookup check
+        // we need 1 complex selector for the lookup check in the range check chip
         let toggle_lookup_check = meta.complex_selector();
 
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, #WIDTH fixed columns for rc_a and #WIDTH for rc_b
@@ -149,10 +149,11 @@ where
             selectors[0..2].try_into().unwrap(),
         );
 
-        let overflow_check_config = OverflowChip::<8>::configure(
+        let range_check_config = RangeCheckChip::<8>::configure(
             meta,
             advices[0],
             advices[1],
+            advices[2],
             fixed_columns[4],
             selectors[2],
             toggle_lookup_check,
@@ -164,7 +165,7 @@ where
         Self {
             merkle_sum_tree_config,
             poseidon_config,
-            overflow_check_config,
+            range_check_config,
             instance,
         }
     }
@@ -208,8 +209,7 @@ where
         let poseidon_chip = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::construct(
             config.poseidon_config.clone(),
         );
-        let overflow_check_chip =
-            OverflowChip::<8>::construct(config.overflow_check_config.clone());
+        let range_check_chip = RangeCheckChip::<8>::construct(config.range_check_config.clone());
 
         // Assign the leaf hash and the leaf balances
         let (mut current_hash, mut current_balances) = merkle_sum_tree_chip
@@ -222,8 +222,8 @@ where
         // expose the first current hash, namely the leaf hash, as public input
         config.expose_public(layouter.namespace(|| "public leaf hash"), &current_hash, 0)?;
 
-        // load overflow check chip
-        overflow_check_chip.load(&mut layouter)?;
+        // load range check chip
+        range_check_chip.load(&mut layouter)?;
 
         for level in 0..LEVELS {
             let namespace_prefix = format!("level {}", level);
@@ -262,20 +262,20 @@ where
                         swap_bit_level.clone(),
                     )?;
 
-                // Each balance cell is constrained to be less than the overflow limit
-                overflow_check_chip.assign(
+                // Each balance cell is constrained to be within the range defined by N_BYTES
+                range_check_chip.assign(
                     layouter.namespace(|| {
                         format!(
-                            "{}: asset {}: overflow check left balance",
+                            "{}: asset {}: range check left balance",
                             namespace_prefix, asset
                         )
                     }),
                     &left_balance,
                 )?;
-                overflow_check_chip.assign(
+                range_check_chip.assign(
                     layouter.namespace(|| {
                         format!(
-                            "{}: asset {}: overflow check right balance",
+                            "{}: asset {}: range check right balance",
                             namespace_prefix, asset
                         )
                     }),
@@ -315,12 +315,9 @@ where
         // expose the last current hash, namely the root hash, as public input
         config.expose_public(layouter.namespace(|| "public root hash"), &current_hash, 1)?;
 
-        // perform range check on the balances of the root to make sure these lie in the 2^64 range
+        // perform range check on the balances of the root to make sure these lie in the range defined by N_BYTES
         for balance in current_balances.iter() {
-            overflow_check_chip.assign(
-                layouter.namespace(|| "overflow check root balance"),
-                balance,
-            )?;
+            range_check_chip.assign(layouter.namespace(|| "range check root balance"), balance)?;
         }
 
         Ok(())
