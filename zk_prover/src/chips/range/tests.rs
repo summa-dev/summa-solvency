@@ -157,10 +157,19 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
         // Load the lookup table
         overflow_chip.load(&mut layouter)?;
 
-        // check overflow on a, b and c
-        overflow_chip.assign(layouter.namespace(|| "checking overflow value a"), &a_cell)?;
-        overflow_chip.assign(layouter.namespace(|| "checking overflow value b"), &b_cell)?;
-        overflow_chip.assign(layouter.namespace(|| "checking overflow value c"), &c_cell)?;
+        // check range on a, b and c
+        overflow_chip.assign(
+            layouter.namespace(|| "checking value a is in range"),
+            &a_cell,
+        )?;
+        overflow_chip.assign(
+            layouter.namespace(|| "checking value b is in range"),
+            &b_cell,
+        )?;
+        overflow_chip.assign(
+            layouter.namespace(|| "checking value c is in range"),
+            &c_cell,
+        )?;
 
         Ok(())
     }
@@ -276,5 +285,26 @@ mod testing {
                 ]
             }])
         );
+    }
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_range_check_test() {
+        use plotters::prelude::*;
+
+        let root =
+            BitMapBackend::new("prints/range-check-layout.png", (1024, 3096)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root
+            .titled("Range Check Layout", ("sans-serif", 60))
+            .unwrap();
+
+        let circuit = TestCircuit::<4> {
+            a: Fp::from(0x1f2f3f4f),
+            b: Fp::from(1),
+        };
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(9, &circuit, &root)
+            .unwrap();
     }
 }

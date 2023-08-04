@@ -40,7 +40,7 @@ pub struct RangeCheckConfig<const N_BYTES: usize> {
 /// |  3  |             | 0x3f                | 0x1f2f3f       | 1                        | 1                   |
 /// |  4  |             | 0x4f                | 0x1f2f3f4f     | 1                        | 1                   |
 ///
-/// The column decomposed_value contains the decomposition of `value` in #N_BYTES chunks, big-endian.
+/// The column decomposed_value contains the decomposition of `value` in #N_BYTES bytes, big-endian.
 /// The column running_sum contains the running sum of the values in decomposed_value. In particular the running_sum in a particular row is the result of concatenating the prev running_sum with the current decomposed_value.
 /// The contraints that are enforced are:
 /// - (running_sum(prev) << 8) + decomposed_value(cur) = running_sum(cur) (enabled by toggle_running_sum_check)
@@ -56,7 +56,7 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
         Self { config }
     }
 
-    /// Configures the Overflow Chip
+    /// Configures the Range Chip
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
         value: Column<Advice>,
