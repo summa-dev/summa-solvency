@@ -12,7 +12,7 @@ struct CsvEntry {
 }
 
 /// Parses a CSV file stored at path into a vector of Entries
-pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
+pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize, const N_BYTES: usize>(
     path: P,
 ) -> Result<Vec<Entry<N_ASSETS>>, Box<dyn Error>> {
     let mut entries = Vec::new();
@@ -45,9 +45,9 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
         entries.push(entry);
     }
 
-    // Iterate through the balance accumulator and throw error if any balance is not in range 0, 2 ** 64:
+    // Iterate through the balance accumulator and throw error if any balance is not in range 0, 2 ^ (8 * N_BYTES):
     for balance in balances_acc {
-        if balance >= BigUint::from(2 as usize).pow(64 as u32) {
+        if balance >= BigUint::from(2 as usize).pow(8 * N_BYTES as u32) {
             return Err(
                 "Accumulated balance is not in the expected range, proof generation will fail!"
                     .into(),

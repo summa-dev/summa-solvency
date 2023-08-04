@@ -23,8 +23,8 @@ use summa_solvency::{
 use crate::apis::csv_parser::parse_signature_csv;
 use crate::apis::fetch::fetch_asset_sums;
 
-pub struct Snapshot<const LEVELS: usize, const N_ASSETS: usize> {
-    mst: MerkleSumTree<N_ASSETS>,
+pub struct Snapshot<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
+    mst: MerkleSumTree<N_ASSETS, N_BYTES>,
     proof_of_account_ownership: AccountOwnershipProof,
     trusted_setup: [SetupArtifcats; 2], // the first trusted setup relates to MstInclusionCircuit, the second related to SolvencyCircuit
 }
@@ -88,7 +88,8 @@ impl AccountOwnershipProof {
     }
 }
 
-impl<const LEVELS: usize, const N_ASSETS: usize> Snapshot<LEVELS, N_ASSETS>
+impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
+    Snapshot<LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; N_ASSETS + 1]: Sized,
     [usize; 2 * (1 + N_ASSETS)]: Sized,
@@ -98,13 +99,13 @@ where
         signature_csv_path: &str,
         message: String,
         params_path: &str,
-    ) -> Result<Snapshot<LEVELS, N_ASSETS>, Box<dyn std::error::Error>> {
+    ) -> Result<Snapshot<LEVELS, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>> {
         let (addresses, signatures) = parse_signature_csv(signature_csv_path).unwrap();
 
-        let mst: MerkleSumTree<N_ASSETS> = MerkleSumTree::<N_ASSETS>::new(entry_csv_path).unwrap();
+        let mst = MerkleSumTree::<N_ASSETS, N_BYTES>::new(entry_csv_path).unwrap();
 
-        let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init_empty();
-        let solvency_circuit = SolvencyCircuit::<N_ASSETS>::init_empty();
+        let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
+        let solvency_circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init_empty();
 
         // get k from ptau file name
         let parts: Vec<&str> = params_path.split("-").collect();
@@ -141,7 +142,7 @@ where
         yul_output_path: &str,
         sol_output_path: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let _deployment_code = gen_evm_verifier_shplonk::<SolvencyCircuit<N_ASSETS>>(
+        let _deployment_code = gen_evm_verifier_shplonk::<SolvencyCircuit<N_ASSETS, N_BYTES>>(
             &self.trusted_setup[1].0,
             &self.trusted_setup[1].2,
             vec![1 + N_ASSETS],
@@ -158,7 +159,7 @@ where
         asset_contract_addresses: Vec<String>,
         asset_sums: [Fp; N_ASSETS],
     ) -> Result<(SolvencyProof, Vec<String>), &'static str> {
-        let circuit = SolvencyCircuit::<N_ASSETS>::init(self.mst.clone(), asset_sums);
+        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(self.mst.clone(), asset_sums);
 
         let calldata = gen_proof_solidity_calldata(
             &self.trusted_setup[1].0,
@@ -179,7 +180,8 @@ where
         &self,
         user_index: usize,
     ) -> Result<MstInclusionProof, &'static str> {
-        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(self.mst.clone(), user_index);
+        let circuit =
+            MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(self.mst.clone(), user_index);
 
         let proof = full_prover(
             &self.trusted_setup[0].0,
@@ -213,12 +215,13 @@ mod tests {
 
     const N_ASSETS: usize = 2;
     const LEVELS: usize = 4;
+    const N_BYTES: usize = 8;
 
-    fn initialize_snapshot() -> Snapshot<LEVELS, N_ASSETS> {
+    fn initialize_snapshot() -> Snapshot<LEVELS, N_ASSETS, N_BYTES> {
         let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
         let signature_csv = "src/apis/csv/signatures.csv";
 
-        Snapshot::<LEVELS, N_ASSETS>::new(
+        Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(
             entry_csv,
             signature_csv,
             "Summa proof of solvency for CryptoExchange".to_string(),

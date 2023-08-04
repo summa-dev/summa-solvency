@@ -16,6 +16,7 @@ use snark_verifier_sdk::CircuitExt;
 ///
 /// * `LEVELS`: The number of levels of the merkle sum tree
 /// * `N_ASSETS`: The number of assets for which the solvency is verified.
+/// * `N_BYTES`: The number of bytes in which the balances should lie
 ///
 /// # Fields
 ///
@@ -25,7 +26,7 @@ use snark_verifier_sdk::CircuitExt;
 /// * `path_element_balances`: The balances of the path elements from the leaf to the root. The length of this vector is LEVELS
 /// * `path_indices`: The boolean indices of the path elements from the leaf to the root. 0 indicates that the element is on the right to the path, 1 indicates that the element is on the left to the path. The length of this vector is LEVELS
 #[derive(Clone)]
-pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize> {
+pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     pub leaf_hash: Fp,
     pub leaf_balances: Vec<Fp>,
     pub path_element_hashes: Vec<Fp>,
@@ -34,8 +35,8 @@ pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize> {
     pub root_hash: Fp,
 }
 
-impl<const LEVELS: usize, const N_ASSETS: usize> CircuitExt<Fp>
-    for MstInclusionCircuit<LEVELS, N_ASSETS>
+impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
+    for MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
@@ -49,7 +50,9 @@ where
     }
 }
 
-impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_ASSETS> {
+impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
+    MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
+{
     pub fn init_empty() -> Self {
         Self {
             leaf_hash: Fp::zero(),
@@ -62,7 +65,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_A
     }
 
     /// Initializes the circuit with the merkle sum tree and the index of the user of which the inclusion is to be verified.
-    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, user_index: usize) -> Self
+    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS, N_BYTES>, user_index: usize) -> Self
     where
         [usize; N_ASSETS + 1]:,
     {
@@ -92,6 +95,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_A
 /// # Type Parameters
 ///
 /// * `N_ASSETS`: The number of assets for which the solvency is verified.
+/// * `N_BYTES`: The number of bytes in which the balances should lie
 ///
 /// # Fields
 ///
@@ -101,17 +105,17 @@ impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_A
 /// * `instance`: Instance column used to store the public inputs
 
 #[derive(Debug, Clone)]
-pub struct MstInclusionConfig<const N_ASSETS: usize>
+pub struct MstInclusionConfig<const N_ASSETS: usize, const N_BYTES: usize>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
     pub poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
-    pub range_check_config: RangeCheckConfig<8>,
+    pub range_check_config: RangeCheckConfig<N_BYTES>,
     pub instance: Column<Instance>,
 }
 
-impl<const N_ASSETS: usize> MstInclusionConfig<N_ASSETS>
+impl<const N_ASSETS: usize, const N_BYTES: usize> MstInclusionConfig<N_ASSETS, N_BYTES>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
@@ -149,7 +153,7 @@ where
             selectors[0..2].try_into().unwrap(),
         );
 
-        let range_check_config = RangeCheckChip::<8>::configure(
+        let range_check_config = RangeCheckChip::<N_BYTES>::configure(
             meta,
             advices[0],
             advices[1],
@@ -181,12 +185,12 @@ where
     }
 }
 
-impl<const LEVELS: usize, const N_ASSETS: usize> Circuit<Fp>
-    for MstInclusionCircuit<LEVELS, N_ASSETS>
+impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
+    for MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
-    type Config = MstInclusionConfig<N_ASSETS>;
+    type Config = MstInclusionConfig<N_ASSETS, N_BYTES>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -195,7 +199,7 @@ where
 
     /// Configures the circuit
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        MstInclusionConfig::<N_ASSETS>::configure(meta)
+        MstInclusionConfig::<N_ASSETS, N_BYTES>::configure(meta)
     }
 
     fn synthesize(
@@ -209,7 +213,8 @@ where
         let poseidon_chip = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::construct(
             config.poseidon_config.clone(),
         );
-        let range_check_chip = RangeCheckChip::<8>::construct(config.range_check_config.clone());
+        let range_check_chip =
+            RangeCheckChip::<N_BYTES>::construct(config.range_check_config.clone());
 
         // Assign the leaf hash and the leaf balances
         let (mut current_hash, mut current_balances) = merkle_sum_tree_chip
