@@ -108,28 +108,26 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+        let z = meta.advice_column();
+        let range = meta.fixed_column();
+
         let a = meta.advice_column();
         let b = meta.advice_column();
         let c = meta.advice_column();
-        let range = meta.fixed_column();
 
+        meta.enable_equality(z);
         meta.enable_equality(a);
         meta.enable_equality(b);
         meta.enable_equality(c);
 
+        let constants = meta.fixed_column();
+        meta.enable_constant(constants);
+
         let add_selector = meta.selector();
-        let toggle_running_sum_check = meta.selector();
         let toggle_lookup_check = meta.complex_selector();
 
-        let range_check_config = RangeCheckChip::<N_BYTES>::configure(
-            meta,
-            a,
-            b,
-            c,
-            range,
-            toggle_running_sum_check,
-            toggle_lookup_check,
-        );
+        let range_check_config =
+            RangeCheckChip::<N_BYTES>::configure(meta, z, range, toggle_lookup_check);
 
         let addchip_config = AddChip::configure(meta, a, b, c, add_selector);
 
@@ -204,14 +202,8 @@ mod testing {
     // a = (1 << 16) - 2 = 0xfffe
     // b = 2
     // c = a + b = 0x10000
+    // a and b are within 2 bytes range.
     // c overflows 2 bytes so the circuit should fail.
-    // |     | value               | decomposed_value    | running_sum              | toggle_running_sum_check | toggle_lookup_check |
-    // |-----|-------------        |------               |------                    | ------                   | ------              |
-    // |  0  |  -                  | -                   | 0x00                     | 0                        | 0                   |
-    // |  1  | 0x10000             | 0x01                | 0x01                     | 1                        | 1                   |
-    // |  2  |                     | 0x00                | 0x10000                  | 1                        | 1                   |
-    //
-    // The constraint => (running_sum(prev) << 8) + decomposed_value(cur) = running_sum(cur) should fail at offset 2
     #[test]
     fn test_overflow_16bits() {
         let k = 9;
@@ -223,38 +215,27 @@ mod testing {
         let invalid_prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(
             invalid_prover.verify(),
-            Err(vec![VerifyFailure::ConstraintNotSatisfied {
-                constraint: (
-                    (0, "equality check between running_sum_cur and running_sum_prev << 8 + running_sum_cur").into(),
-                    0,
-                    ""
-                )
-                    .into(),
-                location: FailureLocation::InRegion {
-                    region: (4, "assign values to range check").into(),
-                    offset: 2 // failure happening at row 2
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (4, "assign value to perform range check").into(),
+                        offset: 2
+                    }
                 },
-                cell_values: vec![
-                    (((Any::advice(), 1).into(), 0).into(), "0".to_string()),  // decomposed value (columun 1) at offset 0 (row 2)
-                    (((Any::advice(), 2).into(), -1).into(), "1".to_string()), // running sum (column 2) at offset -1 (row 1) 
-                    (((Any::advice(), 2).into(), 0).into(), "0x10000".to_string()), // running sum (column 2) at offset 0 (row 2)
-                ]
-            }])
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 2 }
+                },
+            ])
         );
     }
 
     // a is the max value within the range (32 bits / 4 bytes)
     // a = 0x-ff-ff-ff-ff
     // b = 1
+    // a and b are within 4 bytes range.
     // c overflows 4 bytes so the circuit should fail.
-    // c = 0x-01-00-00-00-00
-    // |     | value                    | decomposed_value     | running_sum              | toggle_running_sum_check | toggle_lookup_check |
-    // |-----|-------------             |------                |------                    | ------                   | ------              |
-    // |  0  |  -                       | -                    | 0x-00                    | 0                        | 0                   |
-    // |  1  | 0x-01-00-00-00-00        | 0x-1                 | 0x-1                     | 1                        | 1                   |
-    // |  2  |                          | 0x-00                | 0x-1-00                  | 1                        | 1                   |
-    // |  3  |                          | 0x-00                | 0x-1-00-00               | 1                        | 1                   |
-    // |  4  |                          | 0x-00                | 0x-1-00-00-00-00         | 1                        | 1                   |
     #[test]
     fn test_overflow_32bits() {
         let k = 9;
@@ -267,23 +248,19 @@ mod testing {
 
         assert_eq!(
             invalid_prover.verify(),
-            Err(vec![VerifyFailure::ConstraintNotSatisfied {
-                constraint: (
-                    (0, "equality check between running_sum_cur and running_sum_prev << 8 + running_sum_cur").into(),
-                    0,
-                    ""
-                )
-                    .into(),
-                location: FailureLocation::InRegion {
-                    region: (4, "assign values to range check").into(),
-                    offset: 4 // failure happening at row 4
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (4, "assign value to perform range check").into(),
+                        offset: 4
+                    }
                 },
-                cell_values: vec![
-                    (((Any::advice(), 1).into(), 0).into(), "0".to_string()),  // decomposed value (columun 1) at offset 0 (row 4)
-                    (((Any::advice(), 2).into(), -1).into(),"0x10000".to_string()), // running sum (column 2) at offset -1 (row 30) 
-                    (((Any::advice(), 2).into(), 0).into(), "0x100000000".to_string()), // running sum (column 2) at offset 0 (row 31)
-                ]
-            }])
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 2 }
+                },
+            ])
         );
     }
 
