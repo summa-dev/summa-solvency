@@ -13,6 +13,8 @@ use std::{
     error::Error, fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc, time::Duration,
 };
 
+use super::generated::summa_contract::{OwnedAddress, OwnedAsset};
+
 #[derive(Debug)]
 pub struct SummaSigner {
     signing_wallets: Vec<LocalWallet>,
@@ -97,13 +99,11 @@ impl SummaSigner {
 
     pub async fn submit_proof_of_address_ownership(
         &self,
-        cex_addresses: Vec<ethers::types::H160>,
-        cex_signatures: Vec<ethers::types::Bytes>,
-        message: &str,
+        cex_addresses: Vec<OwnedAddress>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let submit_proof_of_account_ownership_call = &self
             .summa_contract
-            .submit_proof_of_account_ownership(cex_addresses, cex_signatures, message.to_owned());
+            .submit_proof_of_account_ownership(cex_addresses);
         let tx = submit_proof_of_account_ownership_call.send().await.unwrap();
 
         tx.await.unwrap();
@@ -113,17 +113,15 @@ impl SummaSigner {
 
     pub async fn submit_proof_of_solvency(
         &self,
-        erc_20_contract_addresses: Vec<ethers::types::H160>,
-        balances_to_prove: Vec<ethers::types::U256>,
+        owned_assets: Vec<OwnedAsset>,
         mst_root: ethers::types::U256,
         proof: ethers::types::Bytes,
+        timestamp: ethers::types::U256,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let submit_proof_of_solvency_call = &self.summa_contract.submit_proof_of_solvency(
-            erc_20_contract_addresses,
-            balances_to_prove,
-            mst_root,
-            proof,
-        );
+        let submit_proof_of_solvency_call =
+            &self
+                .summa_contract
+                .submit_proof_of_solvency(owned_assets, mst_root, proof, timestamp);
         let tx = submit_proof_of_solvency_call.send().await.unwrap();
 
         tx.await.unwrap();

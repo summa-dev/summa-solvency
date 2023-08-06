@@ -6,6 +6,11 @@ pragma solidity ^0.8.18;
  */
 interface IAddressOwnershipVerifier {
     /**
+     * @dev Get the type of the address by chain (e.g., EVM, BTC)
+     */
+    function getAddressType() external view returns (bytes32);
+
+    /**
      * @dev Verify the ownership of an address.
      * @param cexAddress The address to verify (e.g., in case of ETH, the ETH address)
      * @param addressOwnershipProof The data needed to verify the address ownership (e.g., in case of ETH, a signature and a message signed by the address, encoded as bytes)

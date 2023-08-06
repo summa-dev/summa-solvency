@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { ethers } from "hardhat";
 import {
   ERC20BalanceRetriever,
@@ -9,12 +9,7 @@ import {
   Summa,
 } from "../typechain-types";
 import { BigNumber, Signer } from "ethers";
-import {
-  defaultAbiCoder,
-  keccak256,
-  solidityKeccak256,
-} from "ethers/lib/utils";
-import { Provider } from "@ethersproject/abstract-provider";
+import { defaultAbiCoder, solidityKeccak256 } from "ethers/lib/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe("Summa Contract", () => {
@@ -112,12 +107,7 @@ describe("Summa Contract", () => {
     });
 
     it("should allow admin to add an address verifier", async () => {
-      await expect(
-        summa.setAssetAddressVerifier(
-          solidityKeccak256(["string"], ["EVM"]),
-          evmAddresVerifier.address
-        )
-      )
+      await expect(summa.setAssetAddressVerifier(evmAddresVerifier.address))
         .to.emit(summa, "AddressVerifierSet")
         .withArgs(
           solidityKeccak256(["string"], ["EVM"]),
@@ -125,14 +115,27 @@ describe("Summa Contract", () => {
         );
     });
 
+    it("should not allow to add an invalid address verifier", async () => {
+      await expect(
+        summa.setAssetAddressVerifier(ethers.constants.AddressZero)
+      ).to.be.revertedWith("Invalid address verifier");
+    });
+
+    it("should not allow to add an invalid address verifier", async () => {
+      const invalidAddressVerifier = await ethers.deployContract(
+        "InvalidAddressVerifier"
+      );
+      await invalidAddressVerifier.deployed();
+      await expect(
+        summa.setAssetAddressVerifier(invalidAddressVerifier.address)
+      ).to.be.revertedWith("Invalid address type");
+    });
+
     it("should revert if a non-admin is trying to add an address verifier", async () => {
       await expect(
         summa
           .connect(account1)
-          .setAssetAddressVerifier(
-            solidityKeccak256(["string"], ["EVM"]),
-            evmAddresVerifier.address
-          )
+          .setAssetAddressVerifier(evmAddresVerifier.address)
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
@@ -143,10 +146,7 @@ describe("Summa Contract", () => {
     });
 
     it("should verify the address ownership and store the addresses", async () => {
-      await summa.setAssetAddressVerifier(
-        solidityKeccak256(["string"], ["EVM"]),
-        evmAddresVerifier.address
-      );
+      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
 
       await expect(summa.submitProofOfAccountOwnership(ownedAddresses))
         .to.emit(summa, "ExchangeAddressesSubmitted")
@@ -169,10 +169,7 @@ describe("Summa Contract", () => {
     });
 
     it("should revert if a signature is invalid", async () => {
-      await summa.setAssetAddressVerifier(
-        solidityKeccak256(["string"], ["EVM"]),
-        evmAddresVerifier.address
-      );
+      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
 
       //Invalid signature
       ownedAddresses[0].ownershipProof =
@@ -184,10 +181,7 @@ describe("Summa Contract", () => {
     });
 
     it("should revert if the signer is invalid", async () => {
-      await summa.setAssetAddressVerifier(
-        solidityKeccak256(["string"], ["EVM"]),
-        evmAddresVerifier.address
-      );
+      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
 
       //Invalid signer (account #3)
       ownedAddresses[0].ownershipProof =
@@ -199,10 +193,7 @@ describe("Summa Contract", () => {
     });
 
     it("should revert if the address has already been verified", async () => {
-      await summa.setAssetAddressVerifier(
-        solidityKeccak256(["string"], ["EVM"]),
-        evmAddresVerifier.address
-      );
+      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
 
       await summa.submitProofOfAccountOwnership(ownedAddresses);
 
@@ -317,10 +308,7 @@ describe("Summa Contract", () => {
     });
 
     it("should not verify the proof if the balance retriever was not set", async () => {
-      await summa.setAssetAddressVerifier(
-        solidityKeccak256(["string"], ["EVM"]),
-        evmAddresVerifier.address
-      );
+      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
 
       await summa.submitProofOfAccountOwnership(ownedAddresses);
 
@@ -335,10 +323,7 @@ describe("Summa Contract", () => {
     });
 
     it("should verify the proof of solvency for the given public input", async () => {
-      await summa.setAssetAddressVerifier(
-        solidityKeccak256(["string"], ["EVM"]),
-        evmAddresVerifier.address
-      );
+      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 
@@ -357,10 +342,7 @@ describe("Summa Contract", () => {
     });
 
     it("should not verify the proof of solvency if the address verifier was not set", async () => {
-      await summa.setAssetAddressVerifier(
-        solidityKeccak256(["string"], ["EVM"]),
-        evmAddresVerifier.address
-      );
+      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 
@@ -382,10 +364,7 @@ describe("Summa Contract", () => {
         .add(await ethers.provider.getBalance(account2.address))
         .add(BigNumber.from(1000000000000000));
 
-      await summa.setAssetAddressVerifier(
-        solidityKeccak256(["string"], ["EVM"]),
-        evmAddresVerifier.address
-      );
+      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 
@@ -405,10 +384,7 @@ describe("Summa Contract", () => {
       //Make the proven balance bigger than the actual balance
       ownedAssets[1].amountToProve = BigNumber.from(556864);
 
-      await summa.setAssetAddressVerifier(
-        solidityKeccak256(["string"], ["EVM"]),
-        evmAddresVerifier.address
-      );
+      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 
@@ -426,10 +402,7 @@ describe("Summa Contract", () => {
 
     it("should revert with invalid MST root", async () => {
       mstRoot = BigNumber.from(0);
-      await summa.setAssetAddressVerifier(
-        solidityKeccak256(["string"], ["EVM"]),
-        evmAddresVerifier.address
-      );
+      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 
@@ -447,10 +420,7 @@ describe("Summa Contract", () => {
 
     it("should revert with invalid proof", async () => {
       proof = "0x000000";
-      await summa.setAssetAddressVerifier(
-        solidityKeccak256(["string"], ["EVM"]),
-        evmAddresVerifier.address
-      );
+      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 

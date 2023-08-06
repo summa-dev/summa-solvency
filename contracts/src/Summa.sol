@@ -76,14 +76,16 @@ contract Summa is Ownable {
 
     /**
      * @dev Set the address of the address ownership verifier for a given asset type
-     * @param addressType The type of address by chain(e.g., keccak256("EVM"), keccak256("BTC"))
      * @param _verifier The address of the address ownership verifier smart contract
      */
-    function setAssetAddressVerifier(
-        bytes32 addressType,
-        address _verifier
-    ) public onlyOwner {
-        cexAddressVerifier[addressType] = IAddressOwnershipVerifier(_verifier);
+    function setAssetAddressVerifier(address _verifier) public onlyOwner {
+        require(_verifier != address(0), "Invalid address verifier");
+        IAddressOwnershipVerifier addressOwnershipVerifier = IAddressOwnershipVerifier(
+                _verifier
+            );
+        bytes32 addressType = addressOwnershipVerifier.getAddressType();
+        require(addressType != bytes32(0), "Invalid address type");
+        cexAddressVerifier[addressType] = addressOwnershipVerifier;
         emit AddressVerifierSet(addressType, _verifier);
     }
 

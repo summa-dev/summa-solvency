@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.18;
 
-import "./interfaces/IAddressOwnershipVerifier.sol";
+import "./../interfaces/IAddressOwnershipVerifier.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract EVMAddressVerifier is IAddressOwnershipVerifier {
+contract InvalidAddressVerifier is IAddressOwnershipVerifier {
     using ECDSA for bytes32;
 
     function verifyAddressOwnership(
@@ -19,6 +19,6 @@ contract EVMAddressVerifier is IAddressOwnershipVerifier {
     }
 
     function getAddressType() external pure override returns (bytes32) {
-        return keccak256("EVM");
+        return 0;
     }
 }
