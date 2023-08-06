@@ -204,12 +204,23 @@ mod test {
             .unwrap();
 
         assert_eq!(logs.len(), 1);
-        // assert_eq!(
-        //     logs[0],
-        //     ExchangeAddressesSubmittedFilter {
-        //         addresses: vec![owned_addresses[0], owned_addresses[1]],
-        //     }
-        // );
+        assert_eq!(
+            logs[0],
+            ExchangeAddressesSubmittedFilter {
+                addresses: vec![OwnedAddress {
+                    address_type: keccak256("EVM"),
+                    cex_address: cex_addr_1.encode().into(),
+                    ownership_proof:
+                        ("0x089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b").parse().unwrap()
+                    },OwnedAddress {
+                    address_type: keccak256("EVM"),
+                    cex_address: cex_addr_2.encode().into(),
+                    ownership_proof:
+                        ("0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c").parse().unwrap()
+                    },
+                ],
+            }
+        );
 
         let owned_assets = vec![
             OwnedAsset {
