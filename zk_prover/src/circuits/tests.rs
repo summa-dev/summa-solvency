@@ -1,18 +1,21 @@
 #[cfg(test)]
 mod test {
 
-
-    use crate::circuits::{
-        merkle_sum_tree::MstInclusionCircuit,
-        solvency::SolvencyCircuit,
-        utils::{full_prover, full_verifier, generate_setup_artifacts, get_verification_cost},
-    };
     use crate::merkle_sum_tree::MerkleSumTree;
+    use crate::{
+        circuits::{
+            merkle_sum_tree::MstInclusionCircuit,
+            solvency::SolvencyCircuit,
+            utils::{full_prover, full_verifier, generate_setup_artifacts, get_verification_cost},
+        },
+        merkle_sum_tree::Entry,
+    };
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
         halo2curves::bn256::Fr as Fp,
         plonk::Any,
     };
+    use num_bigint::ToBigUint;
     use snark_verifier_sdk::{
         evm::{evm_verify, gen_evm_proof_shplonk, gen_evm_verifier_shplonk},
         CircuitExt,
@@ -271,9 +274,9 @@ mod test {
                     cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
                 },
                 VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((4, "swap constraint").into(), 0, "").into(),
+                    constraint: ((7, "swap constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (3, "assign nodes hashes per merkle tree level").into(),
+                        region: (12, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
                     },
                     cell_values: vec![
@@ -301,9 +304,9 @@ mod test {
                     ]
                 },
                 VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((4, "swap constraint").into(), 0, "").into(),
+                    constraint: ((7, "swap constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (4, "assign nodes balances per asset").into(),
+                        region: (13, "assign nodes balances per asset").into(),
                         offset: 0
                     },
                     cell_values: vec![
@@ -315,9 +318,9 @@ mod test {
                     ]
                 },
                 VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((4, "swap constraint").into(), 0, "").into(),
+                    constraint: ((7, "swap constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (7, "assign nodes balances per asset").into(),
+                        region: (16, "assign nodes balances per asset").into(),
                         offset: 0
                     },
                     cell_values: vec![
