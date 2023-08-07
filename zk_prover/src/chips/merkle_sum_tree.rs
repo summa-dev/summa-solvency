@@ -13,14 +13,15 @@ use halo2_proofs::poly::Rotation;
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeConfig {
     pub advice: [Column<Advice>; 3],
-    pub bool_and_swap_selector: Selector,
-    pub sum_selector: Selector,
+    bool_and_swap_selector: Selector,
+    sum_selector: Selector,
 }
 
 /// Chip that performs various constraints related to a Merkle Sum Tree data structure such as:
 ///
 /// * `s * swap_bit * (1 - swap_bit) = 0` (if `bool_and_swap_selector` is toggled). It basically enforces that swap_bit is either a 0 or 1.
-/// * `s * swap_bit * ((elelment_l_next - elelment_l_cur) - (elelment_r_cur - elelment_r_next))`. Enforces that if the swap_bit is equal to 1, the values will be swapped on the next row (if `bool_and_swap_selector` is toggled).
+/// * `s * (swap_bit * 2 * (elelment_r_cur - elelment_l_cur)  - (elelment_l_next - elelment_l_cur) - (elelment_r_cur - elelment_r_next)) = 0`. Enforces that if the swap_bit is equal to 1, the values will be swapped on the next row (if `bool_and_swap_selector` is toggled).
+/// If the swap_bit is equal to 0, the values will remain the same on the next row (if `bool_and_swap_selector` is toggled).
 /// * `s * (left_balance + right_balance - computed_sum)`. It constraints the computed sum to be equal to the sum of the left and right balances (if `sum_selector` is toggled).
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeChip<const N_ASSETS: usize> {
@@ -59,8 +60,11 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
             let elelment_r_next = meta.query_advice(col_b, Rotation::next());
 
             let swap_constraint = s
-                * swap_bit
-                * ((elelment_l_next - elelment_l_cur) - (elelment_r_cur - elelment_r_next));
+                * ((swap_bit
+                    * Expression::Constant(Fp::from(2))
+                    * (elelment_r_cur.clone() - elelment_l_cur.clone())
+                    - (elelment_l_next - elelment_l_cur))
+                    - (elelment_r_cur - elelment_r_next));
 
             vec![swap_constraint]
         });

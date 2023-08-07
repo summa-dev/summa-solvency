@@ -1,3 +1,4 @@
+#![feature(generic_const_exprs)]
 use criterion::{criterion_group, criterion_main, Criterion};
 use halo2_proofs::{
     halo2curves::bn256::Fr as Fp,

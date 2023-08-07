@@ -152,7 +152,7 @@ impl<const N_BYTES: usize> Circuit<Fp> for OverflowCheckTestCircuit<N_BYTES> {
 
         // Initiate the overflow check chip
         let overflow_chip = OverflowChip::construct(config.overflow_check_config);
-        overflow_chip.load(&mut layouter)?;
+        overflow_chip.load(layouter.namespace(|| "checking overflow value a"))?;
 
         // check overflow
         overflow_chip.assign(layouter.namespace(|| "checking overflow value a"), &a_cell)?;

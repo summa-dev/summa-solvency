@@ -267,7 +267,7 @@ where
         config.expose_public(layouter.namespace(|| "public leaf hash"), &current_hash, 0)?;
 
         // load overflow check chip
-        overflow_check_chip.load(&mut layouter)?;
+        overflow_check_chip.load(layouter.namespace(|| "load lookup table"))?;
 
         for level in 0..LEVELS {
             let namespace_prefix = format!("level {}", level);
