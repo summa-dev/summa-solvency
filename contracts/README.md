@@ -1,5 +1,11 @@
 # Summa Smart contract
 
+Install dependencies:
+
+```shell
+npm install
+```
+
 Testing:
 
 ```shell
