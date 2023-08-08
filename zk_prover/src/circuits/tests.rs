@@ -16,7 +16,6 @@ mod test {
         plonk::Any,
     };
     use num_bigint::BigUint;
-    use rand::rngs::OsRng;
     use snark_verifier_sdk::{
         evm::{evm_verify, gen_evm_proof_shplonk, gen_evm_verifier_shplonk},
         CircuitExt,

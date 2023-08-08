@@ -8,7 +8,7 @@ To build, test and print the circuits, execute
 
 ```
 cargo build
-cargo test --release --features dev-graph -- --nocapture
+cargo test --release --features dev-graph
 ```
 ## Documentation 
 
