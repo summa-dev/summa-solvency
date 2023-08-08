@@ -107,7 +107,7 @@ describe("Summa Contract", () => {
     });
 
     it("should allow admin to add an address verifier", async () => {
-      await expect(summa.setAssetAddressVerifier(evmAddresVerifier.address))
+      await expect(summa.setAddressOwnershipVerifier(evmAddresVerifier.address))
         .to.emit(summa, "AddressVerifierSet")
         .withArgs(
           solidityKeccak256(["string"], ["EVM"]),
@@ -117,7 +117,7 @@ describe("Summa Contract", () => {
 
     it("should not allow to add an invalid address verifier", async () => {
       await expect(
-        summa.setAssetAddressVerifier(ethers.constants.AddressZero)
+        summa.setAddressOwnershipVerifier(ethers.constants.AddressZero)
       ).to.be.revertedWith("Invalid address verifier");
     });
 
@@ -127,7 +127,7 @@ describe("Summa Contract", () => {
       );
       await invalidAddressVerifier.deployed();
       await expect(
-        summa.setAssetAddressVerifier(invalidAddressVerifier.address)
+        summa.setAddressOwnershipVerifier(invalidAddressVerifier.address)
       ).to.be.revertedWith("Invalid address type");
     });
 
@@ -135,20 +135,20 @@ describe("Summa Contract", () => {
       await expect(
         summa
           .connect(account1)
-          .setAssetAddressVerifier(evmAddresVerifier.address)
+          .setAddressOwnershipVerifier(evmAddresVerifier.address)
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("should revert if address verifier was not set", async () => {
       await expect(
-        summa.submitProofOfAccountOwnership(ownedAddresses)
+        summa.submitProofOfAddressOwnership(ownedAddresses)
       ).to.be.revertedWith("Address verifier not set for this type of address");
     });
 
     it("should verify the address ownership and store the addresses", async () => {
-      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
+      await summa.setAddressOwnershipVerifier(evmAddresVerifier.address);
 
-      await expect(summa.submitProofOfAccountOwnership(ownedAddresses))
+      await expect(summa.submitProofOfAddressOwnership(ownedAddresses))
         .to.emit(summa, "ExchangeAddressesSubmitted")
         .withArgs((ownedAddresses: any) => {
           return (
@@ -169,36 +169,36 @@ describe("Summa Contract", () => {
     });
 
     it("should revert if a signature is invalid", async () => {
-      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
+      await summa.setAddressOwnershipVerifier(evmAddresVerifier.address);
 
       //Invalid signature
       ownedAddresses[0].ownershipProof =
         "0x9a9f2dd5ad8242b8feb5ad19e6f5cc87693bc2335ed849c8f9fa908e49c047d0250d001da1d1a83fed254171f1c686e83482b9b927702768efdaafac7375eac91d";
 
       await expect(
-        summa.submitProofOfAccountOwnership(ownedAddresses)
+        summa.submitProofOfAddressOwnership(ownedAddresses)
       ).to.be.revertedWith("ECDSA: invalid signature");
     });
 
     it("should revert if the signer is invalid", async () => {
-      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
+      await summa.setAddressOwnershipVerifier(evmAddresVerifier.address);
 
       //Invalid signer (account #3)
       ownedAddresses[0].ownershipProof =
         "0x2cb485683668d6a9e68b27763fb40bffe6953c7ba81490f28d1b39584778568d481bca493437d9c0f2c3f0ccd989cdde746eef49faa3d6b5a4f924107684383b1b";
 
       await expect(
-        summa.submitProofOfAccountOwnership(ownedAddresses)
+        summa.submitProofOfAddressOwnership(ownedAddresses)
       ).to.be.revertedWith("Invalid signer");
     });
 
     it("should revert if the address has already been verified", async () => {
-      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
+      await summa.setAddressOwnershipVerifier(evmAddresVerifier.address);
 
-      await summa.submitProofOfAccountOwnership(ownedAddresses);
+      await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
-        summa.submitProofOfAccountOwnership(ownedAddresses)
+        summa.submitProofOfAddressOwnership(ownedAddresses)
       ).to.be.revertedWith("Address already verified");
     });
   });
@@ -308,9 +308,9 @@ describe("Summa Contract", () => {
     });
 
     it("should not verify the proof if the balance retriever was not set", async () => {
-      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
+      await summa.setAddressOwnershipVerifier(evmAddresVerifier.address);
 
-      await summa.submitProofOfAccountOwnership(ownedAddresses);
+      await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
         summa.submitProofOfSolvency(
@@ -323,11 +323,11 @@ describe("Summa Contract", () => {
     });
 
     it("should verify the proof of solvency for the given public input", async () => {
-      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
+      await summa.setAddressOwnershipVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 
-      await summa.submitProofOfAccountOwnership(ownedAddresses);
+      await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
         summa.submitProofOfSolvency(
@@ -341,8 +341,8 @@ describe("Summa Contract", () => {
         .withArgs(mstRoot);
     });
 
-    it("should not verify the proof of solvency if the address verifier was not set", async () => {
-      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
+    it("should not verify the proof of solvency if the CEX hasn't proven the address ownership", async () => {
+      await summa.setAddressOwnershipVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 
@@ -364,11 +364,11 @@ describe("Summa Contract", () => {
         .add(await ethers.provider.getBalance(account2.address))
         .add(BigNumber.from(1000000000000000));
 
-      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
+      await summa.setAddressOwnershipVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 
-      await summa.submitProofOfAccountOwnership(ownedAddresses);
+      await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
         summa.submitProofOfSolvency(
@@ -377,18 +377,18 @@ describe("Summa Contract", () => {
           proof,
           BigNumber.from(0)
         )
-      ).to.be.revertedWith("Actual balance is less than the proven balance");
+      ).to.be.revertedWith("Actual balance is less than the amount to prove");
     });
 
     it("should revert if actual ERC20 balance is less than the proven balance", async () => {
       //Make the proven balance bigger than the actual balance
       ownedAssets[1].amountToProve = BigNumber.from(556864);
 
-      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
+      await summa.setAddressOwnershipVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 
-      await summa.submitProofOfAccountOwnership(ownedAddresses);
+      await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
         summa.submitProofOfSolvency(
@@ -397,16 +397,16 @@ describe("Summa Contract", () => {
           proof,
           BigNumber.from(0)
         )
-      ).to.be.revertedWith("Actual balance is less than the proven balance");
+      ).to.be.revertedWith("Actual balance is less than the amount to prove");
     });
 
     it("should revert with invalid MST root", async () => {
       mstRoot = BigNumber.from(0);
-      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
+      await summa.setAddressOwnershipVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 
-      await summa.submitProofOfAccountOwnership(ownedAddresses);
+      await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
         summa.submitProofOfSolvency(
@@ -420,11 +420,11 @@ describe("Summa Contract", () => {
 
     it("should revert with invalid proof", async () => {
       proof = "0x000000";
-      await summa.setAssetAddressVerifier(evmAddresVerifier.address);
+      await summa.setAddressOwnershipVerifier(evmAddresVerifier.address);
       await summa.setBalanceRetriever(ethBalanceRetriever.address);
       await summa.setBalanceRetriever(erc20BalanceRetriever.address);
 
-      await summa.submitProofOfAccountOwnership(ownedAddresses);
+      await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
         summa.submitProofOfSolvency(

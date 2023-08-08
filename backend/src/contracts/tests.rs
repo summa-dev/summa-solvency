@@ -163,7 +163,7 @@ mod test {
         );
 
         summa_contract
-            .set_asset_address_verifier(evm_address_verifier.address())
+            .set_address_ownership_verifier(evm_address_verifier.address())
             .send()
             .await
             .unwrap();

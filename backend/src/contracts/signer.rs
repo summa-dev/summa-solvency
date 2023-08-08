@@ -103,7 +103,7 @@ impl SummaSigner {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let submit_proof_of_account_ownership_call = &self
             .summa_contract
-            .submit_proof_of_account_ownership(cex_addresses);
+            .submit_proof_of_address_ownership(cex_addresses);
         let tx = submit_proof_of_account_ownership_call.send().await.unwrap();
 
         tx.await.unwrap();

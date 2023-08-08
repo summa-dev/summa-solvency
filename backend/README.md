@@ -56,6 +56,7 @@ The content of the message can be specified with the local variable `SIGNATURE_V
 The provided verifier found at `src/contracts/Verifier.json` is based on the trusted setup, `hermez-raw-11`. If you are working with a higher number of entries, you will need to generate a new verifier contract by using the `generate_solvency_verifier` method.
 
 Here's a brief example of how you might invoke this method:
+
 ```Rust
 Snapshot::generate_solvency_verifier("SolvencyVerifier.yul", "SolvencyVerifier.sol");
 ```
@@ -71,4 +72,4 @@ cargo build
 SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" cargo test --release -- --nocapture
 ```
 
-The contract Rust interfaces are built by the [buildscript](./build.rs) from the JSON ABI. The [Summa contract ABI json](./src/contracts/Summa.json) is updated when the contract is deployed from the [contracts subproject](./../contracts/README.md).
+The [buildscript](./build.rs) will automatically build the contract Rust interfaces from the [JSON ABIs](./src/contracts/abi/) and place them into [./src/contracts/generated](./src/contracts/generated) directory. The ABIs are updated on contract deployment from the [contracts subproject](./../contracts/README.md) by the [contract deployment script](./../contracts/scripts/deploy.ts).

@@ -17,10 +17,12 @@ contract Summa is Ownable {
 
     IVerifier private immutable verifier;
 
-    mapping(bytes32 => bool) public confirmedAddress; // instead ofbool, should contain the additional data needed to verify the address ownership (e.g., in case of ERC20, the address of the ERC20 contract)
+    //A mapping of CEX address hashes to a boolean indicating whether the address has been confirmed
+    mapping(bytes32 => bool) public confirmedAddress;
 
+    //A mapping of asset type hash to the balance retriever smart contract for that type of asset
     mapping(bytes32 => IBalanceRetriever) public balanceRetriever;
-    mapping(bytes32 => bytes) public balanceRetrieverArgs;
+    //A mapping of address type hash to the address ownership verifier smart contract for that type of address
     mapping(bytes32 => IAddressOwnershipVerifier) public cexAddressVerifier;
 
     /**
@@ -39,7 +41,7 @@ contract Summa is Ownable {
      * @dev Struct representing an asset owned by the CEX
      * @param assetType The type of the asset (e.g., a hash of the asset kind, like keccak256("ETH"), keccak256("BTC", keccak256("ERC20")
      * @param amountToProve The amount of the asset that the CEX wants to prove to own
-     * @param addresses The addresses that the CEX wants to prove to own the asset
+     * @param addresses CEX addresses that control the @param asset
      * @param balanceRetrieverArgs Additional arguments needed to get the balance (e.g., in case of ERC20, the address of the ERC20 contract)
      */
     struct OwnedAsset {
@@ -78,7 +80,7 @@ contract Summa is Ownable {
      * @dev Set the address of the address ownership verifier for a given asset type
      * @param _verifier The address of the address ownership verifier smart contract
      */
-    function setAssetAddressVerifier(address _verifier) public onlyOwner {
+    function setAddressOwnershipVerifier(address _verifier) public onlyOwner {
         require(_verifier != address(0), "Invalid address verifier");
         IAddressOwnershipVerifier addressOwnershipVerifier = IAddressOwnershipVerifier(
                 _verifier
@@ -89,7 +91,7 @@ contract Summa is Ownable {
         emit AddressVerifierSet(addressType, _verifier);
     }
 
-    function submitProofOfAccountOwnership(
+    function submitProofOfAddressOwnership(
         OwnedAddress[] memory _cexAddresses
     ) public {
         for (uint i = 0; i < _cexAddresses.length; i++) {
@@ -119,7 +121,7 @@ contract Summa is Ownable {
      * @param assets Assets owned by CEX
      * @param mstRoot The root of the Merkle sum tree
      * @param proof The ZK proof
-     * @param timestamp The timestamp at which the proof was generated
+     * @param timestamp The timestamp at which the CEX took the snapshot of its liabilites
      */
     function submitProofOfSolvency(
         OwnedAsset[] memory assets,
@@ -149,7 +151,7 @@ contract Summa is Ownable {
             }
             require(
                 assets[i].amountToProve <= totalAssetSum[i],
-                "Actual balance is less than the proven balance"
+                "Actual balance is less than the amount to prove"
             );
         }
 
