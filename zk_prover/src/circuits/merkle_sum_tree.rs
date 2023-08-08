@@ -156,10 +156,7 @@ where
         let range_check_config = RangeCheckChip::<N_BYTES>::configure(
             meta,
             advices[0],
-            advices[1],
-            advices[2],
             fixed_columns[4],
-            selectors[2],
             toggle_lookup_check,
         );
 
