@@ -134,6 +134,9 @@ where
         let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
         let complex_selector = meta.complex_selector();
 
+        // enable constant for the fixed_column[2], this is required for the poseidon chip
+        meta.enable_constant(fixed_columns[2]);
+
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, #WIDTH fixed columns for rc_a and #WIDTH for rc_b
         let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::configure(
             meta,

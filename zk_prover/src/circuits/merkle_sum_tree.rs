@@ -132,6 +132,9 @@ where
         // we need 1 complex selector for the lookup check in the range check chip
         let toggle_lookup_check = meta.complex_selector();
 
+        // enable constant for the fixed_column[2], this is required for the poseidon chip and the range check chip
+        meta.enable_constant(fixed_columns[2]);
+
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, #WIDTH fixed columns for rc_a and #WIDTH for rc_b
         let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::configure(
             meta,
