@@ -24,7 +24,7 @@ pub struct SummaSigner {
 impl SummaSigner {
     /// Creates a new SummaSigner instance
     /// # Arguments
-    /// * `private_keys` - A list of the private keys of the accounts holding the exchange assets
+    /// * `private_keys` - A list of the private keys of the addresses holding the exchange assets
     /// * `main_signer_key` - The private key of wallet that will interact with the chain on behalf of the exchange
     /// * `chain_id` - The chain id of the network
     /// * `rpc_url` - The RPC URL of the network
@@ -101,10 +101,10 @@ impl SummaSigner {
         &self,
         cex_addresses: Vec<OwnedAddress>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let submit_proof_of_account_ownership_call = &self
+        let submit_proof_of_address_ownership = &self
             .summa_contract
             .submit_proof_of_address_ownership(cex_addresses);
-        let tx = submit_proof_of_account_ownership_call.send().await.unwrap();
+        let tx = submit_proof_of_address_ownership.send().await.unwrap();
 
         tx.await.unwrap();
 
