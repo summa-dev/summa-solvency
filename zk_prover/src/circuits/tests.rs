@@ -526,6 +526,82 @@ mod test {
         );
     }
 
+    // Adding a balance at the verge of overflowing should fail the range check for any following computed sum and, because we are adding a fake balance, the root hash check should fail too
+    #[test]
+    fn test_balance_not_in_range() {
+        let merkle_sum_tree =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let mut circuit =
+            MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_sum_tree.clone(), 0);
+
+        circuit.path_element_balances[0][0] = Fp::from(0xffffffffffffffff); // 2^64 - 1. It means that as soon as it is summed with the other balances, it will overflow
+
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 2).into(),
+                    location: FailureLocation::OutsideRegion { row: 287 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 2).into(),
+                    location: FailureLocation::OutsideRegion { row: 571 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 2).into(),
+                    location: FailureLocation::OutsideRegion { row: 855 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 2).into(),
+                    location: FailureLocation::OutsideRegion { row: 1139 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (26, "assign value to perform range check").into(),
+                        offset: 8
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (47, "assign value to perform range check").into(),
+                        offset: 8
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (68, "assign value to perform range check").into(),
+                        offset: 8
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (85, "permute state").into(),
+                        offset: 36
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (86, "assign value to perform range check").into(),
+                        offset: 8
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 1 }
+                },
+            ])
+        );
+    }
+
     // Passing asset_sums that are less than the liabilities sum should not fail the solvency circuit
     #[test]
     fn test_valid_liabilities_less_than_assets() {
