@@ -15,6 +15,7 @@ mod test {
         plonk::{keygen_pk, keygen_vk, Any, Circuit},
         poly::commitment::Params,
     };
+    use num_bigint::BigUint;
     use rand::rngs::OsRng;
     use snark_verifier_sdk::{
         evm::{evm_verify, gen_evm_proof_shplonk, gen_evm_verifier_shplonk},
@@ -536,7 +537,9 @@ mod test {
         let mut circuit =
             MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_sum_tree.clone(), 0);
 
-        circuit.path_element_balances[0][0] = Fp::from(0xffffffffffffffff); // 2^64 - 1. It means that as soon as it is summed with the other balances, it will overflow
+        let balance = BigUint::from(2u64).pow(N_BYTES as u32 * 8) - BigUint::from(1u64);
+
+        circuit.path_element_balances[0][0] = big_to_fe(balance); // 2^64 - 1. It means that as soon as it is summed with the other balances, it will overflow
 
         let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 

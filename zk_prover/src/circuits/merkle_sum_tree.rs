@@ -126,8 +126,8 @@ where
         // we need 2 * WIDTH fixed columns for poseidon config + 1 for the range check chip
         let fixed_columns: [Column<Fixed>; 5] = std::array::from_fn(|_| meta.fixed_column());
 
-        // we also need 2 selectors for the MerkleSumTreeChip and 1 for the range check chip
-        let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
+        // we also need 2 selectors for the MerkleSumTreeChip
+        let selectors: [Selector; 2] = std::array::from_fn(|_| meta.selector());
 
         // we need 1 complex selector for the lookup check in the range check chip
         let toggle_lookup_check = meta.complex_selector();
