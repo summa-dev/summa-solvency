@@ -144,7 +144,7 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
                 }
 
                 // Constrain the final running sum output to be zero.
-                region.constrain_constant(zs.last().unwrap().cell(), Fp::from(0))?;
+                region.constrain_constant(zs[N_BYTES].cell(), Fp::from(0))?;
 
                 Ok(())
             },
