@@ -1,22 +1,48 @@
+use ethers::prelude::Abigen;
 use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
-use ethers::prelude::Abigen;
-
 fn main() {
-    let contract_out_file = std::env::current_dir()
-        .unwrap()
-        .join("src/contracts/generated/summa_contract.rs");
-    if contract_out_file.exists() {
-        std::fs::remove_file(&contract_out_file).unwrap();
-    }
+    let contracts = vec![
+        (
+            "src/contracts/generated/erc20_balance_retriever.rs",
+            "ERC20BalanceRetriever",
+            "ERC20BalanceRetriever",
+        ),
+        (
+            "src/contracts/generated/eth_balance_retriever.rs",
+            "ETHBalanceRetriever",
+            "ETHBalanceRetriever",
+        ),
+        (
+            "src/contracts/generated/evm_address_verifier.rs",
+            "EVMAddressVerifier",
+            "EVMAddressVerifier",
+        ),
+        (
+            "src/contracts/generated/mock_erc20.rs",
+            "MockERC20",
+            "MockERC20",
+        ),
+        (
+            "src/contracts/generated/summa_contract.rs",
+            "Summa",
+            "Summa",
+        ),
+        (
+            "src/contracts/generated/verifier.rs",
+            "SolvencyVerifier",
+            "Verifier",
+        ),
+    ];
 
-    Abigen::new("Summa", "./src/contracts/Summa.json")
-        .unwrap()
-        .format(true)
-        .generate()
-        .unwrap()
-        .write_to_file(contract_out_file)
-        .unwrap();
+    let mut submodule_names = Vec::new();
+    for (out_path, contract_name, abi_source) in contracts.iter() {
+        if let Some(submodule_name) =
+            generate_rust_contract_interface(out_path, contract_name, abi_source)
+        {
+            submodule_names.push(submodule_name);
+        }
+    }
 
     let mod_out_file: PathBuf = std::env::current_dir()
         .unwrap()
@@ -31,37 +57,40 @@ fn main() {
         .open(mod_out_file)
         .unwrap();
 
-    mod_file
-        .write_all(b"pub mod summa_contract;\npub mod verifier;\npub mod mock_erc20;")
-        .unwrap();
+    let final_content = submodule_names
+        .iter()
+        .map(|name| format!("pub mod {};", name))
+        .collect::<Vec<String>>()
+        .join("\n");
 
-    let contract_out_file = std::env::current_dir()
-        .unwrap()
-        .join("src/contracts/generated/mock_erc20.rs");
+    mod_file.write_all(final_content.as_bytes()).unwrap();
+}
+
+fn generate_rust_contract_interface<'a>(
+    out_path: &'a str,
+    contract_name: &str,
+    abi_source: &str,
+) -> Option<&'a str> {
+    let contract_out_file = std::env::current_dir().unwrap().join(out_path);
     if contract_out_file.exists() {
         std::fs::remove_file(&contract_out_file).unwrap();
     }
 
-    Abigen::new("MockERC20", "./src/contracts/MockERC20.json")
-        .unwrap()
-        .format(true)
-        .generate()
-        .unwrap()
-        .write_to_file(contract_out_file)
-        .unwrap();
+    Abigen::new(
+        contract_name,
+        format!("./src/contracts/abi/{}.json", abi_source),
+    )
+    .unwrap()
+    .format(true)
+    .generate()
+    .unwrap()
+    .write_to_file(contract_out_file)
+    .unwrap();
 
-    let contract_out_file = std::env::current_dir()
-        .unwrap()
-        .join("src/contracts/generated/verifier.rs");
-    if contract_out_file.exists() {
-        std::fs::remove_file(&contract_out_file).unwrap();
-    }
+    let submodule_name = out_path
+        .rsplit('/') // Split the string from the right at each /
+        .next() // Take the substring right after the last /
+        .and_then(|s| s.split('.').next()); // Take the substring before the first . (from the right)
 
-    Abigen::new("SolvencyVerifier", "./src/contracts/Verifier.json")
-        .unwrap()
-        .format(true)
-        .generate()
-        .unwrap()
-        .write_to_file(contract_out_file)
-        .unwrap();
+    submodule_name
 }
