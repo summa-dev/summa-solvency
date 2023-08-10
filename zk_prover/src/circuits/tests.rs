@@ -415,52 +415,52 @@ mod test {
             Err(vec![
                 VerifyFailure::Permutation {
                     column: (Any::Fixed, 2).into(),
-                    location: FailureLocation::OutsideRegion { row: 287 }
+                    location: FailureLocation::OutsideRegion { row: 407 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Fixed, 2).into(),
-                    location: FailureLocation::OutsideRegion { row: 571 }
+                    location: FailureLocation::OutsideRegion { row: 691 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Fixed, 2).into(),
-                    location: FailureLocation::OutsideRegion { row: 855 }
+                    location: FailureLocation::OutsideRegion { row: 975 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Fixed, 2).into(),
-                    location: FailureLocation::OutsideRegion { row: 1139 }
+                    location: FailureLocation::OutsideRegion { row: 1259 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (26, "assign value to perform range check").into(),
+                        region: (35, "assign value to perform range check").into(),
                         offset: 8
                     }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (47, "assign value to perform range check").into(),
+                        region: (56, "assign value to perform range check").into(),
                         offset: 8
                     }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (68, "assign value to perform range check").into(),
+                        region: (77, "assign value to perform range check").into(),
                         offset: 8
                     }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (85, "permute state").into(),
+                        region: (94, "permute state").into(),
                         offset: 36
                     }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (86, "assign value to perform range check").into(),
+                        region: (95, "assign value to perform range check").into(),
                         offset: 8
                     }
                 },
