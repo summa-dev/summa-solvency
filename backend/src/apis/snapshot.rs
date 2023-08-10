@@ -21,7 +21,6 @@ use summa_solvency::{
 };
 
 use crate::apis::csv_parser::parse_signature_csv;
-use crate::apis::fetch::fetch_asset_sums;
 
 pub struct Snapshot<const LEVELS: usize, const N_ASSETS: usize> {
     mst: MerkleSumTree<N_ASSETS>,

@@ -1,17 +1,21 @@
 #[cfg(test)]
 mod test {
 
-    use crate::circuits::{
-        merkle_sum_tree::MstInclusionCircuit,
-        solvency::SolvencyCircuit,
-        utils::{full_prover, full_verifier, generate_setup_artifacts, get_verification_cost},
-    };
     use crate::merkle_sum_tree::MerkleSumTree;
+    use crate::{
+        circuits::{
+            merkle_sum_tree::MstInclusionCircuit,
+            solvency::SolvencyCircuit,
+            utils::{full_prover, full_verifier, generate_setup_artifacts, get_verification_cost},
+        },
+        merkle_sum_tree::Entry,
+    };
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
         halo2curves::bn256::Fr as Fp,
         plonk::Any,
     };
+    use num_bigint::ToBigUint;
     use snark_verifier_sdk::{
         evm::{evm_verify, gen_evm_proof_shplonk, gen_evm_verifier_shplonk},
         CircuitExt,
@@ -108,7 +112,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (85, "permute state").into(),
+                        region: (94, "permute state").into(),
                         offset: 36
                     }
                 },
@@ -145,11 +149,11 @@ mod test {
         assert!(!full_verifier(&params, &vk, proof, instances));
     }
 
-    // Passing an invalid leaf hash as input for the witness generation should fail:
+    // Passing an invalid entry balance as input for the witness generation should fail:
     // - the permutation check between the leaf hash and the instance column leaf hash
     // - the permutation check between the computed root hash and the instance column root hash
     #[test]
-    fn test_invalid_leaf_hash_as_witness() {
+    fn test_invalid_entry_balance_as_witness() {
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
@@ -157,8 +161,13 @@ mod test {
 
         let instances = circuit.instances();
 
-        // invalidate leaf hash
-        circuit.leaf_hash = Fp::from(1000u64);
+        let invalid_leaf_balances = [1000.to_biguint().unwrap(), 1000.to_biguint().unwrap()];
+
+        // invalidate user entry
+        let invalid_entry =
+            Entry::new(circuit.entry.username().to_string(), invalid_leaf_balances).unwrap();
+
+        circuit.entry = invalid_entry;
 
         let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
         assert_eq!(
@@ -167,14 +176,14 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (3, "assign nodes hashes per merkle tree level").into(),
+                        region: (12, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
                     }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (85, "permute state").into(),
+                        region: (94, "permute state").into(),
                         offset: 36
                     }
                 },
@@ -210,7 +219,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (3, "assign nodes hashes per merkle tree level").into(),
+                        region: (12, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
                     }
                 },
@@ -222,69 +231,6 @@ mod test {
         );
     }
 
-    // Passing an invalid leaf balance as input for the witness generation.
-    // Invalid leaf balance means: leaf_hash = H(user_id, valid_balance), while the leaf balance passed as witness is invalid.
-    // The following permutation check should fail:
-    // - The root hash that doesn't match the expected one.
-    #[test]
-    fn test_invalid_leaf_balance_as_witness() {
-        let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
-
-        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree.clone(), 0);
-
-        // We need to extract the valid instances before invalidating the circuit
-        let instances = circuit.instances();
-
-        // invalid leaf balance for the first asset
-        circuit.leaf_balances = vec![Fp::from(1000u64), circuit.leaf_balances[1]];
-
-        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
-
-        assert_eq!(
-            invalid_prover.verify(),
-            Err(vec![
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 0).into(),
-                    location: FailureLocation::InRegion {
-                        region: (85, "permute state").into(),
-                        offset: 36
-                    }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 1 }
-                }
-            ])
-        );
-
-        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
-
-        // We need to extract the valid instances before invalidating the circuit
-        let instances = circuit.instances();
-
-        // invalid leaf balance for the second asset
-        circuit.leaf_balances = vec![circuit.leaf_balances[0], Fp::from(1000u64)];
-
-        let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
-
-        assert_eq!(
-            invalid_prover.verify(),
-            Err(vec![
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 0).into(),
-                    location: FailureLocation::InRegion {
-                        region: (85, "permute state").into(),
-                        offset: 36
-                    }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::Instance, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 1 }
-                },
-            ])
-        );
-    }
     // Passing a non binary index should fail the bool constraint inside "assign nodes hashes per merkle tree level" and "assign nodes balances per asset" region and the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_non_binary_index() {
@@ -304,33 +250,33 @@ mod test {
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((3, "bool constraint").into(), 0, "").into(),
+                    constraint: ((6, "bool constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (3, "assign nodes hashes per merkle tree level").into(),
+                        region: (12, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
                     },
                     cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
                 },
                 VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((3, "bool constraint").into(), 0, "").into(),
+                    constraint: ((6, "bool constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (4, "assign nodes balances per asset").into(),
+                        region: (13, "assign nodes balances per asset").into(),
                         offset: 0
                     },
                     cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
                 },
                 VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((3, "bool constraint").into(), 0, "").into(),
+                    constraint: ((6, "bool constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (7, "assign nodes balances per asset").into(),
+                        region: (16, "assign nodes balances per asset").into(),
                         offset: 0
                     },
                     cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
                 },
                 VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((4, "swap constraint").into(), 0, "").into(),
+                    constraint: ((7, "swap constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (3, "assign nodes hashes per merkle tree level").into(),
+                        region: (12, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
                     },
                     cell_values: vec![
@@ -358,9 +304,9 @@ mod test {
                     ]
                 },
                 VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((4, "swap constraint").into(), 0, "").into(),
+                    constraint: ((7, "swap constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (4, "assign nodes balances per asset").into(),
+                        region: (13, "assign nodes balances per asset").into(),
                         offset: 0
                     },
                     cell_values: vec![
@@ -372,9 +318,9 @@ mod test {
                     ]
                 },
                 VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((4, "swap constraint").into(), 0, "").into(),
+                    constraint: ((7, "swap constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (7, "assign nodes balances per asset").into(),
+                        region: (16, "assign nodes balances per asset").into(),
                         offset: 0
                     },
                     cell_values: vec![
@@ -388,7 +334,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (85, "permute state").into(),
+                        region: (94, "permute state").into(),
                         offset: 36
                     }
                 },
@@ -421,7 +367,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (85, "permute state").into(),
+                        region: (94, "permute state").into(),
                         offset: 36
                     }
                 },
@@ -502,7 +448,7 @@ mod test {
                 Err(vec![VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((7, "is_lt is 1").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (19, "enforce input cell to be less than value in instance column at row `index`").into(),
+                        region: (21, "enforce input cell to be less than value in instance column at row `index`").into(),
                         offset: 1
                     },
                     cell_values: vec![
@@ -525,7 +471,7 @@ mod test {
                 Err(vec![VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((7, "is_lt is 1").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (20, "enforce input cell to be less than value in instance column at row `index`").into(),
+                        region: (22, "enforce input cell to be less than value in instance column at row `index`").into(),
                         offset: 1
                     },
                     cell_values: vec![
@@ -548,7 +494,7 @@ mod test {
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((7, "is_lt is 1").into(), 0, "").into(),
                         location: FailureLocation::InRegion {
-                            region: (19, "enforce input cell to be less than value in instance column at row `index`").into(),
+                            region: (21, "enforce input cell to be less than value in instance column at row `index`").into(),
                             offset: 1
                         },
                         cell_values: vec![
@@ -559,7 +505,7 @@ mod test {
                     VerifyFailure::ConstraintNotSatisfied {
                         constraint: ((7, "is_lt is 1").into(), 0, "").into(),
                         location: FailureLocation::InRegion {
-                            region: (20, "enforce input cell to be less than value in instance column at row `index`").into(),
+                            region: (22, "enforce input cell to be less than value in instance column at row `index`").into(),
                             offset: 1
                         },
                         cell_values: vec![
@@ -577,16 +523,16 @@ mod test {
         let merkle_sum_tree =
             MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-        // For the second asset, the asset_sums is less than the liabilities sum (556862)
+        // For the second asset, the asset_sums is less than the liabilities sum (556862) namely the CEX is not solvent!
         let less_than_asset_sums_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
 
         let mut circuit =
             SolvencyCircuit::<N_ASSETS>::init(merkle_sum_tree, less_than_asset_sums_2nd);
 
-        // But actually, the CEX tries to manipulate the liabilities sum for the second asset to make it less than the assets sum
+        // But actually, the CEX tries to manipulate the liabilities sum for the second asset to make it less than the assets sum and result solvent
         circuit.left_node_balances[1] = Fp::from(1u64);
 
-        // This should pass the less than constraint but generate a root hash that does not match the one passed in the instance
+        // This should pass the less the less than constraint but generate a root hash that does not match the one passed in the instance
         let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
         assert_eq!(
@@ -595,7 +541,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (17, "permute state").into(),
+                        region: (19, "permute state").into(),
                         offset: 36
                     }
                 },
@@ -617,7 +563,7 @@ mod test {
 
         let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS>::init(merkle_sum_tree, 0);
 
-        let root = BitMapBackend::new("prints/mst-inclusion-layout.png", (2048, 16384))
+        let root = BitMapBackend::new("prints/mst-inclusion-layout.png", (2048, 32768))
             .into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root
@@ -642,7 +588,7 @@ mod test {
         let circuit = SolvencyCircuit::<N_ASSETS>::init(merkle_sum_tree, asset_sums);
 
         let root =
-            BitMapBackend::new("prints/solvency-layout.png", (2048, 16384)).into_drawing_area();
+            BitMapBackend::new("prints/solvency-layout.png", (2048, 32768)).into_drawing_area();
         root.fill(&WHITE).unwrap();
         let root = root.titled("Solvency Layout", ("sans-serif", 60)).unwrap();
 

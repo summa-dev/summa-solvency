@@ -73,19 +73,19 @@ Benches run after PR #80 (`add solidity verifier`). In order to achieve small pr
 
 | MST init     |
 | --------     |
-| 2.6274 s (+39.91%)    |
+| 4.2 s        |
 
 For Merkle Sum Tree Proof of Inclusion circuit
 
 | VK Gen             | Pk Gen              | Proof Generation    | Proof Verification  | Proof Size (bytes) |
 | ------------------ | ------------------- | ------------------- | ------------------- | ------------------ |
-| 172.09 ms (- 3.86%) | 98.160 ms (+55.05%.) | 447.11 ms (+56.80%) | 3.2016 ms (-32.22%) | 1760   (-36.05%) |
+| 176.05 ms          | 122.75 ms           | 473.98 ms           | 3.8 ms              | 1856               |
 
 For Proof of Solvency circuit
 
-| VK Gen               | Pk Gen   | Proof Generation | Proof Verification | Proof Size (bytes) |
-| ------               | ------   | ---------------- | ------------------ | ------------------ |
-| 60.968 ms (-21.19%)  | 30.850 ms (-12.49%) |    129.37ms (-11.09%)       |    3.2417 ms (-28.16%)       | 1760 (-36.05%)              |
+| VK Gen               | Pk Gen    | Proof Generation | Proof Verification | Proof Size (bytes) |
+| ------               | ------    | ---------------- | ------------------ | ------------------ |
+| 63.22 ms             | 27.075 ms |    133.82 ms     |    3.4476 ms       | 1760 (-36.05%)     |
 
 Gas cost to verify proof of solvency 
 
