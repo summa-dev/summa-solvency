@@ -20,7 +20,7 @@ async function main() {
   await summa.deployed();
 
   console.log(`Summa deployed to ${summa.address}`);
-  
+
   let deploymentsJson: Deployments = {};
   const fs = require("fs");
   try {
@@ -51,10 +51,13 @@ async function main() {
     deploymentsStringified
   );
 
-  //Copy the ABI from `artifacts/src/Summa.sol/Summa.json` to `backend/src/contracts/Summa.json`
-  const abi = require("../artifacts/src/Summa.sol/Summa.json");
-  const abiStringified = JSON.stringify(abi);
-  fs.writeFileSync("../backend/src/contracts/Summa.json", abiStringified);
+  //Copy the ABIs from `artifacts/src/*` to `backend/src/contracts/*`
+  copyAbi(fs, "Summa", "Summa");
+  copyAbi(fs, "SolvencyVerifier", "Verifier");
+  copyAbi(fs, "EVMAddressVerifier", "EVMAddressVerifier");
+  copyAbi(fs, "ETHBalanceRetriever", "ETHBalanceRetriever");
+  copyAbi(fs, "ERC20BalanceRetriever", "ERC20BalanceRetriever");
+  copyAbi(fs, "mock/MockERC20", "MockERC20");
 }
 
 // We recommend this pattern to be able to use async/await everywhere
@@ -63,3 +66,12 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+function copyAbi(fs: any, path: string, contractName: string) {
+  const abi = require(`../artifacts/src/${path}.sol/${contractName}.json`);
+  const abiStringified = JSON.stringify(abi);
+  fs.writeFileSync(
+    `../backend/src/contracts/abi/${contractName}.json`,
+    abiStringified
+  );
+}

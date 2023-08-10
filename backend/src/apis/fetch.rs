@@ -10,10 +10,8 @@ use ethers::{
     types::{H160, U256},
 };
 
-use crate::contracts;
-
 pub trait TokenBalance<M: Middleware> {
-    fn get_token_balance(&self, account: Address) -> ContractCall<M, U256>;
+    fn get_token_balance(&self, address: Address) -> ContractCall<M, U256>;
 }
 
 /// This function takes a list of token contracts, addresses and returns the balances of that address for the queried contracts.
@@ -55,15 +53,15 @@ pub async fn fetch_asset_sums<'a, M: Middleware + 'a>(
 mod tests {
     use super::*;
 
+    use crate::contracts::generated::mock_erc20::MockERC20;
     use crate::contracts::tests::initialize_anvil;
-    use contracts::generated::mock_erc20::MockERC20;
 
     #[tokio::test]
     async fn test_fetch_asset_sums() {
         // Necessary to implement `get_balance_from_contract` for the `contracts` parameter by following trait
         impl<M: Middleware> TokenBalance<M> for MockERC20<M> {
-            fn get_token_balance(&self, account: Address) -> ContractCall<M, U256> {
-                self.balance_of(account)
+            fn get_token_balance(&self, address: Address) -> ContractCall<M, U256> {
+                self.balance_of(address)
             }
         }
 

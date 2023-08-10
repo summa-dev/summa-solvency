@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{ops::Add, path::Path};
 
 use ethers::types::{Bytes, U256};
 use halo2_proofs::{
@@ -21,11 +21,10 @@ use summa_solvency::{
 };
 
 use crate::apis::csv_parser::parse_signature_csv;
-use crate::apis::fetch::fetch_asset_sums;
 
 pub struct Snapshot<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     mst: MerkleSumTree<N_ASSETS, N_BYTES>,
-    proof_of_account_ownership: AccountOwnershipProof,
+    proof_of_address_ownership: AddressOwnershipProof,
     trusted_setup: [SetupArtifcats; 2], // the first trusted setup relates to MstInclusionCircuit, the second related to SolvencyCircuit
 }
 
@@ -68,13 +67,13 @@ impl MstInclusionProof {
 }
 
 #[derive(Debug, Clone)]
-pub struct AccountOwnershipProof {
+pub struct AddressOwnershipProof {
     addresses: Vec<String>,
     signatures: Vec<String>,
     message: String,
 }
 
-impl AccountOwnershipProof {
+impl AddressOwnershipProof {
     pub fn get_addresses(&self) -> &Vec<String> {
         &self.addresses
     }
@@ -123,7 +122,7 @@ where
             solvency_setup_artifacts_artifacts,
         ];
 
-        let proof_of_account_ownership = AccountOwnershipProof {
+        let proof_of_address_ownership = AddressOwnershipProof {
             addresses,
             signatures,
             message,
@@ -131,7 +130,7 @@ where
 
         Ok(Snapshot {
             mst,
-            proof_of_account_ownership,
+            proof_of_address_ownership,
             trusted_setup,
         })
     }
@@ -196,8 +195,8 @@ where
         })
     }
 
-    pub fn get_proof_of_account_ownership(&self) -> &AccountOwnershipProof {
-        &self.proof_of_account_ownership
+    pub fn get_proof_of_address_ownership(&self) -> &AddressOwnershipProof {
+        &self.proof_of_address_ownership
     }
 
     pub fn get_trusted_setup_for_mst_inclusion(&self) -> &SetupArtifcats {
@@ -259,7 +258,7 @@ mod tests {
             "0x220b71671b649c03714da9c621285943f3cbcdc6".to_string(), // ERC20 token address
         ];
 
-        // In this test, we assume that the balances of the accounts in the snapshot are 556863 for both assets
+        // In this test, we assume that the balances of the address in the snapshot are 556863 for both assets
         // In a live environment, Should fetch balances from on-chain via `fetch_asset_sums` method in `fetch.rs`.
         let calldata: (SolvencyProof, Vec<String>) = snapshot
             .generate_proof_of_solvency(
@@ -284,15 +283,15 @@ mod tests {
     }
 
     #[test]
-    fn test_get_proof_of_account_ownership() {
+    fn test_get_proof_of_address_ownership() {
         let snapshot = initialize_snapshot();
 
-        let proof_of_account_ownership = snapshot.get_proof_of_account_ownership();
+        let proof_of_address_ownership = snapshot.get_proof_of_address_ownership();
 
-        assert_eq!(proof_of_account_ownership.addresses.len(), 3);
-        assert_eq!(proof_of_account_ownership.signatures.len(), 3);
+        assert_eq!(proof_of_address_ownership.addresses.len(), 3);
+        assert_eq!(proof_of_address_ownership.signatures.len(), 3);
         assert_eq!(
-            proof_of_account_ownership.message,
+            proof_of_address_ownership.message,
             "Summa proof of solvency for CryptoExchange".to_string()
         );
     }

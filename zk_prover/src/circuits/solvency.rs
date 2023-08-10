@@ -269,16 +269,43 @@ where
         );
         let lt_chip = LtVerticalChip::<N_BYTES>::construct(config.lt_config);
 
-        // Assign the left penultimate hash and the left penultimate balances
-        let (left_node_hash, left_node_balances) = merkle_sum_tree_chip
-            .assign_entry_hash_and_balances(
-                layouter.namespace(|| "assign leaf hash and balances"),
-                self.left_node_hash,
-                &self.left_node_balances,
-            )?;
+        // Assign the penultimate left node hash and the penultimate left node balances following this layout on two columns:
+        //
+        // | a                     | b                          |
+        // | --------------------- | -------------------------- |
+        // | left_node_hash        | left_node_balances_0       |
+        // | -                     | left_node_balances_1       |
+        // | -                     | ...                        |
+        // | -                     | left_node_balances_N       |
 
-        let swap_bit = merkle_sum_tree_chip
-            .assing_swap_bit(layouter.namespace(|| "assign swap bit"), Fp::from(0))?;
+        let left_node_hash = merkle_sum_tree_chip.assign_value(
+            layouter.namespace(|| "assign penultimate left node hash"),
+            self.left_node_hash,
+            0,
+            "left node hash",
+        )?;
+
+        let left_node_balances = self
+            .left_node_balances
+            .iter()
+            .enumerate()
+            .map(|(i, balance)| {
+                merkle_sum_tree_chip.assign_value(
+                    layouter.namespace(|| format!("assign entry balance {}", i)),
+                    *balance,
+                    1,
+                    "left node balance",
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        // assign swap bit
+        let swap_bit = merkle_sum_tree_chip.assign_value(
+            layouter.namespace(|| "assign swap bit"),
+            Fp::from(0),
+            2,
+            "swap bit",
+        )?;
 
         // assign penultimate nodes hashes according to the swap bit
         let (left_hash, right_hash) = merkle_sum_tree_chip.assign_nodes_hashes_per_level(
