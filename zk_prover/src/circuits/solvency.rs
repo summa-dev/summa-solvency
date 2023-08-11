@@ -29,7 +29,7 @@ use snark_verifier_sdk::CircuitExt;
 /// * `asset_sums`: The sum of the assets of the CEX for each asset
 /// * `root_hash`: The root hash of the merkle sum tree
 #[derive(Clone)]
-pub struct SolvencyCircuit<const N_ASSETS: usize> {
+pub struct SolvencyCircuit<const N_ASSETS: usize, const N_BYTES: usize> {
     pub left_node_hash: Fp,
     pub left_node_balances: [Fp; N_ASSETS],
     pub right_node_hash: Fp,
@@ -38,7 +38,8 @@ pub struct SolvencyCircuit<const N_ASSETS: usize> {
     pub root_hash: Fp,
 }
 
-impl<const N_ASSETS: usize> CircuitExt<Fp> for SolvencyCircuit<N_ASSETS>
+impl<const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
+    for SolvencyCircuit<N_ASSETS, N_BYTES>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
@@ -55,7 +56,7 @@ where
     }
 }
 
-impl<const N_ASSETS: usize> SolvencyCircuit<N_ASSETS> {
+impl<const N_ASSETS: usize, const N_BYTES: usize> SolvencyCircuit<N_ASSETS, N_BYTES> {
     pub fn init_empty() -> Self {
         Self {
             left_node_hash: Fp::zero(),
@@ -68,7 +69,10 @@ impl<const N_ASSETS: usize> SolvencyCircuit<N_ASSETS> {
     }
 
     /// Initializes the circuit with the merkle sum tree and the assets sum
-    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, asset_sums: [Fp; N_ASSETS]) -> Self {
+    pub fn init(
+        merkle_sum_tree: MerkleSumTree<N_ASSETS, N_BYTES>,
+        asset_sums: [Fp; N_ASSETS],
+    ) -> Self {
         let (penultimate_node_left, penultimate_node_right) = merkle_sum_tree
             .penultimate_level_data()
             .expect("Failed to retrieve penultimate level data");
@@ -103,7 +107,7 @@ impl<const N_ASSETS: usize> SolvencyCircuit<N_ASSETS> {
 /// The circuit performs an additional constraint:
 /// * `lt_enable * (lt_config.is_lt - 1) = 0` (if `lt_enable` is toggled). It basically enforces the result of the less than chip to be 1.
 #[derive(Debug, Clone)]
-pub struct SolvencyConfig<const N_ASSETS: usize>
+pub struct SolvencyConfig<const N_ASSETS: usize, const N_BYTES: usize>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
@@ -111,10 +115,10 @@ where
     pub poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
     pub instance: Column<Instance>,
     pub lt_selector: Selector,
-    pub lt_config: LtVerticalConfig<8>,
+    pub lt_config: LtVerticalConfig<N_BYTES>,
 }
 
-impl<const N_ASSETS: usize> SolvencyConfig<N_ASSETS>
+impl<const N_ASSETS: usize, const N_BYTES: usize> SolvencyConfig<N_ASSETS, N_BYTES>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
@@ -129,6 +133,9 @@ where
         // we also need 4 selectors - 3 simple selectors and 1 complex selector
         let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
         let complex_selector = meta.complex_selector();
+
+        // enable constant for the fixed_column[2], this is required for the poseidon chip
+        meta.enable_constant(fixed_columns[2]);
 
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, #WIDTH fixed columns for rc_a and #WIDTH for rc_b
         let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::configure(
@@ -189,7 +196,7 @@ where
         mut layouter: impl Layouter<Fp>,
         input_cell: &AssignedCell<Fp, Fp>,
         index: usize,
-        lt_chip: &LtVerticalChip<8>,
+        lt_chip: &LtVerticalChip<N_BYTES>,
     ) -> Result<(), Error> {
         layouter.assign_region(
             || "enforce input cell to be less than value in instance column at row `index`",
@@ -234,11 +241,11 @@ where
     }
 }
 
-impl<const N_ASSETS: usize> Circuit<Fp> for SolvencyCircuit<N_ASSETS>
+impl<const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp> for SolvencyCircuit<N_ASSETS, N_BYTES>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
-    type Config = SolvencyConfig<N_ASSETS>;
+    type Config = SolvencyConfig<N_ASSETS, N_BYTES>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -246,7 +253,7 @@ where
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        SolvencyConfig::<N_ASSETS>::configure(meta)
+        SolvencyConfig::<N_ASSETS, N_BYTES>::configure(meta)
     }
 
     fn synthesize(
@@ -260,7 +267,7 @@ where
         let poseidon_chip = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::construct(
             config.poseidon_config.clone(),
         );
-        let lt_chip = LtVerticalChip::<8>::construct(config.lt_config);
+        let lt_chip = LtVerticalChip::<N_BYTES>::construct(config.lt_config);
 
         // Assign the penultimate left node hash and the penultimate left node balances following this layout on two columns:
         //

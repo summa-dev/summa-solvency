@@ -6,12 +6,14 @@ mod test {
     use num_bigint::{BigUint, ToBigUint};
 
     const N_ASSETS: usize = 2;
+    const N_BYTES: usize = 8;
 
     #[test]
     fn test_mst() {
         // create new merkle tree
         let merkle_tree =
-            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
 
         // get root
         let root = merkle_tree.root();
@@ -30,9 +32,10 @@ mod test {
         assert!(merkle_tree.verify_proof(&proof));
 
         // Should generate different root hashes when changing the entry order
-        let merkle_tree_2 =
-            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16_switched_order.csv")
-                .unwrap();
+        let merkle_tree_2 = MerkleSumTree::<N_ASSETS, N_BYTES>::new(
+            "src/merkle_sum_tree/csv/entry_16_switched_order.csv",
+        )
+        .unwrap();
         assert_ne!(root.hash, merkle_tree_2.root().hash);
 
         // the balance total should be the same
@@ -84,10 +87,12 @@ mod test {
         proof_invalid_3.sibling_sums[0] = [0.into(), 0.into()];
     }
 
+    // Passing a csv file with a single entry that has a balance that is not in the expected range will fail
     #[test]
-    fn test_mst_overflow() {
-        let result =
-            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16_overflow.csv");
+    fn test_mst_overflow_1() {
+        let result = MerkleSumTree::<N_ASSETS, N_BYTES>::new(
+            "src/merkle_sum_tree/csv/entry_16_overflow.csv",
+        );
 
         if let Err(e) = result {
             assert_eq!(
@@ -98,6 +103,30 @@ mod test {
     }
 
     #[test]
+    // Passing a csv file in which the entries have a balance in the range, but while summing it generates a ndoe in which the balance is not in the expected range will fail
+    fn test_mst_overflow_2() {
+        let result = MerkleSumTree::<N_ASSETS, N_BYTES>::new(
+            "src/merkle_sum_tree/csv/entry_16_overflow_2.csv",
+        );
+
+        if let Err(e) = result {
+            assert_eq!(
+                e.to_string(),
+                "Accumulated balance is not in the expected range, proof generation will fail!"
+            );
+        }
+    }
+
+    // Passing a csv file with a single entry that has a balance that is the maximum that can fit in the expected range will not fail
+    #[test]
+    fn test_mst_no_overflow() {
+        let result = MerkleSumTree::<N_ASSETS, N_BYTES>::new(
+            "src/merkle_sum_tree/csv/entry_16_no_overflow.csv",
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]        
     fn test_big_uint_conversion() {
         let big_uint = 3.to_biguint().unwrap();
         let fp = big_uint_to_fp(&big_uint);
@@ -122,7 +151,8 @@ mod test {
     #[test]
     fn test_penultimate_level_data() {
         let merkle_tree =
-            MerkleSumTree::<N_ASSETS>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
 
         let root = merkle_tree.root();
 

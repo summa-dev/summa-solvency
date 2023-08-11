@@ -1,7 +1,7 @@
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
-use crate::chips::overflow::overflow_check::{OverflowCheckConfig, OverflowChip};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
+use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
 use crate::merkle_sum_tree::{big_uint_to_fp, Entry, MerkleSumTree};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
@@ -16,6 +16,7 @@ use snark_verifier_sdk::CircuitExt;
 ///
 /// * `LEVELS`: The number of levels of the merkle sum tree
 /// * `N_ASSETS`: The number of assets for which the solvency is verified.
+/// * `N_BYTES`: The number of bytes in which the balances should lie
 ///
 /// # Fields
 ///
@@ -24,7 +25,7 @@ use snark_verifier_sdk::CircuitExt;
 /// * `path_element_balances`: The balances of the path elements from the leaf to the root. The length of this vector is LEVELS
 /// * `path_indices`: The boolean indices of the path elements from the leaf to the root. 0 indicates that the element is on the right to the path, 1 indicates that the element is on the left to the path. The length of this vector is LEVELS
 #[derive(Clone)]
-pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize> {
+pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     pub entry: Entry<N_ASSETS>,
     pub path_element_hashes: Vec<Fp>,
     pub path_element_balances: Vec<[Fp; N_ASSETS]>,
@@ -32,8 +33,8 @@ pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize> {
     pub root_hash: Fp,
 }
 
-impl<const LEVELS: usize, const N_ASSETS: usize> CircuitExt<Fp>
-    for MstInclusionCircuit<LEVELS, N_ASSETS>
+impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
+    for MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
     [usize; N_ASSETS + 1]: Sized,
@@ -48,7 +49,9 @@ where
     }
 }
 
-impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_ASSETS> {
+impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
+    MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
+{
     pub fn init_empty() -> Self {
         Self {
             entry: Entry::init_empty(),
@@ -60,7 +63,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_A
     }
 
     /// Initializes the circuit with the merkle sum tree and the index of the user of which the inclusion is to be verified.
-    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS>, user_index: usize) -> Self
+    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS, N_BYTES>, user_index: usize) -> Self
     where
         [usize; N_ASSETS + 1]:,
     {
@@ -84,28 +87,29 @@ impl<const LEVELS: usize, const N_ASSETS: usize> MstInclusionCircuit<LEVELS, N_A
 /// # Type Parameters
 ///
 /// * `N_ASSETS`: The number of assets for which the solvency is verified.
+/// * `N_BYTES`: The number of bytes in which the balances should lie
 ///
 /// # Fields
 ///
 /// * `merkle_sum_tree_config`: Configuration for the merkle sum tree
 /// * `poseidon_entry_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1 and input length of 1 + N_ASSETS. Needed to perform the hashing from the entry to the leaf.
 /// * `poseidon_middle_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1 and input length of 2 * (1 + N_ASSETS). Needed to perform hashings from the leaf to the root.
-/// * `overflow_check_config`: Configuration for the overflow check chip
+/// * `range_check_config`: Configuration for the range check chip
 /// * `instance`: Instance column used to store the public inputs
 
 #[derive(Debug, Clone)]
-pub struct MstInclusionConfig<const N_ASSETS: usize>
+pub struct MstInclusionConfig<const N_ASSETS: usize, const N_BYTES: usize>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
     pub poseidon_entry_config: PoseidonConfig<2, 1, { 1 + N_ASSETS }>,
     pub poseidon_middle_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
-    pub overflow_check_config: OverflowCheckConfig<8>,
+    pub range_check_config: RangeCheckConfig<N_BYTES>,
     pub instance: Column<Instance>,
 }
 
-impl<const N_ASSETS: usize> MstInclusionConfig<N_ASSETS>
+impl<const N_ASSETS: usize, const N_BYTES: usize> MstInclusionConfig<N_ASSETS, N_BYTES>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
@@ -113,14 +117,17 @@ where
         // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config
         let advices: [Column<Advice>; 3] = std::array::from_fn(|_| meta.advice_column());
 
-        // we need 2 * WIDTH fixed columns for poseidon config + 1 for the overflow check chip
+        // we need 2 * WIDTH fixed columns for poseidon config + 1 for the range check chip
         let fixed_columns: [Column<Fixed>; 5] = std::array::from_fn(|_| meta.fixed_column());
 
-        // we also need 2 selectors for the MerkleSumTreeChip and 1 for the overflow check chip
-        let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
+        // we also need 2 selectors for the MerkleSumTreeChip
+        let selectors: [Selector; 2] = std::array::from_fn(|_| meta.selector());
 
-        // we need 1 complex selector for the lookup check
+        // we need 1 complex selector for the lookup check in the range check chip
         let toggle_lookup_check = meta.complex_selector();
+
+        // enable constant for the fixed_column[2], this is required for the poseidon chip and the range check chip
+        meta.enable_constant(fixed_columns[2]);
 
         let poseidon_entry_config = PoseidonChip::<PoseidonSpec, 2, 1, { 1 + N_ASSETS }>::configure(
             meta,
@@ -152,12 +159,10 @@ where
             selectors[0..2].try_into().unwrap(),
         );
 
-        let overflow_check_config = OverflowChip::<8>::configure(
+        let range_check_config = RangeCheckChip::<N_BYTES>::configure(
             meta,
             advices[0],
-            advices[1],
             fixed_columns[4],
-            selectors[2],
             toggle_lookup_check,
         );
 
@@ -168,7 +173,7 @@ where
             merkle_sum_tree_config,
             poseidon_entry_config,
             poseidon_middle_config,
-            overflow_check_config,
+            range_check_config,
             instance,
         }
     }
@@ -184,12 +189,12 @@ where
     }
 }
 
-impl<const LEVELS: usize, const N_ASSETS: usize> Circuit<Fp>
-    for MstInclusionCircuit<LEVELS, N_ASSETS>
+impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
+    for MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
-    type Config = MstInclusionConfig<N_ASSETS>;
+    type Config = MstInclusionConfig<N_ASSETS, N_BYTES>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -198,7 +203,7 @@ where
 
     /// Configures the circuit
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        MstInclusionConfig::<N_ASSETS>::configure(meta)
+        MstInclusionConfig::<N_ASSETS, N_BYTES>::configure(meta)
     }
 
     fn synthesize(
@@ -219,8 +224,8 @@ where
                 config.poseidon_middle_config.clone(),
             );
 
-        let overflow_check_chip =
-            OverflowChip::<8>::construct(config.overflow_check_config.clone());
+        let range_check_chip =
+            RangeCheckChip::<N_BYTES>::construct(config.range_check_config.clone());
 
         // Assign the entry username
         let username = merkle_sum_tree_chip.assign_value(
@@ -266,8 +271,8 @@ where
         // expose the first current hash, namely the leaf hash, as public input
         config.expose_public(layouter.namespace(|| "public leaf hash"), &current_hash, 0)?;
 
-        // load overflow check chip
-        overflow_check_chip.load(layouter.namespace(|| "load lookup table"))?;
+        // load range check chip
+        range_check_chip.load(&mut layouter)?;
 
         for level in 0..LEVELS {
             let namespace_prefix = format!("level {}", level);
@@ -308,20 +313,20 @@ where
                         swap_bit_level.clone(),
                     )?;
 
-                // Each balance cell is constrained to be less than the overflow limit
-                overflow_check_chip.assign(
+                // Each balance cell is constrained to be within the range defined by N_BYTES
+                range_check_chip.assign(
                     layouter.namespace(|| {
                         format!(
-                            "{}: asset {}: overflow check left balance",
+                            "{}: asset {}: range check left balance",
                             namespace_prefix, asset
                         )
                     }),
                     &left_balance,
                 )?;
-                overflow_check_chip.assign(
+                range_check_chip.assign(
                     layouter.namespace(|| {
                         format!(
-                            "{}: asset {}: overflow check right balance",
+                            "{}: asset {}: range check right balance",
                             namespace_prefix, asset
                         )
                     }),
@@ -361,12 +366,9 @@ where
         // expose the last current hash, namely the root hash, as public input
         config.expose_public(layouter.namespace(|| "public root hash"), &current_hash, 1)?;
 
-        // perform range check on the balances of the root to make sure these lie in the 2^64 range
+        // perform range check on the balances of the root to make sure these lie in the range defined by N_BYTES
         for balance in current_balances.iter() {
-            overflow_check_chip.assign(
-                layouter.namespace(|| "overflow check root balance"),
-                balance,
-            )?;
+            range_check_chip.assign(layouter.namespace(|| "range check root balance"), balance)?;
         }
 
         Ok(())

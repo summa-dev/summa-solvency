@@ -15,15 +15,16 @@ use num_bigint::BigUint;
 /// # Type Parameters
 ///
 /// * `N_ASSETS`: The number of assets for each user account
+/// * `N_BYTES`: Range in which each node balance should lie
 #[derive(Debug, Clone)]
-pub struct MerkleSumTree<const N_ASSETS: usize> {
+pub struct MerkleSumTree<const N_ASSETS: usize, const N_BYTES: usize> {
     root: Node<N_ASSETS>,
     nodes: Vec<Vec<Node<N_ASSETS>>>,
     depth: usize,
     entries: Vec<Entry<N_ASSETS>>,
 }
 
-impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
+impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTES> {
     pub const MAX_DEPTH: usize = 27;
 
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The CSV file must be formatted as follows:
@@ -36,7 +37,7 @@ impl<const N_ASSETS: usize> MerkleSumTree<N_ASSETS> {
         [usize; N_ASSETS + 1]: Sized,
         [usize; 2 * (1 + N_ASSETS)]: Sized,
     {
-        let entries = parse_csv_to_entries(path)?;
+        let entries = parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
         let depth = (entries.len() as f64).log2().ceil() as usize;
 
         if !(1..=Self::MAX_DEPTH).contains(&depth) {

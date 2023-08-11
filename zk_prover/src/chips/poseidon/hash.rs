@@ -66,7 +66,6 @@ impl<S: Spec<Fp, WIDTH, RATE>, const WIDTH: usize, const RATE: usize, const L: u
         rc_a: [Column<Fixed>; WIDTH],
         rc_b: [Column<Fixed>; WIDTH],
     ) -> PoseidonConfig<WIDTH, RATE, L> {
-        meta.enable_constant(rc_b[0]);
         let pow5_config = Pow5Chip::configure::<S>(meta, state, partial_sbox, rc_a, rc_b);
 
         PoseidonConfig { pow5_config }
