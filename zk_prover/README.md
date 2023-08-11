@@ -79,13 +79,13 @@ For Merkle Sum Tree Proof of Inclusion circuit
 
 | VK Gen             | Pk Gen              | Proof Generation    | Proof Verification  | Proof Size (bytes) |
 | ------------------ | ------------------- | ------------------- | ------------------- | ------------------ |
-| 176.05 ms          | 122.75 ms           | 473.98 ms           | 3.8 ms              | 1856               |
+| 176.05 ms          | 122.75 ms           | 473.98 ms           | 3.8 ms              | 1632               |
 
 For Proof of Solvency circuit
 
 | VK Gen               | Pk Gen    | Proof Generation | Proof Verification | Proof Size (bytes) |
 | ------               | ------    | ---------------- | ------------------ | ------------------ |
-| 63.22 ms             | 27.075 ms |    133.82 ms     |    3.4476 ms       | 1760 (-36.05%)     |
+| 63.22 ms             | 27.075 ms |    133.82 ms     |    3.4476 ms       | 1760               |
 
 Gas cost to verify proof of solvency 
 
