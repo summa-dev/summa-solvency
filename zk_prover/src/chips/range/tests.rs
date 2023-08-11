@@ -150,21 +150,21 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
             addchip.assign(self.a, self.b, layouter.namespace(|| "add chip"))?;
 
         // Initiate the range check chip
-        let overflow_chip = RangeCheckChip::construct(config.range_check_config);
+        let range_chip = RangeCheckChip::construct(config.range_check_config);
 
         // Load the lookup table
-        overflow_chip.load(&mut layouter)?;
+        range_chip.load(&mut layouter)?;
 
         // check range on a, b and c
-        overflow_chip.assign(
+        range_chip.assign(
             layouter.namespace(|| "checking value a is in range"),
             &a_cell,
         )?;
-        overflow_chip.assign(
+        range_chip.assign(
             layouter.namespace(|| "checking value b is in range"),
             &b_cell,
         )?;
-        overflow_chip.assign(
+        range_chip.assign(
             layouter.namespace(|| "checking value c is in range"),
             &c_cell,
         )?;

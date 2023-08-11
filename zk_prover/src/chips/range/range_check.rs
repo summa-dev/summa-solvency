@@ -69,17 +69,20 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
     ) -> RangeCheckConfig<N_BYTES> {
         meta.annotate_lookup_any_column(range, || "LOOKUP_MAXBITS_RANGE");
 
-        meta.lookup_any("range u8 check for word", |meta| {
-            let z_cur = meta.query_advice(z, Rotation::cur());
-            let z_next = meta.query_advice(z, Rotation::next());
+        meta.lookup_any(
+            "range u8 check for difference between each interstitial running sum output",
+            |meta| {
+                let z_cur = meta.query_advice(z, Rotation::cur());
+                let z_next = meta.query_advice(z, Rotation::next());
 
-            let enable_lookup = meta.query_selector(toggle_lookup_check);
-            let u8_range = meta.query_fixed(range, Rotation::cur());
+                let enable_lookup = meta.query_selector(toggle_lookup_check);
+                let u8_range = meta.query_fixed(range, Rotation::cur());
 
-            let word = z_cur - z_next * Fp::from(1 << 8);
+                let diff = z_cur - z_next * Fp::from(1 << 8);
 
-            vec![(enable_lookup * word, u8_range)]
-        });
+                vec![(enable_lookup * diff, u8_range)]
+            },
+        );
 
         RangeCheckConfig {
             z,
