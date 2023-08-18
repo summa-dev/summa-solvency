@@ -23,7 +23,7 @@ mod test {
 
     const N_ASSETS: usize = 2;
     const LEVELS: usize = 4;
-    const N_BYTES: usize = 8;
+    const N_BYTES: usize = 14;
     const K: u32 = 11;
 
     #[test]
@@ -415,39 +415,39 @@ mod test {
             Err(vec![
                 VerifyFailure::Permutation {
                     column: (Any::Fixed, 2).into(),
-                    location: FailureLocation::OutsideRegion { row: 407 }
+                    location: FailureLocation::OutsideRegion { row: 431 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Fixed, 2).into(),
-                    location: FailureLocation::OutsideRegion { row: 691 }
+                    location: FailureLocation::OutsideRegion { row: 739 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Fixed, 2).into(),
-                    location: FailureLocation::OutsideRegion { row: 975 }
+                    location: FailureLocation::OutsideRegion { row: 1047 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Fixed, 2).into(),
-                    location: FailureLocation::OutsideRegion { row: 1259 }
+                    location: FailureLocation::OutsideRegion { row: 1355 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (35, "assign value to perform range check").into(),
-                        offset: 8
+                        offset: 14
                     }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (56, "assign value to perform range check").into(),
-                        offset: 8
+                        offset: 14
                     }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (77, "assign value to perform range check").into(),
-                        offset: 8
+                        offset: 14
                     }
                 },
                 VerifyFailure::Permutation {
@@ -461,7 +461,7 @@ mod test {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (95, "assign value to perform range check").into(),
-                        offset: 8
+                        offset: 14
                     }
                 },
                 VerifyFailure::Permutation {
@@ -542,19 +542,21 @@ mod test {
         let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
         assert_eq!(
-                invalid_prover.verify(),
-                Err(vec![VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 2).into(),
+                    location: FailureLocation::OutsideRegion { row: 250 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 2).into(),
                     location: FailureLocation::InRegion {
-                        region: (21, "enforce input cell to be less than value in instance column at row `index`").into(),
-                        offset: 1
-                    },
-                    cell_values: vec![
-                        // The zero means that is not less than
-                        (((Any::advice(), 1).into(), 0).into(), "0".to_string())
-                    ]
-                }])
-            );
+                        region: (24, "assign value to perform range check").into(),
+                        offset: 14
+                    }
+                },
+            ])
+        );
 
         // Make the second asset sum less than liabilities sum (556862)
         let less_than_asset_sums_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
@@ -567,19 +569,21 @@ mod test {
         let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
         assert_eq!(
-                invalid_prover.verify(),
-                Err(vec![VerifyFailure::ConstraintNotSatisfied {
-                    constraint: ((7, "is_lt is 1").into(), 0, "").into(),
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 2).into(),
+                    location: FailureLocation::OutsideRegion { row: 251 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 2).into(),
                     location: FailureLocation::InRegion {
-                        region: (22, "enforce input cell to be less than value in instance column at row `index`").into(),
-                        offset: 1
-                    },
-                    cell_values: vec![
-                        // The zero means that is not less than
-                        (((Any::advice(), 1).into(), 0).into(), "0".to_string())
-                    ]
-                }])
-            );
+                        region: (27, "assign value to perform range check").into(),
+                        offset: 14
+                    }
+                },
+            ])
+        );
 
         // Make both the balances less than liabilities sum (556862)
         let less_than_asset_sums_both = [Fp::from(556861u64), Fp::from(556861u64)];
@@ -590,32 +594,32 @@ mod test {
         let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
         assert_eq!(
-                invalid_prover.verify(),
-                Err(vec![
-                    VerifyFailure::ConstraintNotSatisfied {
-                        constraint: ((7, "is_lt is 1").into(), 0, "").into(),
-                        location: FailureLocation::InRegion {
-                            region: (21, "enforce input cell to be less than value in instance column at row `index`").into(),
-                            offset: 1
-                        },
-                        cell_values: vec![
-                            // The zero means that is not less than
-                            (((Any::advice(), 1).into(), 0).into(), "0".to_string())
-                        ]
-                    },
-                    VerifyFailure::ConstraintNotSatisfied {
-                        constraint: ((7, "is_lt is 1").into(), 0, "").into(),
-                        location: FailureLocation::InRegion {
-                            region: (22, "enforce input cell to be less than value in instance column at row `index`").into(),
-                            offset: 1
-                        },
-                        cell_values: vec![
-                            // The zero means that is not less than
-                            (((Any::advice(), 1).into(), 0).into(), "0".to_string())
-                        ]
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 2).into(),
+                    location: FailureLocation::OutsideRegion { row: 250 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 2).into(),
+                    location: FailureLocation::OutsideRegion { row: 251 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 2).into(),
+                    location: FailureLocation::InRegion {
+                        region: (24, "assign value to perform range check").into(),
+                        offset: 14
                     }
-                ])
-            );
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 2).into(),
+                    location: FailureLocation::InRegion {
+                        region: (27, "assign value to perform range check").into(),
+                        offset: 14
+                    }
+                },
+            ])
+        );
     }
 
     // Manipulating the liabilities to make it less than the assets sum should fail the solvency circuit because the root hash will not match
@@ -643,7 +647,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (19, "permute state").into(),
+                        region: (21, "permute state").into(),
                         offset: 36
                     }
                 },

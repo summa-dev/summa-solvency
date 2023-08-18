@@ -21,7 +21,7 @@ use super::utils::decompose_fp_to_bytes;
 /// * `toggle_lookup_check`: Selector to toggle the lookup check.
 ///
 /// Patterned after [halo2_gadgets](https://github.com/privacy-scaling-explorations/halo2/blob/main/halo2_gadgets/src/utilities/decompose_running_sum.rs)
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct RangeCheckConfig<const N_BYTES: usize> {
     pub z: Column<Advice>,
     pub range: Column<Fixed>,

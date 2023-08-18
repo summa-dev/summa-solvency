@@ -1,16 +1,13 @@
-use crate::chips::less_than::less_than_vertical::{
-    LtVerticalChip, LtVerticalConfig, LtVerticalInstruction,
-};
+use crate::chips::less_than_check::lt_check::{CheckLtChip, CheckLtConfig};
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::merkle_sum_tree::MerkleSumTree;
-use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
+use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
-    Advice, Circuit, Column, ConstraintSystem, Error, Expression, Fixed, Instance, Selector,
+    Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Instance, Selector,
 };
-use halo2_proofs::poly::Rotation;
 use snark_verifier_sdk::CircuitExt;
 
 /// Circuit for verifying solvency, namely that the asset_sums is greater than the sum of the liabilities stored in the merkle sum tree
@@ -111,11 +108,11 @@ pub struct SolvencyConfig<const N_ASSETS: usize, const N_BYTES: usize>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
+    pub advice_cols: [Column<Advice>; 3],
     pub merkle_sum_tree_config: MerkleSumTreeConfig,
     pub poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
     pub instance: Column<Instance>,
-    pub lt_selector: Selector,
-    pub lt_config: LtVerticalConfig<N_BYTES>,
+    pub check_lt_config: CheckLtConfig<N_BYTES>,
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> SolvencyConfig<N_ASSETS, N_BYTES>
@@ -125,14 +122,14 @@ where
     /// Configures the circuit
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
         // the max number of advices columns needed is #WIDTH + 1 given requirement of the poseidon config
-        let advices: [Column<Advice>; 3] = std::array::from_fn(|_| meta.advice_column());
+        let advice_cols: [Column<Advice>; 3] = std::array::from_fn(|_| meta.advice_column());
 
         // the max number of fixed columns needed is 2 * WIDTH given requirement of the poseidon config
         let fixed_columns: [Column<Fixed>; 4] = std::array::from_fn(|_| meta.fixed_column());
 
         // we also need 4 selectors - 3 simple selectors and 1 complex selector
         let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
-        let complex_selector = meta.complex_selector();
+        let toggle_lookup_check = meta.complex_selector();
 
         // enable constant for the fixed_column[2], this is required for the poseidon chip
         meta.enable_constant(fixed_columns[2]);
@@ -140,94 +137,68 @@ where
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, #WIDTH fixed columns for rc_a and #WIDTH for rc_b
         let poseidon_config = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::configure(
             meta,
-            advices[0..2].try_into().unwrap(),
-            advices[2],
+            advice_cols[0..2].try_into().unwrap(),
+            advice_cols[2],
             fixed_columns[0..2].try_into().unwrap(),
             fixed_columns[2..4].try_into().unwrap(),
         );
 
         // enable permutation for all the advice columns
-        for col in &advices {
+        for col in &advice_cols {
             meta.enable_equality(*col);
         }
 
         // the configuration of merkle_sum_tree will always require 3 advices, no matter the number of assets
         let merkle_sum_tree_config = MerkleSumTreeChip::<N_ASSETS>::configure(
             meta,
-            advices[0..3].try_into().unwrap(),
+            advice_cols[0..3].try_into().unwrap(),
             selectors[0..2].try_into().unwrap(),
         );
 
-        let lt_selector = selectors[2];
+        let check_lt_enable = selectors[2];
 
-        // configure lt chip
-        let lt_config = LtVerticalChip::configure(
+        // configure check lt chip
+        let check_lt_config = CheckLtChip::<N_BYTES>::configure(
             meta,
-            |meta| meta.query_selector(lt_selector),
-            |meta| meta.query_advice(advices[0], Rotation::prev()),
-            |meta| meta.query_advice(advices[0], Rotation::cur()),
-            advices[1],
-            advices[2],
+            advice_cols[0],
+            advice_cols[1],
+            advice_cols[2],
             fixed_columns[0],
-            complex_selector,
+            check_lt_enable,
+            toggle_lookup_check,
         );
-
-        // Gate that enforces that the result of the lt chip is 1 at the row in which the lt selector is enabled
-        meta.create_gate("is_lt is 1", |meta| {
-            let lt_enable = meta.query_selector(lt_selector);
-            vec![lt_enable * (lt_config.is_lt(meta, None) - Expression::Constant(Fp::from(1)))]
-        });
 
         let instance = meta.instance_column();
         meta.enable_equality(instance);
 
         Self {
+            advice_cols,
             merkle_sum_tree_config,
             poseidon_config,
-            lt_config,
-            lt_selector,
+            check_lt_config,
             instance,
         }
     }
 
-    /// Enforces value in the cell passed as input to be less than the value in the instance column at row `index`.
-    pub fn enforce_less_than(
+    /// Generic method to assign witness value to a cell in the witness table to advice column `column_index`. `object_to_assign` is label to identify the object being assigned. It is useful for debugging.
+    pub fn assign_value_to_witness(
         &self,
         mut layouter: impl Layouter<Fp>,
-        input_cell: &AssignedCell<Fp, Fp>,
-        index: usize,
-        lt_chip: &LtVerticalChip<N_BYTES>,
-    ) -> Result<(), Error> {
+        value: Fp,
+        column_index: usize,
+        object_to_assign: &'static str,
+    ) -> Result<AssignedCell<Fp, Fp>, Error> {
         layouter.assign_region(
-            || "enforce input cell to be less than value in instance column at row `index`",
+            || format!("assign {}", object_to_assign),
             |mut region| {
-                // First, copy the input cell inside the region
-                let lhs = input_cell.copy_advice(
-                    || "copy input sum",
-                    &mut region,
-                    self.merkle_sum_tree_config.advice[0],
+                region.assign_advice(
+                    || "value",
+                    self.advice_cols[column_index],
                     0,
-                )?;
-
-                // Next, copy the value from the instance columns
-                let rhs = region.assign_advice_from_instance(
-                    || "copy value from instance column",
-                    self.instance,
-                    index,
-                    self.merkle_sum_tree_config.advice[0],
-                    1,
-                )?;
-
-                // enable lt seletor
-                self.lt_selector.enable(&mut region, 1)?;
-
-                lt_chip.assign(&mut region, 1, lhs.value().copied(), rhs.value().copied())?;
-
-                Ok(())
+                    || Value::known(value),
+                )
             },
-        )?;
-
-        Ok(())
+        )
     }
 
     /// Enforces copy constraint check between input cell and instance column at row passed as input
@@ -267,7 +238,22 @@ where
         let poseidon_chip = PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::construct(
             config.poseidon_config.clone(),
         );
-        let lt_chip = LtVerticalChip::<N_BYTES>::construct(config.lt_config);
+        let check_lt_chip = CheckLtChip::<N_BYTES>::construct(config.check_lt_config);
+
+        // assign asset sums value to the witness
+        let asset_sums = self
+            .asset_sums
+            .iter()
+            .enumerate()
+            .map(|(i, sum)| {
+                config.assign_value_to_witness(
+                    layouter.namespace(|| format!("assign asset sum {}", i)),
+                    *sum,
+                    0,
+                    "asset sum",
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Assign the penultimate left node hash and the penultimate left node balances following this layout on two columns:
         //
@@ -358,16 +344,12 @@ where
         // expose the root hash, as public input
         config.expose_public(layouter.namespace(|| "public root hash"), &root_hash, 0)?;
 
-        // load lookup table for lt chip
-        lt_chip.load(&mut layouter)?;
-
         // enforce root balances to be less than the assets sum
-        for asset in 0..N_ASSETS {
-            config.enforce_less_than(
+        for i in 0..N_ASSETS {
+            check_lt_chip.assign(
                 layouter.namespace(|| "enforce less than"),
-                &root_balances[asset],
-                asset + 1,
-                &lt_chip,
+                &root_balances[i],
+                &asset_sums[i],
             )?;
         }
 

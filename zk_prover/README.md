@@ -67,9 +67,9 @@ Furthermore the benchmarking function `verify_zk_proof_benchmark` will also prin
 
 Run on MacBook Pro 2023, M2 Pro, 32GB RAM, 12 cores
 
-Benches run after PR #80 (`add solidity verifier`). In order to achieve small proof size, to be cheap to verify on-chain. We decreased the range in which the balances should lie to 64 and reduced the rate of the Poseidon hash function to 1. 
+Benches run after PR #80 (`add solidity verifier`). In order to achieve small proof size, to be cheap to verify on-chain. 
 
-2^15 entries (32768) users, 2 assets
+2^15 entries (32768) users, 2 assets. Range is 14 bytes, considering SHIBA INU token supply (110 bits) as the upper bound.
 
 | MST init     |
 | --------     |
@@ -85,10 +85,10 @@ For Proof of Solvency circuit
 
 | VK Gen               | Pk Gen    | Proof Generation | Proof Verification | Proof Size (bytes) |
 | ------               | ------    | ---------------- | ------------------ | ------------------ |
-| 63.22 ms             | 27.075 ms |    133.82 ms     |    3.4476 ms       | 1760               |
+| 63.22 ms             | 27.075 ms |    133.82 ms     |    3.4476 ms       | 1568               |
 
 Gas cost to verify proof of solvency 
 
-403991 gas units (run `cargo test --release test_solvency_on_chain_verifier -- --nocapture`)
+395579 gas units (run `cargo test --release test_solvency_on_chain_verifier -- --nocapture`)
 
 
