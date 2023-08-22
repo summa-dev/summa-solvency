@@ -18,7 +18,7 @@ const SAMPLE_SIZE: usize = 10;
 const LEVELS: usize = 15;
 const N_ASSETS: usize = 2;
 const PATH_NAME: &str = "two_assets";
-const N_BYTES: usize = 8;
+const N_BYTES: usize = 14;
 
 fn build_mstree(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);

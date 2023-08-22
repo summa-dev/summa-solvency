@@ -1,5 +1,6 @@
-use crate::merkle_sum_tree::utils::fp_to_big_uint;
+use crate::merkle_sum_tree::utils::{big_uint_to_fp, fp_to_big_uint};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use num_bigint::BigUint;
 
 /// Converts value Fp to n bytes of bytes in little endian order.
 /// If value is decomposed in #bytes which are less than n, then the returned bytes are padded with 0s at the most significant bytes.
@@ -25,6 +26,11 @@ pub fn decompose_fp_to_bytes(value: Fp, n: usize) -> Vec<u8> {
     }
 
     bytes
+}
+
+pub fn pow_of_two(by: usize) -> Fp {
+    let res = BigUint::from(1u8) << by;
+    big_uint_to_fp(&res)
 }
 
 #[cfg(test)]
@@ -70,5 +76,14 @@ mod testing {
         let f = Fp::from(0xf1f2f3f);
         let bytes = decompose_fp_to_bytes(f, 2);
         assert_eq!(bytes, vec![0x3f, 0x2f]);
+    }
+
+    #[test]
+    fn test_pow_2() {
+        let pow = pow_of_two(8);
+        assert_eq!(pow, Fp::from(0x100));
+        let pow = pow_of_two(72);
+        let big_uint = BigUint::from(0x1000000000000000000u128);
+        assert_eq!(pow, big_uint_to_fp(&big_uint));
     }
 }
