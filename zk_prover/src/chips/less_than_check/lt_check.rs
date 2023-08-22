@@ -29,7 +29,7 @@ pub struct CheckLtConfig<const N_BYTES: usize> {
 ///
 /// Assumes that`lhs` and `rhs` are known to have <= N_BYTES bytes.
 ///
-/// Note: This may fail silently if a or b have more than N_BYTES
+/// Note: This may fail silently if `lhs` or `rhs` have more than N_BYTES
 ///
 /// Patterned after [Axiom `check_less_than`](https://axiom-crypto.github.io/halo2-lib/src/halo2_base/gates/range.rs.html#213-219)
 ///

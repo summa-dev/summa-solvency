@@ -127,7 +127,6 @@ mod testing {
     fn valid_check_lt() {
         let k = 9;
 
-        // a: new value
         let lhs = Fp::from(1);
         let rhs = Fp::from(200);
 
@@ -143,7 +142,6 @@ mod testing {
     fn valid_check_lt_2() {
         let k = 9;
 
-        // a: new value
         let lhs = Fp::from(1);
         let rhs = Fp::from(200);
 
@@ -159,7 +157,6 @@ mod testing {
     fn invalid_check_lt() {
         let k = 9;
 
-        // a: new value
         let lhs = Fp::from(200);
         let rhs = Fp::from(1);
 
@@ -190,7 +187,6 @@ mod testing {
     fn invalid_check_lt_2() {
         let k = 9;
 
-        // a: new value
         let lhs = Fp::from(200);
         let rhs = Fp::from(200);
 
