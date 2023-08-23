@@ -102,11 +102,11 @@ pub struct MstInclusionConfig<const N_ASSETS: usize, const N_BYTES: usize>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
-    pub merkle_sum_tree_config: MerkleSumTreeConfig,
-    pub poseidon_entry_config: PoseidonConfig<2, 1, { 1 + N_ASSETS }>,
-    pub poseidon_middle_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
-    pub range_check_config: RangeCheckConfig<N_BYTES>,
-    pub instance: Column<Instance>,
+    merkle_sum_tree_config: MerkleSumTreeConfig,
+    poseidon_entry_config: PoseidonConfig<2, 1, { 1 + N_ASSETS }>,
+    poseidon_middle_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
+    range_check_config: RangeCheckConfig<N_BYTES>,
+    instance: Column<Instance>,
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> MstInclusionConfig<N_ASSETS, N_BYTES>
@@ -124,7 +124,7 @@ where
         let selectors: [Selector; 2] = std::array::from_fn(|_| meta.selector());
 
         // we need 1 complex selector for the lookup check in the range check chip
-        let toggle_lookup_check = meta.complex_selector();
+        let enable_lookup_selector = meta.complex_selector();
 
         // enable constant for the fixed_column[2], this is required for the poseidon chip and the range check chip
         meta.enable_constant(fixed_columns[2]);
@@ -163,7 +163,7 @@ where
             meta,
             advices[0],
             fixed_columns[4],
-            toggle_lookup_check,
+            enable_lookup_selector,
         );
 
         let instance = meta.instance_column();

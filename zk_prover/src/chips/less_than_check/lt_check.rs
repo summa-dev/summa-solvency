@@ -20,22 +20,22 @@ pub struct CheckLtConfig<const N_BYTES: usize> {
     /// Denotes the diff value.
     diff_col: Column<Advice>,
     /// Denotes the selector used to enforce the LT constraint between lhs and rhs.
-    check_lt_enable: Selector,
+    check_lt_selector: Selector,
     /// Configuration for the RangeCheck chip.
     range_check_config: RangeCheckConfig<N_BYTES>,
 }
 
 /// Constrains that 'lhs' is less than 'rhs'.
 ///
-/// Assumes that`lhs` and `rhs` are known to have <= N_BYTES bytes.
+/// Assumes that `lhs` and `rhs` are known to have <= N_BYTES bytes.
 ///
 /// Note: This may fail silently if `lhs` or `rhs` have more than N_BYTES
 ///
 /// Patterned after [Axiom `check_less_than`](https://axiom-crypto.github.io/halo2-lib/src/halo2_base/gates/range.rs.html#213-219)
 ///
 /// It performs the following constraint:
-/// * `diff = lhs - rhs + 2**(N_BYTES*8)`. When range_check_config is 1, this constraint is enforced.
-/// * `diff ∈ N_BYTES range. When check_lt_enable is 1, this constraint is enforced.
+/// * `diff = lhs - rhs + 2**(N_BYTES*8)`. When check_lt_selector is 1, this constraint is enforced.
+/// * `diff ∈ N_BYTES range for diff cell
 
 #[derive(Clone, Copy, Debug)]
 pub struct CheckLtChip<const N_BYTES: usize> {
@@ -50,20 +50,20 @@ impl<const N_BYTES: usize> CheckLtChip<N_BYTES> {
         rhs_col: Column<Advice>,
         diff_col: Column<Advice>,
         range: Column<Fixed>,
-        check_lt_enable: Selector,
+        check_lt_selector: Selector,
         toggle_lookup_check: Selector,
     ) -> CheckLtConfig<N_BYTES> {
         meta.create_gate("lt gate", |meta| {
             let lhs_expr = meta.query_advice(lhs_col, Rotation::cur());
             let rhs_expr = meta.query_advice(rhs_col, Rotation::cur());
             let diff_expr = meta.query_advice(diff_col, Rotation::cur());
-            let check_lt_enable: Expression<Fp> = meta.query_selector(check_lt_enable);
+            let check_lt_selector: Expression<Fp> = meta.query_selector(check_lt_selector);
 
             let range_fp = pow_of_two(N_BYTES * 8);
 
             let range_expr = Expression::Constant(range_fp);
 
-            vec![check_lt_enable * (lhs_expr - rhs_expr + range_expr - diff_expr)]
+            vec![check_lt_selector * (lhs_expr - rhs_expr + range_expr - diff_expr)]
         });
 
         let range_check_config =
@@ -73,7 +73,7 @@ impl<const N_BYTES: usize> CheckLtChip<N_BYTES> {
             lhs_col,
             rhs_col,
             diff_col,
-            check_lt_enable,
+            check_lt_selector,
             range_check_config,
         }
     }
@@ -93,8 +93,8 @@ impl<const N_BYTES: usize> CheckLtChip<N_BYTES> {
         let diff_cell = layouter.assign_region(
             || "assign lhs, rhs and diff to the region",
             |mut region| {
-                // enable check_lt_enable selector at offset 0
-                self.config.check_lt_enable.enable(&mut region, 0)?;
+                // enable check_lt_selector at offset 0
+                self.config.check_lt_selector.enable(&mut region, 0)?;
 
                 // copy `lhs_cell` to `lhs_col` column at offset 0
                 lhs_cell.copy_advice(|| "copy lhs", &mut region, self.config.lhs_col, 0)?;

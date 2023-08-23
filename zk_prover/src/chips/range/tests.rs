@@ -124,10 +124,10 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
         meta.enable_constant(constants);
 
         let add_selector = meta.selector();
-        let toggle_lookup_check = meta.complex_selector();
+        let lookup_enable_selector = meta.complex_selector();
 
         let range_check_config =
-            RangeCheckChip::<N_BYTES>::configure(meta, z, range, toggle_lookup_check);
+            RangeCheckChip::<N_BYTES>::configure(meta, z, range, lookup_enable_selector);
 
         let addchip_config = AddChip::configure(meta, a, b, c, add_selector);
 

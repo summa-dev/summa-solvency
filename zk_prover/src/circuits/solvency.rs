@@ -108,11 +108,11 @@ pub struct SolvencyConfig<const N_ASSETS: usize, const N_BYTES: usize>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
-    pub advice_cols: [Column<Advice>; 3],
-    pub merkle_sum_tree_config: MerkleSumTreeConfig,
-    pub poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
-    pub instance: Column<Instance>,
-    pub check_lt_config: CheckLtConfig<N_BYTES>,
+    advice_cols: [Column<Advice>; 3],
+    merkle_sum_tree_config: MerkleSumTreeConfig,
+    poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
+    instance: Column<Instance>,
+    check_lt_config: CheckLtConfig<N_BYTES>,
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> SolvencyConfig<N_ASSETS, N_BYTES>
@@ -129,7 +129,7 @@ where
 
         // we also need 4 selectors - 3 simple selectors and 1 complex selector
         let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
-        let toggle_lookup_check = meta.complex_selector();
+        let enable_lookup_selector = meta.complex_selector();
 
         // enable constant for the fixed_column[2], this is required for the poseidon chip
         meta.enable_constant(fixed_columns[2]);
@@ -155,8 +155,6 @@ where
             selectors[0..2].try_into().unwrap(),
         );
 
-        let check_lt_enable = selectors[2];
-
         // configure check lt chip
         let check_lt_config = CheckLtChip::<N_BYTES>::configure(
             meta,
@@ -164,8 +162,8 @@ where
             advice_cols[1],
             advice_cols[2],
             fixed_columns[0],
-            check_lt_enable,
-            toggle_lookup_check,
+            selectors[2],
+            enable_lookup_selector,
         );
 
         let instance = meta.instance_column();

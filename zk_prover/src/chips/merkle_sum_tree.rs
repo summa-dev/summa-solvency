@@ -8,11 +8,11 @@ use halo2_proofs::poly::Rotation;
 /// # Fields
 ///
 /// * `advice`: advice columns to fit the witness values.
-/// * `bool_and_swap_selector`: Selector to toggle the bool and swap constraints.
-/// * `sum_selector`: Selector to toggle the sum constraints.
+/// * `bool_and_swap_selector`: Selector to enable the bool and swap constraints.
+/// * `sum_selector`: Selector to enable the sum constraints.
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeConfig {
-    pub advice: [Column<Advice>; 3],
+    advice: [Column<Advice>; 3],
     bool_and_swap_selector: Selector,
     sum_selector: Selector,
 }
