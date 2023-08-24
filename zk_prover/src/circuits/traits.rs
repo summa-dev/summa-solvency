@@ -16,7 +16,7 @@ pub trait CircuitBase {
         layouter.constrain_instance(cell.cell(), instance, row)
     }
 
-    /// Generic method to assign value to a cell in the witness table to advice column `column_index`. `object_to_assign` is label to identify the object being assigned. It is useful for debugging.
+    /// Generic method to assign `value` to a cell in the witness table to advice column `advice_col`. `object_to_assign` is label to identify the object being assigned. It is useful for debugging.
     /// Returns the assigned cell.
     fn assign_value_to_witness(
         &self,
