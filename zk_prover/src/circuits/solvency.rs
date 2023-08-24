@@ -2,6 +2,7 @@ use crate::chips::less_than_check::lt_check::{CheckLtChip, CheckLtConfig};
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
+use crate::circuits::traits::CircuitBase;
 use crate::merkle_sum_tree::MerkleSumTree;
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
@@ -33,6 +34,11 @@ pub struct SolvencyCircuit<const N_ASSETS: usize, const N_BYTES: usize> {
     pub right_node_balances: [Fp; N_ASSETS],
     pub asset_sums: [Fp; N_ASSETS],
     pub root_hash: Fp,
+}
+
+impl<const N_ASSETS: usize, const N_BYTES: usize> CircuitBase
+    for SolvencyCircuit<N_ASSETS, N_BYTES>
+{
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
@@ -108,11 +114,11 @@ pub struct SolvencyConfig<const N_ASSETS: usize, const N_BYTES: usize>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
-    pub advice_cols: [Column<Advice>; 3],
-    pub merkle_sum_tree_config: MerkleSumTreeConfig,
-    pub poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
-    pub instance: Column<Instance>,
-    pub check_lt_config: CheckLtConfig<N_BYTES>,
+    advice_cols: [Column<Advice>; 3],
+    merkle_sum_tree_config: MerkleSumTreeConfig,
+    poseidon_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
+    instance: Column<Instance>,
+    check_lt_config: CheckLtConfig<N_BYTES>,
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> SolvencyConfig<N_ASSETS, N_BYTES>
@@ -129,7 +135,7 @@ where
 
         // we also need 4 selectors - 3 simple selectors and 1 complex selector
         let selectors: [Selector; 3] = std::array::from_fn(|_| meta.selector());
-        let toggle_lookup_check = meta.complex_selector();
+        let enable_lookup_selector = meta.complex_selector();
 
         // enable constant for the fixed_column[2], this is required for the poseidon chip
         meta.enable_constant(fixed_columns[2]);
@@ -155,8 +161,6 @@ where
             selectors[0..2].try_into().unwrap(),
         );
 
-        let check_lt_enable = selectors[2];
-
         // configure check lt chip
         let check_lt_config = CheckLtChip::<N_BYTES>::configure(
             meta,
@@ -164,8 +168,8 @@ where
             advice_cols[1],
             advice_cols[2],
             fixed_columns[0],
-            check_lt_enable,
-            toggle_lookup_check,
+            selectors[2],
+            enable_lookup_selector,
         );
 
         let instance = meta.instance_column();
@@ -199,16 +203,6 @@ where
                 )
             },
         )
-    }
-
-    /// Enforces copy constraint check between input cell and instance column at row passed as input
-    pub fn expose_public(
-        &self,
-        mut layouter: impl Layouter<Fp>,
-        cell: &AssignedCell<Fp, Fp>,
-        row: usize,
-    ) -> Result<(), Error> {
-        layouter.constrain_instance(cell.cell(), self.instance, row)
     }
 }
 
@@ -264,11 +258,11 @@ where
         // | -                     | ...                        |
         // | -                     | left_node_balances_N       |
 
-        let left_node_hash = merkle_sum_tree_chip.assign_value(
+        let left_node_hash = self.assign_value_to_witness(
             layouter.namespace(|| "assign penultimate left node hash"),
             self.left_node_hash,
-            0,
             "left node hash",
+            config.advice_cols[0],
         )?;
 
         let left_node_balances = self
@@ -276,21 +270,21 @@ where
             .iter()
             .enumerate()
             .map(|(i, balance)| {
-                merkle_sum_tree_chip.assign_value(
+                self.assign_value_to_witness(
                     layouter.namespace(|| format!("assign entry balance {}", i)),
                     *balance,
-                    1,
                     "left node balance",
+                    config.advice_cols[1],
                 )
             })
             .collect::<Result<Vec<_>, _>>()?;
 
         // assign swap bit
-        let swap_bit = merkle_sum_tree_chip.assign_value(
+        let swap_bit = self.assign_value_to_witness(
             layouter.namespace(|| "assign swap bit"),
             Fp::from(0),
-            2,
             "swap bit",
+            config.advice_cols[2],
         )?;
 
         // assign penultimate nodes hashes according to the swap bit
@@ -342,7 +336,12 @@ where
         )?;
 
         // expose the root hash, as public input
-        config.expose_public(layouter.namespace(|| "public root hash"), &root_hash, 0)?;
+        self.expose_public(
+            layouter.namespace(|| "public root hash"),
+            &root_hash,
+            0,
+            config.instance,
+        )?;
 
         // enforce root balances to be less than the assets sum
         for i in 0..N_ASSETS {

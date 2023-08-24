@@ -2,6 +2,7 @@ use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
+use crate::circuits::traits::CircuitBase;
 use crate::merkle_sum_tree::{big_uint_to_fp, Entry, MerkleSumTree};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
@@ -47,6 +48,11 @@ where
     fn instances(&self) -> Vec<Vec<Fp>> {
         vec![vec![self.entry.compute_leaf().hash, self.root_hash]]
     }
+}
+
+impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitBase
+    for MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
+{
 }
 
 impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
@@ -102,11 +108,12 @@ pub struct MstInclusionConfig<const N_ASSETS: usize, const N_BYTES: usize>
 where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
-    pub merkle_sum_tree_config: MerkleSumTreeConfig,
-    pub poseidon_entry_config: PoseidonConfig<2, 1, { 1 + N_ASSETS }>,
-    pub poseidon_middle_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
-    pub range_check_config: RangeCheckConfig<N_BYTES>,
-    pub instance: Column<Instance>,
+    merkle_sum_tree_config: MerkleSumTreeConfig,
+    poseidon_entry_config: PoseidonConfig<2, 1, { 1 + N_ASSETS }>,
+    poseidon_middle_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
+    range_check_config: RangeCheckConfig<N_BYTES>,
+    instance: Column<Instance>,
+    advices: [Column<Advice>; 3],
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> MstInclusionConfig<N_ASSETS, N_BYTES>
@@ -124,7 +131,7 @@ where
         let selectors: [Selector; 2] = std::array::from_fn(|_| meta.selector());
 
         // we need 1 complex selector for the lookup check in the range check chip
-        let toggle_lookup_check = meta.complex_selector();
+        let enable_lookup_selector = meta.complex_selector();
 
         // enable constant for the fixed_column[2], this is required for the poseidon chip and the range check chip
         meta.enable_constant(fixed_columns[2]);
@@ -163,7 +170,7 @@ where
             meta,
             advices[0],
             fixed_columns[4],
-            toggle_lookup_check,
+            enable_lookup_selector,
         );
 
         let instance = meta.instance_column();
@@ -175,17 +182,8 @@ where
             poseidon_middle_config,
             range_check_config,
             instance,
+            advices,
         }
-    }
-
-    /// Enforce copy constraint check between input cell and instance column at row passed as input
-    pub fn expose_public(
-        &self,
-        mut layouter: impl Layouter<Fp>,
-        cell: &AssignedCell<Fp, Fp>,
-        row: usize,
-    ) -> Result<(), Error> {
-        layouter.constrain_instance(cell.cell(), self.instance, row)
     }
 }
 
@@ -228,22 +226,22 @@ where
             RangeCheckChip::<N_BYTES>::construct(config.range_check_config.clone());
 
         // Assign the entry username
-        let username = merkle_sum_tree_chip.assign_value(
+        let username = self.assign_value_to_witness(
             layouter.namespace(|| "assign entry username"),
             big_uint_to_fp(self.entry.username_to_big_uint()),
-            0,
             "entry username",
+            config.advices[0],
         )?;
 
         // Assign the entry balances
         let mut current_balances = vec![];
 
         for i in 0..N_ASSETS {
-            let balance = merkle_sum_tree_chip.assign_value(
+            let balance = self.assign_value_to_witness(
                 layouter.namespace(|| format!("assign entry balance {}", i)),
                 big_uint_to_fp(&self.entry.balances()[i]),
-                1,
                 "entry balance",
+                config.advices[1],
             )?;
             current_balances.push(balance);
         }
@@ -269,7 +267,12 @@ where
         )?;
 
         // expose the first current hash, namely the leaf hash, as public input
-        config.expose_public(layouter.namespace(|| "public leaf hash"), &current_hash, 0)?;
+        self.expose_public(
+            layouter.namespace(|| "public leaf hash"),
+            &current_hash,
+            0,
+            config.instance,
+        )?;
 
         // load range check chip
         range_check_chip.load(&mut layouter)?;
@@ -278,11 +281,11 @@ where
             let namespace_prefix = format!("level {}", level);
 
             // For each level assign the index to the circuit
-            let swap_bit_level = merkle_sum_tree_chip.assign_value(
+            let swap_bit_level = self.assign_value_to_witness(
                 layouter.namespace(|| format!("{}: assign swap bit", namespace_prefix)),
                 self.path_indices[level],
-                0,
                 "swap bit",
+                config.advices[0],
             )?;
 
             // For each level assign the hashes to the circuit
@@ -364,7 +367,12 @@ where
         }
 
         // expose the last current hash, namely the root hash, as public input
-        config.expose_public(layouter.namespace(|| "public root hash"), &current_hash, 1)?;
+        self.expose_public(
+            layouter.namespace(|| "public root hash"),
+            &current_hash,
+            1,
+            config.instance,
+        )?;
 
         // perform range check on the balances of the root to make sure these lie in the range defined by N_BYTES
         for balance in current_balances.iter() {

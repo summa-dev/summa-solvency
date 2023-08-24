@@ -8,11 +8,11 @@ use halo2_proofs::poly::Rotation;
 /// # Fields
 ///
 /// * `advice`: advice columns to fit the witness values.
-/// * `bool_and_swap_selector`: Selector to toggle the bool and swap constraints.
-/// * `sum_selector`: Selector to toggle the sum constraints.
+/// * `bool_and_swap_selector`: Selector to enable the bool and swap constraints.
+/// * `sum_selector`: Selector to enable the sum constraints.
 #[derive(Debug, Clone)]
 pub struct MerkleSumTreeConfig {
-    pub advice: [Column<Advice>; 3],
+    advice: [Column<Advice>; 3],
     bool_and_swap_selector: Selector,
     sum_selector: Selector,
 }
@@ -86,27 +86,6 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
             bool_and_swap_selector,
             sum_selector,
         }
-    }
-
-    /// Generic method to assign a value to a cell in the witness table to advice column `column_index`. `object_to_assign` is label to identify the object being assigned. It is useful for debugging.
-    pub fn assign_value(
-        &self,
-        mut layouter: impl Layouter<Fp>,
-        value: Fp,
-        column_index: usize,
-        object_to_assign: &'static str,
-    ) -> Result<AssignedCell<Fp, Fp>, Error> {
-        layouter.assign_region(
-            || format!("assign {}", object_to_assign),
-            |mut region| {
-                region.assign_advice(
-                    || "value",
-                    self.config.advice[column_index],
-                    0,
-                    || Value::known(value),
-                )
-            },
-        )
     }
 
     /// Assign the hashes for node in a region following this layout on 3 advice columns:

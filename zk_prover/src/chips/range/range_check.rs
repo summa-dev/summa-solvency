@@ -1,7 +1,7 @@
 use halo2_proofs::arithmetic::Field;
 use halo2_proofs::circuit::{AssignedCell, Layouter, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Selector};
+use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector};
 use halo2_proofs::poly::Rotation;
 
 use std::fmt::Debug;
@@ -18,14 +18,14 @@ use super::utils::decompose_fp_to_bytes;
 ///
 /// * `z`: Advice column for the value to be checked and its running sum.
 /// * `range`: Fixed column for the lookup table. It contains the values from 0 to 2^8 - 1.
-/// * `toggle_lookup_check`: Selector to toggle the lookup check.
+/// * `lookup_enable_selector`: Selector to enable the lookup check.
 ///
 /// Patterned after [halo2_gadgets](https://github.com/privacy-scaling-explorations/halo2/blob/main/halo2_gadgets/src/utilities/decompose_running_sum.rs)
 #[derive(Debug, Copy, Clone)]
 pub struct RangeCheckConfig<const N_BYTES: usize> {
-    pub z: Column<Advice>,
-    pub range: Column<Fixed>,
-    pub toggle_lookup_check: Selector,
+    z: Column<Advice>,
+    range: Column<Fixed>,
+    lookup_enable_selector: Selector,
 }
 
 /// Helper chip that verfiies that the value witnessed in a given cell lies within a given range defined by N_BYTES.
@@ -48,7 +48,7 @@ pub struct RangeCheckConfig<const N_BYTES: usize> {
 /// The column z contains the witnessed value to be checked at offset 0
 /// At offset i, the column z contains the value z(i+1) = (z(i) - k(i)) / 2^8 (shift right by 8 bits) where k(i) is the i-th decomposition big-endian of `value`
 /// The contraints that are enforced are:
-/// - z(i) - 2^8⋅z(i+1) ∈ lookup_u8 (enabled by toggle_lookup_check activate at offset [0, N_BYTES - 1])
+/// - z(i) - 2^8⋅z(i+1) ∈ lookup_u8 (enabled by lookup_enable_selector at offset [0, N_BYTES - 1])
 /// - z(N_BYTES) == 0
 #[derive(Debug, Clone)]
 pub struct RangeCheckChip<const N_BYTES: usize> {
@@ -65,7 +65,7 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
         meta: &mut ConstraintSystem<Fp>,
         z: Column<Advice>,
         range: Column<Fixed>,
-        toggle_lookup_check: Selector,
+        lookup_enable_selector: Selector,
     ) -> RangeCheckConfig<N_BYTES> {
         meta.annotate_lookup_any_column(range, || "LOOKUP_MAXBITS_RANGE");
 
@@ -75,19 +75,19 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
                 let z_cur = meta.query_advice(z, Rotation::cur());
                 let z_next = meta.query_advice(z, Rotation::next());
 
-                let enable_lookup = meta.query_selector(toggle_lookup_check);
+                let lookup_enable_selector = meta.query_selector(lookup_enable_selector);
                 let u8_range = meta.query_fixed(range, Rotation::cur());
 
-                let diff = z_cur - z_next * Fp::from(1 << 8);
+                let diff = z_cur - z_next * Expression::Constant(Fp::from(1 << 8));
 
-                vec![(enable_lookup * diff, u8_range)]
+                vec![(lookup_enable_selector * diff, u8_range)]
             },
         );
 
         RangeCheckConfig {
             z,
             range,
-            toggle_lookup_check,
+            lookup_enable_selector,
         }
     }
 
@@ -102,7 +102,7 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
             |mut region| {
                 // enable the lookup at offset [0, N_BYTES - 1]
                 for i in 0..N_BYTES {
-                    self.config.toggle_lookup_check.enable(&mut region, i)?;
+                    self.config.lookup_enable_selector.enable(&mut region, i)?;
                 }
 
                 // copy `value` to `z_0` at offset 0

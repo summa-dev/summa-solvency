@@ -8,6 +8,7 @@ edition = "2021"
 [features]
 dev-graph = ["halo2_proofs/dev-graph", "plotters"]
 
+
 [dependencies]
 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_04_20"}
 halo2_gadgets = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_04_20"}
@@ -17,6 +18,7 @@ ark-std = { version = "0.3.0", features = ["print-trace"] }
 tabbycat = { version = "0.1", features = ["attributes"], optional = true }
 csv = "1.1"
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 hex = "0.4.3"
 num-bigint = "0.4"
 num_cpus = "1.15"

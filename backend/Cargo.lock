@@ -3251,6 +3251,7 @@ dependencies = [
  "rand",
  "regex",
  "serde",
+ "serde_json",
  "snark-verifier",
  "snark-verifier-sdk",
 ]
