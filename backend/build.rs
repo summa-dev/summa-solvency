@@ -2,27 +2,7 @@ use ethers::prelude::Abigen;
 use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
 fn main() {
-    let contracts = vec![
-        (
-            "src/contracts/generated/erc20_balance_retriever.rs",
-            "ERC20BalanceRetriever",
-            "ERC20BalanceRetriever",
-        ),
-        (
-            "src/contracts/generated/eth_balance_retriever.rs",
-            "ETHBalanceRetriever",
-            "ETHBalanceRetriever",
-        ),
-        (
-            "src/contracts/generated/evm_address_verifier.rs",
-            "EVMAddressVerifier",
-            "EVMAddressVerifier",
-        ),
-        (
-            "src/contracts/generated/mock_erc20.rs",
-            "MockERC20",
-            "MockERC20",
-        ),
+    let contracts = [
         (
             "src/contracts/generated/summa_contract.rs",
             "Summa",

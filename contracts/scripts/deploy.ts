@@ -54,10 +54,6 @@ async function main() {
   //Copy the ABIs from `artifacts/src/*` to `backend/src/contracts/*`
   copyAbi(fs, "Summa", "Summa");
   copyAbi(fs, "SolvencyVerifier", "Verifier");
-  copyAbi(fs, "EVMAddressVerifier", "EVMAddressVerifier");
-  copyAbi(fs, "ETHBalanceRetriever", "ETHBalanceRetriever");
-  copyAbi(fs, "ERC20BalanceRetriever", "ERC20BalanceRetriever");
-  copyAbi(fs, "mock/MockERC20", "MockERC20");
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -13,7 +13,7 @@ use std::{
     error::Error, fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc, time::Duration,
 };
 
-use super::generated::summa_contract::{OwnedAddress, OwnedAsset};
+use super::generated::summa_contract::{AddressOwnershipProof, Asset};
 
 #[derive(Debug)]
 pub struct SummaSigner {
@@ -99,7 +99,7 @@ impl SummaSigner {
 
     pub async fn submit_proof_of_address_ownership(
         &self,
-        cex_addresses: Vec<OwnedAddress>,
+        cex_addresses: Vec<AddressOwnershipProof>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let submit_proof_of_address_ownership = &self
             .summa_contract
@@ -113,15 +113,14 @@ impl SummaSigner {
 
     pub async fn submit_proof_of_solvency(
         &self,
-        owned_assets: Vec<OwnedAsset>,
         mst_root: ethers::types::U256,
+        assets: Vec<Asset>,
         proof: ethers::types::Bytes,
         timestamp: ethers::types::U256,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let submit_proof_of_solvency_call =
-            &self
-                .summa_contract
-                .submit_proof_of_solvency(owned_assets, mst_root, proof, timestamp);
+        let submit_proof_of_solvency_call = &self
+            .summa_contract
+            .submit_proof_of_solvency(mst_root, assets, proof, timestamp);
         let tx = submit_proof_of_solvency_call.send().await.unwrap();
 
         tx.await.unwrap();
