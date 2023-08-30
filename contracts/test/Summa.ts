@@ -83,7 +83,7 @@ describe("Summa Contract", () => {
 
     it("should verify the address ownership and store the addresses", async () => {
       await expect(summa.submitProofOfAddressOwnership(ownedAddresses))
-        .to.emit(summa, "ExchangeAddressesSubmitted")
+        .to.emit(summa, "AddressOwnershipProofSubmitted")
         .withArgs((ownedAddresses: any) => {
           return (
             ownedAddresses[0].chain == "ETH" &&
@@ -228,7 +228,7 @@ describe("Summa Contract", () => {
           BigNumber.from(0)
         )
       )
-        .to.emit(summa, "ProofOfSolvencySubmitted")
+        .to.emit(summa, "SolvencyProofSubmitted")
         .withArgs(BigNumber.from(0), mstRoot, (assets: Summa.AssetStruct[]) => {
           console.log(assets[0].amount);
           return (

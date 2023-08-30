@@ -86,8 +86,8 @@ mod test {
     use crate::contracts::{
         generated::{
             summa_contract::{
-                AddressOwnershipProof, Asset, ExchangeAddressesSubmittedFilter,
-                ProofOfSolvencySubmittedFilter, Summa,
+                AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
+                SolvencyProofSubmittedFilter, Summa,
             },
             verifier::SolvencyVerifier,
         },
@@ -164,7 +164,7 @@ mod test {
         assert_eq!(result.is_ok(), true);
 
         let logs = summa_contract
-            .exchange_addresses_submitted_filter()
+            .address_ownership_proof_submitted_filter()
             .query()
             .await
             .unwrap();
@@ -172,7 +172,7 @@ mod test {
         assert_eq!(logs.len(), 1);
         assert_eq!(
             logs[0],
-            ExchangeAddressesSubmittedFilter {
+            AddressOwnershipProofSubmittedFilter {
                 address_ownership_proofs: vec![AddressOwnershipProof {
           chain: "ETH".to_string(),
           cex_address: cex_addr_1.to_string(),
@@ -217,7 +217,7 @@ mod test {
         assert_eq!(result.is_ok(), true);
 
         let logs = summa_contract
-            .proof_of_solvency_submitted_filter()
+            .solvency_proof_submitted_filter()
             .query()
             .await
             .unwrap();
@@ -225,7 +225,7 @@ mod test {
         assert_eq!(logs.len(), 1);
         assert_eq!(
             logs[0],
-            ProofOfSolvencySubmittedFilter {
+            SolvencyProofSubmittedFilter {
                 timestamp: U256::from(0),
                 mst_root: "0x2E021D9BF99C5BD7267488B6A7A5CF5F7D00222A41B6A9B971899C44089E0C5"
                     .parse()

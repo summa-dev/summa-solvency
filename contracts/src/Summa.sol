@@ -29,6 +29,7 @@ contract Summa is Ownable {
      * @dev Struct representing an asset owned by the CEX
      * @param assetName The name of the asset
      * @param chain The name of the chain name where the asset lives (e.g., ETH, BTC)
+     * @param amount The total amount of the asset that the CEX holds on a given chain
      */
     struct Asset {
         string assetName;
@@ -55,12 +56,12 @@ contract Summa is Ownable {
     mapping(bytes32 => AddressOwnershipProof) public ownershipProofByAddress;
 
     //All proofs of solvency by timestamp
-    mapping(uint256 => ZKProof) public proofOfSolvency;
+    mapping(uint256 => ZKProof) public solvencyProofs;
 
-    event ExchangeAddressesSubmitted(
+    event AddressOwnershipProofSubmitted(
         AddressOwnershipProof[] addressOwnershipProofs
     );
-    event ProofOfSolvencySubmitted(
+    event SolvencyProofSubmitted(
         uint256 indexed timestamp,
         uint256 mstRoot,
         Asset[] assets
@@ -71,7 +72,7 @@ contract Summa is Ownable {
     }
 
     /**
-     * @dev Submit proof of address ownership for a CEX
+     * @dev Submit an optimistic proof of address ownership for a CEX. The proof is subject to an off-chain verification as it's not feasible to verify the signatures of non-EVM chains in an Ethereum smart contract.
      * @param _addressOwnershipProofs The list of address ownership proofs
      */
     function submitProofOfAddressOwnership(
@@ -96,7 +97,7 @@ contract Summa is Ownable {
             );
         }
 
-        emit ExchangeAddressesSubmitted(_addressOwnershipProofs);
+        emit AddressOwnershipProofSubmitted(_addressOwnershipProofs);
     }
 
     /**
@@ -104,7 +105,7 @@ contract Summa is Ownable {
      * @param mstRoot Merkle sum tree root of the CEX's liabilities
      * @param assets The list of assets owned by the CEX
      * @param proof The ZK proof
-     * @param timestamp The timestamp at which the CEX took the snapshot of its liabilites
+     * @param timestamp The timestamp at which the CEX took the snapshot of its assets and liabilites
      */
     function submitProofOfSolvency(
         uint256 mstRoot,
@@ -128,9 +129,9 @@ contract Summa is Ownable {
         }
         // Verify ZK proof
         require(verifyZkProof(proof, inputs), "Invalid ZK proof");
-        proofOfSolvency[timestamp] = ZKProof(proof, inputs);
+        solvencyProofs[timestamp] = ZKProof(proof, inputs);
 
-        emit ProofOfSolvencySubmitted(timestamp, inputs[0], assets);
+        emit SolvencyProofSubmitted(timestamp, inputs[0], assets);
     }
 
     function verifyZkProof(
@@ -143,6 +144,6 @@ contract Summa is Ownable {
     function getProofOfSolvency(
         uint256 timestamp
     ) public view returns (ZKProof memory) {
-        return proofOfSolvency[timestamp];
+        return solvencyProofs[timestamp];
     }
 }
