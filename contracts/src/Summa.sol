@@ -77,7 +77,7 @@ contract Summa is Ownable {
      */
     function submitProofOfAddressOwnership(
         AddressOwnershipProof[] memory _addressOwnershipProofs
-    ) public {
+    ) public onlyOwner {
         for (uint i = 0; i < _addressOwnershipProofs.length; i++) {
             bytes32 addressHash = keccak256(
                 abi.encode(_addressOwnershipProofs[i].cexAddress)
@@ -112,7 +112,7 @@ contract Summa is Ownable {
         Asset[] memory assets,
         bytes memory proof,
         uint256 timestamp
-    ) public {
+    ) public onlyOwner {
         require(
             addressOwnershipProofs.length != 0,
             "The CEX has not submitted any address ownership proofs"
@@ -137,7 +137,7 @@ contract Summa is Ownable {
     function verifyZkProof(
         bytes memory proof,
         uint256[] memory publicInputs
-    ) public view returns (bool) {
+    ) public view onlyOwner returns (bool) {
         return verifier.verify(publicInputs, proof);
     }
 
