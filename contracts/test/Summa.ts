@@ -230,7 +230,6 @@ describe("Summa Contract", () => {
       )
         .to.emit(summa, "SolvencyProofSubmitted")
         .withArgs(BigNumber.from(0), mstRoot, (assets: Summa.AssetStruct[]) => {
-          console.log(assets[0].amount);
           return (
             assets[0].chain == "ETH" &&
             assets[0].assetName == "ETH" &&
@@ -240,16 +239,6 @@ describe("Summa Contract", () => {
             BigNumber.from(556863).eq(assets[1].amount as BigNumber)
           );
         });
-
-      let proofOfSolvency = await summa.getProofOfSolvency(BigNumber.from(0));
-      expect(proofOfSolvency.proof).to.be.equal(proof);
-      expect(proofOfSolvency.publicInputs[0]).to.be.equal(mstRoot);
-      expect(proofOfSolvency.publicInputs[1]).to.be.equal(
-        BigNumber.from(556863)
-      );
-      expect(proofOfSolvency.publicInputs[2]).to.be.equal(
-        BigNumber.from(556863)
-      );
     });
 
     it("should not verify the proof of solvency if the CEX hasn't proven the address ownership", async () => {

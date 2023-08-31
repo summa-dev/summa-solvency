@@ -53,10 +53,7 @@ contract Summa is Ownable {
     AddressOwnershipProof[] public addressOwnershipProofs;
 
     //Convenience mapping to check if an address has already been verified
-    mapping(bytes32 => AddressOwnershipProof) public ownershipProofByAddress;
-
-    //All proofs of solvency by timestamp
-    mapping(uint256 => ZKProof) public solvencyProofs;
+    mapping(bytes32 => uint256) public ownershipProofByAddress;
 
     event AddressOwnershipProofSubmitted(
         AddressOwnershipProof[] addressOwnershipProofs
@@ -82,11 +79,9 @@ contract Summa is Ownable {
             bytes32 addressHash = keccak256(
                 abi.encode(_addressOwnershipProofs[i].cexAddress)
             );
-            require(
-                ownershipProofByAddress[addressHash].signature.length == 0,
-                "Address already verified"
-            );
-            ownershipProofByAddress[addressHash] = _addressOwnershipProofs[i];
+            uint256 index = ownershipProofByAddress[addressHash];
+            require(index == 0, "Address already verified");
+            ownershipProofByAddress[addressHash] = i + 1;
             addressOwnershipProofs.push(_addressOwnershipProofs[i]);
             require(
                 bytes(_addressOwnershipProofs[i].cexAddress).length != 0 &&
@@ -129,7 +124,6 @@ contract Summa is Ownable {
         }
         // Verify ZK proof
         require(verifyZkProof(proof, inputs), "Invalid ZK proof");
-        solvencyProofs[timestamp] = ZKProof(proof, inputs);
 
         emit SolvencyProofSubmitted(timestamp, inputs[0], assets);
     }
@@ -139,11 +133,5 @@ contract Summa is Ownable {
         uint256[] memory publicInputs
     ) public view onlyOwner returns (bool) {
         return verifier.verify(publicInputs, proof);
-    }
-
-    function getProofOfSolvency(
-        uint256 timestamp
-    ) public view returns (ZKProof memory) {
-        return solvencyProofs[timestamp];
     }
 }
