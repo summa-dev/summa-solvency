@@ -41,7 +41,7 @@ pub async fn fetch_asset_sums<'a, M: Middleware + 'a>(
     for contract in &token_contracts {
         for addr in exchange_addresses.clone() {
             let token_balance = contract.get_token_balance(addr).call().await.unwrap();
-            sum_token_balance = sum_token_balance + token_balance;
+            sum_token_balance += token_balance;
         }
         result.push(sum_token_balance)
     }
@@ -53,7 +53,7 @@ pub async fn fetch_asset_sums<'a, M: Middleware + 'a>(
 mod tests {
     use super::*;
 
-    use crate::contracts::generated::mock_erc20::MockERC20;
+    use crate::contracts::mock::mock_erc20::MockERC20;
     use crate::contracts::tests::initialize_anvil;
 
     #[tokio::test]

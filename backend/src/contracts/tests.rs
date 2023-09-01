@@ -9,7 +9,7 @@ use ethers::{
 };
 use tokio::time;
 
-use crate::contracts::generated::mock_erc20::{MockERC20, MOCKERC20_ABI, MOCKERC20_BYTECODE};
+use crate::contracts::mock::mock_erc20::{MockERC20, MOCKERC20_ABI, MOCKERC20_BYTECODE};
 
 // Setup test conditions on the anvil instance
 pub async fn initialize_anvil() -> (
@@ -48,7 +48,7 @@ pub async fn initialize_anvil() -> (
 
     // Send RPC requests with `anvil_setBalance` method via provider to set ETH balance of `cex_addr_1` and `cex_addr_2`
     // This is for meeting `proof_of_solvency` test conditions
-    for addr in [cex_addr_1, cex_addr_2].to_vec() {
+    for addr in [cex_addr_1, cex_addr_2].iter().copied() {
         let _res = client
             .provider()
             .request::<(H160, U256), ()>("anvil_setBalance", (addr, U256::from(278432)))
@@ -67,7 +67,7 @@ pub async fn initialize_anvil() -> (
 
     time::sleep(Duration::from_millis(500)).await;
 
-    return (anvil, cex_addr_1, cex_addr_2, client, mock_erc20);
+    (anvil, cex_addr_1, cex_addr_2, client, mock_erc20)
 }
 
 mod test {
@@ -85,15 +85,13 @@ mod test {
 
     use crate::contracts::{
         generated::{
-            erc20_balance_retriever::ERC20BalanceRetriever,
-            eth_balance_retriever::{self, ETHBalanceRetriever},
-            evm_address_verifier::{self, EVMAddressVerifier},
             summa_contract::{
-                ExchangeAddressesSubmittedFilter, OwnedAddress, OwnedAsset,
-                ProofOfSolvencySubmittedFilter, Summa,
+                AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
+                SolvencyProofSubmittedFilter, Summa,
             },
             verifier::SolvencyVerifier,
         },
+        mock::mock_erc20,
         signer::SummaSigner,
         tests::initialize_anvil,
     };
@@ -121,7 +119,7 @@ mod test {
 
     #[tokio::test]
     async fn test_submit_proof_of_solvency() {
-        let (anvil, cex_addr_1, cex_addr_2, client, mock_erc20) = initialize_anvil().await;
+        let (anvil, cex_addr_1, cex_addr_2, client, _mock_erc20) = initialize_anvil().await;
 
         let verifer_contract = SolvencyVerifier::deploy(Arc::clone(&client), ())
             .unwrap()
@@ -130,24 +128,6 @@ mod test {
             .unwrap();
 
         let summa_contract = Summa::deploy(Arc::clone(&client), verifer_contract.address())
-            .unwrap()
-            .send()
-            .await
-            .unwrap();
-
-        let evm_address_verifier = EVMAddressVerifier::deploy(Arc::clone(&client), ())
-            .unwrap()
-            .send()
-            .await
-            .unwrap();
-
-        let eth_balance_retriever = ETHBalanceRetriever::deploy(Arc::clone(&client), ())
-            .unwrap()
-            .send()
-            .await
-            .unwrap();
-
-        let erc20_balance_retriever = ERC20BalanceRetriever::deploy(Arc::clone(&client), ())
             .unwrap()
             .send()
             .await
@@ -164,34 +144,18 @@ mod test {
             summa_contract.address(),
         );
 
-        summa_contract
-            .set_address_ownership_verifier(evm_address_verifier.address())
-            .send()
-            .await
-            .unwrap();
-
-        summa_contract
-            .set_balance_retriever(eth_balance_retriever.address())
-            .send()
-            .await
-            .unwrap();
-
-        summa_contract
-            .set_balance_retriever(erc20_balance_retriever.address())
-            .send()
-            .await
-            .unwrap();
-
-        let owned_addresses = vec![OwnedAddress {
-          address_type: keccak256("EVM"),
-          cex_address: cex_addr_1.encode().into(),
-          ownership_proof:
-            ("0x089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b").parse().unwrap()
-        },OwnedAddress {
-          address_type: keccak256("EVM"),
-          cex_address: cex_addr_2.encode().into(),
-          ownership_proof:
-            ("0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c").parse().unwrap()
+        let owned_addresses = vec![AddressOwnershipProof {
+          chain: "ETH".to_string(),
+          cex_address: cex_addr_1.to_string(),
+          signature:
+            ("0x089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b").parse().unwrap(),
+            message:  "Summa proof of solvency for CryptoExchange".encode().into(),
+        },AddressOwnershipProof {
+          chain: "ETH".to_string(),
+          cex_address: cex_addr_2.to_string(),
+          signature:
+            ("0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c").parse().unwrap(),
+            message:  "Summa proof of solvency for CryptoExchange".encode().into(),
         }];
         let result = summa_signer
             .submit_proof_of_address_ownership(owned_addresses)
@@ -200,7 +164,7 @@ mod test {
         assert_eq!(result.is_ok(), true);
 
         let logs = summa_contract
-            .exchange_addresses_submitted_filter()
+            .address_ownership_proof_submitted_filter()
             .query()
             .await
             .unwrap();
@@ -208,36 +172,23 @@ mod test {
         assert_eq!(logs.len(), 1);
         assert_eq!(
             logs[0],
-            ExchangeAddressesSubmittedFilter {
-                addresses: vec![OwnedAddress {
-                    address_type: keccak256("EVM"),
-                    cex_address: cex_addr_1.encode().into(),
-                    ownership_proof:
-                        ("0x089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b").parse().unwrap()
-                    },OwnedAddress {
-                    address_type: keccak256("EVM"),
-                    cex_address: cex_addr_2.encode().into(),
-                    ownership_proof:
-                        ("0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c").parse().unwrap()
-                    },
+            AddressOwnershipProofSubmittedFilter {
+                address_ownership_proofs: vec![AddressOwnershipProof {
+          chain: "ETH".to_string(),
+          cex_address: cex_addr_1.to_string(),
+          signature:
+            ("0x089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b").parse().unwrap(),
+            message:  "Summa proof of solvency for CryptoExchange".encode().into(),
+        },AddressOwnershipProof {
+          chain: "ETH".to_string(),
+          cex_address: cex_addr_2.to_string(),
+          signature:
+            ("0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c").parse().unwrap(),
+            message:  "Summa proof of solvency for CryptoExchange".encode().into(),
+        },
                 ],
             }
         );
-
-        let owned_assets = vec![
-            OwnedAsset {
-                asset_type: keccak256("ETH"),
-                addresses: vec![cex_addr_1.encode().into(), cex_addr_2.encode().into()],
-                amount_to_prove: U256::from(556863),
-                balance_retriever_args: Bytes::new(),
-            },
-            OwnedAsset {
-                asset_type: keccak256("ERC20"),
-                addresses: vec![cex_addr_2.encode().into()],
-                amount_to_prove: U256::from(556863),
-                balance_retriever_args: mock_erc20.address().encode().into(),
-            },
-        ];
 
         let path = "../zk_prover/examples/proof_solidity_calldata.json";
         let json_data = read_to_string(path).expect("Unable to read the file");
@@ -245,8 +196,19 @@ mod test {
 
         let result = summa_signer
             .submit_proof_of_solvency(
-                owned_assets,
                 calldata.public_inputs[0],
+                vec![
+                    Asset {
+                        asset_name: "ETH".to_string(),
+                        chain: "ETH".to_string(),
+                        amount: U256::from(556863),
+                    },
+                    Asset {
+                        asset_name: "USDT".to_string(),
+                        chain: "ETH".to_string(),
+                        amount: U256::from(556863),
+                    },
+                ],
                 calldata.proof.parse().unwrap(),
                 U256::from(0),
             )
@@ -255,7 +217,7 @@ mod test {
         assert_eq!(result.is_ok(), true);
 
         let logs = summa_contract
-            .proof_of_solvency_submitted_filter()
+            .solvency_proof_submitted_filter()
             .query()
             .await
             .unwrap();
@@ -263,10 +225,23 @@ mod test {
         assert_eq!(logs.len(), 1);
         assert_eq!(
             logs[0],
-            ProofOfSolvencySubmittedFilter {
+            SolvencyProofSubmittedFilter {
+                timestamp: U256::from(0),
                 mst_root: "0x2E021D9BF99C5BD7267488B6A7A5CF5F7D00222A41B6A9B971899C44089E0C5"
                     .parse()
                     .unwrap(),
+                assets: vec![
+                    Asset {
+                        asset_name: "ETH".to_string(),
+                        chain: "ETH".to_string(),
+                        amount: U256::from(556863)
+                    },
+                    Asset {
+                        asset_name: "USDT".to_string(),
+                        chain: "ETH".to_string(),
+                        amount: U256::from(556863)
+                    }
+                ],
             }
         );
 
