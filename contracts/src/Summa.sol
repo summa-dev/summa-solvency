@@ -47,13 +47,18 @@ contract Summa is Ownable {
         uint256[] publicInputs;
     }
 
-    IVerifier private immutable verifier;
+    //Verifier contracts
+    IVerifier private immutable solvencyVerifier;
+    IVerifier private immutable inclusionVerifier;
 
     //All address ownership proofs submitted by the CEX
     AddressOwnershipProof[] public addressOwnershipProofs;
 
     //Convenience mapping to check if an address has already been verified
     mapping(bytes32 => uint256) public ownershipProofByAddress;
+
+    // MST roots correasponding to successfully verified solvency proofs by timestamp
+    mapping(uint256 => uint256) public mstRoots;
 
     event AddressOwnershipProofSubmitted(
         AddressOwnershipProof[] addressOwnershipProofs
@@ -64,8 +69,9 @@ contract Summa is Ownable {
         Asset[] assets
     );
 
-    constructor(IVerifier _verifier) {
-        verifier = _verifier;
+    constructor(IVerifier _solvencyVerifier, IVerifier _inclusionVerifier) {
+        solvencyVerifier = _solvencyVerifier;
+        inclusionVerifier = _inclusionVerifier;
     }
 
     /**
@@ -122,16 +128,36 @@ contract Summa is Ownable {
             );
             inputs[i + 1] = assets[i].amount;
         }
-        // Verify ZK proof
-        require(verifyZkProof(proof, inputs), "Invalid ZK proof");
+        require(verifySolvencyProof(proof, inputs), "Invalid ZK proof");
+
+        mstRoots[timestamp] = mstRoot;
 
         emit SolvencyProofSubmitted(timestamp, inputs[0], assets);
     }
 
-    function verifyZkProof(
+    /**
+     * Verify the proof of CEX solvency
+     * @param proof ZK proof
+     * @param publicInputs proof inputs
+     */
+    function verifySolvencyProof(
         bytes memory proof,
         uint256[] memory publicInputs
-    ) public view onlyOwner returns (bool) {
-        return verifier.verify(publicInputs, proof);
+    ) public view returns (bool) {
+        return solvencyVerifier.verify(publicInputs, proof);
+    }
+
+    /**
+     * Verify the proof of user inclusion into the liabilities tree
+     * @param proof ZK proof
+     * @param publicInputs proof inputs
+     */
+    function verifyInclusionProof(
+        bytes memory proof,
+        uint256[] memory publicInputs,
+        uint256 timestamp
+    ) public view returns (bool) {
+        require(mstRoots[timestamp] == publicInputs[1], "Invalid MST root");
+        return inclusionVerifier.verify(publicInputs, proof);
     }
 }

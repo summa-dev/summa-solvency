@@ -1,6 +1,5 @@
 #![feature(generic_const_exprs)]
 
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use serde_json::to_string_pretty;
 use snark_verifier_sdk::{
     evm::{evm_verify, gen_evm_proof_shplonk, gen_evm_verifier_shplonk},
@@ -9,7 +8,7 @@ use snark_verifier_sdk::{
 use std::{fs::File, io::Write, path::Path};
 use summa_solvency::{
     circuits::{
-        solvency::SolvencyCircuit,
+        merkle_sum_tree::MstInclusionCircuit,
         types::ProofSolidityCallData,
         utils::{
             gen_proof_solidity_calldata, generate_setup_artifacts, write_verifier_sol_from_yul,
@@ -18,6 +17,7 @@ use summa_solvency::{
     merkle_sum_tree::MerkleSumTree,
 };
 
+const LEVELS: usize = 4;
 const N_ASSETS: usize = 2;
 const N_BYTES: usize = 14;
 
@@ -25,12 +25,10 @@ fn main() {
     let merkle_sum_tree =
         MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
-    let asset_sums = [Fp::from(556863u64), Fp::from(556863u64)];
-
-    let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(merkle_sum_tree, asset_sums);
+    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_sum_tree, 0);
 
     // generate a universal trusted setup for testing, along with the verification key (vk) and the proving key (pk).
-    let (params, pk, _) = generate_setup_artifacts(10, None, circuit.clone()).unwrap();
+    let (params, pk, _) = generate_setup_artifacts(11, None, circuit.clone()).unwrap();
 
     let num_instances = circuit.num_instance();
     let instances = circuit.instances();
@@ -50,15 +48,15 @@ fn main() {
     let serialized_data = to_string_pretty(&data).expect("Failed to serialize data");
 
     // Save the serialized data to a JSON file
-    let mut file = File::create("./examples/solvency_proof_solidity_calldata.json")
+    let mut file = File::create("./examples/inclusion_proof_solidity_calldata.json")
         .expect("Unable to create file");
     file.write_all(serialized_data.as_bytes())
         .expect("Unable to write data to file");
 
-    let yul_output_path = "../contracts/src/SolvencyVerifier.yul";
-    let sol_output_path = "../contracts/src/SolvencyVerifier.sol";
+    let yul_output_path = "../contracts/src/InclusionVerifier.yul";
+    let sol_output_path = "../contracts/src/InclusionVerifier.sol";
 
-    let deployment_code = gen_evm_verifier_shplonk::<SolvencyCircuit<N_ASSETS, N_BYTES>>(
+    let deployment_code = gen_evm_verifier_shplonk::<MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>>(
         &params,
         pk.get_vk(),
         num_instances,

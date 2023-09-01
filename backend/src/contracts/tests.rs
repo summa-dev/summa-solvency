@@ -85,11 +85,12 @@ mod test {
 
     use crate::contracts::{
         generated::{
+            inclusion_verifier::InclusionVerifier,
+            solvency_verifier::SolvencyVerifier,
             summa_contract::{
                 AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
                 SolvencyProofSubmittedFilter, Summa,
             },
-            verifier::SolvencyVerifier,
         },
         mock::mock_erc20,
         signer::SummaSigner,
@@ -121,17 +122,29 @@ mod test {
     async fn test_submit_proof_of_solvency() {
         let (anvil, cex_addr_1, cex_addr_2, client, _mock_erc20) = initialize_anvil().await;
 
-        let verifer_contract = SolvencyVerifier::deploy(Arc::clone(&client), ())
+        let solvency_verifer_contract = SolvencyVerifier::deploy(Arc::clone(&client), ())
             .unwrap()
             .send()
             .await
             .unwrap();
 
-        let summa_contract = Summa::deploy(Arc::clone(&client), verifer_contract.address())
+        let inclusion_verifer_contract = InclusionVerifier::deploy(Arc::clone(&client), ())
             .unwrap()
             .send()
             .await
             .unwrap();
+
+        let summa_contract = Summa::deploy(
+            Arc::clone(&client),
+            (
+                solvency_verifer_contract.address(),
+                inclusion_verifer_contract.address(),
+            ),
+        )
+        .unwrap()
+        .send()
+        .await
+        .unwrap();
 
         let summa_signer = SummaSigner::new(
             &vec![
@@ -190,7 +203,7 @@ mod test {
             }
         );
 
-        let path = "../zk_prover/examples/proof_solidity_calldata.json";
+        let path = "../zk_prover/examples/solvency_proof_solidity_calldata.json";
         let json_data = read_to_string(path).expect("Unable to read the file");
         let calldata: ProofSolidityCallData = from_str(&json_data).unwrap();
 
