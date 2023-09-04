@@ -72,8 +72,11 @@ main().catch((error) => {
   process.exitCode = 1;
 });
 
-function copyAbi(fs: any, path: string, contractName: string) {
-  const abi = require(`../artifacts/src/${path}.sol/${contractName}.json`);
+function copyAbi(fs: any, filename: string, contractName: string) {
+  const abi = require(`../artifacts/src/${filename}.sol/${contractName}.json`);
   const abiStringified = JSON.stringify(abi);
-  fs.writeFileSync(`../backend/src/contracts/abi/${path}.json`, abiStringified);
+  fs.writeFileSync(
+    `../backend/src/contracts/abi/${filename}.json`,
+    abiStringified
+  );
 }

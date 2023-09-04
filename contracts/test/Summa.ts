@@ -9,6 +9,44 @@ import * as fs from "fs";
 import * as path from "path";
 
 describe("Summa Contract", () => {
+  function submitProofOfSolvency(
+    summa: Summa,
+    mstRoot: BigNumber,
+    proof: string,
+    assets = [
+      {
+        chain: "ETH",
+        assetName: "ETH",
+        amount: BigNumber.from(556863),
+      },
+      {
+        chain: "ETH",
+        assetName: "USDT",
+        amount: BigNumber.from(556863),
+      },
+    ]
+  ): any {
+    return summa.submitProofOfSolvency(
+      mstRoot,
+      assets,
+      proof,
+      BigNumber.from(1693559255)
+    );
+  }
+
+  function verifyInclusionProof(
+    summa: Summa,
+    inclusionProof: string,
+    leafHash: BigNumber,
+    mstRoot: BigNumber
+  ): any {
+    return summa.verifyInclusionProof(
+      inclusionProof,
+      [leafHash, mstRoot],
+      1693559255
+    );
+  }
+
   async function deploySummaFixture() {
     // Contracts are deployed using the first signer/account by default
     const [owner, addr1, addr2, addr3]: SignerWithAddress[] =
@@ -66,7 +104,7 @@ describe("Summa Contract", () => {
       //   ["bytes"],
       //   [message]
       // );
-      // const signature = await deployemtnInfo.addr3.signMessage(
+      // const signature = await deploymentInfo.addr3.signMessage(
       //   ethers.utils.arrayify(hashedMessage)
       // );
       // console.log("signature", signature);
@@ -223,25 +261,7 @@ describe("Summa Contract", () => {
     it("should verify the proof of solvency for the given public input", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
 
-      await expect(
-        summa.submitProofOfSolvency(
-          mstRoot,
-          [
-            {
-              chain: "ETH",
-              assetName: "ETH",
-              amount: BigNumber.from(556863),
-            },
-            {
-              chain: "ETH",
-              assetName: "USDT",
-              amount: BigNumber.from(556863),
-            },
-          ],
-          proof,
-          BigNumber.from(1693559255)
-        )
-      )
+      await expect(submitProofOfSolvency(summa, mstRoot, proof))
         .to.emit(summa, "SolvencyProofSubmitted")
         .withArgs(
           BigNumber.from(1693559255),
@@ -283,23 +303,7 @@ describe("Summa Contract", () => {
 
     it("should not verify the proof of solvency if the CEX hasn't proven the address ownership", async () => {
       await expect(
-        summa.submitProofOfSolvency(
-          mstRoot,
-          [
-            {
-              chain: "ETH",
-              assetName: "ETH",
-              amount: BigNumber.from(556863),
-            },
-            {
-              chain: "ETH",
-              assetName: "USDT",
-              amount: BigNumber.from(556863),
-            },
-          ],
-          proof,
-          BigNumber.from(1693559255)
-        )
+        submitProofOfSolvency(summa, mstRoot, proof)
       ).to.be.revertedWith(
         "The CEX has not submitted any address ownership proofs"
       );
@@ -311,23 +315,7 @@ describe("Summa Contract", () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
-        summa.submitProofOfSolvency(
-          mstRoot,
-          [
-            {
-              chain: "ETH",
-              assetName: "ETH",
-              amount: BigNumber.from(556863),
-            },
-            {
-              chain: "ETH",
-              assetName: "USDT",
-              amount: BigNumber.from(556863),
-            },
-          ],
-          proof,
-          BigNumber.from(1693559255)
-        )
+        submitProofOfSolvency(summa, mstRoot, proof)
       ).to.be.revertedWith("Invalid ZK proof");
     });
 
@@ -335,33 +323,23 @@ describe("Summa Contract", () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
-        summa.submitProofOfSolvency(
-          mstRoot,
-          [
-            {
-              chain: "",
-              assetName: "ETH",
-              amount: BigNumber.from(556863),
-            },
-          ],
-          proof,
-          BigNumber.from(0)
-        )
+        submitProofOfSolvency(summa, mstRoot, proof, [
+          {
+            chain: "",
+            assetName: "ETH",
+            amount: BigNumber.from(556863),
+          },
+        ])
       ).to.be.revertedWith("Invalid asset");
 
       await expect(
-        summa.submitProofOfSolvency(
-          mstRoot,
-          [
-            {
-              chain: "ETH",
-              assetName: "",
-              amount: BigNumber.from(556863),
-            },
-          ],
-          proof,
-          BigNumber.from(1693559255)
-        )
+        submitProofOfSolvency(summa, mstRoot, proof, [
+          {
+            chain: "ETH",
+            assetName: "",
+            amount: BigNumber.from(556863),
+          },
+        ])
       ).to.be.revertedWith("Invalid asset");
     });
 
@@ -371,45 +349,13 @@ describe("Summa Contract", () => {
       proof = proof.replace("1", "2");
 
       await expect(
-        summa.submitProofOfSolvency(
-          mstRoot,
-          [
-            {
-              chain: "ETH",
-              assetName: "ETH",
-              amount: BigNumber.from(556863),
-            },
-            {
-              chain: "ETH",
-              assetName: "USDT",
-              amount: BigNumber.from(556863),
-            },
-          ],
-          proof,
-          BigNumber.from(1693559255)
-        )
+        submitProofOfSolvency(summa, mstRoot, proof)
       ).to.be.revertedWith("Invalid ZK proof");
 
       proof = "0x000000";
 
       await expect(
-        summa.submitProofOfSolvency(
-          mstRoot,
-          [
-            {
-              chain: "ETH",
-              assetName: "ETH",
-              amount: BigNumber.from(556863),
-            },
-            {
-              chain: "ETH",
-              assetName: "USDT",
-              amount: BigNumber.from(556863),
-            },
-          ],
-          proof,
-          BigNumber.from(1693559255)
-        )
+        submitProofOfSolvency(summa, mstRoot, proof)
       ).to.be.revertedWithoutReason();
     });
   });
@@ -479,69 +425,25 @@ describe("Summa Contract", () => {
 
     it("should verify the proof of inclusion for the given public input", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await summa.submitProofOfSolvency(
-        mstRoot,
-        [
-          {
-            chain: "ETH",
-            assetName: "ETH",
-            amount: BigNumber.from(556863),
-          },
-          {
-            chain: "ETH",
-            assetName: "USDT",
-            amount: BigNumber.from(556863),
-          },
-        ],
-        solvencyProof,
-        BigNumber.from(1693559255)
-      );
+      await submitProofOfSolvency(summa, mstRoot, solvencyProof);
       expect(
-        await summa.verifyInclusionProof(
-          inclusionProof,
-          [leafHash, mstRoot],
-          1693559255
-        )
+        await verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
       ).to.be.equal(true);
     });
 
     it("should not verify with invalid MST root", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await summa.submitProofOfSolvency(
-        mstRoot,
-        [
-          {
-            chain: "ETH",
-            assetName: "ETH",
-            amount: BigNumber.from(556863),
-          },
-          {
-            chain: "ETH",
-            assetName: "USDT",
-            amount: BigNumber.from(556863),
-          },
-        ],
-        solvencyProof,
-        BigNumber.from(1693559255)
-      );
+      await submitProofOfSolvency(summa, mstRoot, solvencyProof);
       mstRoot = BigNumber.from(0);
       await expect(
-        summa.verifyInclusionProof(
-          inclusionProof,
-          [leafHash, mstRoot],
-          1693559255
-        )
+        verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
       ).to.be.revertedWith("Invalid MST root");
     });
 
     it("should not verify if the MST root lookup by timestamp returns an incorrect MST root", async () => {
       // The lookup will return a zero MST root as no MST root has been stored yet
       await expect(
-        summa.verifyInclusionProof(
-          inclusionProof,
-          [leafHash, mstRoot],
-          1693559255
-        )
+        verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
       ).to.be.revertedWith("Invalid MST root");
     });
 
@@ -549,29 +451,9 @@ describe("Summa Contract", () => {
       leafHash = BigNumber.from(0);
 
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await summa.submitProofOfSolvency(
-        mstRoot,
-        [
-          {
-            chain: "ETH",
-            assetName: "ETH",
-            amount: BigNumber.from(556863),
-          },
-          {
-            chain: "ETH",
-            assetName: "USDT",
-            amount: BigNumber.from(556863),
-          },
-        ],
-        solvencyProof,
-        BigNumber.from(1693559255)
-      );
+      await submitProofOfSolvency(summa, mstRoot, solvencyProof);
       expect(
-        await summa.verifyInclusionProof(
-          inclusionProof,
-          [leafHash, mstRoot],
-          1693559255
-        )
+        verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
       ).to.be.equal(false);
     });
 
@@ -579,29 +461,9 @@ describe("Summa Contract", () => {
       inclusionProof = inclusionProof.replace("1", "2");
 
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await summa.submitProofOfSolvency(
-        mstRoot,
-        [
-          {
-            chain: "ETH",
-            assetName: "ETH",
-            amount: BigNumber.from(556863),
-          },
-          {
-            chain: "ETH",
-            assetName: "USDT",
-            amount: BigNumber.from(556863),
-          },
-        ],
-        solvencyProof,
-        BigNumber.from(1693559255)
-      );
+      await submitProofOfSolvency(summa, mstRoot, solvencyProof);
       expect(
-        await summa.verifyInclusionProof(
-          inclusionProof,
-          [leafHash, mstRoot],
-          1693559255
-        )
+        verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
       ).to.be.equal(false);
     });
   });

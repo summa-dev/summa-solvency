@@ -57,7 +57,7 @@ contract Summa is Ownable {
     //Convenience mapping to check if an address has already been verified
     mapping(bytes32 => uint256) public ownershipProofByAddress;
 
-    // MST roots correasponding to successfully verified solvency proofs by timestamp
+    // MST roots corresponding to successfully verified solvency proofs by timestamp
     mapping(uint256 => uint256) public mstRoots;
 
     event AddressOwnershipProofSubmitted(
@@ -106,7 +106,7 @@ contract Summa is Ownable {
      * @param mstRoot Merkle sum tree root of the CEX's liabilities
      * @param assets The list of assets owned by the CEX
      * @param proof The ZK proof
-     * @param timestamp The timestamp at which the CEX took the snapshot of its assets and liabilites
+     * @param timestamp The timestamp at which the CEX took the snapshot of its assets and liabilities
      */
     function submitProofOfSolvency(
         uint256 mstRoot,
