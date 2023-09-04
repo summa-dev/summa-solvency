@@ -453,7 +453,7 @@ describe("Summa Contract", () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
       await submitProofOfSolvency(summa, mstRoot, solvencyProof);
       expect(
-        verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
+        await verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
       ).to.be.equal(false);
     });
 
@@ -463,7 +463,7 @@ describe("Summa Contract", () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
       await submitProofOfSolvency(summa, mstRoot, solvencyProof);
       expect(
-        verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
+        await verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
       ).to.be.equal(false);
     });
   });
