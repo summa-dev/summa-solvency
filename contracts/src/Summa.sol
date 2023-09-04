@@ -37,16 +37,6 @@ contract Summa is Ownable {
         uint256 amount;
     }
 
-    /**
-     * @dev Zero-knowledge proof and its inputs
-     * @param proof zero-knowledge proof
-     * @param publicInputs proof inputs
-     */
-    struct ZKProof {
-        bytes proof;
-        uint256[] publicInputs;
-    }
-
     //Verifier contracts
     IVerifier private immutable solvencyVerifier;
     IVerifier private immutable inclusionVerifier;
