@@ -10,12 +10,20 @@ type Deployments = {
 };
 
 async function main() {
-  const verifier = await ethers.deployContract(
+  const solvencyVerifier = await ethers.deployContract(
     "src/SolvencyVerifier.sol:Verifier"
   );
-  await verifier.deployed();
+  await solvencyVerifier.deployed();
 
-  const summa = await ethers.deployContract("Summa", [verifier.address]);
+  const inclusionVerifier = await ethers.deployContract(
+    "src/InclusionVerifier.sol:Verifier"
+  );
+  await inclusionVerifier.deployed();
+
+  const summa = await ethers.deployContract("Summa", [
+    solvencyVerifier.address,
+    inclusionVerifier.address,
+  ]);
 
   await summa.deployed();
 
@@ -54,6 +62,7 @@ async function main() {
   //Copy the ABIs from `artifacts/src/*` to `backend/src/contracts/*`
   copyAbi(fs, "Summa", "Summa");
   copyAbi(fs, "SolvencyVerifier", "Verifier");
+  copyAbi(fs, "InclusionVerifier", "Verifier");
 }
 
 // We recommend this pattern to be able to use async/await everywhere
@@ -63,11 +72,11 @@ main().catch((error) => {
   process.exitCode = 1;
 });
 
-function copyAbi(fs: any, path: string, contractName: string) {
-  const abi = require(`../artifacts/src/${path}.sol/${contractName}.json`);
+function copyAbi(fs: any, filename: string, contractName: string) {
+  const abi = require(`../artifacts/src/${filename}.sol/${contractName}.json`);
   const abiStringified = JSON.stringify(abi);
   fs.writeFileSync(
-    `../backend/src/contracts/abi/${contractName}.json`,
+    `../backend/src/contracts/abi/${filename}.json`,
     abiStringified
   );
 }
