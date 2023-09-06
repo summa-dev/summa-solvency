@@ -245,7 +245,7 @@ mod tests {
 
     const LEVELS: usize = 4;
     const N_ASSETS: usize = 2;
-    const N_BYTES: usize = 10;
+    const N_BYTES: usize = 14;
 
     #[tokio::test]
     async fn test_round_features() {
@@ -303,8 +303,26 @@ mod tests {
         // Build snapshot
         round.build_snapshot(entry_csv, params_path, 1);
 
+        // Verify solvency proof
+        let mut logs = summa_contract
+            .solvency_proof_submitted_filter()
+            .query()
+            .await
+            .unwrap();
+        assert_eq!(logs.len(), 0);
+
         assert_eq!(round.dispatch_solvency_proof(assets).await.unwrap(), ());
 
+        // after send transaction to submit proof of solvency, logs should be updated
+        let mut logs = summa_contract
+            .solvency_proof_submitted_filter()
+            .query()
+            .await
+            .unwrap();
+
+        assert_eq!(logs.len(), 1);
+
+        // Test inclusion proof generation
         let inclusion_proof = round.get_proof_of_inclusion(0).unwrap();
 
         assert_eq!(

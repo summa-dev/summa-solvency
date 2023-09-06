@@ -99,11 +99,11 @@ impl SummaSigner {
 
     pub async fn submit_proof_of_address_ownership(
         &self,
-        cex_addresses: Vec<AddressOwnershipProof>,
+        address_ownership_proofs: Vec<AddressOwnershipProof>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let submit_proof_of_address_ownership = &self
             .summa_contract
-            .submit_proof_of_address_ownership(cex_addresses);
+            .submit_proof_of_address_ownership(address_ownership_proofs);
         let tx = submit_proof_of_address_ownership.send().await.unwrap();
 
         tx.await.unwrap();
@@ -111,7 +111,6 @@ impl SummaSigner {
         Ok(())
     }
 
-    #[cfg(not(test))]
     pub async fn submit_proof_of_solvency(
         &self,
         mst_root: ethers::types::U256,
@@ -126,19 +125,6 @@ impl SummaSigner {
 
         tx.await.unwrap();
 
-        Ok(())
-    }
-
-    // Mock function for testing
-    // Actual testing for contract method on `contracts::tests:test_submit_proof_of_solvency`
-    #[cfg(test)]
-    pub async fn submit_proof_of_solvency(
-        &self,
-        mst_root: ethers::types::U256,
-        assets: Vec<Asset>,
-        proof: ethers::types::Bytes,
-        timestamp: ethers::types::U256,
-    ) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 }

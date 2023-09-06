@@ -66,27 +66,6 @@ impl MstInclusionProof {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct AddressOwnershipProof {
-    addresses: Vec<String>,
-    signatures: Vec<String>,
-    message: String,
-}
-
-impl AddressOwnershipProof {
-    pub fn get_addresses(&self) -> &Vec<String> {
-        &self.addresses
-    }
-
-    pub fn get_signatures(&self) -> &Vec<String> {
-        &self.signatures
-    }
-
-    pub fn get_message(&self) -> &String {
-        &self.message
-    }
-}
-
 impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
     Snapshot<LEVELS, N_ASSETS, N_BYTES>
 where
