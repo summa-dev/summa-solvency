@@ -15,9 +15,9 @@ Inputs:
 
 Outputs:
 ---------
-- step_out[2] : `user_state_cur` and `liabilities_state_cur`, namely the resulting states after the IVC step
-- leaf_hash: hash of the leaf node that proved inclusion in the merkle sum tree
-- root_hash: root hash of the resulting merkle sum tree
+- step_out[2] : `user_state_cur` and `liabilities_state_cur`, namely the resulting states after the IVC step. 
+    - `user_state_cur` is equal to H(`user_state_prev`, `leaf_hash`)
+    - `liabilities_state_cur` is equal to H(`liabilities_state_prev`, `root_hash`)
 
 Parameters:
 ------------
@@ -42,8 +42,6 @@ template IncrementalMstInclusion (LEVELS, N_ASSETS, N_BYTES) {
     signal input path_indices[LEVELS];
 
     signal output step_out[2];
-    signal output leaf_hash;
-    signal output root_hash;
 
     // 1.
     component build_leaf_hash = Poseidon(1 + N_ASSETS);
@@ -73,9 +71,6 @@ template IncrementalMstInclusion (LEVELS, N_ASSETS, N_BYTES) {
 
     step_out[0] <== build_user_state_cur.out;
     step_out[1] <== build_liabilities_state_cur.out;
-    leaf_hash <== build_leaf_hash.out;
-    root_hash <== check_inclusion.root_hash;
-
 }
 
 component main { public [step_in] } = IncrementalMstInclusion(4, 2, 14);

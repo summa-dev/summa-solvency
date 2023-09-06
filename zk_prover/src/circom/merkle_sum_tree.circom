@@ -185,7 +185,6 @@ Inputs:
 Outputs:
 ---------
 - root_hash: root hash of the resulting merkle sum tree
-- root_balances[N_ASSETS]: root balances of the resulting merkle sum tree
 
 Parameters:
 ------------
@@ -212,7 +211,6 @@ template MerkleSumTreeInclusion(LEVELS, N_ASSETS, N_BYTES) {
     signal input path_indices[LEVELS];
 
     signal output root_hash;
-    signal output root_balances[N_ASSETS];
 
     component summers[LEVELS];
     component swappers[LEVELS];
@@ -237,7 +235,7 @@ template MerkleSumTreeInclusion(LEVELS, N_ASSETS, N_BYTES) {
         // 3.
         hashers[i] = Hasher(N_ASSETS);
 
-        hashers[i].left_hash <== swappers[i].left_hash;
+        hashers[i].left_hash <== swappers[i].swapped_left_hash;
         hashers[i].left_balances <== swappers[i].swapped_left_balances;
         hashers[i].right_hash <== swappers[i].swapped_right_hash;
         hashers[i].right_balances <== swappers[i].swapped_right_balances;
@@ -253,5 +251,4 @@ template MerkleSumTreeInclusion(LEVELS, N_ASSETS, N_BYTES) {
     }
 
     root_hash <== hashers[LEVELS - 1].hash;
-    root_balances <== summers[LEVELS - 1].out_balances;
 }
