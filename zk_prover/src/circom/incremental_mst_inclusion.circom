@@ -8,7 +8,7 @@ Inputs:
 ---------
 - step_in[2] : `user_state_prev` and `liabilities_state_prev` from the previous step of the IVC
 - username: username of the user whose inclusion in the merkle sum tree we want to prove
-- balances[N_ASSETS]: balances of the user whose inclusion in the merkle sum tree we want to prove
+- user_balances[N_ASSETS]: balances of the user whose inclusion in the merkle sum tree we want to prove
 - path_element_hashes[LEVELS]: hashes of elements of the merkle path
 - path_element_balances[LEVELS][N_ASSETS]: balances of the elements of the merkle path
 - path_indices[LEVELS]: binary selector that indicates whether given path_element is on the left or right side of merkle path
@@ -36,7 +36,7 @@ template IncrementalMstInclusion (LEVELS, N_ASSETS, N_BYTES) {
     signal input step_in[2];
 
     signal input username;
-    signal input balances[N_ASSETS];
+    signal input user_balances[N_ASSETS];
     signal input path_element_hashes[LEVELS];
     signal input path_element_balances[LEVELS][N_ASSETS];
     signal input path_indices[LEVELS];
@@ -49,7 +49,7 @@ template IncrementalMstInclusion (LEVELS, N_ASSETS, N_BYTES) {
     component build_leaf_hash = Poseidon(1 + N_ASSETS);
     build_leaf_hash.inputs[0] <== username;
     for (var i = 0; i < N_ASSETS; i++) {
-        build_leaf_hash.inputs[i + 1] <== balances[i];
+        build_leaf_hash.inputs[i + 1] <== user_balances[i];
     }
 
     // 2.
@@ -61,7 +61,7 @@ template IncrementalMstInclusion (LEVELS, N_ASSETS, N_BYTES) {
     component check_inclusion = MerkleSumTreeInclusion(LEVELS, N_ASSETS, N_BYTES);
 
     check_inclusion.leaf_hash <== build_leaf_hash.out;
-    check_inclusion.leaf_balances <== balances;
+    check_inclusion.leaf_balances <== user_balances;
     check_inclusion.path_element_hashes <== path_element_hashes;
     check_inclusion.path_element_balances <== path_element_balances;
     check_inclusion.path_indices <== path_indices;
