@@ -111,6 +111,7 @@ impl SummaSigner {
         Ok(())
     }
 
+    #[cfg(not(test))]
     pub async fn submit_proof_of_solvency(
         &self,
         mst_root: ethers::types::U256,
@@ -125,6 +126,19 @@ impl SummaSigner {
 
         tx.await.unwrap();
 
+        Ok(())
+    }
+
+    // Mock function for testing
+    // Actual testing for contract method on `contracts::tests:test_submit_proof_of_solvency`
+    #[cfg(test)]
+    pub async fn submit_proof_of_solvency(
+        &self,
+        mst_root: ethers::types::U256,
+        assets: Vec<Asset>,
+        proof: ethers::types::Bytes,
+        timestamp: ethers::types::U256,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 }
