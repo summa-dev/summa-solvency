@@ -27,7 +27,6 @@ jobs:
       - name: Test Nova Prover
         run: |
           cd zk_prover
-          circom src/circom/incremental_mst_inclusion.circom  --r1cs --wasm  -o examples/build --prime bn128
           cargo run --release --example nova_incremental_verifier
 
       - name: Install Foundry
