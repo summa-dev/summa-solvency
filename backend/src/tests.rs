@@ -274,5 +274,7 @@ mod test {
         summa_contract
             .verify_inclusion_proof(proof, public_inputs, U256::from(1))
             .await;
+
+        drop(anvil);
     }
 }
