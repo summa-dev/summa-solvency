@@ -22,6 +22,27 @@ const N_ASSETS: usize = 2;
 const N_BYTES: usize = 14;
 
 fn main() {
+    // In order to generate the verifier we create the circuit using the init_empty() method, which means that the circuit is not initialized with any data.
+    let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init_empty();
+
+    // generate a universal trusted setup for testing, along with the verification key (vk) and the proving key (pk).
+    let (params, pk, _) = generate_setup_artifacts(10, None, circuit.clone()).unwrap();
+
+    let num_instances = circuit.num_instance();
+
+    let yul_output_path = "../contracts/src/SolvencyVerifier.yul";
+    let sol_output_path = "../contracts/src/SolvencyVerifier.sol";
+
+    let deployment_code = gen_evm_verifier_shplonk::<SolvencyCircuit<N_ASSETS, N_BYTES>>(
+        &params,
+        pk.get_vk(),
+        num_instances,
+        Some(Path::new(yul_output_path)),
+    );
+
+    write_verifier_sol_from_yul(yul_output_path, sol_output_path).unwrap();
+
+    // In order to generate a proof for testing purpose we create the circuit using the init() method, which take as input the merkle sum tree and the asset sums.
     let merkle_sum_tree =
         MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
@@ -56,18 +77,6 @@ fn main() {
         .expect("Unable to create file");
     file.write_all(serialized_data.as_bytes())
         .expect("Unable to write data to file");
-
-    let yul_output_path = "../contracts/src/SolvencyVerifier.yul";
-    let sol_output_path = "../contracts/src/SolvencyVerifier.sol";
-
-    let deployment_code = gen_evm_verifier_shplonk::<SolvencyCircuit<N_ASSETS, N_BYTES>>(
-        &params,
-        pk.get_vk(),
-        num_instances,
-        Some(Path::new(yul_output_path)),
-    );
-
-    write_verifier_sol_from_yul(yul_output_path, sol_output_path).unwrap();
 
     let gas_cost = evm_verify(deployment_code, instances, proof);
 
