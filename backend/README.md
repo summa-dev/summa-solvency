@@ -2,18 +2,26 @@
 
 This directory contains the backend implementation for the Summa Proof of Solvency protocol.
 
-The core datastructure is the `Snapshot` struct, a data container for:
+## Core Components
 
-- the CEX liabilities, represented via a `MerkleSumTree`
-- the CEX wallets, represented via the `WalletOwnershipProof` struct.
-- the Trusted Setup parameters for the `MstInclusionCircuit` and `SolvencyCircuit` zk circuits.
+### Round
 
-Furthermore, the `Snapshot` struct contains the following methods:
+The `Round` component represents a specific period or cycle in the Summa Proof of Solvency protocol. It encapsulates the state of the system at a given time, including the snapshot of assets and liabilities, as well as the associated proofs. 
+ The `Round` struct integrates with the `Snapshot` and `SummaSigner` to facilitate the generation and submission of proofs to the contract.
 
-- `generate_solvency_verifier` -> write the Solidity Verifier contract (for the `SolvencyProof`) to a file
-- `generate_proof_of_solvency` -> generate the `SolvencyProof` for the current snapshot to be verified on-chain
-- `generate_proof_of_inclusion` -> generate the `MstInclusionProof` for a specific user for the current snapshot to be verified off-chain
-- `get_proof_of_address_ownership` -> generate the `AddressOwnershipProof` for a specific user for the current snapshot to be verified off-chain
+Key Features:
+- Initialization of a new round with specific parameters.
+- Building a snapshot of the current state.
+- Dispatching solvency proofs to the contract.
+- Retrieving proofs of inclusion for specific users.
+
+### AddressOwnership
+
+The `AddressOwnership` component is responsible for managing and verifying the ownership of addresses. It ensures that addresses used in the protocol owned by the respective participants. This component interacts with the `SummaSigner` to submit proofs of address ownership to on-chain.
+
+Key Features:
+- Initialization with specific signer details.
+- Dispatching proofs of address ownership to the contract.
 
 ## Prerequisites
 
@@ -29,17 +37,17 @@ After downloading, pass the path to the desired file to the `Snapshot::new` meth
 
 ## Important Notices
 
-### For Proof of Solvency
+### Generating Verifiers for Backend
 
-As of the current implementation, the `generate_proof_of_solvency` method does not directly fetch data about the balances of the wallets of the CEX. Instead, you can use the `fetch_asset_sums` function to retrieve balance information from the blockchain. Here's an example of how you might utilize it:
+To generate the verifiers for the backend, follow the steps outlined below:
 
-```Rust
-let asset_sums = fetch_asset_sums(client, token_contracts, exchange_addresses).await?;
-```
+1. **Build the Verifier Contracts**: Begin by constructing the solvency and inclusion verifier contracts located within the `zk_prover`. Please check in details in [here](https://github.com/summa-dev/summa-solvency/tree/master/zk_prover#build-a-solvency-verifier-contract) and [here](https://github.com/summa-dev/summa-solvency/tree/master/zk_prover#build-an-inclusion-verifier-contract)
 
-Please note that the first element in the `asset_sums` array represents the ETH balance.
+2. **Deploy Contracts to Local Environment**: Navigate to the `contracts` directory and deploy the contracts to a Hardhat environment. This action will update the ABI files(`src/contracts/abi/*.json`) in the backend.
 
-Alternatively, you can create your own custom fetcher to retrieve the balances.
+3. **Generate Rust Interface Files**: Execute the build script in the backend. This will produce the Rust interface files: `inclusion_verifier.rs`, `solvency_verifier.rs`, and `summa_contract.rs`.
+
+By following this procedure, the backend will be equipped with the necessary verifiers for its operations.
 
 ### For Proof of Ownership
 
@@ -51,18 +59,6 @@ let signatures = signer.generate_signatures().await.unwrap();
 
 The content of the message can be specified with the local variable `SIGNATURE_VERIFICATION_MESSAGE`.
 
-### For Generating Solvency Verifier
-
-The provided verifier found at `src/contracts/Verifier.json` is based on the trusted setup, `hermez-raw-11`. If you are working with a higher number of entries, you will need to generate a new verifier contract by using the `generate_solvency_verifier` method.
-
-Here's a brief example of how you might invoke this method:
-
-```Rust
-Snapshot::generate_solvency_verifier("SolvencyVerifier.yul", "SolvencyVerifier.sol");
-```
-
-This method creates two files, `SolvencyVerifier.yul` and `SolvencyVerifier.sol`, which will be used in `Summa.sol`.
-
 ## Usage
 
 To build the binary executable and test it
@@ -71,5 +67,3 @@ To build the binary executable and test it
 cargo build
 SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" cargo test --release -- --nocapture
 ```
-
-The [buildscript](./build.rs) will automatically build the contract Rust interfaces from the [JSON ABIs](./src/contracts/abi/) and place them into [./src/contracts/generated](./src/contracts/generated) directory. The ABIs are updated on contract deployment from the [contracts subproject](./../contracts/README.md) by the [contract deployment script](./../contracts/scripts/deploy.ts).
