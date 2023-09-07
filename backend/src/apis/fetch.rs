@@ -54,7 +54,7 @@ mod tests {
     use super::*;
 
     use crate::contracts::mock::mock_erc20::MockERC20;
-    use crate::contracts::tests::initialize_anvil;
+    use crate::tests::initialize_anvil;
 
     #[tokio::test]
     async fn test_fetch_asset_sums() {

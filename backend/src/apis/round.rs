@@ -7,6 +7,7 @@ use halo2_proofs::{
     plonk::{ProvingKey, VerifyingKey},
     poly::kzg::commitment::ParamsKZG,
 };
+use serde_json::to_string_pretty;
 use snark_verifier_sdk::CircuitExt;
 use std::error::Error;
 
@@ -110,6 +111,7 @@ where
             .collect::<Vec<Fp>>()
             .try_into()
             .unwrap();
+
         let proof: SolvencyProof = match snapshot.generate_proof_of_solvency(asset_sum) {
             Ok(p) => p,
             Err(_) => return Err("Failed to generate proof of solvency"),
@@ -220,124 +222,5 @@ where
             public_inputs: circuit.instances(),
             proof,
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ethers::{
-        core::k256::ecdsa::SigningKey,
-        signers::{LocalWallet, Wallet},
-        types::H160,
-        utils::{Anvil, AnvilInstance},
-    };
-    use halo2_proofs::halo2curves::ff::PrimeField;
-    use std::{str::from_utf8, str::FromStr, sync::Arc};
-
-    use crate::contracts::{
-        generated::{
-            inclusion_verifier::InclusionVerifier, solvency_verifier::SolvencyVerifier,
-            summa_contract::Summa,
-        },
-        tests::initialize_anvil,
-    };
-
-    const LEVELS: usize = 4;
-    const N_ASSETS: usize = 2;
-    const N_BYTES: usize = 14;
-
-    #[tokio::test]
-    async fn test_round_features() {
-        let (anvil, cex_addr_1, cex_addr_2, client, _mock_erc20) = initialize_anvil().await;
-
-        let solvency_verifer_contract = SolvencyVerifier::deploy(Arc::clone(&client), ())
-            .unwrap()
-            .send()
-            .await
-            .unwrap();
-
-        let inclusion_verifer_contract = InclusionVerifier::deploy(Arc::clone(&client), ())
-            .unwrap()
-            .send()
-            .await
-            .unwrap();
-
-        let summa_contract = Summa::deploy(
-            Arc::clone(&client),
-            (
-                solvency_verifer_contract.address(),
-                inclusion_verifer_contract.address(),
-            ),
-        )
-        .unwrap()
-        .send()
-        .await
-        .unwrap();
-
-        // Initialize round
-        let mut round = Round::<LEVELS, N_ASSETS, N_BYTES>::new(
-            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // anvil account [0]
-            anvil.chain_id(),
-            anvil.endpoint().as_str(),
-            summa_contract.address(),
-        )
-        .unwrap();
-
-        let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
-        let params_path = "ptau/hermez-raw-11";
-
-        let assets = [
-            Asset {
-                asset_name: "ETH".to_string(),
-                chain: "ETH".to_string(),
-                amount: U256::from(556863),
-            },
-            Asset {
-                asset_name: "USDT".to_string(),
-                chain: "ETH".to_string(),
-                amount: U256::from(556863),
-            },
-        ];
-
-        // Build snapshot
-        round.build_snapshot(entry_csv, params_path, 1);
-
-        // Verify solvency proof
-        let mut logs = summa_contract
-            .solvency_proof_submitted_filter()
-            .query()
-            .await
-            .unwrap();
-        assert_eq!(logs.len(), 0);
-
-        assert_eq!(round.dispatch_solvency_proof(assets).await.unwrap(), ());
-
-        // after send transaction to submit proof of solvency, logs should be updated
-        let mut logs = summa_contract
-            .solvency_proof_submitted_filter()
-            .query()
-            .await
-            .unwrap();
-
-        assert_eq!(logs.len(), 1);
-
-        // Test inclusion proof generation
-        let inclusion_proof = round.get_proof_of_inclusion(0).unwrap();
-
-        assert_eq!(
-            inclusion_proof.public_inputs[0][0],
-            Fp::from_str_vartime(
-                "6362822108736413915574850018842190920390136280184018644072260166743334495239"
-            )
-            .unwrap()
-        );
-        assert_eq!(
-            inclusion_proof.public_inputs[0][1],
-            Fp::from_str_vartime(
-                "1300633067792667740851197998552728163078912135282962223512949070409098715333"
-            )
-            .unwrap()
-        );
     }
 }
