@@ -70,30 +70,24 @@ pub async fn initialize_anvil() -> (
     (anvil, cex_addr_1, cex_addr_2, client, mock_erc20)
 }
 
+#[cfg(test)]
 mod test {
-    use serde_json::from_str;
-    use std::{fs::read_to_string, sync::Arc};
+    use std::sync::Arc;
 
     use ethers::{
         abi::AbiEncode,
-        providers::Middleware,
-        types::{Address, Bytes, Filter, U256},
-        utils::{keccak256, to_checksum, Anvil},
+        types::{Bytes, U256},
+        utils::to_checksum,
     };
-    use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
     use crate::apis::{address_ownership::AddressOwnership, round::Round};
-    use crate::contracts::{
-        generated::{
-            inclusion_verifier::InclusionVerifier,
-            solvency_verifier::SolvencyVerifier,
-            summa_contract::{
-                AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
-                SolvencyProofSubmittedFilter, Summa,
-            },
+    use crate::contracts::generated::{
+        inclusion_verifier::InclusionVerifier,
+        solvency_verifier::SolvencyVerifier,
+        summa_contract::{
+            AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
+            SolvencyProofSubmittedFilter, Summa,
         },
-        mock::mock_erc20,
-        signer::SummaSigner,
     };
     use crate::tests::initialize_anvil;
 
@@ -124,21 +118,6 @@ mod test {
         .send()
         .await
         .unwrap();
-
-        // Dispatch proof of address ownership
-        let owned_addresses = vec![AddressOwnershipProof {
-          chain: "ETH".to_string(),
-          cex_address: to_checksum(&cex_addr_1, None),
-          signature:
-            ("0x089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b").parse().unwrap(),
-            message:  "Summa proof of solvency for CryptoExchange".encode().into(),
-        },AddressOwnershipProof {
-          chain: "ETH".to_string(),
-          cex_address: to_checksum(&cex_addr_2, None),
-          signature:
-            ("0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c").parse().unwrap(),
-            message:  "Summa proof of solvency for CryptoExchange".encode().into(),
-        }];
 
         let mut address_ownership_client = AddressOwnership::new(
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
@@ -183,19 +162,21 @@ mod test {
         );
 
         // Initialize round
+        let asset_csv = "src/apis/csv/assets.csv";
+        let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
+        let params_path = "ptau/hermez-raw-11";
+
         let mut round = Round::<4, 2, 14>::new(
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // anvil account [0]
             anvil.chain_id(),
             anvil.endpoint().as_str(),
             summa_contract.address(),
+            entry_csv,
+            asset_csv,
+            params_path,
+            1,
         )
         .unwrap();
-
-        let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
-        let params_path = "ptau/hermez-raw-11";
-
-        // Build snapshot
-        round.build_snapshot(entry_csv, params_path, 1);
 
         // Verify solvency proof
         let mut logs = summa_contract
@@ -219,7 +200,7 @@ mod test {
             },
         ];
 
-        assert_eq!(round.dispatch_solvency_proof(assets).await.unwrap(), ());
+        assert_eq!(round.dispatch_solvency_proof().await.unwrap(), ());
 
         // After sending transaction of proof of solvency, logs should be updated
         logs = summa_contract
@@ -238,18 +219,7 @@ mod test {
                 mst_root: "0x2E021D9BF99C5BD7267488B6A7A5CF5F7D00222A41B6A9B971899C44089E0C5"
                     .parse()
                     .unwrap(),
-                assets: vec![
-                    Asset {
-                        asset_name: "ETH".to_string(),
-                        chain: "ETH".to_string(),
-                        amount: U256::from(556863)
-                    },
-                    Asset {
-                        asset_name: "USDT".to_string(),
-                        chain: "ETH".to_string(),
-                        amount: U256::from(556863)
-                    }
-                ],
+                assets: assets.to_vec()
             }
         );
 
@@ -258,7 +228,7 @@ mod test {
         let proof = Bytes::from(inclusion_proof.get_proof().clone());
         let public_input_vec = inclusion_proof.get_public_inputs();
 
-        // Fixing endianness
+        // Adjust for endianness
         let mut leaf_hash = public_input_vec[0][0].to_bytes();
         let mut root_hash = public_input_vec[0][1].to_bytes();
         leaf_hash.reverse();
@@ -269,10 +239,12 @@ mod test {
             U256::from_big_endian(&root_hash),
         ];
 
+        // Ensure the root hash matches the one from the contract
         let onchain_mstroot = summa_contract.mst_roots(U256::from(1)).await.unwrap();
+        assert_eq!(onchain_mstroot, U256::from_big_endian(&root_hash));
 
         // Verify inclusion proof with onchain function
-        summa_contract
+        let _result = summa_contract
             .verify_inclusion_proof(proof, public_inputs, U256::from(1))
             .await;
 

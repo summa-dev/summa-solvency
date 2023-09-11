@@ -7,10 +7,10 @@ use halo2_proofs::{
     plonk::{ProvingKey, VerifyingKey},
     poly::kzg::commitment::ParamsKZG,
 };
-use serde_json::to_string_pretty;
 use snark_verifier_sdk::CircuitExt;
 use std::error::Error;
 
+use super::csv_parser::parse_asset_csv;
 use crate::contracts::{generated::summa_contract::summa::Asset, signer::SummaSigner};
 use summa_solvency::{
     circuits::{
@@ -61,12 +61,13 @@ impl MstInclusionProof {
 
 pub struct Snapshot<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     mst: MerkleSumTree<N_ASSETS, N_BYTES>,
-    timestamp: usize,
+    assets_state: [Asset; N_ASSETS],
     trusted_setup: [SetupArtifacts; 2],
 }
 
 pub struct Round<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
-    snapshot: Option<Snapshot<LEVELS, N_ASSETS, N_BYTES>>,
+    timestamp: u64,
+    snapshot: Snapshot<LEVELS, N_ASSETS, N_BYTES>,
     signer: SummaSigner,
 }
 
@@ -81,38 +82,29 @@ where
         chain_id: u64,
         rpc_url: &str,
         summa_sc_address: Address,
+        entry_csv_path: &str,
+        asset_csv_path: &str,
+        params_path: &str,
+        timestamp: u64,
     ) -> Result<Round<LEVELS, N_ASSETS, N_BYTES>, Box<dyn Error>> {
         Ok(Round {
-            snapshot: None,
+            timestamp,
+            snapshot: Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(
+                asset_csv_path,
+                entry_csv_path,
+                params_path,
+            )
+            .unwrap(),
             signer: SummaSigner::new(&vec![], signer_key, chain_id, rpc_url, summa_sc_address),
         })
     }
 
-    pub fn build_snapshot(&mut self, entry_csv_path: &str, params_path: &str, timestamp: usize) {
-        let snapshot =
-            Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(entry_csv_path, params_path, timestamp)
-                .unwrap();
-        self.snapshot = Some(snapshot);
+    pub fn get_timestamp(&self) -> u64 {
+        self.timestamp
     }
 
-    pub async fn dispatch_solvency_proof(
-        &mut self,
-        assets: [Asset; N_ASSETS],
-    ) -> Result<(), &'static str> {
-        if self.snapshot.is_none() {
-            return Err("snapshot is not built yet");
-        }
-        let snapshot = self.snapshot.as_ref().unwrap();
-
-        // Convert U256 to Fp for generating proof of solvency
-        let asset_sum: [Fp; N_ASSETS] = assets
-            .iter()
-            .map(|asset| Fp::from_raw(asset.amount.0) as Fp)
-            .collect::<Vec<Fp>>()
-            .try_into()
-            .unwrap();
-
-        let proof: SolvencyProof = match snapshot.generate_proof_of_solvency(asset_sum) {
+    pub async fn dispatch_solvency_proof(&mut self) -> Result<(), &'static str> {
+        let proof: SolvencyProof = match self.snapshot.generate_proof_of_solvency() {
             Ok(p) => p,
             Err(_) => return Err("Failed to generate proof of solvency"),
         };
@@ -121,9 +113,9 @@ where
             .signer
             .submit_proof_of_solvency(
                 proof.public_inputs[0],
-                assets.to_vec(),
+                self.snapshot.assets_state.to_vec(),
                 proof.proof_calldata,
-                U256::from(snapshot.get_timestamp()),
+                U256::from(self.get_timestamp()),
             )
             .await;
 
@@ -134,12 +126,10 @@ where
         &self,
         user_index: usize,
     ) -> Result<MstInclusionProof, &'static str> {
-        let snapshot = self.snapshot.as_ref().unwrap();
-        if snapshot.mst.entries().len() < user_index {
-            return Err("user_index is out of range");
-        }
-
-        Ok(snapshot.generate_proof_of_inclusion(user_index).unwrap())
+        Ok(self
+            .snapshot
+            .generate_proof_of_inclusion(user_index)
+            .unwrap())
     }
 }
 
@@ -150,10 +140,11 @@ where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     pub fn new(
+        asset_csv_path: &str,
         entry_csv_path: &str,
         params_path: &str,
-        timestamp: usize,
     ) -> Result<Snapshot<LEVELS, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>> {
+        let assets_state = parse_asset_csv::<&str, N_ASSETS>(asset_csv_path).unwrap();
         let mst = MerkleSumTree::<N_ASSETS, N_BYTES>::new(entry_csv_path).unwrap();
 
         let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
@@ -177,19 +168,19 @@ where
 
         Ok(Snapshot {
             mst,
-            timestamp,
+            assets_state,
             trusted_setup,
         })
     }
 
-    pub fn get_timestamp(&self) -> usize {
-        self.timestamp
-    }
-
-    pub fn generate_proof_of_solvency(
-        &self,
-        asset_sums: [Fp; N_ASSETS],
-    ) -> Result<SolvencyProof, &'static str> {
+    pub fn generate_proof_of_solvency(&self) -> Result<SolvencyProof, &'static str> {
+        let asset_sums = self
+            .assets_state
+            .iter()
+            .map(|asset| Fp::from_raw(asset.amount.0) as Fp)
+            .collect::<Vec<Fp>>()
+            .try_into()
+            .unwrap();
         let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(self.mst.clone(), asset_sums);
 
         let calldata = gen_proof_solidity_calldata(

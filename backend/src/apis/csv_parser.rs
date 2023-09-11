@@ -1,12 +1,15 @@
 use std::{error::Error, fs::File, path::Path};
 
-use ethers::{abi::AbiEncode, types::Bytes};
+use ethers::{
+    abi::AbiEncode,
+    types::{Bytes, U256},
+};
 use serde::Deserialize;
 
-use crate::contracts::generated::summa_contract::AddressOwnershipProof;
+use crate::contracts::generated::summa_contract::{AddressOwnershipProof, Asset};
 
 #[derive(Debug, Deserialize)]
-struct Record {
+struct EntriesRecord {
     chain: String,
     address: String,
     signature: String,
@@ -22,7 +25,7 @@ pub fn parse_signature_csv<P: AsRef<Path>>(
     let mut address_ownership_proofs = Vec::<AddressOwnershipProof>::new();
 
     for result in rdr.deserialize() {
-        let record: Record = result?;
+        let record: EntriesRecord = result?;
 
         address_ownership_proofs.push(AddressOwnershipProof {
             cex_address: record.address.to_string(),
@@ -35,12 +38,47 @@ pub fn parse_signature_csv<P: AsRef<Path>>(
     Ok(address_ownership_proofs)
 }
 
+#[derive(Debug, Deserialize)]
+struct AssetRecord {
+    chain: String,
+    asset_name: String,
+    amount: String,
+}
+
+pub fn parse_asset_csv<P: AsRef<Path>, const N_ASSETS: usize>(
+    path: P,
+) -> Result<[Asset; N_ASSETS], Box<dyn Error>> {
+    let file = File::open(path)?;
+    let mut rdr = csv::ReaderBuilder::new().delimiter(b';').from_reader(file);
+
+    let mut assets_vec = Vec::with_capacity(N_ASSETS);
+
+    for result in rdr.deserialize() {
+        let record: AssetRecord = result?;
+
+        assets_vec.push(Asset {
+            asset_name: record.asset_name,
+            chain: record.chain,
+            amount: U256::from_dec_str(&record.amount)?,
+        });
+    }
+
+    let assets_array: [Asset; N_ASSETS] = assets_vec.try_into().map_err(|v: Vec<Asset>| {
+        format!(
+            "Number of assets in CSV does not match the number of assets in the contract! {:?}",
+            v
+        )
+    })?;
+
+    Ok(assets_array)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_csv_to_assets() {
+    fn test_parse_csv_to_signature() {
         let path = "src/apis/csv/signatures.csv";
         let address_ownership = parse_signature_csv(path).unwrap();
 
@@ -53,5 +91,28 @@ mod tests {
           };
 
         assert_eq!(address_ownership[0], first_address_ownership);
+    }
+
+    #[test]
+    fn test_parse_csv_to_assets() {
+        let path = "src/apis/csv/assets.csv";
+        let assets = parse_asset_csv::<&str, 2>(path).unwrap();
+
+        assert_eq!(
+            assets[0],
+            Asset {
+                chain: "ETH".to_string(),
+                asset_name: "ETH".to_string(),
+                amount: U256::from(556863),
+            }
+        );
+        assert_eq!(
+            assets[1],
+            Asset {
+                chain: "ETH".to_string(),
+                asset_name: "USDT".to_string(),
+                amount: U256::from(556863),
+            }
+        );
     }
 }
