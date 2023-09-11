@@ -35,35 +35,55 @@ wget https://trusted-setup-halo2kzg.s3.eu-central-1.amazonaws.com/hermez-raw-11
 
 After downloading, pass the path to the desired file to the `Snapshot::new` method. If you are using the included `ptau` file, no additional steps are necessary.
 
-## Important Notices
-
-### Generating Verifiers for Backend
-
-To generate the verifiers for the backend, follow the steps outlined below:
-
-1. **Build the Verifier Contracts**: Begin by constructing the solvency and inclusion verifier contracts located within the `zk_prover`. Please check in details in [here](https://github.com/summa-dev/summa-solvency/tree/master/zk_prover#build-a-solvency-verifier-contract) and [here](https://github.com/summa-dev/summa-solvency/tree/master/zk_prover#build-an-inclusion-verifier-contract)
-
-2. **Deploy Contracts to Local Environment**: Navigate to the `contracts` directory and deploy the contracts to a Hardhat environment. This action will update the ABI files(`src/contracts/abi/*.json`) in the backend.
-
-3. **Generate Rust Interface Files**: Execute the build script in the backend. This will produce the Rust interface files: `inclusion_verifier.rs`, `solvency_verifier.rs`, and `summa_contract.rs`.
-
-By following this procedure, the backend will be equipped with the necessary verifiers for its operations.
-
-### For Proof of Ownership
-
-To generate a signed message, you must first initialize the `SummaSigner` and use the `generate_signatures` method:
-
-```Rust
-let signatures = signer.generate_signatures().await.unwrap();
-```
-
-The content of the message can be specified with the local variable `SIGNATURE_VERIFICATION_MESSAGE`.
-
-## Usage
+## Running Test
 
 To build the binary executable and test it
 
 ```
 cargo build
 SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" cargo test --release -- --nocapture
+```
+
+## Important Notices
+
+### Generating Verifiers for Backend
+
+The following steps are optional and are only required if you need to update the verifier contracts for the backend:
+
+1. **Build the Verifier Contracts**:
+    - Move to the `zk_prover` directory.
+    - Run the [`gen_solvency_verifier`](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_solvency_verifier.rs) and [`gen_inclusion_verifier`](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_inclusion_verifier.rs) located within the `zk_prover/examples`.
+    - For detailed instructions [building a solvency verifier contract](https://github.com/summa-dev/summa-solvency/tree/master/zk_prover#build-a-solvency-verifier-contract) and [building an inclusion verifier contract.](https://github.com/summa-dev/summa-solvency/tree/master/zk_prover#build-an-inclusion-verifier-contract)
+2. **Deploy Contracts to Local Environment**: 
+    - Navigate to the `contracts` directory
+    - Deploy the contracts to a Hardhat environment. This step will refresh the ABI files(`src/contracts/abi/*.json`) in the backend.
+3. **Generate Rust Interface Files**: 
+    - Move to the `backend` directory.
+    - Execute the build script in the backend. This will produce the Rust interface files: `inclusion_verifier.rs`, `solvency_verifier.rs`, and `summa_contract.rs`.
+
+By completing these steps, the backend will be primed with the essential verifiers for its tasks.
+
+## Examples
+
+### Running the Inclusion Verification
+
+This example demonstrates how a user can verify the inclusion of their account in the Merkle Sum Tree. 
+In this example, the CEX provides the user with their `balances` and `username`, but not the `leaf_hash`. 
+
+The user will generate the `leaf_hash` themselves and then verify its inclusion in the tree.
+
+Make sure you have the required files:
+- `backend/ptau/hermez-raw-11`
+- `backend/src/apis/csv/assets.csv`
+- `zk_prover/src/merkle_sum_tree/csv/entry_16.csv`
+
+
+To run the example:
+```
+cargo run --example verify_inclusion
+```
+
+On successful execution, you'll observe a message indicating the verification outcome:
+```
+Verifying the proof result for User #0: true
 ```
