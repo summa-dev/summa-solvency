@@ -78,11 +78,11 @@ mod test {
         abi::AbiEncode,
         providers::Middleware,
         types::{Address, Bytes, Filter, U256},
-        utils::{keccak256, Anvil},
+        utils::{keccak256, to_checksum, Anvil},
     };
     use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
-    use crate::apis::{ownership::AddressOwnership, round::Round};
+    use crate::apis::{address_ownership::AddressOwnership, round::Round};
     use crate::contracts::{
         generated::{
             inclusion_verifier::InclusionVerifier,
@@ -128,13 +128,13 @@ mod test {
         // Dispatch proof of address ownership
         let owned_addresses = vec![AddressOwnershipProof {
           chain: "ETH".to_string(),
-          cex_address: cex_addr_1.to_string(),
+          cex_address: to_checksum(&cex_addr_1, None),
           signature:
             ("0x089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b").parse().unwrap(),
             message:  "Summa proof of solvency for CryptoExchange".encode().into(),
         },AddressOwnershipProof {
           chain: "ETH".to_string(),
-          cex_address: cex_addr_2.to_string(),
+          cex_address: to_checksum(&cex_addr_2, None),
           signature:
             ("0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c").parse().unwrap(),
             message:  "Summa proof of solvency for CryptoExchange".encode().into(),
@@ -145,11 +145,12 @@ mod test {
             anvil.chain_id(),
             anvil.endpoint().as_str(),
             summa_contract.address(),
+            "src/apis/csv/signatures.csv",
         )
         .unwrap();
 
         let ownership_submitted_result = address_ownership_client
-            .dispatch_proof_of_address_ownership(owned_addresses)
+            .dispatch_proof_of_address_ownership()
             .await;
 
         assert_eq!(ownership_submitted_result.is_ok(), true);
@@ -166,13 +167,13 @@ mod test {
             AddressOwnershipProofSubmittedFilter {
                 address_ownership_proofs: vec![AddressOwnershipProof {
           chain: "ETH".to_string(),
-          cex_address: cex_addr_1.to_string(),
+          cex_address: to_checksum(&cex_addr_1, None),
           signature:
             ("0x089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b").parse().unwrap(),
             message:  "Summa proof of solvency for CryptoExchange".encode().into(),
         },AddressOwnershipProof {
           chain: "ETH".to_string(),
-          cex_address: cex_addr_2.to_string(),
+          cex_address:to_checksum(&cex_addr_2, None),
           signature:
             ("0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c").parse().unwrap(),
             message:  "Summa proof of solvency for CryptoExchange".encode().into(),

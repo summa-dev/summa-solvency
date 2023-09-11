@@ -80,11 +80,11 @@ where
         signer_key: &str,
         chain_id: u64,
         rpc_url: &str,
-        summasc_address: Address,
+        summa_sc_address: Address,
     ) -> Result<Round<LEVELS, N_ASSETS, N_BYTES>, Box<dyn Error>> {
         Ok(Round {
             snapshot: None,
-            signer: SummaSigner::new(&vec![], signer_key, chain_id, rpc_url, summasc_address),
+            signer: SummaSigner::new(&vec![], signer_key, chain_id, rpc_url, summa_sc_address),
         })
     }
 
