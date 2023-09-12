@@ -2,7 +2,7 @@
 use halo2_proofs::halo2curves::{bn256::Fr as Fp, ff::PrimeField};
 use num_bigint::BigUint;
 
-use summa_backend::apis::snapshot::Snapshot;
+use summa_backend::apis::round::Snapshot;
 use summa_solvency::{
     circuits::{
         merkle_sum_tree::MstInclusionCircuit,
@@ -32,18 +32,14 @@ fn main() {
     const N_BYTES: usize = 8;
 
     let ptau_path = "./ptau/hermez-raw-11";
-    let signature_csv_path = "./examples/signatures.csv";
+    let asset_csv_path = "src/apis/csv/assets.csv";
     let entry_csv_path = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
 
     // CEX Generate the Merkle Sum Tree and then initialize the circuit.
     // Note that `signature_csv` is empty because this is only needed to generate π of Solvency, which is not the case here.
-    let snapshot = Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(
-        &entry_csv_path,
-        &signature_csv_path,
-        "Summa proof of solvency for CryptoExchange".to_string(),
-        &ptau_path,
-    )
-    .unwrap();
+    let snapshot =
+        Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(&asset_csv_path, &entry_csv_path, &ptau_path)
+            .unwrap();
 
     let inclusion_proof = snapshot.generate_proof_of_inclusion(0 as usize).unwrap();
 

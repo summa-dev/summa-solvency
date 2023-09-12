@@ -26,7 +26,9 @@ fn main() {
     let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
 
     // generate a universal trusted setup for testing, along with the verification key (vk) and the proving key (pk).
-    let (params, pk, _) = generate_setup_artifacts(11, None, circuit.clone()).unwrap();
+    let (params, pk, _) =
+        generate_setup_artifacts(11, Some("../backend/ptau/hermez-raw-11"), circuit.clone())
+            .unwrap();
 
     let num_instances = circuit.num_instance();
 

@@ -99,11 +99,11 @@ impl SummaSigner {
 
     pub async fn submit_proof_of_address_ownership(
         &self,
-        cex_addresses: Vec<AddressOwnershipProof>,
+        address_ownership_proofs: Vec<AddressOwnershipProof>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let submit_proof_of_address_ownership = &self
             .summa_contract
-            .submit_proof_of_address_ownership(cex_addresses);
+            .submit_proof_of_address_ownership(address_ownership_proofs);
         let tx = submit_proof_of_address_ownership.send().await.unwrap();
 
         tx.await.unwrap();
@@ -126,5 +126,32 @@ impl SummaSigner {
         tx.await.unwrap();
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use ethers::{types::Address, utils::Anvil};
+
+    #[tokio::test]
+    async fn test_sign_message() {
+        let anvil = Anvil::new().spawn();
+
+        let signer = SummaSigner::new(
+            //Account #1
+            &vec!["0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"],
+            "0xde9be858da4a475276426320d5e9262ecfc3ba460bfac56360bfa6c4c28b4ee0",
+            31337,
+            anvil.endpoint().as_str(),
+            //Verifier deployment is not necessary for this test
+            Address::random(),
+        );
+
+        let signatures = signer.generate_signatures().await.unwrap();
+        assert_eq!(signatures.len(), 1);
+        //Signature produced by the account #1
+        assert_eq!(signatures[0].to_string(), "089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b");
+        drop(anvil);
     }
 }

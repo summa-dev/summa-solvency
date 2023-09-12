@@ -2,18 +2,26 @@
 
 This directory contains the backend implementation for the Summa Proof of Solvency protocol.
 
-The core datastructure is the `Snapshot` struct, a data container for:
+## Core Components
 
-- the CEX liabilities, represented via a `MerkleSumTree`
-- the CEX wallets, represented via the `WalletOwnershipProof` struct.
-- the Trusted Setup parameters for the `MstInclusionCircuit` and `SolvencyCircuit` zk circuits.
+### Round
 
-Furthermore, the `Snapshot` struct contains the following methods:
+The `Round` component represents a specific period or cycle in the Summa Proof of Solvency protocol. It encapsulates the state of the system at a given time, including the snapshot of assets and liabilities, as well as the associated proofs. 
+ The `Round` struct integrates with the `Snapshot` and `SummaSigner` to facilitate the generation and submission of proofs to the contract.
 
-- `generate_solvency_verifier` -> write the Solidity Verifier contract (for the `SolvencyProof`) to a file
-- `generate_proof_of_solvency` -> generate the `SolvencyProof` for the current snapshot to be verified on-chain
-- `generate_proof_of_inclusion` -> generate the `MstInclusionProof` for a specific user for the current snapshot to be verified off-chain
-- `get_proof_of_address_ownership` -> generate the `AddressOwnershipProof` for a specific user for the current snapshot to be verified off-chain
+Key Features:
+- Initialization of a new round with specific parameters.
+- Building a snapshot of the current state.
+- Dispatching solvency proofs to the contract.
+- Retrieving proofs of inclusion for specific users.
+
+### AddressOwnership
+
+The `AddressOwnership` component is responsible for managing and verifying the ownership of addresses. It ensures that addresses used in the protocol owned by the respective participants. This component interacts with the `SummaSigner` to submit proofs of address ownership to on-chain.
+
+Key Features:
+- Initialization with specific signer details.
+- Dispatching proofs of address ownership to the contract.
 
 ## Prerequisites
 
@@ -27,43 +35,7 @@ wget https://trusted-setup-halo2kzg.s3.eu-central-1.amazonaws.com/hermez-raw-11
 
 After downloading, pass the path to the desired file to the `Snapshot::new` method. If you are using the included `ptau` file, no additional steps are necessary.
 
-## Important Notices
-
-### For Proof of Solvency
-
-As of the current implementation, the `generate_proof_of_solvency` method does not directly fetch data about the balances of the wallets of the CEX. Instead, you can use the `fetch_asset_sums` function to retrieve balance information from the blockchain. Here's an example of how you might utilize it:
-
-```Rust
-let asset_sums = fetch_asset_sums(client, token_contracts, exchange_addresses).await?;
-```
-
-Please note that the first element in the `asset_sums` array represents the ETH balance.
-
-Alternatively, you can create your own custom fetcher to retrieve the balances.
-
-### For Proof of Ownership
-
-To generate a signed message, you must first initialize the `SummaSigner` and use the `generate_signatures` method:
-
-```Rust
-let signatures = signer.generate_signatures().await.unwrap();
-```
-
-The content of the message can be specified with the local variable `SIGNATURE_VERIFICATION_MESSAGE`.
-
-### For Generating Solvency Verifier
-
-The provided verifier found at `src/contracts/Verifier.json` is based on the trusted setup, `hermez-raw-11`. If you are working with a higher number of entries, you will need to generate a new verifier contract by using the `generate_solvency_verifier` method.
-
-Here's a brief example of how you might invoke this method:
-
-```Rust
-Snapshot::generate_solvency_verifier("SolvencyVerifier.yul", "SolvencyVerifier.sol");
-```
-
-This method creates two files, `SolvencyVerifier.yul` and `SolvencyVerifier.sol`, which will be used in `Summa.sol`.
-
-## Usage
+## Running Test
 
 To build the binary executable and test it
 
@@ -72,4 +44,46 @@ cargo build
 SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" cargo test --release -- --nocapture
 ```
 
-The [buildscript](./build.rs) will automatically build the contract Rust interfaces from the [JSON ABIs](./src/contracts/abi/) and place them into [./src/contracts/generated](./src/contracts/generated) directory. The ABIs are updated on contract deployment from the [contracts subproject](./../contracts/README.md) by the [contract deployment script](./../contracts/scripts/deploy.ts).
+## Important Notices
+
+### Generating Verifiers for Backend
+
+The following steps are optional and are only required if you need to update the verifier contracts for the backend:
+
+1. **Build the Verifier Contracts**:
+    - Move to the `zk_prover` directory.
+    - Run the [`gen_solvency_verifier`](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_solvency_verifier.rs) and [`gen_inclusion_verifier`](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_inclusion_verifier.rs) located within the `zk_prover/examples`.
+    - For detailed instructions [building a solvency verifier contract](https://github.com/summa-dev/summa-solvency/tree/master/zk_prover#build-a-solvency-verifier-contract) and [building an inclusion verifier contract.](https://github.com/summa-dev/summa-solvency/tree/master/zk_prover#build-an-inclusion-verifier-contract)
+2. **Deploy Contracts to Local Environment**: 
+    - Navigate to the `contracts` directory
+    - Deploy the contracts to a Hardhat environment. This step will refresh the ABI files(`src/contracts/abi/*.json`) in the backend.
+3. **Generate Rust Interface Files**: 
+    - Move to the `backend` directory.
+    - Execute the build script in the backend. This will produce the Rust interface files: `inclusion_verifier.rs`, `solvency_verifier.rs`, and `summa_contract.rs`.
+
+By completing these steps, the backend will be primed with the essential verifiers for its tasks.
+
+## Examples
+
+### Running the Inclusion Verification
+
+This example demonstrates how a user can verify the inclusion of their account in the Merkle Sum Tree. 
+In this example, the CEX provides the user with their `balances` and `username`, but not the `leaf_hash`. 
+
+The user will generate the `leaf_hash` themselves and then verify its inclusion in the tree.
+
+Make sure you have the required files:
+- `backend/ptau/hermez-raw-11`
+- `backend/src/apis/csv/assets.csv`
+- `zk_prover/src/merkle_sum_tree/csv/entry_16.csv`
+
+
+To run the example:
+```
+cargo run --example verify_inclusion
+```
+
+On successful execution, you'll observe a message indicating the verification outcome:
+```
+Verifying the proof result for User #0: true
+```

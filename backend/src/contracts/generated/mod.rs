@@ -1,3 +1,3 @@
-pub mod summa_contract;
-pub mod solvency_verifier;
 pub mod inclusion_verifier;
+pub mod solvency_verifier;
+pub mod summa_contract;
