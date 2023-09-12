@@ -9,7 +9,7 @@ use serde::Deserialize;
 use crate::contracts::generated::summa_contract::{AddressOwnershipProof, Asset};
 
 #[derive(Debug, Deserialize)]
-struct EntriesRecord {
+struct SignatureRecord {
     chain: String,
     address: String,
     signature: String,
@@ -25,7 +25,7 @@ pub fn parse_signature_csv<P: AsRef<Path>>(
     let mut address_ownership_proofs = Vec::<AddressOwnershipProof>::new();
 
     for result in rdr.deserialize() {
-        let record: EntriesRecord = result?;
+        let record: SignatureRecord = result?;
 
         address_ownership_proofs.push(AddressOwnershipProof {
             cex_address: record.address.to_string(),
@@ -65,7 +65,7 @@ pub fn parse_asset_csv<P: AsRef<Path>, const N_ASSETS: usize>(
 
     let assets_array: [Asset; N_ASSETS] = assets_vec.try_into().map_err(|v: Vec<Asset>| {
         format!(
-            "Number of assets in CSV does not match the number of assets in the contract! {:?}",
+            "The number of assets in CSV file does not match the expected count {:?}",
             v
         )
     })?;
