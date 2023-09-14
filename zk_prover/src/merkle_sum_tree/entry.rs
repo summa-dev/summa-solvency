@@ -35,10 +35,17 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
     where
         [usize; N_ASSETS + 1]: Sized,
     {
+        self.create_node(&self.balances)
+    }
+
+    fn create_node(&self, balances: &[BigUint; N_ASSETS]) -> Node<N_ASSETS>
+    where
+        [usize; N_ASSETS + 1]: Sized,
+    {
         Node {
             hash: poseidon_entry::<N_ASSETS>(
                 big_uint_to_fp(&self.username_to_big_uint),
-                self.balances
+                balances
                     .iter()
                     .map(big_uint_to_fp)
                     .collect::<Vec<Fp>>()
@@ -46,14 +53,24 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
                     .unwrap(),
             ),
             //Map the array of balances using big_int_to_fp:
-            balances: self
-                .balances
+            balances: balances
                 .iter()
                 .map(big_uint_to_fp)
                 .collect::<Vec<Fp>>()
                 .try_into()
                 .unwrap(),
         }
+    }
+
+    /// Stores the new balance values
+    ///
+    /// Returns the updated node
+    pub fn recompute_leaf(&mut self, updated_balances: &[BigUint; N_ASSETS]) -> Node<N_ASSETS>
+    where
+        [usize; N_ASSETS + 1]: Sized,
+    {
+        self.balances = updated_balances.clone();
+        self.create_node(updated_balances)
     }
 
     pub fn balances(&self) -> &[BigUint; N_ASSETS] {

@@ -87,6 +87,85 @@ mod test {
         proof_invalid_3.sibling_sums[0] = [0.into(), 0.into()];
     }
 
+    #[test]
+    fn test_update_mst_leaf() {
+        let mut merkle_tree =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let old_root_hash = merkle_tree.root().hash;
+
+        //Update the 7th leaf with the same values
+        let new_root = merkle_tree
+            .update_leaf(
+                7,
+                &[2087.to_biguint().unwrap(), 79731.to_biguint().unwrap()],
+            )
+            .unwrap();
+        //The root should stay the same
+        assert!(old_root_hash == new_root.hash);
+
+        //Update the 7th leaf with different values
+        let new_root = merkle_tree
+            .update_leaf(
+                7,
+                &[2086.to_biguint().unwrap(), 79732.to_biguint().unwrap()],
+            )
+            .unwrap();
+        //The root should change
+        assert!(old_root_hash != new_root.hash);
+    }
+
+    #[test]
+    fn test_update_invalid_mst_leaf() {
+        let mut merkle_tree =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let new_root = merkle_tree.update_leaf(
+            123, //invalid leaf index that's greater than the total leaf number
+            &[11888.to_biguint().unwrap(), 41163.to_biguint().unwrap()],
+        );
+
+        if let Err(e) = new_root {
+            assert_eq!(e.to_string(), "Index out of bounds");
+        }
+    }
+
+    #[test]
+    fn test_sorted_mst() {
+        let merkle_tree =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let old_root_balances = merkle_tree.root().balances;
+        let old_root_hash = merkle_tree.root().hash;
+
+        let sorted_merkle_tree =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new_sorted("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let new_root_balances = sorted_merkle_tree.root().balances;
+        let new_root_hash = sorted_merkle_tree.root().hash;
+
+        // The index of an entry should not be the same for sorted and unsorted MST
+        assert_ne!(
+            merkle_tree.index_of(
+                "AtwIxZHo",
+                [35479.to_biguint().unwrap(), 31699.to_biguint().unwrap()]
+            ),
+            sorted_merkle_tree.index_of(
+                "AtwIxZHo",
+                [35479.to_biguint().unwrap(), 31699.to_biguint().unwrap()]
+            )
+        );
+
+        // The root balances should be the same for sorted and unsorted MST
+        assert!(old_root_balances == new_root_balances);
+        // The root hash should not be the same for sorted and unsorted MST
+        assert!(old_root_hash != new_root_hash);
+    }
+
     // Passing a csv file with a single entry that has a balance that is not in the expected range will fail
     #[test]
     fn test_mst_overflow_1() {
@@ -126,7 +205,7 @@ mod test {
         assert!(result.is_ok());
     }
 
-    #[test]        
+    #[test]
     fn test_big_uint_conversion() {
         let big_uint = 3.to_biguint().unwrap();
         let fp = big_uint_to_fp(&big_uint);

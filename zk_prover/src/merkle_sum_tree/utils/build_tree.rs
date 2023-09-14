@@ -1,4 +1,3 @@
-use crate::merkle_sum_tree::utils::create_middle_node::create_middle_node;
 use crate::merkle_sum_tree::{Entry, Node};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use std::thread;
@@ -94,7 +93,7 @@ fn build_middle_level<const N_ASSETS: usize>(
         handles.push(thread::spawn(move || {
             chunk
                 .chunks(2)
-                .map(|pair| create_middle_node(&pair[0], &pair[1]))
+                .map(|pair| Node::middle(&pair[0], &pair[1]))
                 .collect::<Vec<_>>()
         }));
     }

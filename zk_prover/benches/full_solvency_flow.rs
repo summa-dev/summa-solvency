@@ -29,13 +29,33 @@ fn build_mstree(_c: &mut Criterion) {
     );
 
     let bench_name = format!(
-        "build merkle sum tree for 2 power of {} entries with {} assets",
+        "build Merkle sum tree for 2 power of {} entries with {} assets",
         LEVELS, N_ASSETS
     );
 
     criterion.bench_function(&bench_name, |b| {
         b.iter(|| {
             MerkleSumTree::<N_ASSETS, N_BYTES>::new(&csv_file).unwrap();
+        })
+    });
+}
+
+fn build_sorted_mstree(_c: &mut Criterion) {
+    let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
+
+    let csv_file = format!(
+        "benches/csv/{}/{}_entry_2_{}.csv",
+        PATH_NAME, PATH_NAME, LEVELS
+    );
+
+    let bench_name = format!(
+        "build sorted Merkle sum tree for 2 power of {} entries with {} assets",
+        LEVELS, N_ASSETS
+    );
+
+    criterion.bench_function(&bench_name, |b| {
+        b.iter(|| {
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new_sorted(&csv_file).unwrap();
         })
     });
 }
@@ -239,6 +259,7 @@ fn verify_zk_proof_solvency_circuit(_c: &mut Criterion) {
 criterion_group!(
     benches,
     build_mstree,
+    build_sorted_mstree,
     verification_key_gen_mst_inclusion_circuit,
     proving_key_gen_mst_inclusion_circuit,
     generate_zk_proof_mst_inclusion_circuit,
