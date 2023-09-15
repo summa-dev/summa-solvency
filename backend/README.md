@@ -87,3 +87,19 @@ On successful execution, you'll observe a message indicating the verification ou
 ```
 Verifying the proof result for User #0: true
 ```
+
+### Generating Message Signatures
+
+This example demonstrates how to generate a CSV file containing signatures derived from a given message, essential for `AddressOwnership`.
+
+This demonstration is adaptable for various scenarios. For instance, you could compile this example into an executable binary, an operator can run it using a hardware wallet.
+ This operation should ideally occur in a highly secure environment within a CEX, where the system is isolated from any online networks, ensuring maximum security against potential external threats.
+
+The resulting signatures are saved in a CSV file using a custom delimiter, allowing for straightforward parsing and verification. You can find the output file at `src/apis/csv/signatures.csv`.
+
+To run the example:
+```
+cargo run --example generate_signatures
+```
+
+Note: This example uses hardcoded private keys for simplicity. In real-world applications, it's imperative never to expose private keys in such a manner. Instead, consider crate your own `message_signer` to utilize secure mechanisms, such as hardware wallets or secure key vaults.

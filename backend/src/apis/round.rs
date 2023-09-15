@@ -95,7 +95,7 @@ where
                 params_path,
             )
             .unwrap(),
-            signer: SummaSigner::new(&vec![], signer_key, chain_id, rpc_url, summa_sc_address),
+            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_sc_address),
         })
     }
 

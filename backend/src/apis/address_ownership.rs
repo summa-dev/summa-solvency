@@ -21,7 +21,7 @@ impl AddressOwnership {
 
         Ok(AddressOwnership {
             address_ownership_proofs,
-            signer: SummaSigner::new(&[], signer_key, chain_id, rpc_url, summa_sc_address),
+            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_sc_address),
         })
     }
 
