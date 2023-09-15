@@ -12,7 +12,7 @@ pub struct Node<const N_ASSETS: usize> {
     pub balances: [Fp; N_ASSETS],
 }
 impl<const N_ASSETS: usize> Node<N_ASSETS> {
-    /// Builds a "middle" (non-leaf-level) node of the SMT
+    /// Builds a "middle" (non-leaf-level) node of the MST
     pub fn middle(child_l: &Node<N_ASSETS>, child_r: &Node<N_ASSETS>) -> Node<N_ASSETS>
     where
         [usize; 2 * (1 + N_ASSETS)]: Sized,
@@ -33,6 +33,7 @@ impl<const N_ASSETS: usize> Node<N_ASSETS> {
         }
     }
 
+    /// Builds a leaf-level node of the MST
     pub fn leaf(username: &BigUint, balances: &[BigUint; N_ASSETS]) -> Node<N_ASSETS>
     where
         [usize; N_ASSETS + 1]: Sized,

@@ -88,12 +88,12 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         })
     }
 
-    /// Updates the balances of the user with the given index and returns the new root of the tree.
+    /// Updates the balances of the entry with the given username and returns the new root of the tree.
     ///
     /// # Arguments
     ///
-    /// * `index`: The index of the user to update
-    /// * `new_balances`: The new balances of the user
+    /// * `username`: The username of the entry to update
+    /// * `new_balances`: The new balances of the entry
     ///
     /// # Returns
     ///
@@ -156,7 +156,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         Ok((&penultimate_level[0], &penultimate_level[1]))
     }
 
-    /// Returns the index of the leaf with the matching username and balances
+    /// Returns the index of the user with the given username and balances in the tree
     pub fn index_of(&self, username: &str, balances: [BigUint; N_ASSETS]) -> Option<usize>
     where
         [usize; N_ASSETS + 1]: Sized,
@@ -164,7 +164,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         index_of(username, balances, &self.nodes)
     }
 
-    /// Returns the index of the leaf with the matching username regardless of the balance values.
+    /// Returns the index of the leaf with the matching username
     pub fn index_of_username(&self, username: &str) -> Result<usize, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
