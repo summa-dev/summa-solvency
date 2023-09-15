@@ -1,13 +1,10 @@
 use crate::contracts::generated::summa_contract::Summa;
 use ethers::{
-    abi::{encode, Token},
     prelude::SignerMiddleware,
     providers::{Http, Provider},
-    signers::{LocalWallet, Signer, WalletError},
-    types::{Address, Signature},
-    utils::keccak256,
+    signers::{LocalWallet, Signer},
+    types::Address,
 };
-use futures::future::join_all;
 use serde_json::Value;
 use std::{
     error::Error, fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc, time::Duration,

@@ -25,6 +25,10 @@ impl AddressOwnership {
         })
     }
 
+    pub fn get_ownership_proofs(&self) -> &Vec<AddressOwnershipProof> {
+        &self.address_ownership_proofs
+    }
+
     // This function dispatches the proof of address ownership. Before calling this function,
     // ensure externally that the provided `addresses` in `address_ownership_proof` are not already registered
     // on the Summa contract.
