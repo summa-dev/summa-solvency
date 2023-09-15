@@ -42,7 +42,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         Self::build_tree(entries, false)
     }
 
-    /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The MST leaves are sorted by the username value. The CSV file must be formatted as follows:
+    /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The MST leaves are sorted by the username byte values. The CSV file must be formatted as follows:
     ///
     /// `username;balances`
     ///
@@ -100,16 +100,14 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     /// The new root of the tree
     pub fn update_leaf(
         &mut self,
-        index: usize,
+        username: &str,
         new_balances: &[BigUint; N_ASSETS],
     ) -> Result<Node<N_ASSETS>, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
         [usize; 2 * (1 + N_ASSETS)]: Sized,
     {
-        if index >= self.entries.len() {
-            return Err("Index out of bounds".into());
-        }
+        let index = self.index_of_username(username)?;
 
         // Update the leaf node.
         let updated_leaf = self.entries[index].recompute_leaf(new_balances);
@@ -158,19 +156,30 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         Ok((&penultimate_level[0], &penultimate_level[1]))
     }
 
-    /// If the tree is unsorted, returns the index of the leaf with the matching username and balances. If the tree is sorted (by username), returns the index of the leaf with the matching username.
+    /// Returns the index of the leaf with the matching username and balances
     pub fn index_of(&self, username: &str, balances: [BigUint; N_ASSETS]) -> Option<usize>
     where
         [usize; N_ASSETS + 1]: Sized,
     {
+        index_of(username, balances, &self.nodes)
+    }
+
+    /// Returns the index of the leaf with the matching username regardless of the balance values.
+    pub fn index_of_username(&self, username: &str) -> Result<usize, Box<dyn std::error::Error>>
+    where
+        [usize; N_ASSETS + 1]: Sized,
+    {
         if !self.is_sorted {
-            index_of(username, balances, &self.nodes)
+            self.entries
+                .iter()
+                .enumerate()
+                .find(|(_, entry)| entry.username() == username)
+                .map(|(index, _)| index)
+                .ok_or_else(|| Box::from("Username not found"))
         } else {
-            Some(
-                self.entries
-                    .binary_search_by_key(&username, |entry| entry.username())
-                    .unwrap(),
-            )
+            self.entries
+                .binary_search_by_key(&username, |entry| entry.username())
+                .map_err(|_| Box::from("Username not found"))
         }
     }
 

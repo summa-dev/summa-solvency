@@ -1,6 +1,10 @@
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use num_bigint::BigUint;
 
-use super::utils::poseidon_node;
+use super::{
+    big_uint_to_fp,
+    utils::{poseidon_entry, poseidon_node},
+};
 
 #[derive(Clone, Debug)]
 pub struct Node<const N_ASSETS: usize> {
@@ -26,6 +30,30 @@ impl<const N_ASSETS: usize> Node<N_ASSETS> {
                 child_r.balances,
             ),
             balances: balances_sum,
+        }
+    }
+
+    pub fn leaf(username: &BigUint, balances: &[BigUint; N_ASSETS]) -> Node<N_ASSETS>
+    where
+        [usize; N_ASSETS + 1]: Sized,
+    {
+        Node {
+            hash: poseidon_entry::<N_ASSETS>(
+                big_uint_to_fp(username),
+                balances
+                    .iter()
+                    .map(big_uint_to_fp)
+                    .collect::<Vec<Fp>>()
+                    .try_into()
+                    .unwrap(),
+            ),
+            //Map the array of balances using big_int_to_fp:
+            balances: balances
+                .iter()
+                .map(big_uint_to_fp)
+                .collect::<Vec<Fp>>()
+                .try_into()
+                .unwrap(),
         }
     }
 }

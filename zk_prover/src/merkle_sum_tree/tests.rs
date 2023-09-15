@@ -89,46 +89,45 @@ mod test {
 
     #[test]
     fn test_update_mst_leaf() {
-        let mut merkle_tree =
+        let merkle_tree_1 =
             MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
 
-        let old_root_hash = merkle_tree.root().hash;
+        let root_hash_1 = merkle_tree_1.root().hash;
 
-        //Update the 7th leaf with the same values
-        let new_root = merkle_tree
+        //Create the second tree with the 7th entry different from the the first tree
+        let mut merkle_tree_2 = MerkleSumTree::<N_ASSETS, N_BYTES>::new(
+            "src/merkle_sum_tree/csv/entry_16_modified.csv",
+        )
+        .unwrap();
+
+        let root_hash_2 = merkle_tree_2.root().hash;
+        assert!(root_hash_1 != root_hash_2);
+
+        //Update the 7th leaf of the second tree so all the entries now match the first tree
+        let new_root = merkle_tree_2
             .update_leaf(
-                7,
+                "RkLzkDun",
                 &[2087.to_biguint().unwrap(), 79731.to_biguint().unwrap()],
             )
             .unwrap();
-        //The root should stay the same
-        assert!(old_root_hash == new_root.hash);
-
-        //Update the 7th leaf with different values
-        let new_root = merkle_tree
-            .update_leaf(
-                7,
-                &[2086.to_biguint().unwrap(), 79732.to_biguint().unwrap()],
-            )
-            .unwrap();
-        //The root should change
-        assert!(old_root_hash != new_root.hash);
+        //The roots should match
+        assert!(root_hash_1 == new_root.hash);
     }
 
     #[test]
     fn test_update_invalid_mst_leaf() {
         let mut merkle_tree =
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new_sorted("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
 
         let new_root = merkle_tree.update_leaf(
-            123, //invalid leaf index that's greater than the total leaf number
+            "non_existing_user", //This username is not present in the tree
             &[11888.to_biguint().unwrap(), 41163.to_biguint().unwrap()],
         );
 
         if let Err(e) = new_root {
-            assert_eq!(e.to_string(), "Index out of bounds");
+            assert_eq!(e.to_string(), "Username not found");
         }
     }
 
@@ -150,14 +149,13 @@ mod test {
 
         // The index of an entry should not be the same for sorted and unsorted MST
         assert_ne!(
-            merkle_tree.index_of(
-                "AtwIxZHo",
-                [35479.to_biguint().unwrap(), 31699.to_biguint().unwrap()]
-            ),
-            sorted_merkle_tree.index_of(
-                "AtwIxZHo",
-                [35479.to_biguint().unwrap(), 31699.to_biguint().unwrap()]
-            )
+            merkle_tree
+                .index_of(
+                    "AtwIxZHo",
+                    [35479.to_biguint().unwrap(), 31699.to_biguint().unwrap()]
+                )
+                .unwrap(),
+            sorted_merkle_tree.index_of_username("AtwIxZHo").unwrap()
         );
 
         // The root balances should be the same for sorted and unsorted MST
