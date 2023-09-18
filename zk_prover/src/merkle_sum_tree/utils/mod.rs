@@ -1,5 +1,4 @@
 mod build_tree;
-mod create_middle_node;
 mod create_proof;
 mod csv_parser;
 mod hash;

@@ -1,5 +1,6 @@
 mod entry;
 mod mst;
+mod node;
 mod tests;
 pub mod utils;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
@@ -13,12 +14,7 @@ pub struct MerkleProof<const N_ASSETS: usize> {
     pub path_indices: Vec<Fp>,
 }
 
-#[derive(Clone, Debug)]
-pub struct Node<const N_ASSETS: usize> {
-    pub hash: Fp,
-    pub balances: [Fp; N_ASSETS],
-}
-
 pub use entry::Entry;
 pub use mst::MerkleSumTree;
+pub use node::Node;
 pub use utils::{big_intify_username, big_uint_to_fp};

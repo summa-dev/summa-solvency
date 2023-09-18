@@ -1,4 +1,4 @@
-use crate::merkle_sum_tree::utils::{big_uint_to_fp, create_middle_node::create_middle_node};
+use crate::merkle_sum_tree::utils::big_uint_to_fp;
 use crate::merkle_sum_tree::{MerkleProof, Node};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
@@ -22,9 +22,9 @@ where
         };
 
         if proof.path_indices[i] == 0.into() {
-            node = create_middle_node(&node, &sibling_node);
+            node = Node::middle(&node, &sibling_node);
         } else {
-            node = create_middle_node(&sibling_node, &node);
+            node = Node::middle(&sibling_node, &node);
         }
 
         for (balance, sibling_balance) in balances.iter_mut().zip(sibling_node.balances.iter()) {

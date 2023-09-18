@@ -87,6 +87,83 @@ mod test {
         proof_invalid_3.sibling_sums[0] = [0.into(), 0.into()];
     }
 
+    #[test]
+    fn test_update_mst_leaf() {
+        let merkle_tree_1 =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let root_hash_1 = merkle_tree_1.root().hash;
+
+        //Create the second tree with the 7th entry different from the the first tree
+        let mut merkle_tree_2 = MerkleSumTree::<N_ASSETS, N_BYTES>::new(
+            "src/merkle_sum_tree/csv/entry_16_modified.csv",
+        )
+        .unwrap();
+
+        let root_hash_2 = merkle_tree_2.root().hash;
+        assert!(root_hash_1 != root_hash_2);
+
+        //Update the 7th leaf of the second tree so all the entries now match the first tree
+        let new_root = merkle_tree_2
+            .update_leaf(
+                "RkLzkDun",
+                &[2087.to_biguint().unwrap(), 79731.to_biguint().unwrap()],
+            )
+            .unwrap();
+        //The roots should match
+        assert!(root_hash_1 == new_root.hash);
+    }
+
+    #[test]
+    fn test_update_invalid_mst_leaf() {
+        let mut merkle_tree =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new_sorted("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let new_root = merkle_tree.update_leaf(
+            "non_existing_user", //This username is not present in the tree
+            &[11888.to_biguint().unwrap(), 41163.to_biguint().unwrap()],
+        );
+
+        if let Err(e) = new_root {
+            assert_eq!(e.to_string(), "Username not found");
+        }
+    }
+
+    #[test]
+    fn test_sorted_mst() {
+        let merkle_tree =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let old_root_balances = merkle_tree.root().balances;
+        let old_root_hash = merkle_tree.root().hash;
+
+        let sorted_merkle_tree =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new_sorted("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let new_root_balances = sorted_merkle_tree.root().balances;
+        let new_root_hash = sorted_merkle_tree.root().hash;
+
+        // The index of an entry should not be the same for sorted and unsorted MST
+        assert_ne!(
+            merkle_tree
+                .index_of(
+                    "AtwIxZHo",
+                    [35479.to_biguint().unwrap(), 31699.to_biguint().unwrap()]
+                )
+                .unwrap(),
+            sorted_merkle_tree.index_of_username("AtwIxZHo").unwrap()
+        );
+
+        // The root balances should be the same for sorted and unsorted MST
+        assert!(old_root_balances == new_root_balances);
+        // The root hash should not be the same for sorted and unsorted MST
+        assert!(old_root_hash != new_root_hash);
+    }
+
     // Passing a csv file with a single entry that has a balance that is not in the expected range will fail
     #[test]
     fn test_mst_overflow_1() {
@@ -126,7 +203,7 @@ mod test {
         assert!(result.is_ok());
     }
 
-    #[test]        
+    #[test]
     fn test_big_uint_conversion() {
         let big_uint = 3.to_biguint().unwrap();
         let fp = big_uint_to_fp(&big_uint);
