@@ -8,6 +8,7 @@ use ethers::{
 
 use summa_backend::apis::csv_parser::SignatureRecord;
 
+// Separated this function from the `generate_signatures.rs` for clarity on the example.
 pub async fn sign_message(message: &str) -> Result<Vec<SignatureRecord>, Box<dyn Error>> {
     // Using private keys directly is insecure.
     // Instead, consider leveraging hardware wallet support.

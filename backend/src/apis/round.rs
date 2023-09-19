@@ -7,7 +7,7 @@ use halo2_proofs::{
     plonk::{ProvingKey, VerifyingKey},
     poly::kzg::commitment::ParamsKZG,
 };
-use snark_verifier_sdk::CircuitExt;
+use snark_verifier_sdk::{evm::gen_evm_proof_shplonk, CircuitExt};
 use std::error::Error;
 
 use super::csv_parser::parse_asset_csv;
@@ -16,7 +16,7 @@ use summa_solvency::{
     circuits::{
         merkle_sum_tree::MstInclusionCircuit,
         solvency::SolvencyCircuit,
-        utils::{full_prover, gen_proof_solidity_calldata, generate_setup_artifacts},
+        utils::{gen_proof_solidity_calldata, generate_setup_artifacts},
     },
     merkle_sum_tree::MerkleSumTree,
 };
@@ -202,7 +202,8 @@ where
         let circuit =
             MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(self.mst.clone(), user_index);
 
-        let proof = full_prover(
+        // Currently, default manner of generating a inclusion proof for solidity-verifier.
+        let proof = gen_evm_proof_shplonk(
             &self.trusted_setup[0].0,
             &self.trusted_setup[0].1,
             circuit.clone(),

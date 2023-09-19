@@ -1,9 +1,10 @@
+#![feature(generic_const_exprs)]
 use std::{error::Error, fs::File};
 
 use csv::WriterBuilder;
 
-mod message_signer;
-use message_signer::sign_message;
+mod mock_signer;
+use mock_signer::sign_message;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -23,6 +24,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     wtr.flush()?; // This will ensure all bytes are written
+    println!("Successfully exported signatures to {}", path);
 
     Ok(())
 }
