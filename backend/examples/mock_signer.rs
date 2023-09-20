@@ -47,3 +47,6 @@ pub async fn sign_message(message: &str) -> Result<Vec<SignatureRecord>, Box<dyn
 
     Ok(signatures)
 }
+
+// To avoid build error
+fn main() {}

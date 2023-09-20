@@ -3,10 +3,12 @@ use summa_backend::{apis::round::Round, tests::initialize_test_env};
 
 #[tokio::main]
 async fn main() {
-    // Initialize test environment
+    // Initialize test environment.
     let (anvil, _, _, _, summa_contract, mut address_ownership_client) =
         initialize_test_env().await;
 
+    // Before submitting the solvency proof, it's crucial to submit the proof of address ownership.
+    // Ensure at least one address is registered in the `addressOwnershipProofs` mapping of the Summa contract.
     address_ownership_client
         .dispatch_proof_of_address_ownership()
         .await
@@ -17,6 +19,7 @@ async fn main() {
     let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
     let params_path = "ptau/hermez-raw-11";
 
+    // Using the `round` instance, the solvency proof is dispatched to the Summa contract with the `dispatch_solvency_proof` method.
     let mut round = Round::<4, 2, 14>::new(
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // anvil account [0]
         anvil.chain_id(),
@@ -29,6 +32,7 @@ async fn main() {
     )
     .unwrap();
 
+    // Sends the solvency proof, which should ideally complete without errors.
     assert_eq!(round.dispatch_solvency_proof().await.unwrap(), ());
 
     // You can also use the `solvency_proof_submitted_filter` method to check if the solvency proof is submitted.

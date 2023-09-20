@@ -19,6 +19,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     const USER_INDEX: usize = 0;
 
     // When verifying the inclusion proof on local, you have to load two files: `ptau` and `proof`.
+    // the `ptau` file should be exactly same with the one used while generating the proof.
     let ptau_path = "./ptau/hermez-raw-11";
     let proof_path = "user_0_proof.json";
 
@@ -37,13 +38,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         generate_leaf_hash::<N_ASSETS>(user_name.clone(), balances_usize.clone())
     );
 
+    // Similar to verifying the `leaf_hash` above, the user should check if the `root_hash` matches with the `mst_root` on the Summa contract.
+    // However, this example does not cover this part, as it's assumed that the user is running the verifier locally.
+    // For the process of checking the `root_hash`, refer to the `verify_inclusion_on_contract` example.
     let root_hash: Fp = serde_json::from_str(&proof_data.root_hash).unwrap();
 
+    // Circuit and params are same while generating the proof.
     let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
-
     let (params, _, vk) =
         generate_setup_artifacts(11, Some(ptau_path), mst_inclusion_circuit).unwrap();
 
+    // This result will be same on the contract method `verifyInclusionProof` on the Summa contract.
     let verification_result: bool =
         full_evm_verifier(&params, &vk, proof, vec![vec![leaf_hash, root_hash]]);
 

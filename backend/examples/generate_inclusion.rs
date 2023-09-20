@@ -33,22 +33,23 @@ async fn main() {
     )
     .unwrap();
 
-    // Before generating inclusion proof, CEX must dispatch proof of solvency for updating the root of merkle sum tree.
-    // Without that, the user may not trust your `root_hash` in the inclusion proof because it is not published on-chain.
-    round.dispatch_solvency_proof().await.unwrap();
-
+    // In a production environment, the CEX should dispatch the solvency proof to update the root of the Merkle sum tree prior to generating inclusion proofs.
+    // Otherwise, users might distrust the provided `root_hash` in the inclusion proof, as it hasn't been published on-chain.
     let inclusion_proof = round.get_proof_of_inclusion(USER_INDEX).unwrap();
     let public_input_vec = inclusion_proof.get_public_inputs();
 
+    // The structure of this output file may vary in production.
+    // For instance, the CEX might substitute `leaf_hash` with attributes like `username` and `balances`.
+    // Consequently, users would generate the `leaf_hash` on client-side before validating the proof.
     let output = json!({
         "proof": serde_json::to_string(&inclusion_proof.get_proof()).unwrap(),
         "leaf_hash": serde_json::to_string(&public_input_vec[0][0]).unwrap(),
         "root_hash": serde_json::to_string(&public_input_vec[0][1]).unwrap()
     });
 
-    let file =
-        fs::File::create(format!("user_{}_proof.json", USER_INDEX)).expect("Unable to create file");
+    let filename = format!("user_{}_proof.json", USER_INDEX);
+    let file = fs::File::create(filename.clone()).expect("Unable to create file");
     to_writer(file, &output).expect("Failed to write JSON to file");
 
-    println!("Exported proof to user_{}_proof.json", USER_INDEX);
+    println!("Exported proof to user #{}, as `{}`", USER_INDEX, filename);
 }
