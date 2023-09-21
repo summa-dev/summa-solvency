@@ -66,7 +66,7 @@ By completing these steps, the backend will be primed with the essential verifie
 ## Examples
 
 The sequence in which the examples are introduced closely relates to the steps of the Summa protocol.
-These examples will be help to understand how the Summa works with the Summa contract and the user side.
+These examples will help to understand how the Summa works with the Summa contract and the user side.
 
 
 ### 1. Generating Message Signatures
@@ -99,7 +99,7 @@ The `dispatch_proof_of_address_ownership` function sends a transaction to the Su
 
 After dispatching the transaction via `dispatch_proof_of_address_ownerhip`, the example computes the hashed addresses (address_hashes) to verify they have been correctly registered on the Summa contract.
 
-To excute this example:
+To execute this example:
 ```
 cargo run --example submit_ownership
 ```
@@ -129,9 +129,9 @@ The roles of these files are as follows:
 X
 - `ptau/hermez-raw-11`: Contains the Powers of Tau trusted setup parameters, essential for constructing the zk circuits.
 
-By employing the round instance, the solvency proof is dispatched to the Summa contract using the `dispatch_solvency_proof` method.
+An instance of Round dispatches the solvency proof using the `dispatch_solvency_proof` method.
 
-To excute this example:
+To execute this example:
 ```
 cargo run --example submit_solvency
 ```
@@ -150,7 +150,7 @@ In this example, we demonstrate how to generate and export user-specific inclusi
 
 After generating the inclusion proof, end of example parts the inclusion proof is transformed into a JSON format, making it easily shareable.
 
-To excute this example:
+To execute this example:
 ```
 cargo run --example generate_inclusion
 ```

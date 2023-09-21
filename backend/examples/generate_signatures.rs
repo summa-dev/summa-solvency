@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let signatures = sign_message(message).await?;
 
     // Write the signatures to a CSV file to be used in the `verify_signatures` example.
-    // It's envisioned that this CSV file will remain internal to CEX; only the Summa contract will publish its contents.
+    // It's envisioned that this CSV file will remain internal to CEX, only the Summa contract will publish its contents.
     let file = File::create(path)?;
     let mut wtr = WriterBuilder::new().delimiter(b';').from_writer(file);
 
