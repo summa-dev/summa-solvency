@@ -21,7 +21,7 @@ async fn main() {
     let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
     let params_path = "ptau/hermez-raw-11";
 
-    let mut round = Round::<4, 2, 14>::new(
+    let round = Round::<4, 2, 14>::new(
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // anvil account [0]
         anvil.chain_id(),
         anvil.endpoint().as_str(),

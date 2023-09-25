@@ -153,22 +153,6 @@ pub fn full_evm_verifier(
         &mut transcript,
     )
     .is_ok()
-
-    // let accept = {
-    //     let mut transcript = TranscriptReadBuffer::<_, G1Affine, _>::init(proof.as_slice());
-    //     VerificationStrategy::<_, VerifierSHPLONK<'_, Bn256>>::finalize(
-    //         verify_proof::<_, VerifierSHPLONK<'_, Bn256>, _, EvmTranscript<_, _, _, _>, _>(
-    //             params,
-    //             vk,
-    //             AccumulatorStrategy::new(params.verifier_params()),
-    //             instances,
-    //             &mut transcript,
-    //         )
-    //         .unwrap(),
-    //     )
-    // };
-
-    // accept
 }
 
 /// Generate a solidity verifier contract starting from its yul code.

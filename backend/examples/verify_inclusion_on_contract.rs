@@ -6,14 +6,14 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use serde_json::from_reader;
 
 use summa_backend::{apis::round::Round, tests::initialize_test_env};
+use summa_solvency::merkle_sum_tree::utils::generate_leaf_hash;
 mod helpers;
-use helpers::inclusion_proof::{generate_leaf_hash, InclusionProof};
+use helpers::inclusion_proof::InclusionProof;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Let assume the user can get instance of `summa_contract` and the CEX already submit solvency at timestamp `1`.
-    let (anvil, _, _, _, summa_contract, mut address_ownership_client) =
-        initialize_test_env().await;
+    let (anvil, _, _, _, summa_contract) = initialize_test_env().await;
 
     address_ownership_client
         .dispatch_proof_of_address_ownership()

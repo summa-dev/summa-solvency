@@ -23,7 +23,6 @@ pub async fn initialize_test_env() -> (
     H160,
     Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
     Summa<SignerMiddleware<Provider<Http>, LocalWallet>>,
-    AddressOwnership,
 ) {
     let anvil: ethers::utils::AnvilInstance = Anvil::new()
         .mnemonic("test test test test test test test test test test test junk")
@@ -99,36 +98,18 @@ pub async fn initialize_test_env() -> (
     .await
     .unwrap();
 
-    let address_ownership_client = AddressOwnership::new(
-        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-        anvil.chain_id(),
-        anvil.endpoint().as_str(),
-        summa_contract.address(),
-        "src/apis/csv/signatures.csv",
-    )
-    .unwrap();
-
-    (
-        anvil,
-        cex_addr_1,
-        cex_addr_2,
-        client,
-        summa_contract,
-        address_ownership_client,
-    )
+    (anvil, cex_addr_1, cex_addr_2, client, summa_contract)
 }
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
-
     use ethers::{
         abi::AbiEncode,
         types::{Bytes, U256},
         utils::to_checksum,
     };
 
-    use crate::apis::{address_ownership::AddressOwnership, round::Round};
+    use crate::apis::round::Round;
     use crate::contracts::generated::summa_contract::{
         AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
         SolvencyProofSubmittedFilter,
@@ -251,10 +232,12 @@ mod test {
             .collect();
 
         // Verify inclusion proof with onchain function
-        summa_contract
+        let verified = summa_contract
             .verify_inclusion_proof(proof, public_inputs, U256::from(1))
             .await
             .unwrap();
+
+        assert_eq!(verified, true);
 
         drop(anvil);
     }
