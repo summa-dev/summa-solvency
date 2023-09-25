@@ -7,6 +7,7 @@ use halo2_proofs::{
     plonk::{ProvingKey, VerifyingKey},
     poly::kzg::commitment::ParamsKZG,
 };
+use serde::{Deserialize, Serialize};
 use snark_verifier_sdk::{evm::gen_evm_proof_shplonk, CircuitExt};
 use std::error::Error;
 
@@ -43,7 +44,7 @@ impl SolvencyProof {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MstInclusionProof {
     public_inputs: Vec<Vec<Fp>>,
     proof: Vec<u8>,

@@ -9,7 +9,6 @@ use ethers::{
 };
 use tokio::time;
 
-use crate::apis::address_ownership::AddressOwnership;
 use crate::contracts::generated::{
     inclusion_verifier::InclusionVerifier, solvency_verifier::SolvencyVerifier,
     summa_contract::Summa,
@@ -109,7 +108,7 @@ mod test {
         utils::to_checksum,
     };
 
-    use crate::apis::round::Round;
+    use crate::apis::{address_ownership::AddressOwnership, round::Round};
     use crate::contracts::generated::summa_contract::{
         AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
         SolvencyProofSubmittedFilter,
@@ -118,8 +117,16 @@ mod test {
 
     #[tokio::test]
     async fn test_round_features() {
-        let (anvil, cex_addr_1, cex_addr_2, _, summa_contract, mut address_ownership_client) =
-            initialize_test_env().await;
+        let (anvil, cex_addr_1, cex_addr_2, _, summa_contract) = initialize_test_env().await;
+
+        let mut address_ownership_client = AddressOwnership::new(
+            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+            anvil.chain_id(),
+            anvil.endpoint().as_str(),
+            summa_contract.address(),
+            "src/apis/csv/signatures.csv",
+        )
+        .unwrap();
 
         let ownership_submitted_result = address_ownership_client
             .dispatch_proof_of_address_ownership()

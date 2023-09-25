@@ -63,36 +63,37 @@ The following steps are optional and are only required if you need to update the
 
 By completing these steps, the backend will be primed with the essential verifiers for its tasks.
 
-## Example
+## Summa solvency flow example
 
-The sequence in which the examples are introduced closely relates to the steps of the Summa protocol.
-These examples will help to understand how the Summa works with the Summa contract and the user side.
+This example illustrates how Summa interacts with the Summa contract and the user side.
+
+To execute this example, use the command:
+
+```
+cargo run --release --example summa_solvency_flow
+```
 
 ### 1. Submitting Address Ownership to the Summa Contract
 
-This example demonstrates the process of submitting proof of address ownership to the Summa contract. After generating signatures for asset ownership (as shown in the `generate_signature` example), this step is essential to register those proofs on-chain, facilitating the validation of asset ownership within Summa.
+First, we submit proof of address ownership to the Summa contract. This is a critical step to register these proofs on-chain, facilitating the validation of asset ownership within Summa.
 
-In this example, a test environment is set up with the anvil instance by invoking the `initialize_test_env` method. This environment is also utilized in other examples such as `submit_solvency` and `verify_inclusion_on_contracts`.
+Key points:
 
-Key points to note:
+- An instance of `AddressOwnership`, named `address_ownership_client`, is initialized with the `signatures.csv` file, which contains the signature data.
 
-The instance of `AddressOwnership` is initialized with `signatures.csv`, and is named `address_ownership_client`. This instance has already loaded the signature data.
+- The `dispatch_proof_of_address_ownership` function sends a transaction to the Summa contract to register CEX-owned addresses.
 
-The `dispatch_proof_of_address_ownership` function sends a transaction to the Summa contract, registering the addresses owned by the CEX on the contract.
+- After dispatching the transaction, the example computes the hashed addresses (address_hashes) to verify they've been correctly registered in the Summa contract
 
-After dispatching the transaction via `dispatch_proof_of_address_ownerhip`, the example computes the hashed addresses (address_hashes) to verify they have been correctly registered on the Summa contract.
 
-To execute this example:
+Note: This demonstration takes place in a test environment. In real-world production, always ensure that the Summa contract is correctly deployed on the target chain.
+
+If executed successfully, you'll see:
+
 ```
-cargo run --release --example submit_ownership
-```
-
-Upon successful execution, you should see the message:
-```
-Ownership proofs are submitted successfully!
+1. Ownership proofs are submitted successfully!
 ```
 
-Reminder: This demonstration takes place in a test environment. In real-world production, always ensure that the Summa contract is correctly deployed on the target chain.
 
 ### 2. Submit Proof of Solvency
 
@@ -103,67 +104,45 @@ Without this process, It seems the user may not trust to the inclusion proof for
 In this example, we'll guide you through the process of submitting a solvency proof using the Round to the Summa contract.
 The Round serves as the core of the backend in Summa, and we have briefly described it in the Components section.
 
-To initialize the Round, several parameters are required, including paths to specific CSV files (`assets.csv` and `entry_16.csv`), as well as a path to the ptau file (`ptau/hermez-raw-11`).
+To initialize the `Round` instance, you'll need paths to specific CSV files (`assets.csv` and `entry_16.csv`) and the `ptau/hermez-raw-11` file. Here's what each file does:
 
-The roles of these files are as follows:
-- `assets.csv`: This file is essential for calculating the total balance of assets for the solvency proof. Currently, only the CEX can generate this asset CSV file in its specific manner.
+- `assets.csv`: Calculates the total balance of assets for the solvency proof. Only the CEX can generate this file.
+- `entry_16.csv`: Used to build the Merkle sum tree, with each leaf element derived from sixteen entries in the CSV.
+- `ptau/hermez-raw-11`: Contains parameters for constructing the zk circuits.
 
-- `entry_16.csv`: This file is used to build the Merkle sum tree, where each leaf element originates from sixteen entries in the CSV.
-X
-- `ptau/hermez-raw-11`: Contains the Powers of Tau trusted setup parameters, essential for constructing the zk circuits.
+Using the `Round` instance, the solvency proof is dispatched to the Summa contract with the `dispatch_solvency_proof` method.
 
-An instance of Round dispatches the solvency proof using the `dispatch_solvency_proof` method.
-
-To execute this example:
-```
-cargo run --release --example submit_solvency
-```
-
-Upon successful execution, you will see the message:
+If this step successfully ran, you can see this message:
 
 ```
- "Solvency proof is submitted successfully!"
+2. Solvency proof is submitted successfully!
 ```
 
 ### 3. Generating and Exporting Inclusion Proofs
 
-Assuming you are a CEX, let's say you've already committed the `solvency` and `ownership` proofs to the Summa contract. Now, you need to generate inclusion proofs for every user.
+Assuming you're a CEX, after committing the `solvency` and `ownership` proofs to the Summa contract, you should generate inclusion proofs for every user. This proof verifies the presence of specific elements in the Merkle sum tree, which is part of the solvency proof.
 
-In this example, we demonstrate how to generate and export user-specific inclusion proofs using the Round. This proof is crucial for users as it helps them validate the presence of specific elements within the Merkle sum tree, which forms a part of the solvency proof submitted.
+After generating the inclusion proof, it's transformed into a JSON format for easy sharing.
 
-After generating the inclusion proof, end of example parts the inclusion proof is transformed into a JSON format, making it easily shareable.
-
-To execute this example:
-```
-cargo run --release --example generate_inclusion
-```
-
-Upon successful execution, you can see this message and exported file `user_0_proof.json`.
+Upon successful execution, you'll find a file named `user_0_proof.json` and see the following message:
 
 ```
- "Exported proof to user #0, as `user_0_proof.json`"
+3. Exported proof to user #0, as `user_0_proof.json`
 ```
 
 ### 4. Verify Proof of Inclusion
 
 This is the final step in the Summa process and the only part that occurs on the user side.
 
-The user will receive the proof for a specific Round. the user can use method on the Summa contract that already deployed on blockchain. It's important to note that the verifier function on the Summa contract is a view function, which means it doesn't require any gas or involve writing state on-chain.
+Users receive the proof for a specific round and use methods available on the deployed Summa contract. Importantly, the Summa contract verifier function is a view function, meaning it doesn't consume gas or change the blockchain's state.
 
-In the `verify_inclusion_on_contract` example, the procedure for verifying the inclusion proof using an on-chain method is illustrated. By leveraging the data from the Summa contract, users can effortlessly ascertain that the provided proof aligns with the data submitted by the CEX.
+In this step, you'll see:
 
-To elaborate:
+- Retrieve the `mst_root` from the Summa contract and match it with the `root_hash` in the proof.
+- Ensure the `leaf_hash` aligns with the hash based on the `username` and `balances` provided by the CEX.
+- Use the `verify_inclusion_proof` method on the Summa contract to validate the proof.
 
-Retrieving the MST Root: The user fetches the `mst_root` from the Summa contract. This root should match the `root_hash` provided in the proof. This verification process is akin to ensuring that the `leaf_hash` corresponds with the anticipated hash based on the `username` and `balances` provided by the CEX.
-
-On-chain Function Verification: The user then invokes the `verify_inclusion_proof` method on the Summa contract. Since this is a view function, it returns a boolean value without incurring any gas fees, indicating the success or failure of the verification.
-
-To run the verify inclusion on contract example:
+The result will display as:
 ```
-cargo run --release --example verify_inclusion_on_contract
-```
-
-You will see the result like:
-```
-Verifying the proof on contract verifier for User #0: true
+4. Verifying the proof on contract verifier for User #0: true
 ```
