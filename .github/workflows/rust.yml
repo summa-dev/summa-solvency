@@ -33,7 +33,6 @@ jobs:
         run: |
           cd backend
           cargo test --release -- --nocapture
-          cargo run --release --example summa_solvency_flow
 
       - name: Test example
         run: |
