@@ -21,8 +21,12 @@ impl AddressOwnership {
 
         Ok(AddressOwnership {
             address_ownership_proofs,
-            signer: SummaSigner::new(&[], signer_key, chain_id, rpc_url, summa_sc_address),
+            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_sc_address),
         })
+    }
+
+    pub fn get_ownership_proofs(&self) -> &Vec<AddressOwnershipProof> {
+        &self.address_ownership_proofs
     }
 
     // This function dispatches the proof of address ownership. Before calling this function,

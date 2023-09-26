@@ -9,15 +9,19 @@ use ethers::{
 };
 use tokio::time;
 
+use crate::contracts::generated::{
+    inclusion_verifier::InclusionVerifier, solvency_verifier::SolvencyVerifier,
+    summa_contract::Summa,
+};
 use crate::contracts::mock::mock_erc20::{MockERC20, MOCKERC20_ABI, MOCKERC20_BYTECODE};
 
-// Setup test conditions on the anvil instance
-pub async fn initialize_anvil() -> (
+// Setup test environment on the anvil instance
+pub async fn initialize_test_env() -> (
     AnvilInstance,
     H160,
     H160,
     Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
-    MockERC20<SignerMiddleware<Provider<Http>, LocalWallet>>,
+    Summa<SignerMiddleware<Provider<Http>, LocalWallet>>,
 ) {
     let anvil: ethers::utils::AnvilInstance = Anvil::new()
         .mnemonic("test test test test test test test test test test test junk")
@@ -67,13 +71,37 @@ pub async fn initialize_anvil() -> (
 
     time::sleep(Duration::from_millis(500)).await;
 
-    (anvil, cex_addr_1, cex_addr_2, client, mock_erc20)
+    // Deploy verifier contracts before deploy Summa contract
+    let solvency_verifer_contract = SolvencyVerifier::deploy(Arc::clone(&client), ())
+        .unwrap()
+        .send()
+        .await
+        .unwrap();
+
+    let inclusion_verifer_contract = InclusionVerifier::deploy(Arc::clone(&client), ())
+        .unwrap()
+        .send()
+        .await
+        .unwrap();
+
+    // Deploy Summa contract
+    let summa_contract = Summa::deploy(
+        Arc::clone(&client),
+        (
+            solvency_verifer_contract.address(),
+            inclusion_verifer_contract.address(),
+        ),
+    )
+    .unwrap()
+    .send()
+    .await
+    .unwrap();
+
+    (anvil, cex_addr_1, cex_addr_2, client, summa_contract)
 }
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
-
     use ethers::{
         abi::AbiEncode,
         types::{Bytes, U256},
@@ -81,43 +109,15 @@ mod test {
     };
 
     use crate::apis::{address_ownership::AddressOwnership, round::Round};
-    use crate::contracts::generated::{
-        inclusion_verifier::InclusionVerifier,
-        solvency_verifier::SolvencyVerifier,
-        summa_contract::{
-            AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
-            SolvencyProofSubmittedFilter, Summa,
-        },
+    use crate::contracts::generated::summa_contract::{
+        AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
+        SolvencyProofSubmittedFilter,
     };
-    use crate::tests::initialize_anvil;
+    use crate::tests::initialize_test_env;
 
     #[tokio::test]
     async fn test_round_features() {
-        let (anvil, cex_addr_1, cex_addr_2, client, _mock_erc20) = initialize_anvil().await;
-
-        let solvency_verifer_contract = SolvencyVerifier::deploy(Arc::clone(&client), ())
-            .unwrap()
-            .send()
-            .await
-            .unwrap();
-
-        let inclusion_verifer_contract = InclusionVerifier::deploy(Arc::clone(&client), ())
-            .unwrap()
-            .send()
-            .await
-            .unwrap();
-
-        let summa_contract = Summa::deploy(
-            Arc::clone(&client),
-            (
-                solvency_verifer_contract.address(),
-                inclusion_verifer_contract.address(),
-            ),
-        )
-        .unwrap()
-        .send()
-        .await
-        .unwrap();
+        let (anvil, cex_addr_1, cex_addr_2, _, summa_contract) = initialize_test_env().await;
 
         let mut address_ownership_client = AddressOwnership::new(
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
@@ -226,27 +226,25 @@ mod test {
         // Test inclusion proof
         let inclusion_proof = round.get_proof_of_inclusion(0).unwrap();
         let proof = Bytes::from(inclusion_proof.get_proof().clone());
-        let public_input_vec = inclusion_proof.get_public_inputs();
-
-        // Adjust for endianness
-        let mut leaf_hash = public_input_vec[0][0].to_bytes();
-        let mut root_hash = public_input_vec[0][1].to_bytes();
-        leaf_hash.reverse();
-        root_hash.reverse();
-
-        let public_inputs = vec![
-            U256::from_big_endian(&leaf_hash),
-            U256::from_big_endian(&root_hash),
-        ];
-
-        // Ensure the root hash matches the one from the contract
-        let onchain_mstroot = summa_contract.mst_roots(U256::from(1)).await.unwrap();
-        assert_eq!(onchain_mstroot, U256::from_big_endian(&root_hash));
+        let public_inputs: Vec<U256> = inclusion_proof
+            .get_public_inputs()
+            .iter()
+            .flat_map(|input_set| {
+                input_set.iter().map(|input| {
+                    let mut bytes = input.to_bytes();
+                    bytes.reverse();
+                    U256::from_big_endian(&bytes)
+                })
+            })
+            .collect();
 
         // Verify inclusion proof with onchain function
-        let _result = summa_contract
+        let verified = summa_contract
             .verify_inclusion_proof(proof, public_inputs, U256::from(1))
-            .await;
+            .await
+            .unwrap();
+
+        assert_eq!(verified, true);
 
         drop(anvil);
     }

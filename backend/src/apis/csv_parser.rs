@@ -4,16 +4,27 @@ use ethers::{
     abi::AbiEncode,
     types::{Bytes, U256},
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::contracts::generated::summa_contract::{AddressOwnershipProof, Asset};
 
-#[derive(Debug, Deserialize)]
-struct SignatureRecord {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SignatureRecord {
     chain: String,
     address: String,
     signature: String,
     message: String,
+}
+
+impl SignatureRecord {
+    pub fn new(chain: String, address: String, signature: String, message: String) -> Self {
+        Self {
+            chain,
+            address,
+            signature,
+            message,
+        }
+    }
 }
 
 pub fn parse_signature_csv<P: AsRef<Path>>(

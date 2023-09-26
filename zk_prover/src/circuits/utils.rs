@@ -71,7 +71,7 @@ pub fn generate_setup_artifacts<C: Circuit<Fp> + CircuitExt<Fp>>(
             }
         }
         None => {
-            let timer = start_timer!(|| "Creating params");
+            let timer = start_timer!(|| "None Creating params");
             params = ParamsKZG::<Bn256>::setup(k, OsRng);
             end_timer!(timer);
         }

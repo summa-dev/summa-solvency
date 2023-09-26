@@ -7,7 +7,8 @@ use halo2_proofs::{
     plonk::{ProvingKey, VerifyingKey},
     poly::kzg::commitment::ParamsKZG,
 };
-use snark_verifier_sdk::CircuitExt;
+use serde::{Deserialize, Serialize};
+use snark_verifier_sdk::{evm::gen_evm_proof_shplonk, CircuitExt};
 use std::error::Error;
 
 use super::csv_parser::parse_asset_csv;
@@ -16,7 +17,7 @@ use summa_solvency::{
     circuits::{
         merkle_sum_tree::MstInclusionCircuit,
         solvency::SolvencyCircuit,
-        utils::{full_prover, gen_proof_solidity_calldata, generate_setup_artifacts},
+        utils::{gen_proof_solidity_calldata, generate_setup_artifacts},
     },
     merkle_sum_tree::MerkleSumTree,
 };
@@ -43,7 +44,7 @@ impl SolvencyProof {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MstInclusionProof {
     public_inputs: Vec<Vec<Fp>>,
     proof: Vec<u8>,
@@ -95,7 +96,7 @@ where
                 params_path,
             )
             .unwrap(),
-            signer: SummaSigner::new(&vec![], signer_key, chain_id, rpc_url, summa_sc_address),
+            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_sc_address),
         })
     }
 
@@ -103,23 +104,22 @@ where
         self.timestamp
     }
 
-    pub async fn dispatch_solvency_proof(&mut self) -> Result<(), &'static str> {
+    pub async fn dispatch_solvency_proof(&mut self) -> Result<(), Box<dyn Error>> {
         let proof: SolvencyProof = match self.snapshot.generate_proof_of_solvency() {
             Ok(p) => p,
-            Err(_) => return Err("Failed to generate proof of solvency"),
+            Err(e) => return Err(format!("Failed to generate proof of solvency: {}", e).into()),
         };
 
-        let result = self
-            .signer
+        self.signer
             .submit_proof_of_solvency(
                 proof.public_inputs[0],
                 self.snapshot.assets_state.to_vec(),
                 proof.proof_calldata,
                 U256::from(self.get_timestamp()),
             )
-            .await;
+            .await?;
 
-        Ok(result.unwrap())
+        Ok(())
     }
 
     pub fn get_proof_of_inclusion(
@@ -202,7 +202,8 @@ where
         let circuit =
             MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(self.mst.clone(), user_index);
 
-        let proof = full_prover(
+        // Currently, default manner of generating a inclusion proof for solidity-verifier.
+        let proof = gen_evm_proof_shplonk(
             &self.trusted_setup[0].0,
             &self.trusted_setup[0].1,
             circuit.clone(),

@@ -63,27 +63,87 @@ The following steps are optional and are only required if you need to update the
 
 By completing these steps, the backend will be primed with the essential verifiers for its tasks.
 
-## Examples
+## Summa solvency flow example
 
-### Running the Inclusion Verification
+This example illustrates how Summa interacts with the Summa contract and the user side.
 
-This example demonstrates how a user can verify the inclusion of their account in the Merkle Sum Tree. 
-In this example, the CEX provides the user with their `balances` and `username`, but not the `leaf_hash`. 
+To execute this example, use the command:
 
-The user will generate the `leaf_hash` themselves and then verify its inclusion in the tree.
-
-Make sure you have the required files:
-- `backend/ptau/hermez-raw-11`
-- `backend/src/apis/csv/assets.csv`
-- `zk_prover/src/merkle_sum_tree/csv/entry_16.csv`
-
-
-To run the example:
 ```
-cargo run --example verify_inclusion
+cargo run --release --example summa_solvency_flow
 ```
 
-On successful execution, you'll observe a message indicating the verification outcome:
+### 1. Submitting Address Ownership to the Summa Contract
+
+First, we submit proof of address ownership to the Summa contract. This is a critical step to register these proofs on-chain, facilitating the validation of asset ownership within Summa.
+
+Key points:
+
+- An instance of `AddressOwnership`, named `address_ownership_client`, is initialized with the `signatures.csv` file, which contains the signature data.
+
+- The `dispatch_proof_of_address_ownership` function sends a transaction to the Summa contract to register CEX-owned addresses.
+
+- After dispatching the transaction, the example computes the hashed addresses (address_hashes) to verify they've been correctly registered in the Summa contract
+
+
+Note: This demonstration takes place in a test environment. In real-world production, always ensure that the Summa contract is correctly deployed on the target chain.
+
+If executed successfully, you'll see:
+
 ```
-Verifying the proof result for User #0: true
+1. Ownership proofs are submitted successfully!
+```
+
+
+### 2. Submit Proof of Solvency
+
+This step is crucial for two primary reasons: first, to validate the root hash of the Merkle Sum Tree (`mst_root`); and second, to ensure that the assets held by the CEX exceed their liabilities, as confirmed through the proof verification on the Summa contract.
+The CEX must submit this proof of solvency to the Summa contract. Currently, it's a mandatory requirement to provide this proof before generating the inclusion proof for each user in the current round.
+
+Without this verification, It seems the user may not trust to the inclusion proof for the round. becuase the `mst_root` is not published on contract. More specifically, it means that the `mst_root` is not correctly verified on the Summa contract.
+
+In this step, we'll guide you through the process of submitting a solvency proof using the Round to the Summa contract.
+The Round serves as the core of the backend in Summa, and we have briefly described it in the Components section.
+
+To initialize the `Round` instance, you'll need paths to specific CSV files (`assets.csv` and `entry_16.csv`) and the `ptau/hermez-raw-11` file. Here's what each file does:
+
+- `assets.csv`: Calculates the total balance of assets for the solvency proof. Only the CEX can generate this file.
+- `entry_16.csv`: Used to build the Merkle sum tree, with each leaf element derived from sixteen entries in the CSV.
+- `ptau/hermez-raw-11`: Contains parameters for constructing the zk circuits.
+
+Using the `Round` instance, the solvency proof is dispatched to the Summa contract with the `dispatch_solvency_proof` method.
+
+If this step successfully ran, you can see this message:
+
+```
+2. Solvency proof is submitted successfully!
+```
+
+### 3. Generating and Exporting Inclusion Proofs
+
+Assuming you're a CEX, after committing the `solvency` and `ownership` proofs to the Summa contract, you should generate inclusion proofs for every user. This proof verifies the presence of specific elements in the Merkle sum tree, which is part of the solvency proof.
+
+After generating the inclusion proof, it's transformed into a JSON format for easy sharing.
+
+Upon successful execution, you'll find a file named `user_0_proof.json` and see the following message:
+
+```
+3. Exported proof to user #0, as `user_0_proof.json`
+```
+
+### 4. Verify Proof of Inclusion
+
+This is the final step in the Summa process and the only part that occurs on the user side.
+
+Users receive the proof for a specific round and use methods available on the deployed Summa contract. Importantly, the Summa contract verifier function is a view function, meaning it doesn't consume gas or change the blockchain's state.
+
+In this step, you'll see:
+
+- Retrieve the `mst_root` from the Summa contract and match it with the `root_hash` in the proof.
+- Ensure the `leaf_hash` aligns with the hash based on the `username` and `balances` provided by the CEX.
+- Use the `verify_inclusion_proof` method on the Summa contract to validate the proof.
+
+The result will display as:
+```
+4. Verifying the proof on contract verifier for User #0: true
 ```
