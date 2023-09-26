@@ -97,11 +97,12 @@ If executed successfully, you'll see:
 
 ### 2. Submit Proof of Solvency
 
-Before generate inclusion proof for every user of the current round, You should submit proof of solvency to Summa contract. Currently, we made this as mandatory way to commit the root hash of the Merkle Sum Tree.
+This step is crucial for two primary reasons: first, to validate the root hash of the Merkle Sum Tree (`mst_root`); and second, to ensure that the assets held by the CEX exceed their liabilities, as confirmed through the proof verification on the Summa contract.
+The CEX must submit this proof of solvency to the Summa contract. Currently, it's a mandatory requirement to provide this proof before generating the inclusion proof for each user in the current round.
 
-Without this process, It seems the user may not trust to the inclusion proof for the round. becuase the `mst_root` is not published on contract. More specifically, it means that the `mst_root` is not correctly verified on the Summa contract.
+Without this verification, It seems the user may not trust to the inclusion proof for the round. becuase the `mst_root` is not published on contract. More specifically, it means that the `mst_root` is not correctly verified on the Summa contract.
 
-In this example, we'll guide you through the process of submitting a solvency proof using the Round to the Summa contract.
+In this step, we'll guide you through the process of submitting a solvency proof using the Round to the Summa contract.
 The Round serves as the core of the backend in Summa, and we have briefly described it in the Components section.
 
 To initialize the `Round` instance, you'll need paths to specific CSV files (`assets.csv` and `entry_16.csv`) and the `ptau/hermez-raw-11` file. Here's what each file does:

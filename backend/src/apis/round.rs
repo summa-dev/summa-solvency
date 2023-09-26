@@ -104,23 +104,22 @@ where
         self.timestamp
     }
 
-    pub async fn dispatch_solvency_proof(&mut self) -> Result<(), &'static str> {
+    pub async fn dispatch_solvency_proof(&mut self) -> Result<(), Box<dyn Error>> {
         let proof: SolvencyProof = match self.snapshot.generate_proof_of_solvency() {
             Ok(p) => p,
-            Err(_) => return Err("Failed to generate proof of solvency"),
+            Err(e) => return Err(format!("Failed to generate proof of solvency: {}", e).into()),
         };
 
-        let result = self
-            .signer
+        self.signer
             .submit_proof_of_solvency(
                 proof.public_inputs[0],
                 self.snapshot.assets_state.to_vec(),
                 proof.proof_calldata,
                 U256::from(self.get_timestamp()),
             )
-            .await;
+            .await?;
 
-        Ok(result.unwrap())
+        Ok(())
     }
 
     pub fn get_proof_of_inclusion(
