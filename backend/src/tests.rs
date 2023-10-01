@@ -132,6 +132,9 @@ mod test {
             .dispatch_proof_of_address_ownership()
             .await;
 
+        /*
+            Replace it with  assert!(ownership_submitted_result.is_ok());
+        */
         assert_eq!(ownership_submitted_result.is_ok(), true);
 
         let logs = summa_contract
@@ -200,6 +203,9 @@ mod test {
             },
         ];
 
+        /*
+        Check comment in `examples/summa_solvency_flow.rs` for the following line
+         */
         assert_eq!(round.dispatch_solvency_proof().await.unwrap(), ());
 
         // After sending transaction of proof of solvency, logs should be updated
@@ -224,6 +230,10 @@ mod test {
         );
 
         // Test inclusion proof
+
+        /*
+               This whole conversion seems unnecessary to me. Look at the comment in `Round`
+        */
         let inclusion_proof = round.get_proof_of_inclusion(0).unwrap();
         let proof = Bytes::from(inclusion_proof.get_proof().clone());
         let public_inputs: Vec<U256> = inclusion_proof
@@ -244,7 +254,7 @@ mod test {
             .await
             .unwrap();
 
-        assert_eq!(verified, true);
+        assert!(verified);
 
         drop(anvil);
     }

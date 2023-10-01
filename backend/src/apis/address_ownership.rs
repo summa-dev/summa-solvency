@@ -10,6 +10,9 @@ pub struct AddressOwnership {
 }
 
 impl AddressOwnership {
+    /*
+       Build signer outside of the constructor and pass it in as a parameter.
+    */
     pub fn new(
         signer_key: &str,
         chain_id: u64,
@@ -28,6 +31,11 @@ impl AddressOwnership {
     pub fn get_ownership_proofs(&self) -> &Vec<AddressOwnershipProof> {
         &self.address_ownership_proofs
     }
+
+    /*
+        If I understand correctly, an error in submit_proof_of_address_ownership is propagated to the caller.
+        Is that correct?
+    */
 
     // This function dispatches the proof of address ownership. Before calling this function,
     // ensure externally that the provided `addresses` in `address_ownership_proof` are not already registered

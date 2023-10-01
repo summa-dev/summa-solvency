@@ -41,6 +41,9 @@ impl SummaSigner {
         }
     }
 
+    /*
+    This method is never used. Can it be removed?
+     */
     pub fn get_deployment_address<P: AsRef<Path>>(
         path: P,
         chain_id: u64,

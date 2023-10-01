@@ -44,6 +44,11 @@ impl SolvencyProof {
     }
 }
 
+/*
+   Since we are now using the `MstInclusionProof` only for on-chain verification,
+   why don't we replace the data type with something that can be directly consumed by the contract?
+   Similar to `SolvencyProof`.
+*/
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MstInclusionProof {
     public_inputs: Vec<Vec<Fp>>,
@@ -66,6 +71,9 @@ pub struct Snapshot<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: u
     trusted_setup: [SetupArtifacts; 2],
 }
 
+/*
+   `timestamp` should be a unix timestamp. Is it enough to use `u64`?
+*/
 pub struct Round<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     timestamp: u64,
     snapshot: Snapshot<LEVELS, N_ASSETS, N_BYTES>,
@@ -78,6 +86,9 @@ where
     [usize; N_ASSETS + 1]: Sized,
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
+    /*
+       Build signer outside of the constructor and pass it in as a parameter.
+    */
     pub fn new(
         signer_key: &str,
         chain_id: u64,
@@ -104,6 +115,10 @@ where
         self.timestamp
     }
 
+    /*
+        If I understand correctly, an error in submit_proof_of_solvency is propagated to the caller.
+        Is that correct?
+    */
     pub async fn dispatch_solvency_proof(&mut self) -> Result<(), Box<dyn Error>> {
         let proof: SolvencyProof = match self.snapshot.generate_proof_of_solvency() {
             Ok(p) => p,
@@ -201,6 +216,10 @@ where
     ) -> Result<MstInclusionProof, &'static str> {
         let circuit =
             MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(self.mst.clone(), user_index);
+
+        /*
+            Why can't we get the `calldata` using `gen_proof_solidity_calldata` similar to `generate_proof_of_solvency`?
+        */
 
         // Currently, default manner of generating a inclusion proof for solidity-verifier.
         let proof = gen_evm_proof_shplonk(

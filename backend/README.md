@@ -48,6 +48,10 @@ SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" carg
 
 ### Generating Verifiers for Backend
 
+/*
+    Can we replace this whole process with a bash script
+*/
+
 The following steps are optional and are only required if you need to update the verifier contracts for the backend:
 
 1. **Build the Verifier Contracts**:

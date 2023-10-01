@@ -38,12 +38,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .unwrap();
 
+    /*
+        I think that this part related to `address_hashes` can be safely removed.
+        The example should be as simple as possible.
+    */
+
     // Retrieve hashed addresses using the `keccak256` method.
     let address_hashes = address_ownership_client
         .get_ownership_proofs()
         .iter()
         .map(|x| keccak256(encode(&[Token::String(x.cex_address.clone())])))
         .collect::<Vec<[u8; 32]>>();
+
+    /*
+        If I understand correctly, the function `dispatch_proof_of_address_ownership` returns a `Result<(), Box<dyn Error>>`.
+        When we call unwrap on the result, it will panic if the result is an error.
+        Is that correct?
+    */
 
     // Dispatch the proof of address ownership.
     // the `dispatch_proof_of_address_ownership` function sends a transaction to the Summa contract.
@@ -97,8 +108,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .unwrap();
 
+    /*
+       I still get the error:
+       ``assert_eq` of unit values detected. This will always succeed
+       for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#unit_cmp
+       `#[deny(clippy::unit_cmp)]` on by defaultclippyClick for full compiler diagnostic`
+
+       I think that, similarly to what you do with `dispatch_proof_of_address_ownership` about, we can remove the `assert_eq` statement.
+       Instead, by just calling round.dispatch_solvency_proof().await.unwrap(), it will panic if the result is an error.
+
+    */
     // Sends the solvency proof, which should ideally complete without errors.
     assert_eq!(round.dispatch_solvency_proof().await.unwrap(), ());
+
+    /*
+        Remove the follwing println statement.
+    */
 
     // You can also use the `solvency_proof_submitted_filter` method to check if the solvency proof is submitted.
     // println!("{:?}", summa_contract
@@ -111,6 +136,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // 3. Generate Inclusion Proof
     //
+    /*
+        Remove the follwing comment. It seems that what you are doing here is different from what you would do in a production setup.
+    */
+
     // In a production setup, the CEX should first dispatch the solvency proof to update the Merkle sum tree's root before generating any inclusion proofs.
     // Otherwise, users might distrust the provided `root_hash` in the inclusion proof, as it hasn't been published on-chain.
     let inclusion_proof = round.get_proof_of_inclusion(USER_INDEX).unwrap();
@@ -140,6 +169,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let public_inputs = downloaded_inclusion_proof.get_public_inputs();
 
+    /*
+        Why leaf_hash is public_inputs[0][0] while mst_root is public_inputs[1]?
+        Shouldn't public_inputs be a vector with 2 elements?
+    */
+
+    /*
+        I would specify that the balances are the balances of the user on the CEX at `snapshot_time`.
+    */
+
     // Verify the `leaf_hash` from the proof file.
     // It's assumed that both `user_name` and `balances` are provided by the CEX.
     let user_name = "dxGaEAii".to_string();
@@ -150,6 +188,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         leaf_hash,
         generate_leaf_hash::<N_ASSETS>(user_name.clone(), balances.clone())
     );
+
+    /*
+        This whole conversion seems unnecessary to me. Look at the comment in `Round`
+    */
 
     // Before verifying `root_hath`, convert type of `proof` and `public_inputs` to the type of `Bytes` and `Vec<U256>`.
     let proof: Bytes = Bytes::from(inclusion_proof.get_proof().clone());
