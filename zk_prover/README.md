@@ -118,27 +118,27 @@ Furthermore the benchmarking function `verify_zk_proof_benchmark` will also prin
 
 ## Current Benches
 
-Run on MacBook Pro 2023, M2 Pro, 32GB RAM, 12 cores
+Run on AWS EC2 instance `m7a.8xlarge` with 32 vcores and 128GB RAM
 
 Benches run after PR #80 (`add solidity verifier`). In order to achieve small proof size, to be cheap to verify on-chain.
 
-2^15 entries (32768) users, 2 assets. Range is 14 bytes, considering SHIBA INU token supply (110 bits) as the upper bound.
+2^28 entries (268435456) users, one asset. Range is 14 bytes, considering SHIBA INU token supply (110 bits) as the upper bound.
 
 | MST init |
 | -------- |
-| 4.2 s    |
+| 7143.9 s |
 
 For Merkle Sum Tree Proof of Inclusion circuit
 
 | VK Gen    | Pk Gen    | Proof Generation | Proof Verification | Proof Size (bytes) |
 | --------- | --------- | ---------------- | ------------------ | ------------------ |
-| 176.05 ms | 122.75 ms | 473.98 ms        | 3.8 ms             | 1632               |
+| 88.92 ms  | 135.96 ms | 369.31 ms        | 3.65 ms            | 1632               |
 
 For Proof of Solvency circuit
 
 | VK Gen   | Pk Gen    | Proof Generation | Proof Verification | Proof Size (bytes) |
 | -------- | --------- | ---------------- | ------------------ | ------------------ |
-| 63.22 ms | 27.075 ms | 133.82 ms        | 3.4476 ms          | 1568               |
+| 32.86 ms | 31.76  ms | 139.60 ms        | 4.09 ms            | 1568               |
 
 Gas cost to verify proof of solvency
 

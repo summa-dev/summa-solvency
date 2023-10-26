@@ -26,7 +26,7 @@ pub struct MerkleSumTree<const N_ASSETS: usize, const N_BYTES: usize> {
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTES> {
-    pub const MAX_DEPTH: usize = 27;
+    pub const MAX_DEPTH: usize = 29;
 
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The CSV file must be formatted as follows:
     ///
