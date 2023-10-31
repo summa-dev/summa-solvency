@@ -102,11 +102,8 @@ pub async fn initialize_test_env() -> (
 
 #[cfg(test)]
 mod test {
-    use ethers::{
-        abi::AbiEncode,
-        types::{Bytes, U256},
-        utils::to_checksum,
-    };
+    use ethers::{abi::AbiEncode, types::U256, utils::to_checksum};
+    use std::error::Error;
 
     use crate::apis::{address_ownership::AddressOwnership, round::Round};
     use crate::contracts::generated::summa_contract::{
@@ -116,7 +113,7 @@ mod test {
     use crate::tests::initialize_test_env;
 
     #[tokio::test]
-    async fn test_round_features() {
+    async fn test_round_features() -> Result<(), Box<dyn Error>> {
         let (anvil, cex_addr_1, cex_addr_2, _, summa_contract) = initialize_test_env().await;
 
         let mut address_ownership_client = AddressOwnership::new(
@@ -128,21 +125,18 @@ mod test {
         )
         .unwrap();
 
-        let ownership_submitted_result = address_ownership_client
+        address_ownership_client
             .dispatch_proof_of_address_ownership()
-            .await;
+            .await?;
 
-        assert!(ownership_submitted_result.is_ok());
-
-        let logs = summa_contract
+        let ownership_proof_logs = summa_contract
             .address_ownership_proof_submitted_filter()
             .query()
-            .await
-            .unwrap();
+            .await?;
 
-        assert_eq!(logs.len(), 1);
+        assert_eq!(ownership_proof_logs.len(), 1);
         assert_eq!(
-            logs[0],
+            ownership_proof_logs[0],
             AddressOwnershipProofSubmittedFilter {
                 address_ownership_proofs: vec![AddressOwnershipProof {
           chain: "ETH".to_string(),
@@ -179,12 +173,12 @@ mod test {
         .unwrap();
 
         // Verify solvency proof
-        let mut logs = summa_contract
+        let mut solvency_proof_logs = summa_contract
             .solvency_proof_submitted_filter()
             .query()
-            .await
-            .unwrap();
-        assert_eq!(logs.len(), 0);
+            .await?;
+
+        assert_eq!(solvency_proof_logs.len(), 0);
 
         // Dispatch solvency proof
         let assets = [
@@ -200,20 +194,19 @@ mod test {
             },
         ];
 
-        assert_eq!(round.dispatch_solvency_proof().await.unwrap(), ());
+        // Send sovlecy proof to contract
+        round.dispatch_solvency_proof().await?; // .unwrap(), ());
+                                                // assert!(result_dispatch_solvency_proof.is_ok());
 
         // After sending transaction of proof of solvency, logs should be updated
-        logs = summa_contract
+        solvency_proof_logs = summa_contract
             .solvency_proof_submitted_filter()
             .query()
-            .await
-            .unwrap();
+            .await?;
 
-        assert_eq!(logs.len(), 1);
-
-        assert_eq!(logs.len(), 1);
+        assert_eq!(solvency_proof_logs.len(), 1);
         assert_eq!(
-            logs[0],
+            solvency_proof_logs[0],
             SolvencyProofSubmittedFilter {
                 timestamp: U256::from(1),
                 mst_root: "0x2E021D9BF99C5BD7267488B6A7A5CF5F7D00222A41B6A9B971899C44089E0C5"
@@ -225,27 +218,19 @@ mod test {
 
         // Test inclusion proof
         let inclusion_proof = round.get_proof_of_inclusion(0).unwrap();
-        let proof = Bytes::from(inclusion_proof.get_proof().clone());
-        let public_inputs: Vec<U256> = inclusion_proof
-            .get_public_inputs()
-            .iter()
-            .flat_map(|input_set| {
-                input_set.iter().map(|input| {
-                    let mut bytes = input.to_bytes();
-                    bytes.reverse();
-                    U256::from_big_endian(&bytes)
-                })
-            })
-            .collect();
 
         // Verify inclusion proof with onchain function
         let verified = summa_contract
-            .verify_inclusion_proof(proof, public_inputs, U256::from(1))
-            .await
-            .unwrap();
+            .verify_inclusion_proof(
+                inclusion_proof.get_proof().clone(),
+                inclusion_proof.get_public_inputs().clone(),
+                U256::from(1),
+            )
+            .await?;
 
         assert_eq!(verified, true);
 
         drop(anvil);
+        Ok(())
     }
 }

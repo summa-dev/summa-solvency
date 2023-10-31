@@ -8,7 +8,6 @@ use halo2_proofs::{
     poly::kzg::commitment::ParamsKZG,
 };
 use serde::{Deserialize, Serialize};
-use snark_verifier_sdk::{evm::gen_evm_proof_shplonk, CircuitExt};
 use std::error::Error;
 
 use super::csv_parser::parse_asset_csv;
@@ -46,17 +45,17 @@ impl SolvencyProof {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MstInclusionProof {
-    public_inputs: Vec<Vec<Fp>>,
-    proof: Vec<u8>,
+    public_inputs: Vec<U256>,
+    proof_calldata: Bytes,
 }
 
 impl MstInclusionProof {
-    pub fn get_public_inputs(&self) -> &Vec<Vec<Fp>> {
+    pub fn get_public_inputs(&self) -> &Vec<U256> {
         &self.public_inputs
     }
 
-    pub fn get_proof(&self) -> &Vec<u8> {
-        &self.proof
+    pub fn get_proof(&self) -> &Bytes {
+        &self.proof_calldata
     }
 }
 
@@ -203,16 +202,28 @@ where
             MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(self.mst.clone(), user_index);
 
         // Currently, default manner of generating a inclusion proof for solidity-verifier.
-        let proof = gen_evm_proof_shplonk(
+        // let proof = gen_evm_proof_shplonk(
+        //     &self.trusted_setup[0].0,
+        //     &self.trusted_setup[0].1,
+        //     circuit.clone(),
+        //     circuit.instances(),
+        // );
+
+        let calldata = gen_proof_solidity_calldata(
             &self.trusted_setup[0].0,
             &self.trusted_setup[0].1,
             circuit.clone(),
-            circuit.instances(),
         );
 
+        // println!(
+        //     "proof size in bytes: {:?}",
+        //     Bytes::from(proof.clone()).len()
+        // );
+        // println!("proof_calldata size in bytes: {:?}", proof_calldata.0.len());
+
         Ok(MstInclusionProof {
-            public_inputs: circuit.instances(),
-            proof,
+            proof_calldata: calldata.0,
+            public_inputs: calldata.1,
         })
     }
 }

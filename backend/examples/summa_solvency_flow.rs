@@ -1,7 +1,12 @@
 #![feature(generic_const_exprs)]
-use std::{error::Error, fs::File, io::BufReader, io::Write};
+use std::{
+    error::Error,
+    fs::{remove_file, File},
+    io::BufReader,
+    io::Write,
+};
 
-use ethers::types::{Bytes, U256};
+use ethers::types::U256;
 use serde_json::{from_reader, to_string_pretty};
 
 use summa_backend::{
@@ -103,25 +108,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let user_name = "dxGaEAii".to_string();
     let balances = vec![11888, 41163];
 
-    let leaf_hash = public_inputs[0][0];
+    let leaf_hash = public_inputs[0];
     assert_eq!(
         leaf_hash,
         generate_leaf_hash::<N_ASSETS>(user_name.clone(), balances.clone())
     );
-
-    // Before verifying `root_hath`, convert type of `proof` and `public_inputs` to the type of `Bytes` and `Vec<U256>`.
-    let proof: Bytes = Bytes::from(inclusion_proof.get_proof().clone());
-    let public_inputs: Vec<U256> = inclusion_proof
-        .get_public_inputs()
-        .iter()
-        .flat_map(|input_set| {
-            input_set.iter().map(|input| {
-                let mut bytes = input.to_bytes();
-                bytes.reverse();
-                U256::from_big_endian(&bytes)
-            })
-        })
-        .collect();
 
     // Get `mst_root` from contract. the `mst_root` is disptached by CEX with specific time `snapshot_time`.
     let mst_root = summa_contract.mst_roots(snapshot_time).call().await?;
@@ -130,8 +121,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     assert_eq!(mst_root, public_inputs[1]);
 
     // Validate the inclusion proof using the contract verifier.
+    let proof = inclusion_proof.get_proof();
     let verification_result = summa_contract
-        .verify_inclusion_proof(proof, public_inputs, snapshot_time)
+        .verify_inclusion_proof(proof.clone(), public_inputs.clone(), snapshot_time)
         .await?;
 
     println!(
@@ -139,5 +131,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         USER_INDEX, verification_result
     );
 
+    // Wrapping up
+    remove_file(format!("user_{}_proof.json", USER_INDEX))?;
+    drop(anvil);
     Ok(())
 }

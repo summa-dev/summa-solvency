@@ -1,9 +1,9 @@
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use ethers::types::U256;
 use num_bigint::BigUint;
 
 use crate::merkle_sum_tree::Entry;
 
-pub fn generate_leaf_hash<const N_ASSETS: usize>(user_name: String, balances: Vec<usize>) -> Fp
+pub fn generate_leaf_hash<const N_ASSETS: usize>(user_name: String, balances: Vec<usize>) -> U256
 where
     [usize; N_ASSETS + 1]: Sized,
 {
@@ -13,5 +13,7 @@ where
     let entry: Entry<N_ASSETS> =
         Entry::new(user_name, balances_big_uint.try_into().unwrap()).unwrap();
 
-    entry.compute_leaf().hash
+    // Convert Fp to U256
+    let hash_str = format!("{:?}", entry.compute_leaf().hash);
+    U256::from_str_radix(&hash_str, 16).unwrap()
 }
