@@ -132,7 +132,7 @@ mod test {
             .dispatch_proof_of_address_ownership()
             .await;
 
-        assert_eq!(ownership_submitted_result.is_ok(), true);
+        assert!(ownership_submitted_result.is_ok());
 
         let logs = summa_contract
             .address_ownership_proof_submitted_filter()
