@@ -202,24 +202,11 @@ where
             MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(self.mst.clone(), user_index);
 
         // Currently, default manner of generating a inclusion proof for solidity-verifier.
-        // let proof = gen_evm_proof_shplonk(
-        //     &self.trusted_setup[0].0,
-        //     &self.trusted_setup[0].1,
-        //     circuit.clone(),
-        //     circuit.instances(),
-        // );
-
         let calldata = gen_proof_solidity_calldata(
             &self.trusted_setup[0].0,
             &self.trusted_setup[0].1,
             circuit.clone(),
         );
-
-        // println!(
-        //     "proof size in bytes: {:?}",
-        //     Bytes::from(proof.clone()).len()
-        // );
-        // println!("proof_calldata size in bytes: {:?}", proof_calldata.0.len());
 
         Ok(MstInclusionProof {
             proof_calldata: calldata.0,
