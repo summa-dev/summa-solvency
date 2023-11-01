@@ -6,7 +6,12 @@ use ethers::{
 };
 use serde_json::Value;
 use std::{
-    error::Error, fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc, time::Duration,
+    error::Error,
+    fs::File,
+    io::BufReader,
+    path::Path,
+    str::FromStr,
+    sync::{Arc, Mutex},
 };
 
 use super::generated::summa_contract::{AddressOwnershipProof, Asset};
@@ -19,7 +24,8 @@ pub enum AddressInput {
 
 #[derive(Debug)]
 pub struct SummaSigner {
-    summa_contract: Summa<SignerMiddleware<Provider<Http>, LocalWallet>>,
+    nonce_lock: Mutex<()>, // To prevent running `submit` methods concurrently
+    summa_contract: Summa<SignerMiddleware<Arc<Provider<Http>>, LocalWallet>>,
 }
 
 impl SummaSigner {
@@ -27,19 +33,16 @@ impl SummaSigner {
     /// # Arguments
     /// * `signer_key` - The private key of wallet that will interact with the chain on behalf of the exchange
     /// * `chain_id` - The chain id of the network
-    /// * `rpc_url` - The RPC URL of the network
-    /// * `address_input` - Either the contract's direct address or a path to its config file.
+    /// * `provider` - The provider
+    /// * `address` - The address of the Summa contract
     pub fn new(
         signer_key: &str,
         chain_id: u64,
-        rpc_url: &str,
+        provider: Arc<Provider<Http>>,
         address_input: AddressInput,
     ) -> Self {
         let wallet: LocalWallet = LocalWallet::from_str(signer_key).unwrap();
 
-        let provider = Provider::<Http>::try_from(rpc_url)
-            .unwrap()
-            .interval(Duration::from_millis(10u64));
         let client = Arc::new(SignerMiddleware::new(
             provider,
             wallet.with_chain_id(chain_id),
@@ -53,9 +56,9 @@ impl SummaSigner {
             }
         };
 
-        let contract = Summa::new(address, client);
         Self {
-            summa_contract: contract,
+            nonce_lock: Mutex::new(()),
+            summa_contract: Summa::new(address, client),
         }
     }
 
@@ -94,6 +97,9 @@ impl SummaSigner {
         let submit_proof_of_address_ownership = &self
             .summa_contract
             .submit_proof_of_address_ownership(address_ownership_proofs);
+
+        // To prevent nonce collision, we lock the nonce before sending the transaction
+        let _lock = self.nonce_lock.lock().unwrap();
         let tx = submit_proof_of_address_ownership.send().await?;
 
         // Wait for the pending transaction to be mined
@@ -112,6 +118,9 @@ impl SummaSigner {
         let submit_proof_of_solvency_call = &self
             .summa_contract
             .submit_proof_of_solvency(mst_root, assets, proof, timestamp);
+
+        // To prevent nonce collision, we lock the nonce before sending the transaction
+        let _lock = self.nonce_lock.lock().unwrap();
         let tx = submit_proof_of_solvency_call.send().await?;
 
         // Wait for the pending transaction to be mined

@@ -8,10 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 
 use super::csv_parser::parse_asset_csv;
-use crate::contracts::{
-    generated::summa_contract::summa::Asset,
-    signer::{AddressInput, SummaSigner},
-};
+use crate::contracts::{generated::summa_contract::summa::Asset, signer::SummaSigner};
 use summa_solvency::{
     circuits::{
         merkle_sum_tree::MstInclusionCircuit,
@@ -65,28 +62,25 @@ pub struct Snapshot<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: u
     trusted_setup: [SetupArtifacts; 2],
 }
 
-pub struct Round<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
+pub struct Round<'a, const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
     timestamp: u64,
     snapshot: Snapshot<LEVELS, N_ASSETS, N_BYTES>,
-    signer: SummaSigner,
+    signer: &'a SummaSigner,
 }
 
 impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
-    Round<LEVELS, N_ASSETS, N_BYTES>
+    Round<'_, LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; N_ASSETS + 1]: Sized,
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
-    pub fn new(
-        signer_key: &str,
-        chain_id: u64,
-        rpc_url: &str,
-        summa_address_input: AddressInput,
+    pub fn new<'a>(
+        signer: &'a SummaSigner,
         entry_csv_path: &str,
         asset_csv_path: &str,
         params_path: &str,
         timestamp: u64,
-    ) -> Result<Round<LEVELS, N_ASSETS, N_BYTES>, Box<dyn Error>> {
+    ) -> Result<Round<'a, LEVELS, N_ASSETS, N_BYTES>, Box<dyn Error>> {
         Ok(Round {
             timestamp,
             snapshot: Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(
@@ -95,7 +89,7 @@ where
                 params_path,
             )
             .unwrap(),
-            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_address_input),
+            signer: &signer,
         })
     }
 

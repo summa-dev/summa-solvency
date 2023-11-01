@@ -102,8 +102,8 @@ pub async fn initialize_test_env() -> (
 
 #[cfg(test)]
 mod test {
-    use ethers::{abi::AbiEncode, types::U256, utils::to_checksum};
-    use std::error::Error;
+    use ethers::{abi::AbiEncode, providers::Provider, types::U256, utils::to_checksum};
+    use std::{convert::TryFrom, error::Error, sync::Arc};
 
     use crate::apis::{address_ownership::AddressOwnership, round::Round};
     use crate::contracts::{
@@ -124,10 +124,11 @@ mod test {
         // the address gets updated in `backend/src/contracts/deployments.json`.
         let contract_address = summa_contract.address();
 
+        let provider = Arc::new(Provider::try_from(anvil.endpoint().as_str())?);
         let summa_signer = SummaSigner::new(
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
             anvil.chain_id(),
-            anvil.endpoint().as_str(),
+            provider,
             AddressInput::Path("./src/contracts/deployments.json".into()), // the file contains the address of the deployed contract
         );
 
@@ -140,14 +141,16 @@ mod test {
     async fn test_round_features() -> Result<(), Box<dyn Error>> {
         let (anvil, cex_addr_1, cex_addr_2, _, summa_contract) = initialize_test_env().await;
 
-        let mut address_ownership_client = AddressOwnership::new(
+        let provider = Arc::new(Provider::try_from(anvil.endpoint().as_str())?);
+        let signer = SummaSigner::new(
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
             anvil.chain_id(),
-            anvil.endpoint().as_str(),
+            provider,
             AddressInput::Address(summa_contract.address()),
-            "src/apis/csv/signatures.csv",
-        )
-        .unwrap();
+        );
+
+        let mut address_ownership_client =
+            AddressOwnership::new(&signer, "src/apis/csv/signatures.csv").unwrap();
 
         address_ownership_client
             .dispatch_proof_of_address_ownership()
@@ -184,17 +187,8 @@ mod test {
         let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
         let params_path = "ptau/hermez-raw-11";
 
-        let mut round = Round::<4, 2, 14>::new(
-            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // anvil account [0]
-            anvil.chain_id(),
-            anvil.endpoint().as_str(),
-            AddressInput::Address(summa_contract.address()),
-            entry_csv,
-            asset_csv,
-            params_path,
-            1,
-        )
-        .unwrap();
+        let mut round =
+            Round::<4, 2, 14>::new(&signer, entry_csv, asset_csv, params_path, 1).unwrap();
 
         // Verify solvency proof
         let mut solvency_proof_logs = summa_contract
