@@ -79,8 +79,10 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
         assert_eq!(proof.sibling_hashes.len(), LEVELS);
         assert_eq!(proof.sibling_sums.len(), LEVELS);
 
+        let entry = merkle_sum_tree.get_entry(user_index).clone();
+
         Self {
-            entry: proof.entry,
+            entry,
             path_element_hashes: proof.sibling_hashes,
             path_element_balances: proof.sibling_sums,
             path_indices: proof.path_indices,

@@ -140,6 +140,10 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         &self.entries
     }
 
+    pub fn get_entry(&self, index: usize) -> &Entry<N_ASSETS> {
+        &self.entries[index]
+    }
+
     pub fn nodes(&self) -> &[Vec<Node<N_ASSETS>>] {
         &self.nodes
     }
@@ -185,7 +189,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
 
     /// Generates a MerkleProof for the user with the given index
     pub fn generate_proof(&self, index: usize) -> Result<MerkleProof<N_ASSETS>, &'static str> {
-        create_proof(index, &self.entries, self.depth, &self.nodes, &self.root)
+        create_proof(index, self.depth, &self.nodes, &self.root)
     }
 
     /// Verifies a MerkleProof

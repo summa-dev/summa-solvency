@@ -68,13 +68,15 @@ mod test {
         // shouldn't create a proof for an entry that doesn't exist in the tree
         assert!(merkle_tree.generate_proof(16).is_err());
 
-        // shouldn't verify a proof with a wrong entry
-        let mut proof_invalid_1 = proof.clone();
-        proof_invalid_1.entry = Entry::new(
+        // shouldn't verify a proof with a wrong leaf
+        let invalid_entry = Entry::new(
             "AtwIxZHo".to_string(),
             [35479.to_biguint().unwrap(), 35479.to_biguint().unwrap()],
         )
         .unwrap();
+        let invalid_leaf = invalid_entry.compute_leaf();
+        let mut proof_invalid_1 = proof.clone();
+        proof_invalid_1.leaf = invalid_leaf;
         assert!(!merkle_tree.verify_proof(&proof_invalid_1));
 
         // shouldn't verify a proof with a wrong root hash
@@ -336,23 +338,14 @@ mod test {
         // shouldn't create a proof for an entry that doesn't exist in the tree
         assert!(aggregation_mst.generate_proof(16, 0).is_err());
 
-        // shouldn't verify a proof with a wrong entry
+        // shouldn't verify a proof with a wrong root hash
         let mut proof_invalid_1 = proof.clone();
-        proof_invalid_1.entry = Entry::new(
-            "AtwIxZHo".to_string(),
-            [35479.to_biguint().unwrap(), 35479.to_biguint().unwrap()],
-        )
-        .unwrap();
+        proof_invalid_1.root_hash = 0.into();
         assert!(!aggregation_mst.verify_proof(&proof_invalid_1));
 
-        // shouldn't verify a proof with a wrong root hash
-        let mut proof_invalid_2 = proof.clone();
-        proof_invalid_2.root_hash = 0.into();
-        assert!(!aggregation_mst.verify_proof(&proof_invalid_2));
-
         // shouldn't verify a proof with a wrong computed balance
-        let mut proof_invalid_3 = proof;
-        proof_invalid_3.sibling_sums[0] = [0.into(), 0.into()];
-        assert!(!aggregation_mst.verify_proof(&proof_invalid_3))
+        let mut proof_invalid_2 = proof;
+        proof_invalid_2.sibling_sums[0] = [0.into(), 0.into()];
+        assert!(!aggregation_mst.verify_proof(&proof_invalid_2))
     }
 }

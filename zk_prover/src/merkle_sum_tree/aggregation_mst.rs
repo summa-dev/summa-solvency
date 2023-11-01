@@ -1,6 +1,4 @@
-use crate::merkle_sum_tree::utils::{
-    build_merkle_tree_from_leaves, create_proof, create_top_tree_proof, verify_proof,
-};
+use crate::merkle_sum_tree::utils::{build_merkle_tree_from_leaves, create_proof, verify_proof};
 use crate::merkle_sum_tree::{MerkleProof, MerkleSumTree, Node};
 
 /// Aggregation Merkle Sum Tree Data Structure.
@@ -91,19 +89,17 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> AggregationMerkleSumTree<N_ASS
 
         let partial_proof = create_proof(
             user_index,
-            mini_tree.entries(),
             *mini_tree.depth(),
             mini_tree.nodes(),
             mini_tree.root(),
         )?;
 
-        let top_tree_proof =
-            create_top_tree_proof(mini_tree_index, self.depth, &self.nodes, &self.root)?;
+        let top_tree_proof = create_proof(mini_tree_index, self.depth, &self.nodes, &self.root)?;
 
         // Merge the two proofs
         let final_proof = MerkleProof {
             root_hash: self.root.hash,
-            entry: partial_proof.entry,
+            leaf: partial_proof.leaf,
             sibling_hashes: [partial_proof.sibling_hashes, top_tree_proof.sibling_hashes].concat(),
             sibling_sums: [partial_proof.sibling_sums, top_tree_proof.sibling_sums].concat(),
             path_indices: [partial_proof.path_indices, top_tree_proof.path_indices].concat(),
