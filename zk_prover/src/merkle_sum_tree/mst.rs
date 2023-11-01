@@ -70,10 +70,12 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         let depth = (entries.len() as f64).log2().ceil() as usize;
 
         if !(1..=Self::MAX_DEPTH).contains(&depth) {
-            return Err(
-                "The tree depth must be between 1 and 27, namely it can support 2^27 users at max"
-                    .into(),
-            );
+            return Err(format!(
+                "The tree depth must be between 1 and {}, namely it can support 2^{} users at max",
+                Self::MAX_DEPTH,
+                Self::MAX_DEPTH
+            )
+            .into());
         }
 
         let mut nodes = vec![];
