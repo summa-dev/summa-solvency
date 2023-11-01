@@ -195,8 +195,7 @@ mod test {
         ];
 
         // Send sovlecy proof to contract
-        round.dispatch_solvency_proof().await?; // .unwrap(), ());
-                                                // assert!(result_dispatch_solvency_proof.is_ok());
+        round.dispatch_solvency_proof().await?;
 
         // After sending transaction of proof of solvency, logs should be updated
         solvency_proof_logs = summa_contract
@@ -228,7 +227,7 @@ mod test {
             )
             .await?;
 
-        assert_eq!(verified, true);
+        assert!(verified);
 
         drop(anvil);
         Ok(())
