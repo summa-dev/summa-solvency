@@ -132,7 +132,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // Wrapping up
-    remove_file(format!("user_{}_proof.json", USER_INDEX))?;
     drop(anvil);
     Ok(())
 }

@@ -48,7 +48,27 @@ SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" carg
 
 ### Generating Verifiers for Backend
 
-The following steps are optional and are only required if you need to update the verifier contracts for the backend:
+If you need to update the verifier contracts for the backend, you can either follow the manual steps or use the provided bash script.
+
+#### Using the Bash Script
+
+We have provided a bash script to automate the process of updating the verifier contracts. To use the script:
+
+Ensure you have the necessary permissions to execute the script.
+```
+backend $ chmod +x scripts/update_verifier_contracts.sh
+```
+
+Run the script.
+```
+backend $ scripts/update_verifier_contracts.sh
+```
+
+The script will handle building the verifier contracts, deploying them to the local environment, and generating the Rust interface files for the backend.
+
+#### Manual Steps
+
+If you prefer to update the verifier contracts manually, follow these steps:
 
 1. **Build the Verifier Contracts**:
     - Move to the `zk_prover` directory.
@@ -61,7 +81,7 @@ The following steps are optional and are only required if you need to update the
     - Move to the `backend` directory.
     - Execute the build script in the backend. This will produce the Rust interface files: `inclusion_verifier.rs`, `solvency_verifier.rs`, and `summa_contract.rs`.
 
-By completing these steps, the backend will be primed with the essential verifiers for its tasks.
+This section provides CEX with the option to use the bash script for convenience or to follow the manual steps if you prefer.
 
 ## Summa solvency flow example
 
@@ -83,9 +103,6 @@ Key points:
 
 - The `dispatch_proof_of_address_ownership` function sends a transaction to the Summa contract to register CEX-owned addresses.
 
-- After dispatching the transaction, the example computes the hashed addresses (address_hashes) to verify they've been correctly registered in the Summa contract
-
-
 Note: This demonstration takes place in a test environment. In real-world production, always ensure that the Summa contract is correctly deployed on the target chain.
 
 If executed successfully, you'll see:
@@ -97,12 +114,16 @@ If executed successfully, you'll see:
 
 ### 2. Submit Proof of Solvency
 
-This step is crucial for two primary reasons: first, to validate the root hash of the Merkle Sum Tree (`mst_root`); and second, to ensure that the assets held by the CEX exceed their liabilities, as confirmed through the proof verification on the Summa contract.
-The CEX must submit this proof of solvency to the Summa contract. Currently, it's a mandatory requirement to provide this proof before generating the inclusion proof for each user in the current round.
+This step is also crucial for two primary reasons: 
+ 
+ first, to validate the root hash of the Merkle Sum Tree (`mst_root`); and second, to ensure that the assets held by the CEX exceed their liabilities, as confirmed through the proof verification on the Summa contract.
+The CEX must submit this proof of solvency to the Summa contract. 
+
+ Currently, it's a mandatory requirement to provide this proof before generating the inclusion proof for each user in the current round.
 
 Without this verification, It seems the user may not trust to the inclusion proof for the round. becuase the `mst_root` is not published on contract. More specifically, it means that the `mst_root` is not correctly verified on the Summa contract.
 
-In this step, we'll guide you through the process of submitting a solvency proof using the Round to the Summa contract.
+In here, we'll introduce you through the process of submitting a solvency proof using the `Round` to the Summa contract.
 The Round serves as the core of the backend in Summa, and we have briefly described it in the Components section.
 
 To initialize the `Round` instance, you'll need paths to specific CSV files (`assets.csv` and `entry_16.csv`) and the `ptau/hermez-raw-11` file. Here's what each file does:
