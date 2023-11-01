@@ -26,8 +26,6 @@ pub struct MerkleSumTree<const N_ASSETS: usize, const N_BYTES: usize> {
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTES> {
-    pub const MAX_DEPTH: usize = 29;
-
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The CSV file must be formatted as follows:
     ///
     /// `username;balances`
@@ -68,15 +66,6 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         [usize; 2 * (1 + N_ASSETS)]: Sized,
     {
         let depth = (entries.len() as f64).log2().ceil() as usize;
-
-        if !(1..=Self::MAX_DEPTH).contains(&depth) {
-            return Err(format!(
-                "The tree depth must be between 1 and {}, namely it can support 2^{} users at max",
-                Self::MAX_DEPTH,
-                Self::MAX_DEPTH
-            )
-            .into());
-        }
 
         let mut nodes = vec![];
         let root = build_merkle_tree_from_entries(&entries, depth, &mut nodes)?;
