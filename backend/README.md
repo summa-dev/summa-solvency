@@ -46,42 +46,22 @@ SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" carg
 
 ## Important Notices
 
-### Generating Verifiers for Backend
+### Generating and updating verifier contracts for Backend
 
-If you need to update the verifier contracts for the backend, you can either follow the manual steps or use the provided bash script.
+The verifier contracts in the backend were generated using a predefined set of parameters: `N_ASSETS = 2` and `N_BYTES=14`, as indicated [here](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_solvency_verifier.rs#L21-L22).
+If you intend to work with different parameters, you'll need to adjust these hard-coded values and then generate new verifier contracts. 
+ 
+The process described below assists in both generating the verifiers and updating the Summa contract, which integrates the new verifiers as constructors.
 
 #### Using the Bash Script
 
-We have provided a bash script to automate the process of updating the verifier contracts. To use the script:
+We have provided a bash script to automate the process of updating the verifier contracts and the Summa contract. To use the script:
 
 Ensure you have the necessary permissions to execute the script.
+
 ```
 backend $ chmod +x scripts/update_verifier_contracts.sh
 ```
-
-Run the script.
-```
-backend $ scripts/update_verifier_contracts.sh
-```
-
-The script will handle building the verifier contracts, deploying them to the local environment, and generating the Rust interface files for the backend.
-
-#### Manual Steps
-
-If you prefer to update the verifier contracts manually, follow these steps:
-
-1. **Build the Verifier Contracts**:
-    - Move to the `zk_prover` directory.
-    - Run the [`gen_solvency_verifier`](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_solvency_verifier.rs) and [`gen_inclusion_verifier`](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_inclusion_verifier.rs) located within the `zk_prover/examples`.
-    - For detailed instructions [building a solvency verifier contract](https://github.com/summa-dev/summa-solvency/tree/master/zk_prover#build-a-solvency-verifier-contract) and [building an inclusion verifier contract.](https://github.com/summa-dev/summa-solvency/tree/master/zk_prover#build-an-inclusion-verifier-contract)
-2. **Deploy Contracts to Local Environment**: 
-    - Navigate to the `contracts` directory
-    - Deploy the contracts to a Hardhat environment. This step will refresh the ABI files(`src/contracts/abi/*.json`) in the backend.
-3. **Generate Rust Interface Files**: 
-    - Move to the `backend` directory.
-    - Execute the build script in the backend. This will produce the Rust interface files: `inclusion_verifier.rs`, `solvency_verifier.rs`, and `summa_contract.rs`.
-
-This section provides CEX with the option to use the bash script for convenience or to follow the manual steps if you prefer.
 
 ## Summa solvency flow example
 
@@ -168,3 +148,17 @@ The result will display as:
 ```
 4. Verifying the proof on contract verifier for User #0: true
 ```
+
+### 4. Verify Proof of Inclusion
+
+This is the final step in the Summa process and the only part that occurs on the user side. Users receive the proof for a specific round and use methods available on the deployed Summa contract. Importantly, the Summa contract verifier function is a view function, meaning it doesn't consume gas or change the blockchain's state.
+
+In this step, you'll see:
+- Retrieve the `mst_root` from the Summa contract and match it with the `root_hash` in the proof.
+- Ensure the `leaf_hash` aligns with the hash based on the `username` and `balances` provided by the CEX.
+- Use the `verify_inclusion_proof` method on the Summa contract to validate the proof.
+The result will display as:
+
+**Note:** In a production environment, users can independently verify their proof using public interfaces, such as Etherscan, as shown below:
+![Summa contract interface on Etherscan](summa_verifier_interface.png)
+This offers an added layer of transparency and trust.

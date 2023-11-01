@@ -1,10 +1,5 @@
 #![feature(generic_const_exprs)]
-use std::{
-    error::Error,
-    fs::{remove_file, File},
-    io::BufReader,
-    io::Write,
-};
+use std::{error::Error, fs::File, io::BufReader, io::Write};
 
 use ethers::types::U256;
 use serde_json::{from_reader, to_string_pretty};
