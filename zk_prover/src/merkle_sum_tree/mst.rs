@@ -135,6 +135,10 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         &self.entries
     }
 
+    pub fn nodes(&self) -> &[Vec<Node<N_ASSETS>>] {
+        &self.nodes
+    }
+
     /// Returns the nodes stored at the penultimate level of the tree, namely the one before the root
     pub fn penultimate_level_data(
         &self,

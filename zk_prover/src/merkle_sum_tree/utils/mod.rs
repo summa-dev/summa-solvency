@@ -7,8 +7,8 @@ mod index_of;
 mod operation_helpers;
 mod proof_verification;
 
-pub use build_tree::build_merkle_tree_from_entries;
-pub use create_proof::create_proof;
+pub use build_tree::{build_merkle_tree_from_entries, build_merkle_tree_from_roots};
+pub use create_proof::{create_proof, create_top_tree_proof};
 pub use csv_parser::parse_csv_to_entries;
 pub use generate_leaf_hash::generate_leaf_hash;
 pub use hash::{poseidon_entry, poseidon_node};

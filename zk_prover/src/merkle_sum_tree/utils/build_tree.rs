@@ -77,3 +77,50 @@ where
         tree[level][index] = new_node;
     }
 }
+
+pub fn build_merkle_tree_from_roots<const N_ASSETS: usize>(
+    roots: &[Node<N_ASSETS>],
+    depth: usize,
+    nodes: &mut Vec<Vec<Node<N_ASSETS>>>,
+) -> Result<Node<N_ASSETS>, Box<dyn std::error::Error>>
+where
+    [usize; N_ASSETS + 1]: Sized,
+    [usize; 2 * (1 + N_ASSETS)]: Sized,
+{
+    let n = roots.len();
+
+    let mut tree: Vec<Vec<Node<N_ASSETS>>> = Vec::with_capacity(depth + 1);
+
+    tree.push(vec![
+        Node {
+            hash: Fp::from(0),
+            balances: [Fp::from(0); N_ASSETS]
+        };
+        n
+    ]);
+
+    for _ in 1..=depth {
+        let previous_level = tree.last().unwrap();
+        let nodes_in_level = (previous_level.len() + 1) / 2;
+
+        tree.push(vec![
+            Node {
+                hash: Fp::from(0),
+                balances: [Fp::from(0); N_ASSETS]
+            };
+            nodes_in_level
+        ]);
+    }
+
+    for (index, node) in roots.iter().enumerate() {
+        tree[0][index] = node.clone();
+    }
+
+    for level in 1..=depth {
+        build_middle_level(level, &mut tree)
+    }
+
+    let root = tree[depth][0].clone();
+    *nodes = tree;
+    Ok(root)
+}
