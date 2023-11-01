@@ -1,5 +1,5 @@
 use crate::merkle_sum_tree::utils::{
-    build_merkle_tree_from_roots, create_proof, create_top_tree_proof, verify_proof,
+    build_merkle_tree_from_leaves, create_proof, create_top_tree_proof, verify_proof,
 };
 use crate::merkle_sum_tree::{MerkleProof, MerkleSumTree, Node};
 
@@ -22,6 +22,7 @@ pub struct AggregationMerkleSumTree<const N_ASSETS: usize, const N_BYTES: usize>
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> AggregationMerkleSumTree<N_ASSETS, N_BYTES> {
     /// Builds a AggregationMerkleSumTree from a set of mini MerkleSumTrees
+    /// The leaves of the AggregationMerkleSumTree are the roots of the mini MerkleSumTrees
     pub fn new(
         mini_trees: Vec<MerkleSumTree<N_ASSETS, N_BYTES>>,
     ) -> Result<Self, Box<dyn std::error::Error>>
@@ -54,7 +55,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> AggregationMerkleSumTree<N_ASS
         let depth = (roots.len() as f64).log2().ceil() as usize;
 
         let mut nodes = vec![];
-        let root = build_merkle_tree_from_roots(&roots, depth, &mut nodes)?;
+        let root = build_merkle_tree_from_leaves(&roots, depth, &mut nodes)?;
 
         Ok(AggregationMerkleSumTree {
             root,
