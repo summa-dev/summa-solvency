@@ -1,5 +1,9 @@
 use crate::merkle_sum_tree::utils::{build_merkle_tree_from_leaves, create_proof, verify_proof};
 use crate::merkle_sum_tree::{MerkleProof, MerkleSumTree, Node};
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use num_bigint::BigUint;
+
+use super::utils::fp_to_big_uint;
 
 /// Aggregation Merkle Sum Tree Data Structure.
 ///
@@ -42,8 +46,6 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> AggregationMerkleSumTree<N_ASS
         [usize; N_ASSETS + 1]: Sized,
         [usize; 2 * (1 + N_ASSETS)]: Sized,
     {
-        // TO DO: check overflow when building the tree
-
         // extract all the roots of the mini trees
         let roots = mini_trees
             .iter()
@@ -51,6 +53,28 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> AggregationMerkleSumTree<N_ASS
             .collect::<Vec<Node<N_ASSETS>>>();
 
         let depth = (roots.len() as f64).log2().ceil() as usize;
+
+        // Calculate the accumulated balances for each asset
+        let mut balances_acc: Vec<Fp> = vec![Fp::from(0); N_ASSETS];
+
+        for root in &roots {
+            for (i, balance) in root.balances.iter().enumerate() {
+                balances_acc[i] += *balance;
+            }
+        }
+
+        // Iterate through the balance accumulator and throw error if any balance is not in range 0, 2 ^ (8 * N_BYTES):
+        for balance in &balances_acc {
+            // transform the balance to a BigUint
+            let balance_big_uint = fp_to_big_uint(*balance);
+
+            if balance_big_uint >= BigUint::from(2_usize).pow(8 * N_BYTES as u32) {
+                return Err(
+                    "Accumulated balance is not in the expected range, proof generation will fail!"
+                        .into(),
+                );
+            }
+        }
 
         let mut nodes = vec![];
         let root = build_merkle_tree_from_leaves(&roots, depth, &mut nodes)?;

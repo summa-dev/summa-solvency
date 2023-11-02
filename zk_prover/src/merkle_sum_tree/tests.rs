@@ -348,4 +348,32 @@ mod test {
         proof_invalid_2.sibling_sums[0] = [0.into(), 0.into()];
         assert!(!aggregation_mst.verify_proof(&proof_invalid_2))
     }
+
+    #[test]
+    fn test_aggregation_mst_overflow_1() {
+        // create new mini merkle sum trees. The accumulated balance of each mini tree is in the expected range
+        let merkle_sum_tree_1 = MerkleSumTree::<N_ASSETS, N_BYTES>::new(
+            "src/merkle_sum_tree/csv/entry_16_no_overflow.csv",
+        )
+        .unwrap();
+
+        let merkle_sum_tree_2 = MerkleSumTree::<N_ASSETS, N_BYTES>::new(
+            "src/merkle_sum_tree/csv/entry_16_no_overflow.csv",
+        )
+        .unwrap();
+
+        // When creating the aggregation merkle sum tree, the accumulated balance of the two mini trees is not in the expected range, an error is thrown
+
+        let result = AggregationMerkleSumTree::<N_ASSETS, N_BYTES>::new(vec![
+            merkle_sum_tree_1,
+            merkle_sum_tree_2.clone(),
+        ]);
+
+        if let Err(e) = result {
+            assert_eq!(
+                e.to_string(),
+                "Accumulated balance is not in the expected range, proof generation will fail!"
+            );
+        }
+    }
 }
