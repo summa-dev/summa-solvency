@@ -103,7 +103,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> AggregationMerkleSumTree<N_ASS
         &self.mini_trees[index]
     }
 
-    /// Generates a MerkleProof for the user with the given index in the mini tree with the given index
+    /// Generates a MerkleProof for the user with the given index in the mini tree with the given index (according to the order in which the mini trees were passed to the constructor)
     pub fn generate_proof(
         &self,
         user_index: usize,

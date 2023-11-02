@@ -16,7 +16,7 @@ pub fn create_proof<const N_ASSETS: usize, const N_BYTES: usize>(
     let mut path_indices = vec![Fp::from(0); depth];
     let mut current_index = index;
 
-    let leaf = &nodes[0][index]; // Added this line to store the leaf node
+    let leaf = &nodes[0][index];
 
     for level in 0..depth {
         let position = current_index % 2;
