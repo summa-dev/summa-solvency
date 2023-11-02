@@ -12,6 +12,7 @@ echo "2. Deploying contracts to local environment"
 cd ../contracts
 npm install
 npx hardhat node &
+HARDHAT_PID=$!
 sleep 5
 npx hardhat run scripts/deploy.ts --network localhost
 
@@ -19,3 +20,7 @@ npx hardhat run scripts/deploy.ts --network localhost
 echo "3. Generating interface files for Backend"
 cd ../backend
 cargo build
+
+# Wrap up
+echo "Terminate hardhat node"
+kill $HARDHAT_PID

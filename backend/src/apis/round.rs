@@ -1,7 +1,4 @@
-use ethers::{
-    abi::Address,
-    types::{Bytes, U256},
-};
+use ethers::types::{Bytes, U256};
 use halo2_proofs::{
     halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
     plonk::{ProvingKey, VerifyingKey},
@@ -11,7 +8,10 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 
 use super::csv_parser::parse_asset_csv;
-use crate::contracts::{generated::summa_contract::summa::Asset, signer::SummaSigner};
+use crate::contracts::{
+    generated::summa_contract::summa::Asset,
+    signer::{AddressInput, SummaSigner},
+};
 use summa_solvency::{
     circuits::{
         merkle_sum_tree::MstInclusionCircuit,
@@ -81,7 +81,7 @@ where
         signer_key: &str,
         chain_id: u64,
         rpc_url: &str,
-        summa_sc_address: Address,
+        summa_address_input: AddressInput,
         entry_csv_path: &str,
         asset_csv_path: &str,
         params_path: &str,
@@ -95,7 +95,7 @@ where
                 params_path,
             )
             .unwrap(),
-            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_sc_address),
+            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_address_input),
         })
     }
 

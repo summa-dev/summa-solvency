@@ -9,6 +9,7 @@ use summa_backend::{
         address_ownership::AddressOwnership,
         round::{MstInclusionProof, Round},
     },
+    contracts::signer::AddressInput,
     tests::initialize_test_env,
 };
 use summa_solvency::merkle_sum_tree::utils::generate_leaf_hash;
@@ -25,11 +26,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //
     // Each CEX prepares its own `signature` CSV file.
     let signature_csv_path = "src/apis/csv/signatures.csv";
+
+    // Using AddressInput::Address to directly provide the summa_contract's address.
+    // For deployed contracts, if the address is stored in a config file,
+    // you can alternatively use AddressInput::Path to specify the file's path.
     let mut address_ownership_client = AddressOwnership::new(
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
         anvil.chain_id(),
         anvil.endpoint().as_str(),
-        summa_contract.address(),
+        AddressInput::Address(summa_contract.address()),
         signature_csv_path,
     )
     .unwrap();
@@ -54,7 +59,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // anvil account [0]
         anvil.chain_id(),
         anvil.endpoint().as_str(),
-        summa_contract.address(),
+        AddressInput::Address(summa_contract.address()),
         entry_csv,
         asset_csv,
         params_path,
