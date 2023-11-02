@@ -273,7 +273,7 @@ mod test {
                 .unwrap();
 
         let aggregation_mst = AggregationMerkleSumTree::<N_ASSETS, N_BYTES>::new(vec![
-            merkle_sum_tree_1,
+            merkle_sum_tree_1.clone(),
             merkle_sum_tree_2.clone(),
         ])
         .unwrap();
@@ -286,8 +286,13 @@ mod test {
         // expect balance to match the sum of all entries
         assert!(root.balances == [(556862 * 2).into(), (556862 * 2).into()]);
 
-        // get proof for entry 0
+        // get proof for entry 0 and mini tree 0
         let proof = aggregation_mst.generate_proof(0, 0).unwrap();
+
+        // expect depth to be equal to merkle_sum_tree_1.depth (= merkle_sum_tree_2.depth) + 1
+        let depth = aggregation_mst.depth();
+
+        assert!(*depth == 1);
 
         // verify proof
         assert!(aggregation_mst.verify_proof(&proof));

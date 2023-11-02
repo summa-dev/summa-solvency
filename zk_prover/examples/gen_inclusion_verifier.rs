@@ -55,7 +55,7 @@ fn main() {
 
     // In order to generate a proof for testing purpose we create the circuit using the init() method
     // which takes as input the merkle sum tree and the index of the leaf we are generating the proof for.
-    let mut circuit =
+    let circuit =
         MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof, user_entry.clone());
 
     let instances = circuit.instances();

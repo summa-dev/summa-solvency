@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test {
 
-    use crate::merkle_sum_tree::MerkleSumTree;
+    use crate::merkle_sum_tree::{AggregationMerkleSumTree, MerkleSumTree};
     use crate::{
         circuits::{
             merkle_sum_tree::MstInclusionCircuit,
@@ -44,6 +44,62 @@ mod test {
             let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
             assert_eq!(circuit.instances()[0].len(), circuit.num_instance()[0]);
+
+            valid_prover.assert_satisfied();
+        }
+    }
+
+    #[test]
+    fn test_valid_aggregation_merkle_sum_tree() {
+        // create new mini merkle sum tree
+        let merkle_sum_tree_1 =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let merkle_sum_tree_2 =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let aggregation_mst = AggregationMerkleSumTree::<N_ASSETS, N_BYTES>::new(vec![
+            merkle_sum_tree_1,
+            merkle_sum_tree_2.clone(),
+        ])
+        .unwrap();
+
+        for user_index in 0..16 {
+            // get proof for entry `user_index` in the first mini merkle sum tree
+            let merkle_proof_1 = aggregation_mst.generate_proof(user_index, 0).unwrap();
+
+            // get the entry for `user_index` in the first mini merkle sum tree
+            let user_entry_1 = aggregation_mst.mini_tree(0).get_entry(user_index);
+
+            // the `LEVELS` constant has to be modified to be the equal to depth of the mini merkle sum trees (LEVELS) + depth of the aggregation merkle sum tree (1)
+
+            let circuit_1 = MstInclusionCircuit::<{ LEVELS + 1 }, N_ASSETS, N_BYTES>::init(
+                merkle_proof_1,
+                user_entry_1.clone(),
+            );
+
+            let valid_prover = MockProver::run(K, &circuit_1, circuit_1.instances()).unwrap();
+
+            assert_eq!(circuit_1.instances()[0].len(), circuit_1.num_instance()[0]);
+
+            valid_prover.assert_satisfied();
+
+            // get proof for entry `user_index` in the second mini merkle sum tree
+            let merkle_proof_2 = aggregation_mst.generate_proof(user_index, 1).unwrap();
+
+            // get the entry for `user_index` in the second mini merkle sum tree
+            let user_entry_2 = aggregation_mst.mini_tree(1).get_entry(user_index);
+
+            let circuit_2 = MstInclusionCircuit::<{ LEVELS + 1 }, N_ASSETS, N_BYTES>::init(
+                merkle_proof_2,
+                user_entry_2.clone(),
+            );
+
+            let valid_prover = MockProver::run(K, &circuit_2, circuit_2.instances()).unwrap();
+
+            assert_eq!(circuit_2.instances()[0].len(), circuit_2.num_instance()[0]);
 
             valid_prover.assert_satisfied();
         }
@@ -740,7 +796,7 @@ mod test {
         let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
-        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
             merkle_proof,
             user_entry.clone(),
         );
