@@ -1,12 +1,12 @@
 use crate::merkle_sum_tree::{MerkleProof, Node};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
-pub fn create_proof<const N_ASSETS: usize>(
+pub fn create_proof<const N_ASSETS: usize, const N_BYTES: usize>(
     index: usize,
     depth: usize,
     nodes: &[Vec<Node<N_ASSETS>>],
     root: &Node<N_ASSETS>,
-) -> Result<MerkleProof<N_ASSETS>, &'static str> {
+) -> Result<MerkleProof<N_ASSETS, N_BYTES>, &'static str> {
     if index >= nodes[0].len() {
         return Err("The leaf does not exist in this tree");
     }

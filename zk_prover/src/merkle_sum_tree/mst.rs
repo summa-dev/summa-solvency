@@ -188,12 +188,15 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     }
 
     /// Generates a MerkleProof for the user with the given index
-    pub fn generate_proof(&self, index: usize) -> Result<MerkleProof<N_ASSETS>, &'static str> {
+    pub fn generate_proof(
+        &self,
+        index: usize,
+    ) -> Result<MerkleProof<N_ASSETS, N_BYTES>, &'static str> {
         create_proof(index, self.depth, &self.nodes, &self.root)
     }
 
     /// Verifies a MerkleProof
-    pub fn verify_proof(&self, proof: &MerkleProof<N_ASSETS>) -> bool
+    pub fn verify_proof(&self, proof: &MerkleProof<N_ASSETS, N_BYTES>) -> bool
     where
         [usize; N_ASSETS + 1]: Sized,
         [usize; 2 * (1 + N_ASSETS)]: Sized,

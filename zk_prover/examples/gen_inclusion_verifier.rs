@@ -47,9 +47,16 @@ fn main() {
     let merkle_sum_tree =
         MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
+    let user_index = 0;
+
+    let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+    let user_entry = merkle_sum_tree.get_entry(user_index);
+
     // In order to generate a proof for testing purpose we create the circuit using the init() method
     // which takes as input the merkle sum tree and the index of the leaf we are generating the proof for.
-    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_sum_tree, 0);
+    let mut circuit =
+        MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof, user_entry.clone());
 
     let instances = circuit.instances();
 

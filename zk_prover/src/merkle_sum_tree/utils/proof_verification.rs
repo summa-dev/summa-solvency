@@ -1,6 +1,8 @@
 use crate::merkle_sum_tree::{MerkleProof, Node};
 
-pub fn verify_proof<const N_ASSETS: usize>(proof: &MerkleProof<N_ASSETS>) -> bool
+pub fn verify_proof<const N_ASSETS: usize, const N_BYTES: usize>(
+    proof: &MerkleProof<N_ASSETS, N_BYTES>,
+) -> bool
 where
     [usize; N_ASSETS + 1]: Sized,
     [usize; 2 * (1 + N_ASSETS)]: Sized,

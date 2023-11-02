@@ -108,17 +108,18 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> AggregationMerkleSumTree<N_ASS
         &self,
         user_index: usize,
         mini_tree_index: usize,
-    ) -> Result<MerkleProof<N_ASSETS>, &'static str> {
+    ) -> Result<MerkleProof<N_ASSETS, N_BYTES>, &'static str> {
         let mini_tree = &self.mini_trees[mini_tree_index];
 
-        let partial_proof = create_proof(
+        let partial_proof: MerkleProof<N_ASSETS, N_BYTES> = create_proof(
             user_index,
             *mini_tree.depth(),
             mini_tree.nodes(),
             mini_tree.root(),
         )?;
 
-        let top_tree_proof = create_proof(mini_tree_index, self.depth, &self.nodes, &self.root)?;
+        let top_tree_proof: MerkleProof<N_ASSETS, N_BYTES> =
+            create_proof(mini_tree_index, self.depth, &self.nodes, &self.root)?;
 
         // Merge the two proofs
         let final_proof = MerkleProof {
@@ -133,7 +134,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> AggregationMerkleSumTree<N_ASS
     }
 
     /// Verifies a MerkleProof
-    pub fn verify_proof(&self, proof: &MerkleProof<N_ASSETS>) -> bool
+    pub fn verify_proof(&self, proof: &MerkleProof<N_ASSETS, N_BYTES>) -> bool
     where
         [usize; N_ASSETS + 1]: Sized,
         [usize; 2 * (1 + N_ASSETS)]: Sized,

@@ -3,7 +3,7 @@ use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
 use crate::circuits::traits::CircuitBase;
-use crate::merkle_sum_tree::{big_uint_to_fp, Entry, MerkleSumTree};
+use crate::merkle_sum_tree::{big_uint_to_fp, Entry, MerkleProof};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
@@ -21,13 +21,14 @@ use snark_verifier_sdk::CircuitExt;
 ///
 /// # Fields
 ///
-/// * `entry`: The entry to be verified inclusion of.
+/// * `user_entry`: The entry to be verified inclusion of.
 /// * `path_element_hashes`: The hashes of the path elements from the leaf to root. The length of this vector is LEVELS
 /// * `path_element_balances`: The balances of the path elements from the leaf to the root. The length of this vector is LEVELS
 /// * `path_indices`: The boolean indices of the path elements from the leaf to the root. 0 indicates that the element is on the right to the path, 1 indicates that the element is on the left to the path. The length of this vector is LEVELS
+/// * `root_hash`: The root hash of the merkle sum tree
 #[derive(Clone)]
 pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
-    pub entry: Entry<N_ASSETS>,
+    pub user_entry: Entry<N_ASSETS>,
     pub path_element_hashes: Vec<Fp>,
     pub path_element_balances: Vec<[Fp; N_ASSETS]>,
     pub path_indices: Vec<Fp>,
@@ -46,7 +47,7 @@ where
     }
     /// Returns the values of the public inputs of the circuit. Namely the leaf hash to be verified inclusion of and the root hash of the merkle sum tree.
     fn instances(&self) -> Vec<Vec<Fp>> {
-        vec![vec![self.entry.compute_leaf().hash, self.root_hash]]
+        vec![vec![self.user_entry.compute_leaf().hash, self.root_hash]]
     }
 }
 
@@ -60,7 +61,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
 {
     pub fn init_empty() -> Self {
         Self {
-            entry: Entry::init_empty(),
+            user_entry: Entry::init_empty(),
             path_element_hashes: vec![Fp::zero(); LEVELS],
             path_element_balances: vec![[Fp::zero(); N_ASSETS]; LEVELS],
             path_indices: vec![Fp::zero(); LEVELS],
@@ -69,24 +70,20 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
     }
 
     /// Initializes the circuit with the merkle sum tree and the index of the user of which the inclusion is to be verified.
-    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS, N_BYTES>, user_index: usize) -> Self
+    pub fn init(merkle_proof: MerkleProof<N_ASSETS, N_BYTES>, user_entry: Entry<N_ASSETS>) -> Self
     where
         [usize; N_ASSETS + 1]:,
     {
-        let proof = merkle_sum_tree.generate_proof(user_index).unwrap();
-
-        assert_eq!(proof.path_indices.len(), LEVELS);
-        assert_eq!(proof.sibling_hashes.len(), LEVELS);
-        assert_eq!(proof.sibling_sums.len(), LEVELS);
-
-        let entry = merkle_sum_tree.get_entry(user_index).clone();
+        assert_eq!(merkle_proof.path_indices.len(), LEVELS);
+        assert_eq!(merkle_proof.sibling_hashes.len(), LEVELS);
+        assert_eq!(merkle_proof.sibling_sums.len(), LEVELS);
 
         Self {
-            entry,
-            path_element_hashes: proof.sibling_hashes,
-            path_element_balances: proof.sibling_sums,
-            path_indices: proof.path_indices,
-            root_hash: proof.root_hash,
+            user_entry,
+            path_element_hashes: merkle_proof.sibling_hashes,
+            path_element_balances: merkle_proof.sibling_sums,
+            path_indices: merkle_proof.path_indices,
+            root_hash: merkle_proof.root_hash,
         }
     }
 }
@@ -230,7 +227,7 @@ where
         // Assign the entry username
         let username = self.assign_value_to_witness(
             layouter.namespace(|| "assign entry username"),
-            big_uint_to_fp(self.entry.username_as_big_uint()),
+            big_uint_to_fp(self.user_entry.username_as_big_uint()),
             "entry username",
             config.advices[0],
         )?;
@@ -241,7 +238,7 @@ where
         for i in 0..N_ASSETS {
             let balance = self.assign_value_to_witness(
                 layouter.namespace(|| format!("assign entry balance {}", i)),
-                big_uint_to_fp(&self.entry.balances()[i]),
+                big_uint_to_fp(&self.user_entry.balances()[i]),
                 "entry balance",
                 config.advices[1],
             )?;
