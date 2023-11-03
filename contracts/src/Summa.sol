@@ -37,14 +37,17 @@ contract Summa is Ownable {
         uint256 amount;
     }
 
-    //Verifier contracts
+    // Verifier contracts
     IVerifier private immutable solvencyVerifier;
     IVerifier private immutable inclusionVerifier;
 
-    //All address ownership proofs submitted by the CEX
+    // All address ownership proofs submitted by the CEX
     AddressOwnershipProof[] public addressOwnershipProofs;
 
-    //Convenience mapping to check if an address has already been verified
+    // Convenience mapping to check if an address has already been verified
+    /*
+     Boolean type is better than uint256 for this mapping, at least more than 2,100 gas is saved per call
+    */
     mapping(bytes32 => uint256) public ownershipProofByAddress;
 
     // MST roots corresponding to successfully verified solvency proofs by timestamp
@@ -64,6 +67,15 @@ contract Summa is Ownable {
         inclusionVerifier = _inclusionVerifier;
     }
 
+    /*
+        // While this duplicate method might elevate deployment costs, the trade-off is a reduction in usage and maintenance costs.
+        function submitProofOfAddressOwnership(
+            AddressOwnershipProof memory _addressOwnershipProof
+        ) public onlyOwner {
+            ...
+        }
+    */
+
     /**
      * @dev Submit an optimistic proof of address ownership for a CEX. The proof is subject to an off-chain verification as it's not feasible to verify the signatures of non-EVM chains in an Ethereum smart contract.
      * @param _addressOwnershipProofs The list of address ownership proofs
@@ -77,6 +89,9 @@ contract Summa is Ownable {
             );
             uint256 index = ownershipProofByAddress[addressHash];
             require(index == 0, "Address already verified");
+            /*
+              Is there any reason to assign value `i + 1` to `ownershipProofByAddress[addressHash]`?
+            */
             ownershipProofByAddress[addressHash] = i + 1;
             addressOwnershipProofs.push(_addressOwnershipProofs[i]);
             require(
@@ -124,6 +139,10 @@ contract Summa is Ownable {
 
         emit SolvencyProofSubmitted(timestamp, inputs[0], assets);
     }
+
+    /*
+        It would be helpful to provide a description of the public inputs for the `verifySolvencyProof` and `verifyInclusionProof` methods.
+    */
 
     /**
      * Verify the proof of CEX solvency
