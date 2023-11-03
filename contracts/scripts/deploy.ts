@@ -10,18 +10,12 @@ type Deployments = {
 };
 
 async function main() {
-  const solvencyVerifier = await ethers.deployContract(
-    "src/SolvencyVerifier.sol:Verifier"
-  );
-  await solvencyVerifier.deployed();
-
   const inclusionVerifier = await ethers.deployContract(
     "src/InclusionVerifier.sol:Verifier"
   );
   await inclusionVerifier.deployed();
 
   const summa = await ethers.deployContract("Summa", [
-    solvencyVerifier.address,
     inclusionVerifier.address,
   ]);
 
@@ -61,7 +55,6 @@ async function main() {
 
   //Copy the ABIs from `artifacts/src/*` to `backend/src/contracts/*`
   copyAbi(fs, "Summa", "Summa");
-  copyAbi(fs, "SolvencyVerifier", "Verifier");
   copyAbi(fs, "InclusionVerifier", "Verifier");
 }
 

@@ -9,27 +9,20 @@ import * as fs from "fs";
 import * as path from "path";
 
 describe("Summa Contract", () => {
-  function submitProofOfSolvency(
+  function submitCommitment(
     summa: Summa,
     mstRoot: BigNumber,
-    proof: string,
-    assets = [
-      {
-        chain: "ETH",
-        assetName: "ETH",
-        amount: BigNumber.from(556863),
-      },
-      {
-        chain: "ETH",
-        assetName: "USDT",
-        amount: BigNumber.from(556863),
-      },
-    ]
+    rootSum: BigNumber,
+    asset = {
+      chain: "ETH",
+      assetName: "ETH",
+      amount: BigNumber.from(556863),
+    }
   ): any {
-    return summa.submitProofOfSolvency(
+    return summa.submitCommitment(
       mstRoot,
-      assets,
-      proof,
+      rootSum,
+      asset,
       BigNumber.from(1693559255)
     );
   }
@@ -52,18 +45,12 @@ describe("Summa Contract", () => {
     const [owner, addr1, addr2, addr3]: SignerWithAddress[] =
       await ethers.getSigners();
 
-    const solvencyVerifier = await ethers.deployContract(
-      "src/SolvencyVerifier.sol:Verifier"
-    );
-    await solvencyVerifier.deployed();
-
     const inclusionVerifier = await ethers.deployContract(
       "src/InclusionVerifier.sol:Verifier"
     );
     await inclusionVerifier.deployed();
 
     const summa = await ethers.deployContract("Summa", [
-      solvencyVerifier.address,
       inclusionVerifier.address,
     ]);
     await summa.deployed();
@@ -211,10 +198,10 @@ describe("Summa Contract", () => {
 
   describe("verify proof of solvency", () => {
     let mstRoot: BigNumber;
+    let rootSum: BigNumber;
     let summa: Summa;
     let account1: SignerWithAddress;
     let account2: SignerWithAddress;
-    let proof: string;
     //let ethAccount3;
     let ownedAddresses: Summa.AddressOwnershipProofStruct[];
     const message = ethers.utils.defaultAbiCoder.encode(
@@ -255,25 +242,23 @@ describe("Summa Contract", () => {
       const calldata: any = JSON.parse(jsonData);
 
       mstRoot = calldata.public_inputs[0];
-      proof = calldata.proof;
+      rootSum = BigNumber.from(10000000);
     });
 
     it("should verify the proof of solvency for the given public input", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
 
-      await expect(submitProofOfSolvency(summa, mstRoot, proof))
+      await expect(submitCommitment(summa, mstRoot, rootSum))
         .to.emit(summa, "SolvencyProofSubmitted")
         .withArgs(
           BigNumber.from(1693559255),
           mstRoot,
-          (assets: Summa.AssetStruct[]) => {
+          rootSum,
+          (asset: Summa.AssetStruct) => {
             return (
-              assets[0].chain == "ETH" &&
-              assets[0].assetName == "ETH" &&
-              BigNumber.from(556863).eq(assets[0].amount as BigNumber) &&
-              assets[1].chain == "ETH" &&
-              assets[1].assetName == "USDT" &&
-              BigNumber.from(556863).eq(assets[1].amount as BigNumber)
+              asset.chain == "ETH" &&
+              asset.assetName == "ETH" &&
+              BigNumber.from(556863).eq(asset.amount as BigNumber)
             );
           }
         );
@@ -281,21 +266,14 @@ describe("Summa Contract", () => {
 
     it("should revert if the caller is not the owner", async () => {
       await expect(
-        summa.connect(account2).submitProofOfSolvency(
+        summa.connect(account2).submitCommitment(
           mstRoot,
-          [
-            {
-              chain: "ETH",
-              assetName: "ETH",
-              amount: BigNumber.from(556863),
-            },
-            {
-              chain: "ETH",
-              assetName: "USDT",
-              amount: BigNumber.from(556863),
-            },
-          ],
-          proof,
+          BigNumber.from(1000000000),
+          {
+            chain: "ETH",
+            assetName: "ETH",
+            amount: BigNumber.from(556863),
+          },
           BigNumber.from(1693559255)
         )
       ).to.be.revertedWith("Ownable: caller is not the owner");
@@ -303,65 +281,46 @@ describe("Summa Contract", () => {
 
     it("should not verify the proof of solvency if the CEX hasn't proven the address ownership", async () => {
       await expect(
-        submitProofOfSolvency(summa, mstRoot, proof)
+        submitCommitment(summa, mstRoot, rootSum)
       ).to.be.revertedWith(
         "The CEX has not submitted any address ownership proofs"
       );
     });
 
-    it("should revert with invalid MST root", async () => {
-      mstRoot = BigNumber.from(0);
+    it("should revert with invalid root sum", async () => {
+      rootSum = BigNumber.from(0);
 
       await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
-        submitProofOfSolvency(summa, mstRoot, proof)
-      ).to.be.revertedWith("Invalid ZK proof");
+        submitCommitment(summa, mstRoot, rootSum)
+      ).to.be.revertedWith("Root sum should be greater than zero");
     });
 
     it("should revert with invalid assets", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
-        submitProofOfSolvency(summa, mstRoot, proof, [
-          {
-            chain: "",
-            assetName: "ETH",
-            amount: BigNumber.from(556863),
-          },
-        ])
+        submitCommitment(summa, mstRoot, rootSum, {
+          chain: "",
+          assetName: "ETH",
+          amount: BigNumber.from(556863),
+        })
       ).to.be.revertedWith("Invalid asset");
 
       await expect(
-        submitProofOfSolvency(summa, mstRoot, proof, [
-          {
-            chain: "ETH",
-            assetName: "",
-            amount: BigNumber.from(556863),
-          },
-        ])
+        submitCommitment(summa, mstRoot, rootSum, {
+          chain: "ETH",
+          assetName: "",
+          amount: BigNumber.from(556863),
+        })
       ).to.be.revertedWith("Invalid asset");
-    });
-
-    it("should revert with invalid proof", async () => {
-      await summa.submitProofOfAddressOwnership(ownedAddresses);
-
-      proof = proof.replace("1", "2");
-
-      await expect(
-        submitProofOfSolvency(summa, mstRoot, proof)
-      ).to.be.revertedWith("Invalid ZK proof");
-
-      proof = "0x000000";
-
-      await expect(
-        submitProofOfSolvency(summa, mstRoot, proof)
-      ).to.be.revertedWithoutReason();
     });
   });
 
   describe("verify proof of inclusion", () => {
     let mstRoot: BigNumber;
+    let rootSum: BigNumber;
     let leafHash: BigNumber;
     let summa: Summa;
     let account1: SignerWithAddress;
@@ -421,11 +380,12 @@ describe("Summa Contract", () => {
       leafHash = inclusionCalldata.public_inputs[0];
       mstRoot = inclusionCalldata.public_inputs[1];
       inclusionProof = inclusionCalldata.proof;
+      rootSum = BigNumber.from(10000000);
     });
 
     it("should verify the proof of inclusion for the given public input", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await submitProofOfSolvency(summa, mstRoot, solvencyProof);
+      await submitCommitment(summa, mstRoot, rootSum);
       expect(
         await verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
       ).to.be.equal(true);
@@ -433,7 +393,7 @@ describe("Summa Contract", () => {
 
     it("should not verify with invalid MST root", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await submitProofOfSolvency(summa, mstRoot, solvencyProof);
+      await submitCommitment(summa, mstRoot, rootSum);
       mstRoot = BigNumber.from(0);
       await expect(
         verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
@@ -451,7 +411,7 @@ describe("Summa Contract", () => {
       leafHash = BigNumber.from(0);
 
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await submitProofOfSolvency(summa, mstRoot, solvencyProof);
+      await submitCommitment(summa, mstRoot, rootSum);
       expect(
         await verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
       ).to.be.equal(false);
@@ -461,7 +421,7 @@ describe("Summa Contract", () => {
       inclusionProof = inclusionProof.replace("1", "2");
 
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await submitProofOfSolvency(summa, mstRoot, solvencyProof);
+      await submitCommitment(summa, mstRoot, rootSum);
       expect(
         await verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
       ).to.be.equal(false);
