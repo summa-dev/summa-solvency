@@ -1,5 +1,7 @@
-use crate::contracts::{generated::summa_contract::AddressOwnershipProof, signer::SummaSigner};
-use ethers::types::Address;
+use crate::contracts::{
+    generated::summa_contract::AddressOwnershipProof,
+    signer::{AddressInput, SummaSigner},
+};
 use std::{error::Error, result::Result};
 
 use super::csv_parser::parse_signature_csv;
@@ -14,14 +16,14 @@ impl AddressOwnership {
         signer_key: &str,
         chain_id: u64,
         rpc_url: &str,
-        summa_sc_address: Address,
+        summa_address_input: AddressInput,
         signature_csv_path: &str,
     ) -> Result<AddressOwnership, Box<dyn Error>> {
         let address_ownership_proofs = parse_signature_csv(signature_csv_path)?;
 
         Ok(AddressOwnership {
             address_ownership_proofs,
-            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_sc_address),
+            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_address_input),
         })
     }
 

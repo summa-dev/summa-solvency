@@ -1,18 +1,17 @@
-use ethers::{
-    abi::Address,
-    types::{Bytes, U256},
-};
+use ethers::types::{Bytes, U256};
 use halo2_proofs::{
     halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
     plonk::{ProvingKey, VerifyingKey},
     poly::kzg::commitment::ParamsKZG,
 };
 use serde::{Deserialize, Serialize};
-use snark_verifier_sdk::{evm::gen_evm_proof_shplonk, CircuitExt};
 use std::error::Error;
 
 use super::csv_parser::parse_asset_csv;
-use crate::contracts::{generated::summa_contract::summa::Asset, signer::SummaSigner};
+use crate::contracts::{
+    generated::summa_contract::summa::Asset,
+    signer::{AddressInput, SummaSigner},
+};
 use summa_solvency::{
     circuits::{
         merkle_sum_tree::MstInclusionCircuit,
@@ -46,17 +45,17 @@ impl SolvencyProof {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MstInclusionProof {
-    public_inputs: Vec<Vec<Fp>>,
-    proof: Vec<u8>,
+    public_inputs: Vec<U256>,
+    proof_calldata: Bytes,
 }
 
 impl MstInclusionProof {
-    pub fn get_public_inputs(&self) -> &Vec<Vec<Fp>> {
+    pub fn get_public_inputs(&self) -> &Vec<U256> {
         &self.public_inputs
     }
 
-    pub fn get_proof(&self) -> &Vec<u8> {
-        &self.proof
+    pub fn get_proof(&self) -> &Bytes {
+        &self.proof_calldata
     }
 }
 
@@ -82,7 +81,7 @@ where
         signer_key: &str,
         chain_id: u64,
         rpc_url: &str,
-        summa_sc_address: Address,
+        summa_address_input: AddressInput,
         entry_csv_path: &str,
         asset_csv_path: &str,
         params_path: &str,
@@ -96,7 +95,7 @@ where
                 params_path,
             )
             .unwrap(),
-            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_sc_address),
+            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_address_input),
         })
     }
 
@@ -203,16 +202,15 @@ where
             MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(self.mst.clone(), user_index);
 
         // Currently, default manner of generating a inclusion proof for solidity-verifier.
-        let proof = gen_evm_proof_shplonk(
+        let calldata = gen_proof_solidity_calldata(
             &self.trusted_setup[0].0,
             &self.trusted_setup[0].1,
             circuit.clone(),
-            circuit.instances(),
         );
 
         Ok(MstInclusionProof {
-            public_inputs: circuit.instances(),
-            proof,
+            proof_calldata: calldata.0,
+            public_inputs: calldata.1,
         })
     }
 }

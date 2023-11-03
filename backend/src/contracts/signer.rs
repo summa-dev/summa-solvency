@@ -1,4 +1,3 @@
-use crate::contracts::generated::summa_contract::Summa;
 use ethers::{
     prelude::SignerMiddleware,
     providers::{Http, Provider},
@@ -11,6 +10,12 @@ use std::{
 };
 
 use super::generated::summa_contract::{AddressOwnershipProof, Asset};
+use crate::contracts::generated::summa_contract::Summa;
+
+pub enum AddressInput {
+    Address(Address),
+    Path(String),
+}
 
 #[derive(Debug)]
 pub struct SummaSigner {
@@ -23,8 +28,13 @@ impl SummaSigner {
     /// * `signer_key` - The private key of wallet that will interact with the chain on behalf of the exchange
     /// * `chain_id` - The chain id of the network
     /// * `rpc_url` - The RPC URL of the network
-    /// * `address` - The address of the Summa contract
-    pub fn new(signer_key: &str, chain_id: u64, rpc_url: &str, address: Address) -> Self {
+    /// * `address_input` - Either the contract's direct address or a path to its config file.
+    pub fn new(
+        signer_key: &str,
+        chain_id: u64,
+        rpc_url: &str,
+        address_input: AddressInput,
+    ) -> Self {
         let wallet: LocalWallet = LocalWallet::from_str(signer_key).unwrap();
 
         let provider = Provider::<Http>::try_from(rpc_url)
@@ -35,13 +45,25 @@ impl SummaSigner {
             wallet.with_chain_id(chain_id),
         ));
 
+        let address = match address_input {
+            AddressInput::Address(address) => address,
+            AddressInput::Path(path) => {
+                let address = Self::get_deployment_address(path, chain_id).unwrap();
+                address
+            }
+        };
+
         let contract = Summa::new(address, client);
         Self {
             summa_contract: contract,
         }
     }
 
-    pub fn get_deployment_address<P: AsRef<Path>>(
+    pub fn get_summa_address(&self) -> Address {
+        self.summa_contract.address()
+    }
+
+    fn get_deployment_address<P: AsRef<Path>>(
         path: P,
         chain_id: u64,
     ) -> Result<Address, Box<dyn Error>> {
@@ -72,9 +94,10 @@ impl SummaSigner {
         let submit_proof_of_address_ownership = &self
             .summa_contract
             .submit_proof_of_address_ownership(address_ownership_proofs);
-        let tx = submit_proof_of_address_ownership.send().await.unwrap();
+        let tx = submit_proof_of_address_ownership.send().await?;
 
-        tx.await.unwrap();
+        // Wait for the pending transaction to be mined
+        tx.await?;
 
         Ok(())
     }
@@ -89,9 +112,10 @@ impl SummaSigner {
         let submit_proof_of_solvency_call = &self
             .summa_contract
             .submit_proof_of_solvency(mst_root, assets, proof, timestamp);
-        let tx = submit_proof_of_solvency_call.send().await.unwrap();
+        let tx = submit_proof_of_solvency_call.send().await?;
 
-        tx.await.unwrap();
+        // Wait for the pending transaction to be mined
+        tx.await?;
 
         Ok(())
     }
