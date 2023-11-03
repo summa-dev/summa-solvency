@@ -20,7 +20,7 @@ const USER_INDEX: usize = 0;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Initialize test environment without `address_ownership` instance from `initialize_test_env` function.
-    let (anvil, _, _, _, summa_contract) = initialize_test_env().await;
+    let (anvil, _, _, _, summa_contract) = initialize_test_env(None).await;
 
     // 1. Submit ownership proof
     //

@@ -5,14 +5,8 @@ use ethers::{
     types::Address,
 };
 use serde_json::Value;
-use std::{
-    error::Error,
-    fs::File,
-    io::BufReader,
-    path::Path,
-    str::FromStr,
-    sync::{Arc, Mutex},
-};
+use std::{error::Error, fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc};
+use tokio::sync::Mutex;
 
 use super::generated::summa_contract::{AddressOwnershipProof, Asset};
 use crate::contracts::generated::summa_contract::Summa;
@@ -42,9 +36,8 @@ impl SummaSigner {
         address_input: AddressInput,
     ) -> Self {
         let wallet: LocalWallet = LocalWallet::from_str(signer_key).unwrap();
-
         let client = Arc::new(SignerMiddleware::new(
-            provider,
+            provider.clone(),
             wallet.with_chain_id(chain_id),
         ));
 
@@ -94,17 +87,19 @@ impl SummaSigner {
         &self,
         address_ownership_proofs: Vec<AddressOwnershipProof>,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let lock_guard = self.nonce_lock.lock().await;
+
         let submit_proof_of_address_ownership = &self
             .summa_contract
             .submit_proof_of_address_ownership(address_ownership_proofs);
 
         // To prevent nonce collision, we lock the nonce before sending the transaction
-        let _lock = self.nonce_lock.lock().unwrap();
         let tx = submit_proof_of_address_ownership.send().await?;
 
         // Wait for the pending transaction to be mined
         tx.await?;
 
+        drop(lock_guard);
         Ok(())
     }
 
@@ -115,16 +110,19 @@ impl SummaSigner {
         proof: ethers::types::Bytes,
         timestamp: ethers::types::U256,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let lock_guard = self.nonce_lock.lock().await;
+
         let submit_proof_of_solvency_call = &self
             .summa_contract
             .submit_proof_of_solvency(mst_root, assets, proof, timestamp);
 
         // To prevent nonce collision, we lock the nonce before sending the transaction
-        let _lock = self.nonce_lock.lock().unwrap();
         let tx = submit_proof_of_solvency_call.send().await?;
 
         // Wait for the pending transaction to be mined
         tx.await?;
+
+        drop(lock_guard);
 
         Ok(())
     }

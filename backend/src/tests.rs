@@ -16,16 +16,25 @@ use crate::contracts::generated::{
 use crate::contracts::mock::mock_erc20::{MockERC20, MOCKERC20_ABI, MOCKERC20_BYTECODE};
 
 // Setup test environment on the anvil instance
-pub async fn initialize_test_env() -> (
+pub async fn initialize_test_env(
+    block_time: Option<u64>,
+) -> (
     AnvilInstance,
     H160,
     H160,
     Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
     Summa<SignerMiddleware<Provider<Http>, LocalWallet>>,
 ) {
-    let anvil: ethers::utils::AnvilInstance = Anvil::new()
-        .mnemonic("test test test test test test test test test test test junk")
-        .spawn();
+    // Initiate anvil by following assign block time or instant mining
+    let anvil = match block_time {
+        Some(interval) => Anvil::new()
+            .mnemonic("test test test test test test test test test test test junk")
+            .block_time(interval)
+            .spawn(),
+        None => Anvil::new()
+            .mnemonic("test test test test test test test test test test test junk")
+            .spawn(),
+    };
 
     // Extracting two exchange addresses from the Anvil instance
     let cex_addr_1 = anvil.addresses()[1];
@@ -43,13 +52,6 @@ pub async fn initialize_test_env() -> (
         wallet.with_chain_id(anvil.chain_id()),
     ));
 
-    // Creating a factory to deploy a mock ERC20 contract
-    let factory = ContractFactory::new(
-        MOCKERC20_ABI.to_owned(),
-        MOCKERC20_BYTECODE.to_owned(),
-        Arc::clone(&client),
-    );
-
     // Send RPC requests with `anvil_setBalance` method via provider to set ETH balance of `cex_addr_1` and `cex_addr_2`
     // This is for meeting `proof_of_solvency` test conditions
     for addr in [cex_addr_1, cex_addr_2].iter().copied() {
@@ -58,6 +60,14 @@ pub async fn initialize_test_env() -> (
             .request::<(H160, U256), ()>("anvil_setBalance", (addr, U256::from(278432)))
             .await;
     }
+
+    // TODO: Mock ERC20 contract deployment following the attributes of `summa_contract`
+    // Creating a factory to deploy a mock ERC20 contract
+    let factory = ContractFactory::new(
+        MOCKERC20_ABI.to_owned(),
+        MOCKERC20_BYTECODE.to_owned(),
+        Arc::clone(&client),
+    );
 
     // Deploy Mock ERC20 contract
     let mock_erc20_deployment = factory.deploy(()).unwrap().send().await.unwrap();
@@ -71,6 +81,10 @@ pub async fn initialize_test_env() -> (
 
     time::sleep(Duration::from_millis(500)).await;
 
+    if block_time != None {
+        time::sleep(Duration::from_secs(block_time.unwrap())).await;
+    };
+
     // Deploy verifier contracts before deploy Summa contract
     let solvency_verifer_contract = SolvencyVerifier::deploy(Arc::clone(&client), ())
         .unwrap()
@@ -78,11 +92,19 @@ pub async fn initialize_test_env() -> (
         .await
         .unwrap();
 
+    if block_time != None {
+        time::sleep(Duration::from_secs(block_time.unwrap())).await;
+    };
+
     let inclusion_verifer_contract = InclusionVerifier::deploy(Arc::clone(&client), ())
         .unwrap()
         .send()
         .await
         .unwrap();
+
+    if block_time != None {
+        time::sleep(Duration::from_secs(block_time.unwrap())).await;
+    };
 
     // Deploy Summa contract
     let summa_contract = Summa::deploy(
@@ -97,13 +119,24 @@ pub async fn initialize_test_env() -> (
     .await
     .unwrap();
 
+    time::sleep(Duration::from_secs(3)).await;
+
     (anvil, cex_addr_1, cex_addr_2, client, summa_contract)
 }
 
 #[cfg(test)]
 mod test {
-    use ethers::{abi::AbiEncode, providers::Provider, types::U256, utils::to_checksum};
+    use ethers::{
+        abi::AbiEncode,
+        providers::{Http, Middleware, Provider},
+        types::{U256, U64},
+        utils::to_checksum,
+    };
     use std::{convert::TryFrom, error::Error, sync::Arc};
+    use tokio::{
+        join,
+        time::{sleep, Duration},
+    };
 
     use crate::apis::{address_ownership::AddressOwnership, round::Round};
     use crate::contracts::{
@@ -117,7 +150,7 @@ mod test {
 
     #[tokio::test]
     async fn test_deployed_address() -> Result<(), Box<dyn Error>> {
-        let (anvil, _, _, _, summa_contract) = initialize_test_env().await;
+        let (anvil, _, _, _, summa_contract) = initialize_test_env(None).await;
 
         // Hardhat development environment, usually updates the address of a deployed contract in the `artifacts` directory.
         // However, in our custom deployment script, `contracts/scripts/deploy.ts`,
@@ -138,8 +171,65 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_concurrent_proof_submissions() -> Result<(), Box<dyn Error>> {
+        let (anvil, _, _, _, summa_contract) = initialize_test_env(Some(1)).await;
+
+        let provider = Arc::new(Provider::try_from(anvil.endpoint().as_str())?);
+
+        let signer = SummaSigner::new(
+            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+            anvil.chain_id(),
+            provider,
+            AddressInput::Address(summa_contract.address()),
+        );
+
+        // At least one address ownership proof should be submitted before submitting solvency proof
+        let mut address_ownership_client =
+            AddressOwnership::new(&signer, "src/apis/csv/signatures.csv").unwrap();
+
+        address_ownership_client
+            .dispatch_proof_of_address_ownership()
+            .await?;
+
+        // Do sumbit solvency proofs simultaneously
+        let asset_csv = "src/apis/csv/assets.csv";
+        let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
+        let params_path = "ptau/hermez-raw-11";
+
+        let mut round_one =
+            Round::<4, 2, 14>::new(&signer, entry_csv, asset_csv, params_path, 1).unwrap();
+        let mut round_two =
+            Round::<4, 2, 14>::new(&signer, entry_csv, asset_csv, params_path, 2).unwrap();
+
+        // Checking block number before sending transaction of proof of solvency
+        let outer_provider: Provider<Http> = Provider::try_from(anvil.endpoint().as_str())?;
+        let start_block_number = outer_provider.get_block_number().await?;
+
+        // Send two solvency proofs simultaneously
+        let (round_one_result, round_two_result) = join!(
+            round_one.dispatch_solvency_proof(),
+            round_two.dispatch_solvency_proof()
+        );
+
+        // Make sure the block has been mined at least 2 blocks
+        for _ in 0..5 {
+            sleep(Duration::from_millis(500)).await;
+            let updated_block_number = outer_provider.get_block_number().await?;
+            if (updated_block_number - start_block_number) > U64::from(2) {
+                break;
+            }
+        }
+
+        // Check two rounds' result are both Ok
+        assert!(round_one_result.is_ok());
+        assert!(round_two_result.is_ok());
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_round_features() -> Result<(), Box<dyn Error>> {
-        let (anvil, cex_addr_1, cex_addr_2, _, summa_contract) = initialize_test_env().await;
+        let (anvil, cex_addr_1, cex_addr_2, _, summa_contract) = initialize_test_env(None).await;
 
         let provider = Arc::new(Provider::try_from(anvil.endpoint().as_str())?);
         let signer = SummaSigner::new(
