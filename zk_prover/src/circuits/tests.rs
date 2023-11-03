@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test {
 
-    use crate::merkle_sum_tree::{AggregationMerkleSumTree, MerkleSumTree};
+    use crate::merkle_sum_tree::{AggregationMerkleSumTree, MerkleSumTree, Tree};
     use crate::{
         circuits::{
             merkle_sum_tree::MstInclusionCircuit,
@@ -33,7 +33,7 @@ mod test {
                 .unwrap();
 
         for user_index in 0..16 {
-            let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+            let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
             let user_entry = merkle_sum_tree.get_entry(user_index);
 
             let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
@@ -68,7 +68,7 @@ mod test {
 
         for user_index in 0..16 {
             // get proof for entry `user_index` in the first mini merkle sum tree
-            let merkle_proof_1 = aggregation_mst.generate_proof(user_index, 0).unwrap();
+            let merkle_proof_1 = aggregation_mst.generate_proof(user_index, Some(0)).unwrap();
 
             // get the entry for `user_index` in the first mini merkle sum tree
             let user_entry_1 = aggregation_mst.mini_tree(0).get_entry(user_index);
@@ -87,7 +87,7 @@ mod test {
             valid_prover.assert_satisfied();
 
             // get proof for entry `user_index` in the second mini merkle sum tree
-            let merkle_proof_2 = aggregation_mst.generate_proof(user_index, 1).unwrap();
+            let merkle_proof_2 = aggregation_mst.generate_proof(user_index, Some(1)).unwrap();
 
             // get the entry for `user_index` in the second mini merkle sum tree
             let user_entry_2 = aggregation_mst.mini_tree(1).get_entry(user_index);
@@ -125,7 +125,7 @@ mod test {
 
         let user_index = 0;
 
-        let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+        let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
         let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
@@ -175,7 +175,7 @@ mod test {
 
         let user_index = 0;
 
-        let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+        let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
         let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
@@ -220,7 +220,7 @@ mod test {
 
         let user_index = 0;
 
-        let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+        let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
         // Only now we can instantiate the circuit with the actual inputs
@@ -252,7 +252,7 @@ mod test {
 
         let user_index = 0;
 
-        let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+        let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
         let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
@@ -312,7 +312,7 @@ mod test {
 
         let user_index = 0;
 
-        let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+        let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
         let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
@@ -353,7 +353,7 @@ mod test {
 
         let user_index = 0;
 
-        let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+        let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
         let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
@@ -477,7 +477,7 @@ mod test {
 
         let user_index = 0;
 
-        let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+        let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
         let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
@@ -519,7 +519,7 @@ mod test {
 
         let user_index = 0;
 
-        let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+        let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
         let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
@@ -793,7 +793,7 @@ mod test {
 
         let user_index = 0;
 
-        let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+        let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
         let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(

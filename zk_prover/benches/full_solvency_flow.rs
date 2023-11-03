@@ -11,7 +11,7 @@ use summa_solvency::{
         solvency::SolvencyCircuit,
         utils::{full_prover, full_verifier, generate_setup_artifacts},
     },
-    merkle_sum_tree::MerkleSumTree,
+    merkle_sum_tree::{MerkleSumTree, Tree},
 };
 
 const SAMPLE_SIZE: usize = 10;
@@ -112,7 +112,7 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 
     let user_index = 0;
 
-    let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+    let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
     let user_entry = merkle_sum_tree.get_entry(user_index);
 
     // Only now we can instantiate the circuit with the actual inputs
@@ -146,7 +146,7 @@ fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 
     let user_index = 0;
 
-    let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+    let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
     let user_entry = merkle_sum_tree.get_entry(user_index);
 
     // Only now we can instantiate the circuit with the actual inputs

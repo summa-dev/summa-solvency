@@ -14,7 +14,7 @@ use summa_solvency::{
             gen_proof_solidity_calldata, generate_setup_artifacts, write_verifier_sol_from_yul,
         },
     },
-    merkle_sum_tree::MerkleSumTree,
+    merkle_sum_tree::{MerkleSumTree, Tree},
 };
 
 const LEVELS: usize = 4;
@@ -49,7 +49,7 @@ fn main() {
 
     let user_index = 0;
 
-    let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+    let merkle_proof = merkle_sum_tree.generate_proof(user_index, None).unwrap();
 
     let user_entry = merkle_sum_tree.get_entry(user_index);
 

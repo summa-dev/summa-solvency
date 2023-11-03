@@ -2,7 +2,7 @@
 mod test {
 
     use crate::merkle_sum_tree::utils::{big_uint_to_fp, poseidon_node};
-    use crate::merkle_sum_tree::{AggregationMerkleSumTree, Entry, MerkleSumTree};
+    use crate::merkle_sum_tree::{AggregationMerkleSumTree, Entry, MerkleSumTree, Tree};
     use num_bigint::{BigUint, ToBigUint};
 
     const N_ASSETS: usize = 2;
@@ -26,7 +26,7 @@ mod test {
         assert!(*merkle_tree.depth() == 4_usize);
 
         // get proof for entry 0
-        let proof = merkle_tree.generate_proof(0).unwrap();
+        let proof = merkle_tree.generate_proof(0, None).unwrap();
 
         // verify proof
         assert!(merkle_tree.verify_proof(&proof));
@@ -61,12 +61,12 @@ mod test {
 
         // should create valid proof for each entry in the tree and verify it
         for i in 0..15 {
-            let proof = merkle_tree.generate_proof(i).unwrap();
+            let proof = merkle_tree.generate_proof(i, None).unwrap();
             assert!(merkle_tree.verify_proof(&proof));
         }
 
         // shouldn't create a proof for an entry that doesn't exist in the tree
-        assert!(merkle_tree.generate_proof(16).is_err());
+        assert!(merkle_tree.generate_proof(16, None).is_err());
 
         // shouldn't verify a proof with a wrong leaf
         let invalid_entry = Entry::new(
@@ -287,7 +287,7 @@ mod test {
         assert!(root.balances == [(556862 * 2).into(), (556862 * 2).into()]);
 
         // get proof for entry 0 and mini tree 0
-        let proof = aggregation_mst.generate_proof(0, 0).unwrap();
+        let proof = aggregation_mst.generate_proof(0, Some(0)).unwrap();
 
         // expect depth to be equal to merkle_sum_tree_1.depth (= merkle_sum_tree_2.depth) + 1
         let depth = aggregation_mst.depth();
@@ -334,14 +334,14 @@ mod test {
 
         // should create valid proof for each entry in the 2 mini-trees and verify it
         for i in 0..15 {
-            let proof_1 = aggregation_mst.generate_proof(i, 0).unwrap();
-            let proof_2 = aggregation_mst.generate_proof(i, 1).unwrap();
+            let proof_1 = aggregation_mst.generate_proof(i, Some(0)).unwrap();
+            let proof_2 = aggregation_mst.generate_proof(i, Some(1)).unwrap();
             assert!(aggregation_mst.verify_proof(&proof_1));
             assert!(aggregation_mst.verify_proof(&proof_2));
         }
 
         // shouldn't create a proof for an entry that doesn't exist in the tree
-        assert!(aggregation_mst.generate_proof(16, 0).is_err());
+        assert!(aggregation_mst.generate_proof(16, Some(0)).is_err());
 
         // shouldn't verify a proof with a wrong root hash
         let mut proof_invalid_1 = proof.clone();

@@ -3,6 +3,7 @@ mod entry;
 mod mst;
 mod node;
 mod tests;
+mod tree;
 pub mod utils;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
@@ -19,4 +20,5 @@ pub use aggregation_mst::AggregationMerkleSumTree;
 pub use entry::Entry;
 pub use mst::MerkleSumTree;
 pub use node::Node;
+pub use tree::Tree;
 pub use utils::{big_intify_username, big_uint_to_fp};
