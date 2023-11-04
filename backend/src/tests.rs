@@ -61,7 +61,7 @@ pub async fn initialize_test_env(
             .await;
     }
 
-    // TODO: Mock ERC20 contract deployment following the attributes of `summa_contract`
+    // Mock ERC20 contract deployment
     // Creating a factory to deploy a mock ERC20 contract
     let factory = ContractFactory::new(
         MOCKERC20_ABI.to_owned(),
@@ -211,7 +211,7 @@ mod test {
             round_two.dispatch_solvency_proof()
         );
 
-        // Make sure the block has been mined at least 2 blocks
+        // Check two blocks has been mined
         for _ in 0..5 {
             sleep(Duration::from_millis(500)).await;
             let updated_block_number = outer_provider.get_block_number().await?;
