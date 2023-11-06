@@ -1,6 +1,5 @@
 use crate::merkle_sum_tree::utils::{
     build_merkle_tree_from_leaves, compute_leaves, create_proof, index_of, parse_csv_to_entries,
-    verify_proof,
 };
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node, Tree};
 use num_bigint::BigUint;
@@ -43,15 +42,6 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> Tree<N_ASSETS, N_BYTES>
 
     fn nodes(&self) -> &[Vec<Node<N_ASSETS>>] {
         &self.nodes
-    }
-
-    /// Verifies a MerkleProof
-    fn verify_proof(&self, proof: &MerkleProof<N_ASSETS, N_BYTES>) -> bool
-    where
-        [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
-    {
-        verify_proof(proof)
     }
 
     /// Generates a MerkleProof for the user with the given index. No mini tree index is required for a MerkleSumTree.

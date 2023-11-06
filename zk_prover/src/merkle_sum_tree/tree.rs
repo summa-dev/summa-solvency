@@ -1,3 +1,4 @@
+use crate::merkle_sum_tree::utils::verify_proof;
 use crate::merkle_sum_tree::{MerkleProof, Node};
 
 /// A trait representing the basic operations for a Merkle-Sum-like Tree.
@@ -24,5 +25,8 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
     fn verify_proof(&self, proof: &MerkleProof<N_ASSETS, N_BYTES>) -> bool
     where
         [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized;
+        [usize; 2 * (1 + N_ASSETS)]: Sized,
+    {
+        verify_proof(proof)
+    }
 }
