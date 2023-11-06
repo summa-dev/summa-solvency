@@ -257,7 +257,7 @@ mod test {
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
         // Only now we can instantiate the circuit with the actual inputs
-        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
             merkle_proof,
             user_entry.clone(),
         );
@@ -741,7 +741,7 @@ mod test {
         let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
-        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(
             merkle_proof,
             user_entry.clone(),
         );

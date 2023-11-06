@@ -56,7 +56,7 @@ fn main() {
     let user_entry = merkle_sum_tree.get_entry(user_index);
 
     // Generate the circuit with the actual inputs
-    let mut circuit =
+    let circuit =
         MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof, user_entry.clone());
 
     let instances = circuit.instances();

@@ -1,7 +1,7 @@
 use crate::merkle_sum_tree::utils::{
-    build_merkle_tree_from_leaves, compute_leaves, create_proof, index_of, parse_csv_to_entries,
+    build_merkle_tree_from_leaves, compute_leaves, parse_csv_to_entries,
 };
-use crate::merkle_sum_tree::{Entry, MerkleProof, Node, Tree};
+use crate::merkle_sum_tree::{Entry, Node, Tree};
 use num_bigint::BigUint;
 
 /// Merkle Sum Tree Data Structure.
@@ -42,14 +42,6 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> Tree<N_ASSETS, N_BYTES>
 
     fn nodes(&self) -> &[Vec<Node<N_ASSETS>>] {
         &self.nodes
-    }
-
-    /// Generates a MerkleProof for the user with the given index. No mini tree index is required for a MerkleSumTree.
-    fn generate_proof(
-        &self,
-        user_index: usize,
-    ) -> Result<MerkleProof<N_ASSETS, N_BYTES>, &'static str> {
-        create_proof(user_index, self.depth, &self.nodes, &self.root)
     }
 }
 
@@ -170,13 +162,6 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         Ok((&penultimate_level[0], &penultimate_level[1]))
     }
 
-    /// Returns the index of the user with the given username and balances in the tree
-    pub fn index_of(&self, username: &str, balances: [BigUint; N_ASSETS]) -> Option<usize>
-    where
-        [usize; N_ASSETS + 1]: Sized,
-    {
-        index_of(username, balances, &self.nodes)
-    }
 
     /// Returns the index of the leaf with the matching username
     pub fn index_of_username(&self, username: &str) -> Result<usize, Box<dyn std::error::Error>>
