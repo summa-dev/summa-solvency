@@ -1,13 +1,12 @@
-use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
+use crate::merkle_sum_tree::{MerkleProof, Node};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
-pub fn create_proof<const N_ASSETS: usize>(
+pub fn create_proof<const N_ASSETS: usize, const N_BYTES: usize>(
     index: usize,
-    entries: &[Entry<N_ASSETS>],
     depth: usize,
     nodes: &[Vec<Node<N_ASSETS>>],
     root: &Node<N_ASSETS>,
-) -> Result<MerkleProof<N_ASSETS>, &'static str> {
+) -> Result<MerkleProof<N_ASSETS, N_BYTES>, &'static str> {
     if index >= nodes[0].len() {
         return Err("The leaf does not exist in this tree");
     }
@@ -16,6 +15,8 @@ pub fn create_proof<const N_ASSETS: usize>(
     let mut sibling_sums = vec![[Fp::from(0); N_ASSETS]; depth];
     let mut path_indices = vec![Fp::from(0); depth];
     let mut current_index = index;
+
+    let leaf = &nodes[0][index];
 
     for level in 0..depth {
         let position = current_index % 2;
@@ -34,8 +35,8 @@ pub fn create_proof<const N_ASSETS: usize>(
     }
 
     Ok(MerkleProof {
+        leaf: leaf.clone(),
         root_hash: root.hash,
-        entry: entries[index].clone(),
         sibling_hashes,
         sibling_sums,
         path_indices,

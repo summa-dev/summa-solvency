@@ -7,7 +7,7 @@ mod index_of;
 mod operation_helpers;
 mod proof_verification;
 
-pub use build_tree::build_merkle_tree_from_entries;
+pub use build_tree::{build_merkle_tree_from_leaves, compute_leaves};
 pub use create_proof::create_proof;
 pub use csv_parser::parse_csv_to_entries;
 pub use generate_leaf_hash::generate_leaf_hash;

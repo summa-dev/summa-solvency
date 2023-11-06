@@ -11,7 +11,7 @@ use summa_solvency::{
         solvency::SolvencyCircuit,
         utils::{full_prover, full_verifier, generate_setup_artifacts},
     },
-    merkle_sum_tree::MerkleSumTree,
+    merkle_sum_tree::{MerkleSumTree, Tree},
 };
 
 const SAMPLE_SIZE: usize = 10;
@@ -101,7 +101,7 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 
     let empty_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
 
-    let (params, pk, vk) = generate_setup_artifacts(13, None, empty_circuit).unwrap();
+    let (params, pk, _) = generate_setup_artifacts(13, None, empty_circuit).unwrap();
 
     let csv_file = format!(
         "benches/csv/{}/{}_entry_2_{}.csv",
@@ -111,7 +111,14 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let merkle_sum_tree = MerkleSumTree::<N_ASSETS, N_BYTES>::new(&csv_file).unwrap();
 
     // Only now we can instantiate the circuit with the actual inputs
-    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_sum_tree, 0);
+
+    let user_index = 0;
+
+    let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+    let user_entry = merkle_sum_tree.get_entry(user_index);
+
+    let circuit =
+        MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof, user_entry.clone());
 
     let bench_name = format!(
         "generate zk proof - tree of 2 power of {} entries with {} assets mst inclusion circuit",
@@ -139,7 +146,14 @@ fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let merkle_sum_tree = MerkleSumTree::<N_ASSETS, N_BYTES>::new(&csv_file).unwrap();
 
     // Only now we can instantiate the circuit with the actual inputs
-    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_sum_tree, 0);
+
+    let user_index = 0;
+
+    let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+    let user_entry = merkle_sum_tree.get_entry(user_index);
+
+    let circuit =
+        MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof, user_entry.clone());
 
     let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
 
@@ -197,7 +211,7 @@ fn generate_zk_proof_solvency_circuit(_c: &mut Criterion) {
 
     let empty_circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init_empty();
 
-    let (params, pk, vk) = generate_setup_artifacts(11, None, empty_circuit).unwrap();
+    let (params, pk, _) = generate_setup_artifacts(11, None, empty_circuit).unwrap();
 
     let csv_file = format!(
         "benches/csv/{}/{}_entry_2_{}.csv",

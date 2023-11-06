@@ -1,7 +1,8 @@
 use crate::merkle_sum_tree::utils::{
-    build_merkle_tree_from_entries, create_proof, index_of, parse_csv_to_entries, verify_proof,
+    build_merkle_tree_from_leaves, compute_leaves, create_proof, index_of, parse_csv_to_entries,
+    verify_proof,
 };
-use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
+use crate::merkle_sum_tree::{Entry, MerkleProof, Node, Tree};
 use num_bigint::BigUint;
 
 /// Merkle Sum Tree Data Structure.
@@ -25,9 +26,44 @@ pub struct MerkleSumTree<const N_ASSETS: usize, const N_BYTES: usize> {
     is_sorted: bool,
 }
 
-impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTES> {
-    pub const MAX_DEPTH: usize = 29;
+impl<const N_ASSETS: usize, const N_BYTES: usize> Tree<N_ASSETS, N_BYTES>
+    for MerkleSumTree<N_ASSETS, N_BYTES>
+{
+    fn root(&self) -> &Node<N_ASSETS> {
+        &self.root
+    }
 
+    fn depth(&self) -> &usize {
+        &self.depth
+    }
+
+    fn leaves(&self) -> &[Node<N_ASSETS>] {
+        &self.nodes[0]
+    }
+
+    fn nodes(&self) -> &[Vec<Node<N_ASSETS>>] {
+        &self.nodes
+    }
+
+    /// Verifies a MerkleProof
+    fn verify_proof(&self, proof: &MerkleProof<N_ASSETS, N_BYTES>) -> bool
+    where
+        [usize; N_ASSETS + 1]: Sized,
+        [usize; 2 * (1 + N_ASSETS)]: Sized,
+    {
+        verify_proof(proof)
+    }
+
+    /// Generates a MerkleProof for the user with the given index. No mini tree index is required for a MerkleSumTree.
+    fn generate_proof(
+        &self,
+        user_index: usize,
+    ) -> Result<MerkleProof<N_ASSETS, N_BYTES>, &'static str> {
+        create_proof(user_index, self.depth, &self.nodes, &self.root)
+    }
+}
+
+impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTES> {
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The CSV file must be formatted as follows:
     ///
     /// `username;balances`
@@ -69,15 +105,11 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     {
         let depth = (entries.len() as f64).log2().ceil() as usize;
 
-        if !(1..=Self::MAX_DEPTH).contains(&depth) {
-            return Err(
-                "The tree depth must be between 1 and 27, namely it can support 2^27 users at max"
-                    .into(),
-            );
-        }
-
         let mut nodes = vec![];
-        let root = build_merkle_tree_from_entries(&entries, depth, &mut nodes)?;
+
+        let leaves = compute_leaves(&entries);
+
+        let root = build_merkle_tree_from_leaves(&leaves, depth, &mut nodes)?;
 
         Ok(MerkleSumTree {
             root,
@@ -128,20 +160,12 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         Ok(root)
     }
 
-    pub fn root(&self) -> &Node<N_ASSETS> {
-        &self.root
-    }
-
-    pub fn depth(&self) -> &usize {
-        &self.depth
-    }
-
-    pub fn leaves(&self) -> &[Node<N_ASSETS>] {
-        &self.nodes[0]
-    }
-
     pub fn entries(&self) -> &[Entry<N_ASSETS>] {
         &self.entries
+    }
+
+    pub fn get_entry(&self, index: usize) -> &Entry<N_ASSETS> {
+        &self.entries[index]
     }
 
     /// Returns the nodes stored at the penultimate level of the tree, namely the one before the root
@@ -181,19 +205,5 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
                 .binary_search_by_key(&username, |entry| entry.username())
                 .map_err(|_| Box::from("Username not found"))
         }
-    }
-
-    /// Generates a MerkleProof for the user with the given index
-    pub fn generate_proof(&self, index: usize) -> Result<MerkleProof<N_ASSETS>, &'static str> {
-        create_proof(index, &self.entries, self.depth, &self.nodes, &self.root)
-    }
-
-    /// Verifies a MerkleProof
-    pub fn verify_proof(&self, proof: &MerkleProof<N_ASSETS>) -> bool
-    where
-        [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
-    {
-        verify_proof(proof)
     }
 }

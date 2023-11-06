@@ -14,7 +14,7 @@ use summa_solvency::{
             gen_proof_solidity_calldata, generate_setup_artifacts, write_verifier_sol_from_yul,
         },
     },
-    merkle_sum_tree::MerkleSumTree,
+    merkle_sum_tree::{MerkleSumTree, Tree},
 };
 
 const LEVELS: usize = 4;
@@ -49,7 +49,15 @@ fn main() {
 
     // In order to generate a proof for testing purpose we create the circuit using the init() method
     // which takes as input the merkle sum tree and the index of the leaf we are generating the proof for.
-    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_sum_tree, 0);
+
+    let user_index = 0;
+
+    let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+    let user_entry = merkle_sum_tree.get_entry(user_index);
+
+    // Generate the circuit with the actual inputs
+    let mut circuit =
+        MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof, user_entry.clone());
 
     let instances = circuit.instances();
 

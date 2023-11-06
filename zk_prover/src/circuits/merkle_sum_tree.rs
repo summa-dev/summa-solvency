@@ -3,7 +3,7 @@ use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
 use crate::circuits::traits::CircuitBase;
-use crate::merkle_sum_tree::{big_uint_to_fp, Entry, MerkleSumTree};
+use crate::merkle_sum_tree::{big_uint_to_fp, Entry, MerkleProof};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
@@ -68,23 +68,24 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
         }
     }
 
-    /// Initializes the circuit with the merkle sum tree and the index of the user of which the inclusion is to be verified.
-    pub fn init(merkle_sum_tree: MerkleSumTree<N_ASSETS, N_BYTES>, user_index: usize) -> Self
+    /// Initializes the circuit with the merkle proof and the entry of the user of which the inclusion is to be verified.
+    pub fn init(merkle_proof: MerkleProof<N_ASSETS, N_BYTES>, entry: Entry<N_ASSETS>) -> Self
     where
         [usize; N_ASSETS + 1]:,
     {
-        let proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+        assert_eq!(merkle_proof.path_indices.len(), LEVELS);
+        assert_eq!(merkle_proof.sibling_hashes.len(), LEVELS);
+        assert_eq!(merkle_proof.sibling_sums.len(), LEVELS);
 
-        assert_eq!(proof.path_indices.len(), LEVELS);
-        assert_eq!(proof.sibling_hashes.len(), LEVELS);
-        assert_eq!(proof.sibling_sums.len(), LEVELS);
+        // assert that the entry leaf hash matches the leaf hash in the merkle proof
+        assert_eq!(merkle_proof.leaf.hash, entry.compute_leaf().hash);
 
         Self {
-            entry: proof.entry,
-            path_element_hashes: proof.sibling_hashes,
-            path_element_balances: proof.sibling_sums,
-            path_indices: proof.path_indices,
-            root_hash: proof.root_hash,
+            entry,
+            path_element_hashes: merkle_proof.sibling_hashes,
+            path_element_balances: merkle_proof.sibling_sums,
+            path_indices: merkle_proof.path_indices,
+            root_hash: merkle_proof.root_hash,
         }
     }
 }
@@ -222,8 +223,7 @@ where
                 config.poseidon_middle_config.clone(),
             );
 
-        let range_check_chip =
-            RangeCheckChip::<N_BYTES>::construct(config.range_check_config.clone());
+        let range_check_chip = RangeCheckChip::<N_BYTES>::construct(config.range_check_config);
 
         // Assign the entry username
         let username = self.assign_value_to_witness(

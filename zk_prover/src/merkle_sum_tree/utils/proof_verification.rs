@@ -1,19 +1,15 @@
-use crate::merkle_sum_tree::utils::big_uint_to_fp;
 use crate::merkle_sum_tree::{MerkleProof, Node};
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
-pub fn verify_proof<const N_ASSETS: usize>(proof: &MerkleProof<N_ASSETS>) -> bool
+pub fn verify_proof<const N_ASSETS: usize, const N_BYTES: usize>(
+    proof: &MerkleProof<N_ASSETS, N_BYTES>,
+) -> bool
 where
     [usize; N_ASSETS + 1]: Sized,
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
-    let mut node = proof.entry.compute_leaf();
-    let mut balances = proof
-        .entry
-        .balances()
-        .iter()
-        .map(big_uint_to_fp)
-        .collect::<Vec<Fp>>();
+    let mut node = proof.leaf.clone();
+
+    let mut balances = proof.leaf.balances;
 
     for i in 0..proof.sibling_hashes.len() {
         let sibling_node = Node {
