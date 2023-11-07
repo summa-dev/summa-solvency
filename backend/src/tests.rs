@@ -132,7 +132,7 @@ mod test {
         types::{U256, U64},
         utils::to_checksum,
     };
-    use std::{convert::TryFrom, error::Error, sync::Arc};
+    use std::{convert::TryFrom, error::Error};
     use tokio::{
         join,
         time::{sleep, Duration},
@@ -157,15 +157,14 @@ mod test {
         // the address gets updated in `backend/src/contracts/deployments.json`.
         let contract_address = summa_contract.address();
 
-        let provider = Arc::new(Provider::try_from(anvil.endpoint().as_str())?);
-        let summa_signer = SummaSigner::new(
+        let signer = SummaSigner::new(
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-            anvil.chain_id(),
-            provider,
+            anvil.endpoint().as_str(),
             AddressInput::Path("./src/contracts/deployments.json".into()), // the file contains the address of the deployed contract
-        );
+        )
+        .await?;
 
-        assert_eq!(contract_address, summa_signer.get_summa_address());
+        assert_eq!(contract_address, signer.get_summa_address());
 
         Ok(())
     }
@@ -174,14 +173,15 @@ mod test {
     async fn test_concurrent_proof_submissions() -> Result<(), Box<dyn Error>> {
         let (anvil, _, _, _, summa_contract) = initialize_test_env(Some(1)).await;
 
-        let provider = Arc::new(Provider::try_from(anvil.endpoint().as_str())?);
-
+        // This test ensures that two proofs, when dispatched concurrently, do not result in nonce collisions.
+        // It checks that both proofs are processed and mined within a reasonable timeframe,
+        // indicating that there's no interference or delay when the two are submitted simultaneously.
         let signer = SummaSigner::new(
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-            anvil.chain_id(),
-            provider,
+            anvil.endpoint().as_str(),
             AddressInput::Address(summa_contract.address()),
-        );
+        )
+        .await?;
 
         // At least one address ownership proof should be submitted before submitting solvency proof
         let mut address_ownership_client =
@@ -231,13 +231,12 @@ mod test {
     async fn test_round_features() -> Result<(), Box<dyn Error>> {
         let (anvil, cex_addr_1, cex_addr_2, _, summa_contract) = initialize_test_env(None).await;
 
-        let provider = Arc::new(Provider::try_from(anvil.endpoint().as_str())?);
         let signer = SummaSigner::new(
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-            anvil.chain_id(),
-            provider,
+            anvil.endpoint().as_str(),
             AddressInput::Address(summa_contract.address()),
-        );
+        )
+        .await?;
 
         let mut address_ownership_client =
             AddressOwnership::new(&signer, "src/apis/csv/signatures.csv").unwrap();

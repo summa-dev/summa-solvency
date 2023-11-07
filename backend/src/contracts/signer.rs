@@ -1,6 +1,6 @@
 use ethers::{
     prelude::SignerMiddleware,
-    providers::{Http, Provider},
+    providers::{Http, Middleware, Provider},
     signers::{LocalWallet, Signer},
     types::Address,
 };
@@ -26,18 +26,19 @@ impl SummaSigner {
     /// Creates a new SummaSigner instance
     /// # Arguments
     /// * `signer_key` - The private key of wallet that will interact with the chain on behalf of the exchange
-    /// * `chain_id` - The chain id of the network
-    /// * `provider` - The provider
+    /// * `url` -  The endpoint for connecting to the node
     /// * `address` - The address of the Summa contract
-    pub fn new(
+    pub async fn new(
         signer_key: &str,
-        chain_id: u64,
-        provider: Arc<Provider<Http>>,
+        url: &str,
         address_input: AddressInput,
-    ) -> Self {
+    ) -> Result<Self, Box<dyn Error>> {
         let wallet: LocalWallet = LocalWallet::from_str(signer_key).unwrap();
+
+        let provider = Arc::new(Provider::try_from(url)?);
+        let chain_id = provider.get_chainid().await?.as_u64();
         let client = Arc::new(SignerMiddleware::new(
-            provider.clone(),
+            provider,
             wallet.with_chain_id(chain_id),
         ));
 
@@ -49,10 +50,10 @@ impl SummaSigner {
             }
         };
 
-        Self {
+        Ok(Self {
             nonce_lock: Mutex::new(()),
             summa_contract: Summa::new(address, client),
-        }
+        })
     }
 
     pub fn get_summa_address(&self) -> Address {

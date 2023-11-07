@@ -1,7 +1,7 @@
 #![feature(generic_const_exprs)]
-use std::{error::Error, fs::File, io::BufReader, io::Write, sync::Arc};
+use std::{error::Error, fs::File, io::BufReader, io::Write};
 
-use ethers::{providers::Provider, types::U256};
+use ethers::types::U256;
 use serde_json::{from_reader, to_string_pretty};
 
 use summa_backend::{
@@ -27,18 +27,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Each CEX prepares its own `signature` CSV file.
     let signature_csv_path = "src/apis/csv/signatures.csv";
 
-    // The signer would be using `provider` that shared with `address_ownership` and `round` instances.
-    let provider = Arc::new(Provider::try_from(anvil.endpoint().as_str())?);
-
+    // The signer instance would be shared with `address_ownership` and `round` instances
+    //
     // Using AddressInput::Address to directly provide the summa_contract's address.
     // For deployed contracts, if the address is stored in a config file,
     // you can alternatively use AddressInput::Path to specify the file's path.
     let signer = SummaSigner::new(
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-        anvil.chain_id(),
-        provider,
+        anvil.endpoint().as_str(),
         AddressInput::Address(summa_contract.address()),
-    );
+    )
+    .await?;
 
     let mut address_ownership_client = AddressOwnership::new(&signer, signature_csv_path).unwrap();
 
@@ -58,7 +57,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let params_path = "ptau/hermez-raw-11";
 
     // Using the `round` instance, the solvency proof is dispatched to the Summa contract with the `dispatch_solvency_proof` method.
-    let mut round = Round::<4, 2, 14>::new(&signer, entry_csv, asset_csv, params_path, 1).unwrap();
+    let timestamp = 1u64;
+    let mut round =
+        Round::<4, 2, 14>::new(&signer, entry_csv, asset_csv, params_path, timestamp).unwrap();
 
     // Sends the solvency proof, which should ideally complete without errors.
     round.dispatch_solvency_proof().await?;
