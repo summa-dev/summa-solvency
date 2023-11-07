@@ -101,7 +101,7 @@ mod test {
         let asset_sums = [Fp::from(556863u64), Fp::from(556863u64)];
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(merkle_sum_tree, asset_sums);
+        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(&merkle_sum_tree, asset_sums);
 
         // Generate the proof
         let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
@@ -550,7 +550,7 @@ mod test {
         // Make the first asset sum more than liabilities sum (556862)
         let asset_sums = [Fp::from(556863u64), Fp::from(556863u64)];
 
-        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(merkle_sum_tree, asset_sums);
+        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(&merkle_sum_tree, asset_sums);
 
         let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
@@ -565,7 +565,7 @@ mod test {
 
         let asset_sums = [Fp::from(556863u64), Fp::from(556863u64)];
 
-        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(merkle_sum_tree, asset_sums);
+        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(&merkle_sum_tree, asset_sums);
 
         // generate a universal trusted setup for testing, along with the verification key (vk) and the proving key (pk).
         let (params, pk, _) = generate_setup_artifacts(10, None, circuit.clone()).unwrap();
@@ -602,10 +602,8 @@ mod test {
         // Make the first asset sum less than liabilities sum (556862)
         let less_than_asset_sums_1st = [Fp::from(556861u64), Fp::from(556863u64)];
 
-        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(
-            merkle_sum_tree.clone(),
-            less_than_asset_sums_1st,
-        );
+        let circuit =
+            SolvencyCircuit::<N_ASSETS, N_BYTES>::init(&merkle_sum_tree, less_than_asset_sums_1st);
 
         let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
@@ -629,10 +627,8 @@ mod test {
         // Make the second asset sum less than liabilities sum (556862)
         let less_than_asset_sums_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
 
-        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(
-            merkle_sum_tree.clone(),
-            less_than_asset_sums_2nd,
-        );
+        let circuit =
+            SolvencyCircuit::<N_ASSETS, N_BYTES>::init(&merkle_sum_tree, less_than_asset_sums_2nd);
 
         let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
@@ -657,7 +653,7 @@ mod test {
         let less_than_asset_sums_both = [Fp::from(556861u64), Fp::from(556861u64)];
 
         let circuit =
-            SolvencyCircuit::<N_ASSETS, N_BYTES>::init(merkle_sum_tree, less_than_asset_sums_both);
+            SolvencyCircuit::<N_ASSETS, N_BYTES>::init(&merkle_sum_tree, less_than_asset_sums_both);
 
         let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
@@ -701,7 +697,7 @@ mod test {
         let less_than_asset_sums_2nd = [Fp::from(556863u64), Fp::from(556861u64)];
 
         let mut circuit =
-            SolvencyCircuit::<N_ASSETS, N_BYTES>::init(merkle_sum_tree, less_than_asset_sums_2nd);
+            SolvencyCircuit::<N_ASSETS, N_BYTES>::init(&merkle_sum_tree, less_than_asset_sums_2nd);
 
         // But actually, the CEX tries to manipulate the liabilities sum for the second asset to make it less than the assets sum and result solvent
         circuit.left_node_balances[1] = Fp::from(1u64);

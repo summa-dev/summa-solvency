@@ -57,7 +57,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         [usize; 2 * (1 + N_ASSETS)]: Sized,
     {
         let entries = parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
-        Self::build_tree(entries, false)
+        Self::from_entries(entries, false)
     }
 
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The MST leaves are sorted by the username byte values. The CSV file must be formatted as follows:
@@ -74,10 +74,10 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
 
         entries.sort_by(|a, b| a.username().cmp(b.username()));
 
-        Self::build_tree(entries, true)
+        Self::from_entries(entries, true)
     }
 
-    fn build_tree(
+    pub fn from_entries(
         entries: Vec<Entry<N_ASSETS>>,
         is_sorted: bool,
     ) -> Result<MerkleSumTree<N_ASSETS, N_BYTES>, Box<dyn std::error::Error>>
@@ -161,7 +161,6 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
 
         Ok((&penultimate_level[0], &penultimate_level[1]))
     }
-
 
     /// Returns the index of the leaf with the matching username
     pub fn index_of_username(&self, username: &str) -> Result<usize, Box<dyn std::error::Error>>

@@ -50,14 +50,14 @@ fn main() {
 
     let asset_sums = [Fp::from(556863u64), Fp::from(556863u64)];
 
-    let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(merkle_sum_tree, asset_sums);
+    let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(&merkle_sum_tree, asset_sums);
 
     // generate a universal trusted setup for testing, along with the verification key (vk) and the proving key (pk).
     let (params, pk, _) =
         generate_setup_artifacts(10, Some("../backend/ptau/hermez-raw-11"), circuit.clone())
             .unwrap();
 
-    let num_instances = circuit.num_instance();
+    let _num_instances = circuit.num_instance();
     let instances = circuit.instances();
 
     let proof = gen_evm_proof_shplonk(&params, &pk, circuit.clone(), instances.clone());
