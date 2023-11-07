@@ -9,7 +9,7 @@ use summa_backend::{
         address_ownership::AddressOwnership,
         round::{MstInclusionProof, Round},
     },
-    contracts::signer::AddressInput,
+    contracts::signer::{AddressInput, SummaSigner},
     tests::initialize_test_env,
 };
 use summa_solvency::merkle_sum_tree::utils::generate_leaf_hash;
@@ -20,24 +20,26 @@ const USER_INDEX: usize = 0;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Initialize test environment without `address_ownership` instance from `initialize_test_env` function.
-    let (anvil, _, _, _, summa_contract) = initialize_test_env().await;
+    let (anvil, _, _, _, summa_contract) = initialize_test_env(None).await;
 
     // 1. Submit ownership proof
     //
     // Each CEX prepares its own `signature` CSV file.
     let signature_csv_path = "src/apis/csv/signatures.csv";
 
+    // The signer instance would be shared with `address_ownership` and `round` instances
+    //
     // Using AddressInput::Address to directly provide the summa_contract's address.
     // For deployed contracts, if the address is stored in a config file,
     // you can alternatively use AddressInput::Path to specify the file's path.
-    let mut address_ownership_client = AddressOwnership::new(
+    let signer = SummaSigner::new(
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-        anvil.chain_id(),
         anvil.endpoint().as_str(),
         AddressInput::Address(summa_contract.address()),
-        signature_csv_path,
     )
-    .unwrap();
+    .await?;
+
+    let mut address_ownership_client = AddressOwnership::new(&signer, signature_csv_path).unwrap();
 
     // Dispatch the proof of address ownership.
     // the `dispatch_proof_of_address_ownership` function sends a transaction to the Summa contract.
@@ -55,17 +57,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let params_path = "ptau/hermez-raw-11";
 
     // Using the `round` instance, the solvency proof is dispatched to the Summa contract with the `dispatch_solvency_proof` method.
-    let mut round = Round::<4, 2, 14>::new(
-        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // anvil account [0]
-        anvil.chain_id(),
-        anvil.endpoint().as_str(),
-        AddressInput::Address(summa_contract.address()),
-        entry_csv,
-        asset_csv,
-        params_path,
-        1,
-    )
-    .unwrap();
+    let timestamp = 1u64;
+    let mut round =
+        Round::<4, 2, 14>::new(&signer, entry_csv, asset_csv, params_path, timestamp).unwrap();
 
     // Sends the solvency proof, which should ideally complete without errors.
     round.dispatch_solvency_proof().await?;

@@ -1,29 +1,23 @@
-use crate::contracts::{
-    generated::summa_contract::AddressOwnershipProof,
-    signer::{AddressInput, SummaSigner},
-};
+use crate::contracts::{generated::summa_contract::AddressOwnershipProof, signer::SummaSigner};
 use std::{error::Error, result::Result};
 
 use super::csv_parser::parse_signature_csv;
 
-pub struct AddressOwnership {
+pub struct AddressOwnership<'a> {
     address_ownership_proofs: Vec<AddressOwnershipProof>,
-    signer: SummaSigner,
+    signer: &'a SummaSigner,
 }
 
-impl AddressOwnership {
-    pub fn new(
-        signer_key: &str,
-        chain_id: u64,
-        rpc_url: &str,
-        summa_address_input: AddressInput,
+impl AddressOwnership<'_> {
+    pub fn new<'a>(
+        signer: &'a SummaSigner,
         signature_csv_path: &str,
-    ) -> Result<AddressOwnership, Box<dyn Error>> {
+    ) -> Result<AddressOwnership<'a>, Box<dyn Error>> {
         let address_ownership_proofs = parse_signature_csv(signature_csv_path)?;
 
         Ok(AddressOwnership {
             address_ownership_proofs,
-            signer: SummaSigner::new(signer_key, chain_id, rpc_url, summa_address_input),
+            signer,
         })
     }
 
