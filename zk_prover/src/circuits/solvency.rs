@@ -73,7 +73,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> SolvencyCircuit<N_ASSETS, N_BY
 
     /// Initializes the circuit with the merkle sum tree and the assets sum
     pub fn init(
-        merkle_sum_tree: MerkleSumTree<N_ASSETS, N_BYTES>,
+        merkle_sum_tree: &MerkleSumTree<N_ASSETS, N_BYTES>,
         asset_sums: [Fp; N_ASSETS],
     ) -> Self {
         let (penultimate_node_left, penultimate_node_right) = merkle_sum_tree

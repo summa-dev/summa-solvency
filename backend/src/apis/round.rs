@@ -15,7 +15,7 @@ use summa_solvency::{
         solvency::SolvencyCircuit,
         utils::{gen_proof_solidity_calldata, generate_setup_artifacts},
     },
-    merkle_sum_tree::MerkleSumTree,
+    merkle_sum_tree::{MerkleSumTree, Tree},
 };
 
 pub(crate) type SetupArtifacts = (
@@ -174,7 +174,7 @@ where
             .collect::<Vec<Fp>>()
             .try_into()
             .unwrap();
-        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(self.mst.clone(), asset_sums);
+        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(&self.mst, asset_sums);
 
         let calldata = gen_proof_solidity_calldata(
             &self.trusted_setup[1].0,
@@ -192,8 +192,10 @@ where
         &self,
         user_index: usize,
     ) -> Result<MstInclusionProof, &'static str> {
+        let merkle_proof = self.mst.generate_proof(user_index).unwrap();
+        let user_entry = self.mst.get_entry(user_index).clone();
         let circuit =
-            MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(self.mst.clone(), user_index);
+            MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof, user_entry);
 
         // Currently, default manner of generating a inclusion proof for solidity-verifier.
         let calldata = gen_proof_solidity_calldata(
