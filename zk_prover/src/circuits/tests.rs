@@ -765,7 +765,7 @@ mod test {
             MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
 
-        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(merkle_sum_tree, asset_sums);
+        let circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init(&merkle_sum_tree, asset_sums);
 
         let root =
             BitMapBackend::new("prints/solvency-layout.png", (2048, 32768)).into_drawing_area();

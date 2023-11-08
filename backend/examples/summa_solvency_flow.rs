@@ -10,7 +10,7 @@ use summa_backend::{
         round::{MstInclusionProof, Round},
     },
     contracts::signer::{AddressInput, SummaSigner},
-    sample_data::*,
+    sample_entries::*,
     tests::initialize_test_env,
 };
 use summa_solvency::merkle_sum_tree::{utils::generate_leaf_hash, MerkleSumTree};
@@ -25,9 +25,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // 1. Submit ownership proof
     //
-    // Each CEX prepares its own `signature` CSV file.
-    let signature_csv_path = "src/apis/csv/signatures.csv";
-
     // The signer instance would be shared with `address_ownership` and `round` instances
     //
     // Using AddressInput::Address to directly provide the summa_contract's address.
@@ -40,10 +37,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .await?;
 
-    // Each CEX has to initialize the `AddressOwnership` instance with the `signer` and `address_ownership_proofs`.
-    let address_ownership_proofs = get_sample_address_ownership_proofs();
-    let mut address_ownership_client =
-        AddressOwnership::new(&signer, address_ownership_proofs).unwrap();
+    // Each CEX prepares its own `signature` CSV file.
+    let signature_csv_path = "src/apis/csv/signatures.csv";
+    let mut address_ownership_client = AddressOwnership::new(&signer, signature_csv_path).unwrap();
 
     // Dispatch the proof of address ownership.
     // the `dispatch_proof_of_address_ownership` function sends a transaction to the Summa contract.
@@ -57,15 +53,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //
     // Initialize the `Round` instance to submit the proof of solvency.
     let params_path = "ptau/hermez-raw-11";
+    let assets_csv_path = "src/apis/csv/assets.csv";
 
-    let assets_state = get_sample_assets();
     let entries = get_sample_entries();
     let mst = MerkleSumTree::from_entries(entries, false).unwrap();
 
     // Using the `round` instance, the solvency proof is dispatched to the Summa contract with the `dispatch_solvency_proof` method.
     let timestamp = 1u64;
     let mut round =
-        Round::<4, 2, 14>::new(&signer, mst, assets_state, params_path, timestamp).unwrap();
+        Round::<4, 2, 14>::new(&signer, mst, assets_csv_path, params_path, timestamp).unwrap();
 
     // Sends the solvency proof, which should ideally complete without errors.
     round.dispatch_solvency_proof().await?;

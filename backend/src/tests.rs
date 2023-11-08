@@ -147,7 +147,7 @@ mod test {
         },
         signer::{AddressInput, SummaSigner},
     };
-    use crate::{sample_data::*, tests::initialize_test_env};
+    use crate::{sample_entries::get_sample_entries, tests::initialize_test_env};
 
     #[tokio::test]
     async fn test_deployed_address() -> Result<(), Box<dyn Error>> {
@@ -185,26 +185,24 @@ mod test {
         .await?;
 
         // At least one address ownership proof should be submitted before submitting solvency proof
-        let address_ownership_proofs = get_sample_address_ownership_proofs();
         let mut address_ownership_client =
-            AddressOwnership::new(&signer, address_ownership_proofs).unwrap();
+            AddressOwnership::new(&signer, "src/apis/csv/signatures.csv").unwrap();
 
         address_ownership_client
             .dispatch_proof_of_address_ownership()
             .await?;
 
         // Do sumbit solvency proofs simultaneously
+        let asset_csv = "src/apis/csv/assets.csv";
         let params_path = "ptau/hermez-raw-11";
 
-        let assets_state = get_sample_assets();
         let entries = get_sample_entries();
         let mst = MerkleSumTree::from_entries(entries, false).unwrap();
 
         let mut round_one =
-            Round::<4, 2, 14>::new(&signer, mst.clone(), assets_state.clone(), params_path, 1)
-                .unwrap();
+            Round::<4, 2, 14>::new(&signer, mst.clone(), asset_csv, params_path, 1).unwrap();
         let mut round_two =
-            Round::<4, 2, 14>::new(&signer, mst, assets_state, params_path, 2).unwrap();
+            Round::<4, 2, 14>::new(&signer, mst, asset_csv, params_path, 2).unwrap();
 
         // Checking block number before sending transaction of proof of solvency
         let outer_provider: Provider<Http> = Provider::try_from(anvil.endpoint().as_str())?;
@@ -243,9 +241,8 @@ mod test {
         )
         .await?;
 
-        let address_ownership_proofs = get_sample_address_ownership_proofs();
         let mut address_ownership_client =
-            AddressOwnership::new(&signer, address_ownership_proofs).unwrap();
+            AddressOwnership::new(&signer, "src/apis/csv/signatures.csv").unwrap();
 
         address_ownership_client
             .dispatch_proof_of_address_ownership()
@@ -279,12 +276,12 @@ mod test {
 
         // Initialize round
         let params_path = "ptau/hermez-raw-11";
+        let asset_csv = "src/apis/csv/assets.csv";
 
-        let assets_state = get_sample_assets();
         let entries = get_sample_entries();
         let mst = MerkleSumTree::from_entries(entries, false).unwrap();
 
-        let mut round = Round::<4, 2, 14>::new(&signer, mst, assets_state, params_path, 1).unwrap();
+        let mut round = Round::<4, 2, 14>::new(&signer, mst, asset_csv, params_path, 1).unwrap();
 
         // Verify solvency proof
         let mut solvency_proof_logs = summa_contract

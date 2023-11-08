@@ -7,6 +7,7 @@ use halo2_proofs::{
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
+use super::csv_parser::parse_asset_csv;
 use crate::contracts::{generated::summa_contract::summa::Asset, signer::SummaSigner};
 use summa_solvency::{
     circuits::{
@@ -76,13 +77,13 @@ where
     pub fn new<'a>(
         signer: &'a SummaSigner,
         mst: MerkleSumTree<N_ASSETS, N_BYTES>,
-        assets_state: [Asset; N_ASSETS],
+        asset_csv_path: &str,
         params_path: &str,
         timestamp: u64,
     ) -> Result<Round<'a, LEVELS, N_ASSETS, N_BYTES>, Box<dyn Error>> {
         Ok(Round {
             timestamp,
-            snapshot: Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(mst, assets_state, params_path)
+            snapshot: Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(mst, asset_csv_path, params_path)
                 .unwrap(),
             signer: &signer,
         })
@@ -129,9 +130,11 @@ where
 {
     pub fn new(
         mst: MerkleSumTree<N_ASSETS, N_BYTES>,
-        assets_state: [Asset; N_ASSETS],
+        asset_csv_path: &str,
         params_path: &str,
     ) -> Result<Snapshot<LEVELS, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>> {
+        let assets_state = parse_asset_csv::<&str, N_ASSETS>(asset_csv_path).unwrap();
+
         let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
         let solvency_circuit = SolvencyCircuit::<N_ASSETS, N_BYTES>::init_empty();
 

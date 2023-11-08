@@ -1,39 +1,5 @@
-use crate::contracts::generated::summa_contract::{AddressOwnershipProof, Asset};
-use ethers::{abi::AbiEncode, types::U256};
 use num_bigint::ToBigUint;
 use summa_solvency::merkle_sum_tree::Entry;
-
-pub fn get_sample_address_ownership_proofs() -> Vec<AddressOwnershipProof> {
-    vec![
-      AddressOwnershipProof {
-          chain: "ETH".to_string(),
-          cex_address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8".to_string(),
-          signature: "0x089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b".parse().unwrap(),
-          message: "Summa proof of solvency for CryptoExchange".encode().into()
-      },
-      AddressOwnershipProof {
-          chain: "ETH".to_string(),
-          cex_address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC".to_string(),
-          signature: "0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c".parse().unwrap(),
-          message: "Summa proof of solvency for CryptoExchange".encode().into()
-        },
-  ]
-}
-
-pub fn get_sample_assets() -> [Asset; 2] {
-    [
-        Asset {
-            asset_name: "ETH".to_string(),
-            chain: "ETH".to_string(),
-            amount: U256::from_dec_str("556863").expect("Invalid decimal string for amount"),
-        },
-        Asset {
-            asset_name: "USDT".to_string(),
-            chain: "ETH".to_string(),
-            amount: U256::from_dec_str("556863").expect("Invalid decimal string for amount"),
-        },
-    ]
-}
 
 pub fn get_sample_entries() -> Vec<Entry<2>> {
     let entries = vec![
