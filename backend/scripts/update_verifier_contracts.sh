@@ -5,7 +5,6 @@ set -e
 echo "1. Building verifier contracts"
 cd ../zk_prover
 cargo run --release --example gen_inclusion_verifier
-cargo run --release --example gen_solvency_verifier
 
 # Deploy contracts to local environment
 echo "2. Deploying contracts to local environment"

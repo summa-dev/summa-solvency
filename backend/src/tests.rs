@@ -9,10 +9,7 @@ use ethers::{
 };
 use tokio::time;
 
-use crate::contracts::generated::{
-    inclusion_verifier::InclusionVerifier, solvency_verifier::SolvencyVerifier,
-    summa_contract::Summa,
-};
+use crate::contracts::generated::{inclusion_verifier::InclusionVerifier, summa_contract::Summa};
 use crate::contracts::mock::mock_erc20::{MockERC20, MOCKERC20_ABI, MOCKERC20_BYTECODE};
 
 // Setup test environment on the anvil instance
@@ -53,7 +50,6 @@ pub async fn initialize_test_env(
     ));
 
     // Send RPC requests with `anvil_setBalance` method via provider to set ETH balance of `cex_addr_1` and `cex_addr_2`
-    // This is for meeting `proof_of_solvency` test conditions
     for addr in [cex_addr_1, cex_addr_2].iter().copied() {
         let _res = client
             .provider()
@@ -85,17 +81,6 @@ pub async fn initialize_test_env(
         time::sleep(Duration::from_secs(block_time.unwrap())).await;
     };
 
-    // Deploy verifier contracts before deploy Summa contract
-    let solvency_verifer_contract = SolvencyVerifier::deploy(Arc::clone(&client), ())
-        .unwrap()
-        .send()
-        .await
-        .unwrap();
-
-    if block_time != None {
-        time::sleep(Duration::from_secs(block_time.unwrap())).await;
-    };
-
     let inclusion_verifer_contract = InclusionVerifier::deploy(Arc::clone(&client), ())
         .unwrap()
         .send()
@@ -107,17 +92,11 @@ pub async fn initialize_test_env(
     };
 
     // Deploy Summa contract
-    let summa_contract = Summa::deploy(
-        Arc::clone(&client),
-        (
-            solvency_verifer_contract.address(),
-            inclusion_verifer_contract.address(),
-        ),
-    )
-    .unwrap()
-    .send()
-    .await
-    .unwrap();
+    let summa_contract = Summa::deploy(Arc::clone(&client), inclusion_verifer_contract.address())
+        .unwrap()
+        .send()
+        .await
+        .unwrap();
 
     time::sleep(Duration::from_secs(3)).await;
 
@@ -143,7 +122,7 @@ mod test {
     use crate::contracts::{
         generated::summa_contract::{
             AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
-            SolvencyProofSubmittedFilter,
+            LiabilitiesCommitmentSubmittedFilter,
         },
         signer::{AddressInput, SummaSigner},
     };
@@ -171,7 +150,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_concurrent_proof_submissions() -> Result<(), Box<dyn Error>> {
+    async fn test_concurrent_sumbit_commitments() -> Result<(), Box<dyn Error>> {
         let (anvil, _, _, _, summa_contract) = initialize_test_env(Some(1)).await;
 
         // This test ensures that two proofs, when dispatched concurrently, do not result in nonce collisions.
@@ -184,15 +163,6 @@ mod test {
         )
         .await?;
 
-        // At least one address ownership proof should be submitted before submitting solvency proof
-        let mut address_ownership_client =
-            AddressOwnership::new(&signer, "src/apis/csv/signatures.csv").unwrap();
-
-        address_ownership_client
-            .dispatch_proof_of_address_ownership()
-            .await?;
-
-        // Do sumbit solvency proofs simultaneously
         let asset_csv = "src/apis/csv/assets.csv";
         let params_path = "ptau/hermez-raw-11";
 
@@ -204,14 +174,14 @@ mod test {
         let mut round_two =
             Round::<4, 2, 14>::new(&signer, mst, asset_csv, params_path, 2).unwrap();
 
-        // Checking block number before sending transaction of proof of solvency
+        // Checking block number before sending transaction of liability commitment
         let outer_provider: Provider<Http> = Provider::try_from(anvil.endpoint().as_str())?;
         let start_block_number = outer_provider.get_block_number().await?;
 
-        // Send two solvency proofs simultaneously
+        // Send two commitments simultaneously
         let (round_one_result, round_two_result) = join!(
-            round_one.dispatch_solvency_proof(),
-            round_two.dispatch_solvency_proof()
+            round_one.dispatch_commitment(),
+            round_two.dispatch_commitment()
         );
 
         // Check two blocks has been mined
@@ -283,46 +253,41 @@ mod test {
 
         let mut round = Round::<4, 2, 14>::new(&signer, mst, asset_csv, params_path, 1).unwrap();
 
-        // Verify solvency proof
-        let mut solvency_proof_logs = summa_contract
-            .solvency_proof_submitted_filter()
+        let mut liability_commitment_logs = summa_contract
+            .liabilities_commitment_submitted_filter()
             .query()
             .await?;
 
-        assert_eq!(solvency_proof_logs.len(), 0);
-
-        // Dispatch solvency proof
-        let assets = [
-            Asset {
-                asset_name: "ETH".to_string(),
-                chain: "ETH".to_string(),
-                amount: U256::from(556863),
-            },
-            Asset {
-                asset_name: "USDT".to_string(),
-                chain: "ETH".to_string(),
-                amount: U256::from(556863),
-            },
-        ];
+        assert_eq!(liability_commitment_logs.len(), 0);
 
         // Send sovlecy proof to contract
-        round.dispatch_solvency_proof().await?;
+        round.dispatch_commitment().await?;
 
-        // After sending transaction of proof of solvency, logs should be updated
-        solvency_proof_logs = summa_contract
-            .solvency_proof_submitted_filter()
+        // After sending transaction of liability commitment, logs should be updated
+        liability_commitment_logs = summa_contract
+            .liabilities_commitment_submitted_filter()
             .query()
             .await?;
 
-        assert_eq!(solvency_proof_logs.len(), 1);
+        assert_eq!(liability_commitment_logs.len(), 1);
         assert_eq!(
-            solvency_proof_logs[0],
-            SolvencyProofSubmittedFilter {
+            liability_commitment_logs[0],
+            LiabilitiesCommitmentSubmittedFilter {
                 timestamp: U256::from(1),
                 mst_root: "0x2E021D9BF99C5BD7267488B6A7A5CF5F7D00222A41B6A9B971899C44089E0C5"
                     .parse()
                     .unwrap(),
-                assets: assets.to_vec()
+                root_sums: vec![U256::from(556862), U256::from(556862)],
+                assets: vec![
+                    Asset {
+                        asset_name: "ETH".to_string(),
+                        chain: "ETH".to_string(),
+                    },
+                    Asset {
+                        asset_name: "USDT".to_string(),
+                        chain: "ETH".to_string(),
+                    },
+                ],
             }
         );
 

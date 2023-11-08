@@ -1,9 +1,6 @@
 use std::{error::Error, fs::File, path::Path};
 
-use ethers::{
-    abi::AbiEncode,
-    types::{Bytes, U256},
-};
+use ethers::{abi::AbiEncode, types::Bytes};
 use serde::{Deserialize, Serialize};
 
 use crate::contracts::generated::summa_contract::{AddressOwnershipProof, Asset};
@@ -53,7 +50,6 @@ pub fn parse_signature_csv<P: AsRef<Path>>(
 struct AssetRecord {
     chain: String,
     asset_name: String,
-    amount: String,
 }
 
 pub fn parse_asset_csv<P: AsRef<Path>, const N_ASSETS: usize>(
@@ -70,7 +66,6 @@ pub fn parse_asset_csv<P: AsRef<Path>, const N_ASSETS: usize>(
         assets_vec.push(Asset {
             asset_name: record.asset_name,
             chain: record.chain,
-            amount: U256::from_dec_str(&record.amount)?,
         });
     }
 
@@ -114,7 +109,6 @@ mod tests {
             Asset {
                 chain: "ETH".to_string(),
                 asset_name: "ETH".to_string(),
-                amount: U256::from(556863),
             }
         );
         assert_eq!(
@@ -122,7 +116,6 @@ mod tests {
             Asset {
                 chain: "ETH".to_string(),
                 asset_name: "USDT".to_string(),
-                amount: U256::from(556863),
             }
         );
     }

@@ -49,24 +49,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("1. Ownership proofs are submitted successfully!");
 
-    // 2. Submit solvency proof
+    // 2. Submit Commitment
     //
-    // Initialize the `Round` instance to submit the proof of solvency.
+    // Initialize the `Round` instance to submit the liability commitment.
     let params_path = "ptau/hermez-raw-11";
     let assets_csv_path = "src/apis/csv/assets.csv";
 
     let entries = get_sample_entries();
     let mst = MerkleSumTree::from_entries(entries, false).unwrap();
 
-    // Using the `round` instance, the solvency proof is dispatched to the Summa contract with the `dispatch_solvency_proof` method.
+    // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
     let mut round =
         Round::<4, 2, 14>::new(&signer, mst, assets_csv_path, params_path, timestamp).unwrap();
 
-    // Sends the solvency proof, which should ideally complete without errors.
-    round.dispatch_solvency_proof().await?;
+    // Sends the commitment, which should ideally complete without errors.
+    round.dispatch_commitment().await?;
 
-    println!("2. Solvency proof is submitted successfully!");
+    println!("2. Commitment is submitted successfully!");
 
     // 3. Generate Inclusion Proof
     //
@@ -111,10 +111,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
 
     // Get `mst_root` from contract. the `mst_root` is disptached by CEX with specific time `snapshot_time`.
-    let mst_root = summa_contract.mst_roots(snapshot_time).call().await?;
+    let commitment = summa_contract.commitments(snapshot_time).call().await?;
 
     // Match the `mst_root` with the `root_hash` derived from the proof.
-    assert_eq!(mst_root, public_inputs[1]);
+    assert_eq!(commitment, public_inputs[1]);
 
     // Validate the inclusion proof using the contract verifier.
     let proof = inclusion_proof.get_proof();
