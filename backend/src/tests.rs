@@ -102,64 +102,82 @@ pub async fn initialize_test_env() -> (
 
 #[cfg(test)]
 mod test {
-    use ethers::{
-        abi::AbiEncode,
-        types::{Bytes, U256},
-        utils::to_checksum,
-    };
+    use ethers::{abi::AbiEncode, types::U256, utils::to_checksum};
+    use std::error::Error;
 
     use crate::apis::{address_ownership::AddressOwnership, round::Round};
-    use crate::contracts::generated::summa_contract::{
-        AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
-        SolvencyProofSubmittedFilter,
+    use crate::contracts::{
+        generated::summa_contract::{
+            AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
+            SolvencyProofSubmittedFilter,
+        },
+        signer::{AddressInput, SummaSigner},
     };
     use crate::tests::initialize_test_env;
 
     #[tokio::test]
-    async fn test_round_features() {
+    async fn test_deployed_address() -> Result<(), Box<dyn Error>> {
+        let (anvil, _, _, _, summa_contract) = initialize_test_env().await;
+
+        // Hardhat development environment, usually updates the address of a deployed contract in the `artifacts` directory.
+        // However, in our custom deployment script, `contracts/scripts/deploy.ts`,
+        // the address gets updated in `backend/src/contracts/deployments.json`.
+        let contract_address = summa_contract.address();
+
+        let summa_signer = SummaSigner::new(
+            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+            anvil.chain_id(),
+            anvil.endpoint().as_str(),
+            AddressInput::Path("./src/contracts/deployments.json".into()), // the file contains the address of the deployed contract
+        );
+
+        assert_eq!(contract_address, summa_signer.get_summa_address());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_round_features() -> Result<(), Box<dyn Error>> {
         let (anvil, cex_addr_1, cex_addr_2, _, summa_contract) = initialize_test_env().await;
 
         let mut address_ownership_client = AddressOwnership::new(
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
             anvil.chain_id(),
             anvil.endpoint().as_str(),
-            summa_contract.address(),
+            AddressInput::Address(summa_contract.address()),
             "src/apis/csv/signatures.csv",
         )
         .unwrap();
 
-        let ownership_submitted_result = address_ownership_client
+        address_ownership_client
             .dispatch_proof_of_address_ownership()
-            .await;
+            .await?;
 
-        assert_eq!(ownership_submitted_result.is_ok(), true);
-
-        let logs = summa_contract
+        let ownership_proof_logs = summa_contract
             .address_ownership_proof_submitted_filter()
             .query()
-            .await
-            .unwrap();
+            .await?;
 
-        assert_eq!(logs.len(), 1);
+        assert_eq!(ownership_proof_logs.len(), 1);
         assert_eq!(
-            logs[0],
-            AddressOwnershipProofSubmittedFilter {
-                address_ownership_proofs: vec![AddressOwnershipProof {
-          chain: "ETH".to_string(),
-          cex_address: to_checksum(&cex_addr_1, None),
-          signature:
-            ("0x089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b").parse().unwrap(),
-            message:  "Summa proof of solvency for CryptoExchange".encode().into(),
-        },AddressOwnershipProof {
-          chain: "ETH".to_string(),
-          cex_address:to_checksum(&cex_addr_2, None),
-          signature:
-            ("0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c").parse().unwrap(),
-            message:  "Summa proof of solvency for CryptoExchange".encode().into(),
-        },
-                ],
-            }
-        );
+        ownership_proof_logs[0],
+        AddressOwnershipProofSubmittedFilter {
+            address_ownership_proofs: vec![AddressOwnershipProof {
+      chain: "ETH".to_string(),
+      cex_address: to_checksum(&cex_addr_1, None),
+      signature:
+        ("0x089b32327d332c295dc3b8873c205b72153211de6dc1c51235782b091cefb9d06d6df2661b86a7d441cd322f125b84901486b150e684221a7b7636eb8182af551b").parse().unwrap(),
+        message:  "Summa proof of solvency for CryptoExchange".encode().into(),
+    },AddressOwnershipProof {
+      chain: "ETH".to_string(),
+      cex_address:to_checksum(&cex_addr_2, None),
+      signature:
+        ("0xb17a9e25265d3b88de7bfad81e7accad6e3d5612308ff83cc0fef76a34152b0444309e8fc3dea5139e49b6fc83a8553071a7af3d0cfd3fb8c1aea2a4c171729c1c").parse().unwrap(),
+        message:  "Summa proof of solvency for CryptoExchange".encode().into(),
+    },
+            ],
+        }
+    );
 
         // Initialize round
         let asset_csv = "src/apis/csv/assets.csv";
@@ -170,7 +188,7 @@ mod test {
             "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // anvil account [0]
             anvil.chain_id(),
             anvil.endpoint().as_str(),
-            summa_contract.address(),
+            AddressInput::Address(summa_contract.address()),
             entry_csv,
             asset_csv,
             params_path,
@@ -179,12 +197,12 @@ mod test {
         .unwrap();
 
         // Verify solvency proof
-        let mut logs = summa_contract
+        let mut solvency_proof_logs = summa_contract
             .solvency_proof_submitted_filter()
             .query()
-            .await
-            .unwrap();
-        assert_eq!(logs.len(), 0);
+            .await?;
+
+        assert_eq!(solvency_proof_logs.len(), 0);
 
         // Dispatch solvency proof
         let assets = [
@@ -200,20 +218,18 @@ mod test {
             },
         ];
 
-        assert_eq!(round.dispatch_solvency_proof().await.unwrap(), ());
+        // Send sovlecy proof to contract
+        round.dispatch_solvency_proof().await?;
 
         // After sending transaction of proof of solvency, logs should be updated
-        logs = summa_contract
+        solvency_proof_logs = summa_contract
             .solvency_proof_submitted_filter()
             .query()
-            .await
-            .unwrap();
+            .await?;
 
-        assert_eq!(logs.len(), 1);
-
-        assert_eq!(logs.len(), 1);
+        assert_eq!(solvency_proof_logs.len(), 1);
         assert_eq!(
-            logs[0],
+            solvency_proof_logs[0],
             SolvencyProofSubmittedFilter {
                 timestamp: U256::from(1),
                 mst_root: "0x2E021D9BF99C5BD7267488B6A7A5CF5F7D00222A41B6A9B971899C44089E0C5"
@@ -225,27 +241,19 @@ mod test {
 
         // Test inclusion proof
         let inclusion_proof = round.get_proof_of_inclusion(0).unwrap();
-        let proof = Bytes::from(inclusion_proof.get_proof().clone());
-        let public_inputs: Vec<U256> = inclusion_proof
-            .get_public_inputs()
-            .iter()
-            .flat_map(|input_set| {
-                input_set.iter().map(|input| {
-                    let mut bytes = input.to_bytes();
-                    bytes.reverse();
-                    U256::from_big_endian(&bytes)
-                })
-            })
-            .collect();
 
         // Verify inclusion proof with onchain function
         let verified = summa_contract
-            .verify_inclusion_proof(proof, public_inputs, U256::from(1))
-            .await
-            .unwrap();
+            .verify_inclusion_proof(
+                inclusion_proof.get_proof().clone(),
+                inclusion_proof.get_public_inputs().clone(),
+                U256::from(1),
+            )
+            .await?;
 
-        assert_eq!(verified, true);
+        assert!(verified);
 
         drop(anvil);
+        Ok(())
     }
 }

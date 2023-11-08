@@ -1,11 +1,7 @@
 #![feature(generic_const_exprs)]
 use std::{error::Error, fs::File, io::BufReader, io::Write};
 
-use ethers::{
-    abi::{encode, Token},
-    types::{Bytes, U256},
-    utils::keccak256,
-};
+use ethers::types::U256;
 use serde_json::{from_reader, to_string_pretty};
 
 use summa_backend::{
@@ -13,6 +9,7 @@ use summa_backend::{
         address_ownership::AddressOwnership,
         round::{MstInclusionProof, Round},
     },
+    contracts::signer::AddressInput,
     tests::initialize_test_env,
 };
 use summa_solvency::merkle_sum_tree::utils::generate_leaf_hash;
@@ -29,52 +26,25 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //
     // Each CEX prepares its own `signature` CSV file.
     let signature_csv_path = "src/apis/csv/signatures.csv";
+
+    // Using AddressInput::Address to directly provide the summa_contract's address.
+    // For deployed contracts, if the address is stored in a config file,
+    // you can alternatively use AddressInput::Path to specify the file's path.
     let mut address_ownership_client = AddressOwnership::new(
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
         anvil.chain_id(),
         anvil.endpoint().as_str(),
-        summa_contract.address(),
+        AddressInput::Address(summa_contract.address()),
         signature_csv_path,
     )
     .unwrap();
-
-    // Retrieve hashed addresses using the `keccak256` method.
-    let address_hashes = address_ownership_client
-        .get_ownership_proofs()
-        .iter()
-        .map(|x| keccak256(encode(&[Token::String(x.cex_address.clone())])))
-        .collect::<Vec<[u8; 32]>>();
 
     // Dispatch the proof of address ownership.
     // the `dispatch_proof_of_address_ownership` function sends a transaction to the Summa contract.
     address_ownership_client
         .dispatch_proof_of_address_ownership()
-        .await
-        .unwrap();
+        .await?;
 
-    // If the `addressHash` isn't found in the `addressOwnershipProofs` mapping of the Summa contract,
-    // it will return 0; otherwise, it will return a non-zero value.
-    //
-    // You can find unregistered address with null bytes as follows:
-    //
-    // let unregistered = summa_contract
-    //     .ownership_proof_by_address([0u8; 32])
-    //     .call()
-    //     .await
-    //     .unwrap();
-    //
-    // assert_eq!(unregistered, 0);
-
-    // Verify whether the addresses have been registered within the Summa contract.
-    for address_hash in address_hashes.iter() {
-        let registered = summa_contract
-            .ownership_proof_by_address(*address_hash)
-            .call()
-            .await
-            .unwrap();
-
-        assert_ne!(registered, U256::from(0));
-    }
     println!("1. Ownership proofs are submitted successfully!");
 
     // 2. Submit solvency proof
@@ -89,7 +59,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // anvil account [0]
         anvil.chain_id(),
         anvil.endpoint().as_str(),
-        summa_contract.address(),
+        AddressInput::Address(summa_contract.address()),
         entry_csv,
         asset_csv,
         params_path,
@@ -98,21 +68,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .unwrap();
 
     // Sends the solvency proof, which should ideally complete without errors.
-    assert_eq!(round.dispatch_solvency_proof().await.unwrap(), ());
-
-    // You can also use the `solvency_proof_submitted_filter` method to check if the solvency proof is submitted.
-    // println!("{:?}", summa_contract
-    //     .solvency_proof_submitted_filter()
-    //     .query()
-    //     .await
-    //     .unwrap(););
+    round.dispatch_solvency_proof().await?;
 
     println!("2. Solvency proof is submitted successfully!");
 
     // 3. Generate Inclusion Proof
     //
-    // In a production setup, the CEX should first dispatch the solvency proof to update the Merkle sum tree's root before generating any inclusion proofs.
-    // Otherwise, users might distrust the provided `root_hash` in the inclusion proof, as it hasn't been published on-chain.
+    // Generate and export the inclusion proof for the specified user to a JSON file.
     let inclusion_proof = round.get_proof_of_inclusion(USER_INDEX).unwrap();
 
     let filename = format!("user_{}_proof.json", USER_INDEX);
@@ -142,49 +104,34 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Verify the `leaf_hash` from the proof file.
     // It's assumed that both `user_name` and `balances` are provided by the CEX.
+    // The `balances` represent the user's balances on the CEX at `snapshot_time`.
     let user_name = "dxGaEAii".to_string();
     let balances = vec![11888, 41163];
 
-    let leaf_hash = public_inputs[0][0];
+    let leaf_hash = public_inputs[0];
     assert_eq!(
         leaf_hash,
         generate_leaf_hash::<N_ASSETS>(user_name.clone(), balances.clone())
     );
 
-    // Before verifying `root_hath`, convert type of `proof` and `public_inputs` to the type of `Bytes` and `Vec<U256>`.
-    let proof: Bytes = Bytes::from(inclusion_proof.get_proof().clone());
-    let public_inputs: Vec<U256> = inclusion_proof
-        .get_public_inputs()
-        .iter()
-        .flat_map(|input_set| {
-            input_set.iter().map(|input| {
-                let mut bytes = input.to_bytes();
-                bytes.reverse();
-                U256::from_big_endian(&bytes)
-            })
-        })
-        .collect();
-
     // Get `mst_root` from contract. the `mst_root` is disptached by CEX with specific time `snapshot_time`.
-    let mst_root = summa_contract
-        .mst_roots(snapshot_time)
-        .call()
-        .await
-        .unwrap();
+    let mst_root = summa_contract.mst_roots(snapshot_time).call().await?;
 
     // Match the `mst_root` with the `root_hash` derived from the proof.
     assert_eq!(mst_root, public_inputs[1]);
 
     // Validate the inclusion proof using the contract verifier.
+    let proof = inclusion_proof.get_proof();
     let verification_result = summa_contract
-        .verify_inclusion_proof(proof, public_inputs, snapshot_time)
-        .await
-        .unwrap();
+        .verify_inclusion_proof(proof.clone(), public_inputs.clone(), snapshot_time)
+        .await?;
 
     println!(
         "4. Verifying the proof on contract veirifer for User #{}: {}",
         USER_INDEX, verification_result
     );
 
+    // Wrapping up
+    drop(anvil);
     Ok(())
 }
