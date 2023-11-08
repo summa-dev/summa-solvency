@@ -1,22 +1,43 @@
-# Summa Smart contract
+# Summa Smart Contract
 
-Install dependencies:
+The [Summa smart contract](src/Summa.sol) acts as a registrar for Centralized Exchanges (CEXs) to commit to their liabilities by submitting a Merkle sum tree (MST) root of all the CEX user asset balances. Users can then verify their inclusion into the liabilities commitment, and the public can compare the committed total sums with the assets owned by the CEX onchain.
+
+## Features
+
+- **Address Ownership Proofs**: CEXs should submit the proof of address ownership for all addresses that hold the assets included into the commitment by using `submitProofOfAddressOwnership` function. The proofs are accepted optimistically and subject to off-chain verification.
+
+- **Liabilities Commitments**: CEXs can submit commitments to its liabilities in the form of MST roots and the corresponding total sums that represent the snapshots of the liabilities at a given timestamp by using `submitCommitment` function.
+
+- **Inclusion Verification**: Users are able to verify the zero-knowledge proof of inclusion of their balances into the MST using `verifyInclusionProof` function. The function is calling the underlying smart contract [Verifier](src/InclusionVerifier.sol). The verifier is generated from the [zk_prover](./../zk_prover/) module (see module's [readme](./../zk_prover/README.md)).
+
+## Installation
+
+Ensure you have Node.js installed on your machine before proceeding. The smart contract is written in Solidity and uses the Hardhat environment for testing and deployment.
+
+To set up the project environment, install the necessary dependencies:
 
 ```shell
 npm install
 ```
 
-Testing:
+## Testing
 
 ```shell
 npx hardhat node
 REPORT_GAS=true npx hardhat test
 ```
 
-Deploying:
+### Test Coverage
+
+```shell
+npx hardhat coverage
+```
+
+## Deploying
 
 ```shell
 npx hardhat run scripts/deploy.ts --network localhost
 ```
 
-The deployment script will copy the contract ABIs from the ./artifacts/src/ to the [backend subproject](./../backend/src/contracts/abi/). The backend buildscript will then be able to generate the updated contract interfaces (see the [backend readme](./../backend/README.md)).
+The deployment script writes the latest deployment address for the chain to the [deployments](./../backend/src/contracts/deployments.json) file in the backend project. This data can later be used by the backend module to connect to the deployed contract.
+The deployment script will copy the contract ABIs from the ./artifacts/src/ to the [backend](./../backend/src/contracts/abi/) module. The backend buildscript will then be able to generate the updated contract interfaces (see the backend [readme](./../backend/README.md)).
