@@ -16,6 +16,11 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
     /// Returns a slice of the nodes.
     fn nodes(&self) -> &[Vec<Node<N_ASSETS>>];
 
+    fn get_entry(&self, index: usize) -> &Entry<N_ASSETS>;
+
+    /// Returns the nodes stored at the penultimate level of the tree, namely the one before the root
+    fn penultimate_level_data(&self) -> Result<(&Node<N_ASSETS>, &Node<N_ASSETS>), &'static str>;
+
     /// Generates a MerkleProof for the user with the given index.
     fn generate_proof(&self, index: usize) -> Result<MerkleProof<N_ASSETS, N_BYTES>, &'static str> {
         let nodes = self.nodes();

@@ -43,6 +43,20 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> Tree<N_ASSETS, N_BYTES>
     fn nodes(&self) -> &[Vec<Node<N_ASSETS>>] {
         &self.nodes
     }
+
+    fn get_entry(&self, index: usize) -> &Entry<N_ASSETS> {
+        &self.entries[index]
+    }
+
+    /// Returns the nodes stored at the penultimate level of the tree, namely the one before the root
+    fn penultimate_level_data(&self) -> Result<(&Node<N_ASSETS>, &Node<N_ASSETS>), &'static str> {
+        let penultimate_level = self
+            .nodes
+            .get(self.depth - 1)
+            .ok_or("The tree does not have a penultimate level")?;
+
+        Ok((&penultimate_level[0], &penultimate_level[1]))
+    }
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTES> {
@@ -144,22 +158,6 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
 
     pub fn entries(&self) -> &[Entry<N_ASSETS>] {
         &self.entries
-    }
-
-    pub fn get_entry(&self, index: usize) -> &Entry<N_ASSETS> {
-        &self.entries[index]
-    }
-
-    /// Returns the nodes stored at the penultimate level of the tree, namely the one before the root
-    pub fn penultimate_level_data(
-        &self,
-    ) -> Result<(&Node<N_ASSETS>, &Node<N_ASSETS>), &'static str> {
-        let penultimate_level = self
-            .nodes
-            .get(self.depth - 1)
-            .ok_or("The tree does not have a penultimate level")?;
-
-        Ok((&penultimate_level[0], &penultimate_level[1]))
     }
 
     /// Returns the index of the leaf with the matching username
