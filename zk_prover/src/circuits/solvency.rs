@@ -3,7 +3,7 @@ use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::circuits::traits::CircuitBase;
-use crate::merkle_sum_tree::{MerkleSumTree, Tree};
+use crate::merkle_sum_tree::Tree;
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{

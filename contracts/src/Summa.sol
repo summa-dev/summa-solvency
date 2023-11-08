@@ -4,9 +4,7 @@ pragma solidity ^0.8.18;
 // Uncomment this line to use console.log
 //import "hardhat/console.sol";
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./interfaces/IVerifier.sol";
 
@@ -29,41 +27,61 @@ contract Summa is Ownable {
      * @dev Struct representing an asset owned by the CEX
      * @param assetName The name of the asset
      * @param chain The name of the chain name where the asset lives (e.g., ETH, BTC)
-     * @param amount The total amount of the asset that the CEX holds on a given chain
      */
     struct Asset {
         string assetName;
         string chain;
-        uint256 amount;
     }
 
-    // Verifier contracts
-    IVerifier private immutable solvencyVerifier;
+    /**
+     * @dev Struct representing a commitment submitted by the CEX.
+     * @param mstRoot Merkle sum tree root of the CEX's liabilities
+     * @param rootSums The total sums of the assets included in the tree
+     * @param assetChains The chains where the CEX holds the assets included into the tree
+     * @param assetNames The names of the assets included into the tree
+     */
+    struct Commitment {
+        uint256 mstRoot;
+        uint256[] rootSums;
+        string[] assetNames;
+        string[] assetChains;
+    }
+
+    // User inclusion proof verifier
     IVerifier private immutable inclusionVerifier;
 
-    // All address ownership proofs submitted by the CEX
+    // List of all address ownership proofs submitted by the CEX
     AddressOwnershipProof[] public addressOwnershipProofs;
 
-    // Convenience mapping to check if an address has already been verified
-    /*
-     Boolean type is better than uint256 for this mapping, at least more than 2,100 gas is saved per call
-    */
-    mapping(bytes32 => uint256) public ownershipProofByAddress;
+    function getAddressOwnershipProof(
+        bytes32 addressHash
+    ) public view returns (AddressOwnershipProof memory) {
+        require(
+            _ownershipProofByAddress[addressHash] > 0,
+            "Address not verified"
+        );
+        // -1 comes from the fact that 0 is reserved to distinguish the case when the proof has not yet been submitted
+        return
+            addressOwnershipProofs[_ownershipProofByAddress[addressHash] - 1];
+    }
 
-    // MST roots corresponding to successfully verified solvency proofs by timestamp
-    mapping(uint256 => uint256) public mstRoots;
+    // Convenience mapping to check if an address has already been verified
+    mapping(bytes32 => uint256) private _ownershipProofByAddress;
+
+    // Solvency commitments by timestamp submitted by the CEX
+    mapping(uint256 => Commitment) public commitments;
 
     event AddressOwnershipProofSubmitted(
         AddressOwnershipProof[] addressOwnershipProofs
     );
-    event SolvencyProofSubmitted(
+    event LiabilitiesCommitmentSubmitted(
         uint256 indexed timestamp,
         uint256 mstRoot,
+        uint256[] rootSums,
         Asset[] assets
     );
 
-    constructor(IVerifier _solvencyVerifier, IVerifier _inclusionVerifier) {
-        solvencyVerifier = _solvencyVerifier;
+    constructor(IVerifier _inclusionVerifier) {
         inclusionVerifier = _inclusionVerifier;
     }
 
@@ -77,7 +95,7 @@ contract Summa is Ownable {
     */
 
     /**
-     * @dev Submit an optimistic proof of address ownership for a CEX. The proof is subject to an off-chain verification as it's not feasible to verify the signatures of non-EVM chains in an Ethereum smart contract.
+     * @dev Submit an optimistic proof of multiple address ownership for a CEX. The proof is subject to an off-chain verification as it's not feasible to verify the signatures of non-EVM chains in an Ethereum smart contract.
      * @param _addressOwnershipProofs The list of address ownership proofs
      */
     function submitProofOfAddressOwnership(
@@ -85,15 +103,14 @@ contract Summa is Ownable {
     ) public onlyOwner {
         for (uint i = 0; i < _addressOwnershipProofs.length; i++) {
             bytes32 addressHash = keccak256(
-                abi.encode(_addressOwnershipProofs[i].cexAddress)
+                abi.encodePacked(_addressOwnershipProofs[i].cexAddress)
             );
-            uint256 index = ownershipProofByAddress[addressHash];
-            require(index == 0, "Address already verified");
-            /*
-              Is there any reason to assign value `i + 1` to `ownershipProofByAddress[addressHash]`?
-            */
-            ownershipProofByAddress[addressHash] = i + 1;
+            uint256 proofIndex = _ownershipProofByAddress[addressHash];
+            require(proofIndex == 0, "Address already verified");
+
             addressOwnershipProofs.push(_addressOwnershipProofs[i]);
+            _ownershipProofByAddress[addressHash] = addressOwnershipProofs
+                .length;
             require(
                 bytes(_addressOwnershipProofs[i].cexAddress).length != 0 &&
                     bytes(_addressOwnershipProofs[i].chain).length != 0 &&
@@ -109,51 +126,50 @@ contract Summa is Ownable {
     /**
      * @dev Submit proof of solvency for a CEX
      * @param mstRoot Merkle sum tree root of the CEX's liabilities
-     * @param assets The list of assets owned by the CEX
-     * @param proof The ZK proof
+     * @param rootSums The total sums of the assets included into the Merkle sum tree
+     * @param assets The assets included into the Merkle sum tree
      * @param timestamp The timestamp at which the CEX took the snapshot of its assets and liabilities
      */
-    function submitProofOfSolvency(
+    function submitCommitment(
         uint256 mstRoot,
+        uint256[] memory rootSums,
         Asset[] memory assets,
-        bytes memory proof,
         uint256 timestamp
     ) public onlyOwner {
+        require(mstRoot != 0, "Invalid MST root");
         require(
-            addressOwnershipProofs.length != 0,
-            "The CEX has not submitted any address ownership proofs"
+            rootSums.length == assets.length,
+            "Root asset sums and asset number mismatch"
         );
-        uint256[] memory inputs = new uint256[](assets.length + 1);
-        inputs[0] = mstRoot;
+        string[] memory assetNames = new string[](assets.length);
+        string[] memory assetChains = new string[](assets.length);
         for (uint i = 0; i < assets.length; i++) {
             require(
                 bytes(assets[i].chain).length != 0 &&
                     bytes(assets[i].assetName).length != 0,
                 "Invalid asset"
             );
-            inputs[i + 1] = assets[i].amount;
+            require(
+                rootSums[i] != 0,
+                "All root sums should be greater than zero"
+            );
+            assetNames[i] = assets[i].assetName;
+            assetChains[i] = assets[i].chain;
         }
-        require(verifySolvencyProof(proof, inputs), "Invalid ZK proof");
 
-        mstRoots[timestamp] = mstRoot;
+        commitments[timestamp] = Commitment(
+            mstRoot,
+            rootSums,
+            assetNames,
+            assetChains
+        );
 
-        emit SolvencyProofSubmitted(timestamp, inputs[0], assets);
-    }
-
-    /*
-        It would be helpful to provide a description of the public inputs for the `verifySolvencyProof` and `verifyInclusionProof` methods.
-    */
-
-    /**
-     * Verify the proof of CEX solvency
-     * @param proof ZK proof
-     * @param publicInputs proof inputs
-     */
-    function verifySolvencyProof(
-        bytes memory proof,
-        uint256[] memory publicInputs
-    ) public view returns (bool) {
-        return solvencyVerifier.verify(publicInputs, proof);
+        emit LiabilitiesCommitmentSubmitted(
+            timestamp,
+            mstRoot,
+            rootSums,
+            assets
+        );
     }
 
     /**
@@ -166,7 +182,10 @@ contract Summa is Ownable {
         uint256[] memory publicInputs,
         uint256 timestamp
     ) public view returns (bool) {
-        require(mstRoots[timestamp] == publicInputs[1], "Invalid MST root");
+        require(
+            commitments[timestamp].mstRoot == publicInputs[1],
+            "Invalid MST root"
+        );
         return inclusionVerifier.verify(publicInputs, proof);
     }
 }
