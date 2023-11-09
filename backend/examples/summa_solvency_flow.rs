@@ -10,7 +10,6 @@ use summa_backend::{
         round::{MstInclusionProof, Round},
     },
     contracts::signer::{AddressInput, SummaSigner},
-    sample_entries::*,
     tests::initialize_test_env,
 };
 use summa_solvency::merkle_sum_tree::{utils::generate_leaf_hash, MerkleSumTree};
@@ -54,14 +53,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Initialize the `Round` instance to submit the liability commitment.
     let params_path = "ptau/hermez-raw-11";
     let assets_csv_path = "src/apis/csv/assets.csv";
-
-    let entries = get_sample_entries();
-    let mst = MerkleSumTree::from_entries(entries, false).unwrap();
+    let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
+    let mst = MerkleSumTree::new(entry_csv).unwrap();
 
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
-    let mut round =
-        Round::<4, 2, 14>::new(&signer, mst, assets_csv_path, params_path, timestamp).unwrap();
+    let mut round = Round::<4, 2, 14>::new(
+        &signer,
+        Box::new(mst),
+        assets_csv_path,
+        params_path,
+        timestamp,
+    )
+    .unwrap();
 
     // Sends the commitment, which should ideally complete without errors.
     round.dispatch_commitment().await?;

@@ -14,7 +14,7 @@ use summa_solvency::{
         merkle_sum_tree::MstInclusionCircuit,
         utils::{gen_proof_solidity_calldata, generate_setup_artifacts},
     },
-    merkle_sum_tree::{MerkleSumTree, Tree},
+    merkle_sum_tree::Tree,
 };
 
 pub(crate) type SetupArtifacts = (
@@ -56,7 +56,7 @@ impl MstInclusionProof {
 }
 
 pub struct Snapshot<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
-    mst: MerkleSumTree<N_ASSETS, N_BYTES>,
+    mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
     assets_state: [Asset; N_ASSETS],
     trusted_setup: SetupArtifacts,
 }
@@ -75,7 +75,7 @@ where
 {
     pub fn new<'a>(
         signer: &'a SummaSigner,
-        mst: MerkleSumTree<N_ASSETS, N_BYTES>,
+        mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
         asset_csv_path: &str,
         params_path: &str,
         timestamp: u64,
@@ -133,7 +133,7 @@ where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     pub fn new(
-        mst: MerkleSumTree<N_ASSETS, N_BYTES>,
+        mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
         asset_csv_path: &str,
         params_path: &str,
     ) -> Result<Snapshot<LEVELS, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>> {
