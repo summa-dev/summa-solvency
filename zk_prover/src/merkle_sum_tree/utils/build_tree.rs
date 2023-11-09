@@ -49,7 +49,9 @@ where
     Ok(root)
 }
 
-pub fn compute_leaves<const N_ASSETS: usize>(entries: &[Entry<N_ASSETS>]) -> Vec<Node<N_ASSETS>>
+pub fn build_leaves_from_entries<const N_ASSETS: usize>(
+    entries: &[Entry<N_ASSETS>],
+) -> Vec<Node<N_ASSETS>>
 where
     [usize; N_ASSETS + 1]: Sized,
 {

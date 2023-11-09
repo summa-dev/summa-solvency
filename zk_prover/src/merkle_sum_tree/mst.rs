@@ -1,5 +1,5 @@
 use crate::merkle_sum_tree::utils::{
-    build_merkle_tree_from_leaves, compute_leaves, parse_csv_to_entries,
+    build_leaves_from_entries, build_merkle_tree_from_leaves, parse_csv_to_entries,
 };
 use crate::merkle_sum_tree::{Entry, Node, Tree};
 use num_bigint::BigUint;
@@ -103,7 +103,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
 
         let mut nodes = vec![];
 
-        let leaves = compute_leaves(&entries);
+        let leaves = build_leaves_from_entries(&entries);
 
         let root = build_merkle_tree_from_leaves(&leaves, depth, &mut nodes)?;
 
