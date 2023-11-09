@@ -26,9 +26,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //
     // The signer instance would be shared with `address_ownership` and `round` instances
     //
-    // Using AddressInput::Address to directly provide the summa_contract's address.
-    // For deployed contracts, if the address is stored in a config file,
-    // you can alternatively use AddressInput::Path to specify the file's path.
+    // Using `AddressInput::Address`` to directly provide the summa_contract's address.
+    //
+    // If the address of a deployed contract is stored in a configuration file,
+    // you can use `AddressInput::Path` to provide the path to that file.
+    //
+    // For example, if the contract address is in "backend/src/contracts/deployments.json" located
+    // you would use `AddressInput::Path` as follows:`AddressInput::Path("backend/src/contracts/deployments.json".to_string())`.
+    //
     let signer = SummaSigner::new(
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
         anvil.endpoint().as_str(),

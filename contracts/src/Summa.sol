@@ -84,16 +84,7 @@ contract Summa is Ownable {
     constructor(IVerifier _inclusionVerifier) {
         inclusionVerifier = _inclusionVerifier;
     }
-
-    /*
-        // While this duplicate method might elevate deployment costs, the trade-off is a reduction in usage and maintenance costs.
-        function submitProofOfAddressOwnership(
-            AddressOwnershipProof memory _addressOwnershipProof
-        ) public onlyOwner {
-            ...
-        }
-    */
-
+    
     /**
      * @dev Submit an optimistic proof of multiple address ownership for a CEX. The proof is subject to an off-chain verification as it's not feasible to verify the signatures of non-EVM chains in an Ethereum smart contract.
      * @param _addressOwnershipProofs The list of address ownership proofs
