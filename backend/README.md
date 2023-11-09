@@ -41,7 +41,7 @@ To build the binary executable and test it
 
 ```
 cargo build
-SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" cargo test --release -- --nocapture
+cargo test --release -- --nocapture
 ```
 
 ## Important Notices
