@@ -24,6 +24,20 @@ cargo doc --no-deps --open
 For testing purposes, it's not necessary to download the `ptau` file. The `generate_setup_artifacts` function can manage this by generating a new setup from a randomly generated value. This automated generation process is intended for testing and development convenience, and it should not be used in production.
 For real-world situations, you must provide the path of a specific `ptau` file to the `generate_setup_artifacts`. The circuit will use the randomness from the given file. You can find an example that initializes a `Snapshot` instance [here](https://github.com/summa-dev/summa-solvency/blob/11d4fce5d18f6175804aa792fc9fc5ac27bf5c00/backend/src/apis/snapshot.rs#L115-L116) in the backend.
 
+## Build a Commitment
+
+A `gen_commitment.rs` script is provided to generate a commitment out of a Merkle Sum Tree. In particular, the example takes a csv file located in "src/merkle_sum_tree/csv/entry_16.csv", build a Merkle Sum Tree and extract a commitment out it. The commitment is made of the `root_hash` and the `root_balances`. 
+
+The script will eventually generate a `commitment_solidity_calldata.json` file that contains some testing calldata to be used within `contracts` and `backend` to test the publishing of the commitment to the Summa Smart Contract.
+
+The script can be run as follows:
+
+```
+cargo run --release --example gen_commitment
+```
+
+Note that the generic parameters of the Merkle Sum Tree `N_ASSETS` and `N_BYTES` are set to `2` and `14`. This means that this should go in pair with a Inclusion Verifier Circuit tuned to the same generic parameters.
+
 ## Build an Inclusion Verifier Contract
 
 A `gen_inclusion_verifier.rs` script is provided to generate a solidity contract that can be used to verify the proof of user inclusion into CEX liabilites. The script can be run as follows:
