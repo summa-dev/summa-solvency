@@ -53,7 +53,7 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
 
         Ok(MerkleProof {
             leaf: leaf.clone(),
-            root_hash: root.hash,
+            root: root.clone(),
             sibling_hashes,
             sibling_sums,
             path_indices,
@@ -68,8 +68,6 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
     {
         let mut node = proof.leaf.clone();
 
-        let mut balances = proof.leaf.balances;
-
         for i in 0..proof.sibling_hashes.len() {
             let sibling_node = Node {
                 hash: proof.sibling_hashes[i],
@@ -81,14 +79,9 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
             } else {
                 node = Node::middle(&sibling_node, &node);
             }
-
-            for (balance, sibling_balance) in balances.iter_mut().zip(sibling_node.balances.iter())
-            {
-                *balance += sibling_balance;
-            }
         }
 
-        proof.root_hash == node.hash && balances == node.balances
+        proof.root.hash == node.hash && proof.root.balances == node.balances
     }
 
     /// Returns the index of the user with the given username and balances in the tree

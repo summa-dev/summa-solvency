@@ -33,6 +33,16 @@ impl<const N_ASSETS: usize> Node<N_ASSETS> {
         }
     }
 
+    pub fn init_empty() -> Node<N_ASSETS>
+    where
+        [usize; N_ASSETS + 1]: Sized,
+    {
+        Node {
+            hash: Fp::zero(),
+            balances: [Fp::zero(); N_ASSETS],
+        }
+    }
+
     /// Builds a leaf-level node of the MST
     pub fn leaf(username: &BigUint, balances: &[BigUint; N_ASSETS]) -> Node<N_ASSETS>
     where

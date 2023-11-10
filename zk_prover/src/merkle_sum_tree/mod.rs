@@ -9,7 +9,7 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 #[derive(Clone, Debug)]
 pub struct MerkleProof<const N_ASSETS: usize, const N_BYTES: usize> {
     pub leaf: Node<N_ASSETS>,
-    pub root_hash: Fp,
+    pub root: Node<N_ASSETS>,
     pub sibling_hashes: Vec<Fp>,
     pub sibling_sums: Vec<[Fp; N_ASSETS]>,
     pub path_indices: Vec<Fp>,

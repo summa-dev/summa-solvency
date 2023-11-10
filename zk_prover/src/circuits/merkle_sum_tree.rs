@@ -3,7 +3,7 @@ use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
 use crate::circuits::traits::CircuitBase;
-use crate::merkle_sum_tree::{big_uint_to_fp, Entry, MerkleProof};
+use crate::merkle_sum_tree::{big_uint_to_fp, Entry, MerkleProof, Node};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
@@ -31,7 +31,7 @@ pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize, const
     pub path_element_hashes: Vec<Fp>,
     pub path_element_balances: Vec<[Fp; N_ASSETS]>,
     pub path_indices: Vec<Fp>,
-    pub root_hash: Fp,
+    pub root: Node<N_ASSETS>,
 }
 
 impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
@@ -40,13 +40,15 @@ where
     [usize; 2 * (1 + N_ASSETS)]: Sized,
     [usize; N_ASSETS + 1]: Sized,
 {
-    /// Returns the number of public inputs of the circuit. It is 2, namely the laef hash to be verified inclusion of and the root hash of the merkle sum tree.
+    /// Returns the number of public inputs of the circuit. It is {2 + N_ASSETS}, namely the leaf hash to be verified inclusion of, the root hash of the merkle sum tree and the root balances of the merkle sum tree.
     fn num_instance(&self) -> Vec<usize> {
-        vec![2]
+        vec![{ 2 + N_ASSETS }]
     }
     /// Returns the values of the public inputs of the circuit. Namely the leaf hash to be verified inclusion of and the root hash of the merkle sum tree.
     fn instances(&self) -> Vec<Vec<Fp>> {
-        vec![vec![self.entry.compute_leaf().hash, self.root_hash]]
+        let mut instance = vec![self.entry.compute_leaf().hash, self.root.hash];
+        instance.extend_from_slice(&self.root.balances);
+        vec![instance]
     }
 }
 
@@ -57,6 +59,8 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitBa
 
 impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
     MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
+where
+    [usize; N_ASSETS + 1]: Sized,
 {
     pub fn init_empty() -> Self {
         Self {
@@ -64,7 +68,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
             path_element_hashes: vec![Fp::zero(); LEVELS],
             path_element_balances: vec![[Fp::zero(); N_ASSETS]; LEVELS],
             path_indices: vec![Fp::zero(); LEVELS],
-            root_hash: Fp::zero(),
+            root: Node::init_empty(),
         }
     }
 
@@ -85,7 +89,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
             path_element_hashes: merkle_proof.sibling_hashes,
             path_element_balances: merkle_proof.sibling_sums,
             path_indices: merkle_proof.path_indices,
-            root_hash: merkle_proof.root_hash,
+            root: merkle_proof.root,
         }
     }
 }
@@ -191,6 +195,7 @@ where
 impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<Fp>
     for MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
 where
+    [usize; N_ASSETS + 1]: Sized,
     [usize; 2 * (1 + N_ASSETS)]: Sized,
 {
     type Config = MstInclusionConfig<N_ASSETS, N_BYTES>;
@@ -373,6 +378,16 @@ where
             1,
             config.instance,
         )?;
+
+        // expose the last current balances, namely the root balances, as public input
+        for (i, balance) in current_balances.iter().enumerate() {
+            self.expose_public(
+                layouter.namespace(|| format!("public root balance {}", i)),
+                balance,
+                2 + i,
+                config.instance,
+            )?;
+        }
 
         // perform range check on the balances of the root to make sure these lie in the range defined by N_BYTES
         for balance in current_balances.iter() {

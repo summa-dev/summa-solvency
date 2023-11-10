@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test {
 
-    use crate::merkle_sum_tree::utils::{big_uint_to_fp, poseidon_node};
+    use crate::merkle_sum_tree::utils::big_uint_to_fp;
     use crate::merkle_sum_tree::{Entry, MerkleSumTree, Tree};
     use num_bigint::{BigUint, ToBigUint};
 
@@ -81,7 +81,7 @@ mod test {
 
         // shouldn't verify a proof with a wrong root hash
         let mut proof_invalid_2 = proof.clone();
-        proof_invalid_2.root_hash = 0.into();
+        proof_invalid_2.root.hash = 0.into();
         assert!(!merkle_tree.verify_proof(&proof_invalid_2));
 
         // shouldn't verify a proof with a wrong computed balance

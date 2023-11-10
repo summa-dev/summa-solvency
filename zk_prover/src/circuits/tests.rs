@@ -41,6 +41,7 @@ mod test {
             let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
             assert_eq!(circuit.instances()[0].len(), circuit.num_instance()[0]);
+            assert_eq!(circuit.instances()[0].len(), 2 + N_ASSETS);
 
             valid_prover.assert_satisfied();
         }
@@ -78,6 +79,21 @@ mod test {
 
         // verify the proof to be true
         assert!(full_verifier(&params, &vk, proof, circuit.instances()));
+
+        // the user should perform the check on the public inputs
+        // public input #0 is the leaf hash
+        let expected_leaf_hash = user_entry.compute_leaf().hash;
+        assert_eq!(circuit.instances()[0][0], expected_leaf_hash);
+
+        // public input #1 is the root hash
+        let expected_root_hash = merkle_sum_tree.root().hash;
+        assert_eq!(circuit.instances()[0][1], expected_root_hash);
+
+        // public inputs [2, 2+N_ASSETS - 1] are the root balances
+        let expected_root_balances = merkle_sum_tree.root().balances;
+        for i in 0..N_ASSETS {
+            assert_eq!(circuit.instances()[0][2 + i], expected_root_balances[i]);
+        }
     }
 
     // Passing an invalid root hash in the instance column should fail the permutation check between the computed root hash and the instance column root hash
@@ -157,6 +173,7 @@ mod test {
     // Passing an invalid entry balance as input for the witness generation should fail:
     // - the permutation check between the leaf hash and the instance column leaf hash
     // - the permutation check between the computed root hash and the instance column root hash
+    // - the permutations checks between the computed root balances and the instance column root balances
     #[test]
     fn test_invalid_entry_balance_as_witness() {
         let merkle_sum_tree =
@@ -203,12 +220,34 @@ mod test {
                     }
                 },
                 VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (95, "assign value to perform range check").into(),
+                        offset: 0
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (96, "assign value to perform range check").into(),
+                        offset: 0
+                    }
+                },
+                VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 0 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 2 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 3 }
                 },
             ])
         );
@@ -424,7 +463,8 @@ mod test {
         );
     }
 
-    // Adding a balance at the verge of overflowing should fail the range check for any following computed sum and, because we are adding a fake balance, the root hash check should fail too
+    // Adding a balance at the verge of overflowing should fail the range check for any following computed sum and, because we are adding a fake balance.
+    // Furthermore, the public input check on the root hash and on root_balances[0] should fail too
     #[test]
     fn test_balance_not_in_range() {
         let merkle_sum_tree =
@@ -499,12 +539,23 @@ mod test {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (95, "assign value to perform range check").into(),
+                        offset: 0
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (95, "assign value to perform range check").into(),
                         offset: 14
                     }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Instance, 0).into(),
                     location: FailureLocation::OutsideRegion { row: 1 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 2 }
                 },
             ])
         );
