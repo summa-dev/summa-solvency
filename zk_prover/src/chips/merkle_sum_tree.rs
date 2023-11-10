@@ -101,7 +101,7 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         mut layouter: impl Layouter<Fp>,
         current_hash: &AssignedCell<Fp, Fp>,
         element_hash: Fp,
-        swap_bit_assigned: AssignedCell<Fp, Fp>,
+        swap_bit_assigned: &AssignedCell<Fp, Fp>,
     ) -> Result<(AssignedCell<Fp, Fp>, AssignedCell<Fp, Fp>), Error> {
         layouter.assign_region(
             || "assign nodes hashes per merkle tree level",
@@ -181,7 +181,7 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         mut layouter: impl Layouter<Fp>,
         current_balance: &AssignedCell<Fp, Fp>,
         element_balance: Fp,
-        swap_bit_assigned: AssignedCell<Fp, Fp>,
+        swap_bit_assigned: &AssignedCell<Fp, Fp>,
     ) -> Result<
         (
             AssignedCell<Fp, Fp>,

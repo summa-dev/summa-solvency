@@ -217,15 +217,15 @@ where
     ) -> Result<(), Error> {
         // build auxiliary chips
         let merkle_sum_tree_chip =
-            MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config.clone());
+            MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config);
 
         let poseidon_entry_chip = PoseidonChip::<PoseidonSpec, 2, 1, { 1 + N_ASSETS }>::construct(
-            config.poseidon_entry_config.clone(),
+            config.poseidon_entry_config,
         );
 
         let poseidon_middle_chip =
             PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::construct(
-                config.poseidon_middle_config.clone(),
+                config.poseidon_middle_config,
             );
 
         let range_check_chip = RangeCheckChip::<N_BYTES>::construct(config.range_check_config);
@@ -299,7 +299,7 @@ where
                     layouter.namespace(|| format!("{}: assign nodes hashes", namespace_prefix)),
                     &current_hash,
                     self.path_element_hashes[level],
-                    swap_bit_level.clone(),
+                    &swap_bit_level,
                 )?;
 
             let mut next_balances = vec![];
@@ -318,7 +318,7 @@ where
                         }),
                         &current_balances[asset],
                         self.path_element_balances[level][asset],
-                        swap_bit_level.clone(),
+                        &swap_bit_level,
                     )?;
 
                 // Each balance cell is constrained to be within the range defined by N_BYTES
