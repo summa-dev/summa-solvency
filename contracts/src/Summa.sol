@@ -84,7 +84,7 @@ contract Summa is Ownable {
     constructor(IVerifier _inclusionVerifier) {
         inclusionVerifier = _inclusionVerifier;
     }
-
+    
     /**
      * @dev Submit an optimistic proof of multiple address ownership for a CEX. The proof is subject to an off-chain verification as it's not feasible to verify the signatures of non-EVM chains in an Ethereum smart contract.
      * @param _addressOwnershipProofs The list of address ownership proofs

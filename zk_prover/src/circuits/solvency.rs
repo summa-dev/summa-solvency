@@ -3,7 +3,7 @@ use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::circuits::traits::CircuitBase;
-use crate::merkle_sum_tree::MerkleSumTree;
+use crate::merkle_sum_tree::Tree;
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
@@ -72,8 +72,8 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> SolvencyCircuit<N_ASSETS, N_BY
     }
 
     /// Initializes the circuit with the merkle sum tree and the assets sum
-    pub fn init(
-        merkle_sum_tree: MerkleSumTree<N_ASSETS, N_BYTES>,
+    pub fn init<T: Tree<N_ASSETS, N_BYTES>>(
+        merkle_sum_tree: &T,
         asset_sums: [Fp; N_ASSETS],
     ) -> Self {
         let (penultimate_node_left, penultimate_node_right) = merkle_sum_tree

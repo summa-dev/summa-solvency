@@ -1,7 +1,7 @@
 use crate::merkle_sum_tree::utils::{
-    build_merkle_tree_from_entries, create_proof, index_of, parse_csv_to_entries, verify_proof,
+    build_leaves_from_entries, build_merkle_tree_from_leaves, parse_csv_to_entries,
 };
-use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
+use crate::merkle_sum_tree::{Entry, Node, Tree};
 use num_bigint::BigUint;
 
 /// Merkle Sum Tree Data Structure.
@@ -25,9 +25,41 @@ pub struct MerkleSumTree<const N_ASSETS: usize, const N_BYTES: usize> {
     is_sorted: bool,
 }
 
-impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTES> {
-    pub const MAX_DEPTH: usize = 29;
+impl<const N_ASSETS: usize, const N_BYTES: usize> Tree<N_ASSETS, N_BYTES>
+    for MerkleSumTree<N_ASSETS, N_BYTES>
+{
+    fn root(&self) -> &Node<N_ASSETS> {
+        &self.root
+    }
 
+    fn depth(&self) -> &usize {
+        &self.depth
+    }
+
+    fn leaves(&self) -> &[Node<N_ASSETS>] {
+        &self.nodes[0]
+    }
+
+    fn nodes(&self) -> &[Vec<Node<N_ASSETS>>] {
+        &self.nodes
+    }
+
+    fn get_entry(&self, index: usize) -> &Entry<N_ASSETS> {
+        &self.entries[index]
+    }
+
+    /// Returns the nodes stored at the penultimate level of the tree, namely the one before the root
+    fn penultimate_level_data(&self) -> Result<(&Node<N_ASSETS>, &Node<N_ASSETS>), &'static str> {
+        let penultimate_level = self
+            .nodes
+            .get(self.depth - 1)
+            .ok_or("The tree does not have a penultimate level")?;
+
+        Ok((&penultimate_level[0], &penultimate_level[1]))
+    }
+}
+
+impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTES> {
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The CSV file must be formatted as follows:
     ///
     /// `username;balances`
@@ -39,7 +71,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         [usize; 2 * (1 + N_ASSETS)]: Sized,
     {
         let entries = parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
-        Self::build_tree(entries, false)
+        Self::from_entries(entries, false)
     }
 
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The MST leaves are sorted by the username byte values. The CSV file must be formatted as follows:
@@ -56,10 +88,10 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
 
         entries.sort_by(|a, b| a.username().cmp(b.username()));
 
-        Self::build_tree(entries, true)
+        Self::from_entries(entries, true)
     }
 
-    fn build_tree(
+    pub fn from_entries(
         entries: Vec<Entry<N_ASSETS>>,
         is_sorted: bool,
     ) -> Result<MerkleSumTree<N_ASSETS, N_BYTES>, Box<dyn std::error::Error>>
@@ -69,15 +101,11 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     {
         let depth = (entries.len() as f64).log2().ceil() as usize;
 
-        if !(1..=Self::MAX_DEPTH).contains(&depth) {
-            return Err(
-                "The tree depth must be between 1 and 27, namely it can support 2^27 users at max"
-                    .into(),
-            );
-        }
-
         let mut nodes = vec![];
-        let root = build_merkle_tree_from_entries(&entries, depth, &mut nodes)?;
+
+        let leaves = build_leaves_from_entries(&entries);
+
+        let root = build_merkle_tree_from_leaves(&leaves, depth, &mut nodes)?;
 
         Ok(MerkleSumTree {
             root,
@@ -128,40 +156,8 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         Ok(root)
     }
 
-    pub fn root(&self) -> &Node<N_ASSETS> {
-        &self.root
-    }
-
-    pub fn depth(&self) -> &usize {
-        &self.depth
-    }
-
-    pub fn leaves(&self) -> &[Node<N_ASSETS>] {
-        &self.nodes[0]
-    }
-
     pub fn entries(&self) -> &[Entry<N_ASSETS>] {
         &self.entries
-    }
-
-    /// Returns the nodes stored at the penultimate level of the tree, namely the one before the root
-    pub fn penultimate_level_data(
-        &self,
-    ) -> Result<(&Node<N_ASSETS>, &Node<N_ASSETS>), &'static str> {
-        let penultimate_level = self
-            .nodes
-            .get(self.depth - 1)
-            .ok_or("The tree does not have a penultimate level")?;
-
-        Ok((&penultimate_level[0], &penultimate_level[1]))
-    }
-
-    /// Returns the index of the user with the given username and balances in the tree
-    pub fn index_of(&self, username: &str, balances: [BigUint; N_ASSETS]) -> Option<usize>
-    where
-        [usize; N_ASSETS + 1]: Sized,
-    {
-        index_of(username, balances, &self.nodes)
     }
 
     /// Returns the index of the leaf with the matching username
@@ -181,19 +177,5 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
                 .binary_search_by_key(&username, |entry| entry.username())
                 .map_err(|_| Box::from("Username not found"))
         }
-    }
-
-    /// Generates a MerkleProof for the user with the given index
-    pub fn generate_proof(&self, index: usize) -> Result<MerkleProof<N_ASSETS>, &'static str> {
-        create_proof(index, &self.entries, self.depth, &self.nodes, &self.root)
-    }
-
-    /// Verifies a MerkleProof
-    pub fn verify_proof(&self, proof: &MerkleProof<N_ASSETS>) -> bool
-    where
-        [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
-    {
-        verify_proof(proof)
     }
 }

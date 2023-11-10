@@ -2,7 +2,7 @@
 mod test {
 
     use crate::merkle_sum_tree::utils::{big_uint_to_fp, poseidon_node};
-    use crate::merkle_sum_tree::{Entry, MerkleSumTree};
+    use crate::merkle_sum_tree::{Entry, MerkleSumTree, Tree};
     use num_bigint::{BigUint, ToBigUint};
 
     const N_ASSETS: usize = 2;
@@ -68,13 +68,15 @@ mod test {
         // shouldn't create a proof for an entry that doesn't exist in the tree
         assert!(merkle_tree.generate_proof(16).is_err());
 
-        // shouldn't verify a proof with a wrong entry
-        let mut proof_invalid_1 = proof.clone();
-        proof_invalid_1.entry = Entry::new(
+        // shouldn't verify a proof with a wrong leaf
+        let invalid_entry = Entry::new(
             "AtwIxZHo".to_string(),
             [35479.to_biguint().unwrap(), 35479.to_biguint().unwrap()],
         )
         .unwrap();
+        let invalid_leaf = invalid_entry.compute_leaf();
+        let mut proof_invalid_1 = proof.clone();
+        proof_invalid_1.leaf = invalid_leaf;
         assert!(!merkle_tree.verify_proof(&proof_invalid_1));
 
         // shouldn't verify a proof with a wrong root hash

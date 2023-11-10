@@ -33,8 +33,6 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Test backend
-        env:
-          SIGNATURE_VERIFICATION_MESSAGE: "Summa proof of solvency for CryptoExchange"
         run: |
           cd backend
           cargo test --release -- --nocapture

@@ -235,7 +235,7 @@ fn main() {
     run_test(circuit_filepath.clone(), witness_gen_filepath);
 }
 
-use num_traits::{FromPrimitive, Num};
+use num_traits::Num;
 use poseidon_rs::{Fr, Poseidon};
 
 // Note that we cannot reuse the MerkleSumTree implementation from zk_prover because it is not compatible with circom's Poseidon Hasher
