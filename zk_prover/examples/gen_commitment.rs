@@ -3,6 +3,7 @@
 use serde_json::to_string_pretty;
 use std::{fs::File, io::Write};
 use summa_solvency::{
+    circuits::types::CommitmentSolidityCallData,
     circuits::utils::field_element_to_solidity_calldata,
     merkle_sum_tree::{MerkleSumTree, Tree},
 };
@@ -24,13 +25,13 @@ fn main() {
         .map(|balance| field_element_to_solidity_calldata(*balance))
         .collect();
 
+    let commitment = CommitmentSolidityCallData {
+        root_hash: root_hash_hex_string,
+        root_balances: root_balances_hex_strings,
+    };
+
     // Serialize to a JSON string
-    let serialized_data = to_string_pretty(&vec![
-        root_hash_hex_string,
-        root_balances_hex_strings[0],
-        root_balances_hex_strings[1],
-    ])
-    .expect("Failed to serialize data");
+    let serialized_data = to_string_pretty(&commitment).expect("Failed to serialize data");
 
     // Save the serialized data to a JSON file
     let mut file = File::create("./examples/commitment_solidity_calldata.json")
