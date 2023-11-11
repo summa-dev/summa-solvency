@@ -36,13 +36,13 @@ contract Summa is Ownable {
     /**
      * @dev Struct representing a commitment submitted by the CEX.
      * @param mstRoot Merkle sum tree root of the CEX's liabilities
-     * @param rootSums The total sums of the assets included in the tree
+     * @param rootBalances The total sums of the assets included in the tree
      * @param assetChains The chains where the CEX holds the assets included into the tree
      * @param assetNames The names of the assets included into the tree
      */
     struct Commitment {
         uint256 mstRoot;
-        uint256[] rootSums;
+        uint256[] rootBalances;
         string[] assetNames;
         string[] assetChains;
     }
@@ -77,14 +77,14 @@ contract Summa is Ownable {
     event LiabilitiesCommitmentSubmitted(
         uint256 indexed timestamp,
         uint256 mstRoot,
-        uint256[] rootSums,
+        uint256[] rootBalances,
         Asset[] assets
     );
 
     constructor(IVerifier _inclusionVerifier) {
         inclusionVerifier = _inclusionVerifier;
     }
-    
+
     /**
      * @dev Submit an optimistic proof of multiple address ownership for a CEX. The proof is subject to an off-chain verification as it's not feasible to verify the signatures of non-EVM chains in an Ethereum smart contract.
      * @param _addressOwnershipProofs The list of address ownership proofs
@@ -117,19 +117,19 @@ contract Summa is Ownable {
     /**
      * @dev Submit proof of solvency for a CEX
      * @param mstRoot Merkle sum tree root of the CEX's liabilities
-     * @param rootSums The total sums of the assets included into the Merkle sum tree
+     * @param rootBalances The total sums of the assets included into the Merkle sum tree
      * @param assets The assets included into the Merkle sum tree
      * @param timestamp The timestamp at which the CEX took the snapshot of its assets and liabilities
      */
     function submitCommitment(
         uint256 mstRoot,
-        uint256[] memory rootSums,
+        uint256[] memory rootBalances,
         Asset[] memory assets,
         uint256 timestamp
     ) public onlyOwner {
         require(mstRoot != 0, "Invalid MST root");
         require(
-            rootSums.length == assets.length,
+            rootBalances.length == assets.length,
             "Root asset sums and asset number mismatch"
         );
         string[] memory assetNames = new string[](assets.length);
@@ -141,7 +141,7 @@ contract Summa is Ownable {
                 "Invalid asset"
             );
             require(
-                rootSums[i] != 0,
+                rootBalances[i] != 0,
                 "All root sums should be greater than zero"
             );
             assetNames[i] = assets[i].assetName;
@@ -150,7 +150,7 @@ contract Summa is Ownable {
 
         commitments[timestamp] = Commitment(
             mstRoot,
-            rootSums,
+            rootBalances,
             assetNames,
             assetChains
         );
@@ -158,7 +158,7 @@ contract Summa is Ownable {
         emit LiabilitiesCommitmentSubmitted(
             timestamp,
             mstRoot,
-            rootSums,
+            rootBalances,
             assets
         );
     }
@@ -177,6 +177,12 @@ contract Summa is Ownable {
             commitments[timestamp].mstRoot == publicInputs[1],
             "Invalid MST root"
         );
+        for (uint i = 2; i < publicInputs.length; i++) {
+            require(
+                commitments[timestamp].rootBalances[i - 2] == publicInputs[i],
+                "Invalid root balance"
+            );
+        }
         return inclusionVerifier.verify(publicInputs, proof);
     }
 }

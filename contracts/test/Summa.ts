@@ -12,17 +12,21 @@ describe("Summa Contract", () => {
   function submitCommitment(
     summa: Summa,
     mstRoot: BigNumber,
-    rootSums: BigNumber[],
+    rootBalances: BigNumber[],
     assets = [
       {
         chain: "ETH",
         assetName: "ETH",
       },
+      {
+        chain: "BTC",
+        assetName: "BTC",
+      },
     ]
   ): any {
     return summa.submitCommitment(
       mstRoot,
-      rootSums,
+      rootBalances,
       assets,
       BigNumber.from(1693559255)
     );
@@ -32,11 +36,13 @@ describe("Summa Contract", () => {
     summa: Summa,
     inclusionProof: string,
     leafHash: BigNumber,
-    mstRoot: BigNumber
+    mstRoot: BigNumber,
+    assetBalance1: BigNumber,
+    assetBalance2: BigNumber
   ): any {
     return summa.verifyInclusionProof(
       inclusionProof,
-      [leafHash, mstRoot],
+      [leafHash, mstRoot, assetBalance1, assetBalance2],
       1693559255
     );
   }
@@ -213,9 +219,9 @@ describe("Summa Contract", () => {
     });
   });
 
-  describe("verify proof of solvency", () => {
+  describe("submit solvency commitment", () => {
     let mstRoot: BigNumber;
-    let rootSum: BigNumber;
+    let rootBalances: BigNumber[];
     let summa: Summa;
     let account1: SignerWithAddress;
     let account2: SignerWithAddress;
@@ -249,21 +255,28 @@ describe("Summa Contract", () => {
         },
       ];
 
-      mstRoot = BigNumber.from(
-        "0x2e021d9bf99c5bd7267488b6a7a5cf5f7d00222a41b6a9b971899c44089e0c5"
+      const commitmentCalldataJson = fs.readFileSync(
+        path.resolve(
+          __dirname,
+          "../../zk_prover/examples/commitment_solidity_calldata.json"
+        ),
+        "utf-8"
       );
-      rootSum = BigNumber.from(10000000);
+      const commitmentCalldata: any = JSON.parse(commitmentCalldataJson);
+
+      mstRoot = commitmentCalldata.root_hash;
+      rootBalances = commitmentCalldata.root_balances;
     });
 
     it("should verify the proof of solvency for the given public input", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
 
-      await expect(submitCommitment(summa, mstRoot, [rootSum]))
+      await expect(submitCommitment(summa, mstRoot, rootBalances))
         .to.emit(summa, "LiabilitiesCommitmentSubmitted")
         .withArgs(
           BigNumber.from(1693559255),
           mstRoot,
-          [rootSum],
+          rootBalances,
           (assets: [Summa.AssetStruct]) => {
             return assets[0].chain == "ETH" && assets[0].assetName == "ETH";
           }
@@ -287,12 +300,12 @@ describe("Summa Contract", () => {
     });
 
     it("should revert with invalid root sum", async () => {
-      rootSum = BigNumber.from(0);
+      rootBalances = [BigNumber.from(0), BigNumber.from(0)];
 
       await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
-        submitCommitment(summa, mstRoot, [rootSum])
+        submitCommitment(summa, mstRoot, rootBalances)
       ).to.be.revertedWith("All root sums should be greater than zero");
     });
 
@@ -300,51 +313,53 @@ describe("Summa Contract", () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
-        submitCommitment(
-          summa,
-          mstRoot,
-          [rootSum],
-          [
-            {
-              chain: "",
-              assetName: "ETH",
-            },
-          ]
-        )
+        submitCommitment(summa, mstRoot, rootBalances, [
+          {
+            chain: "BTC",
+            assetName: "BTC",
+          },
+          {
+            chain: "",
+            assetName: "ETH",
+          },
+        ])
       ).to.be.revertedWith("Invalid asset");
 
       await expect(
-        submitCommitment(
-          summa,
-          mstRoot,
-          [rootSum],
-          [
-            {
-              chain: "ETH",
-              assetName: "",
-            },
-          ]
-        )
+        submitCommitment(summa, mstRoot, rootBalances, [
+          {
+            chain: "ETH",
+            assetName: "ETH",
+          },
+          {
+            chain: "BTC",
+            assetName: "",
+          },
+        ])
       ).to.be.revertedWith("Invalid asset");
     });
 
     it("should not submit invalid root", async () => {
       await expect(
-        submitCommitment(summa, BigNumber.from(0), [rootSum])
+        submitCommitment(summa, BigNumber.from(0), rootBalances)
       ).to.be.revertedWith("Invalid MST root");
     });
 
     it("should revert if asset and sum count don't match", async () => {
+      rootBalances = [BigNumber.from(10000000)];
       await expect(
-        submitCommitment(summa, mstRoot, [rootSum, rootSum])
+        submitCommitment(summa, mstRoot, rootBalances)
       ).to.be.revertedWith("Root asset sums and asset number mismatch");
     });
   });
 
   describe("verify proof of inclusion", () => {
-    let mstRoot: BigNumber;
-    let rootSum: BigNumber;
+    let commitmentMstRoot: BigNumber;
+    let rootBalances: BigNumber[];
+    let inclusionMstRoot: BigNumber;
     let leafHash: BigNumber;
+    let assetBalance1: BigNumber;
+    let assetBalance2: BigNumber;
     let summa: Summa;
     let account1: SignerWithAddress;
     let account2: SignerWithAddress;
@@ -387,43 +402,101 @@ describe("Summa Contract", () => {
       );
       const inclusionCalldata: any = JSON.parse(inclusionJson);
 
-      leafHash = inclusionCalldata.public_inputs[0];
-      mstRoot = inclusionCalldata.public_inputs[1];
       inclusionProof = inclusionCalldata.proof;
-      rootSum = BigNumber.from(10000000);
+      leafHash = inclusionCalldata.public_inputs[0];
+      inclusionMstRoot = inclusionCalldata.public_inputs[1];
+      assetBalance1 = inclusionCalldata.public_inputs[2];
+      assetBalance2 = inclusionCalldata.public_inputs[3];
+
+      const commitmentCalldataJson = fs.readFileSync(
+        path.resolve(
+          __dirname,
+          "../../zk_prover/examples/commitment_solidity_calldata.json"
+        ),
+        "utf-8"
+      );
+      const commitmentCalldata: any = JSON.parse(commitmentCalldataJson);
+
+      commitmentMstRoot = commitmentCalldata.root_hash;
+      rootBalances = commitmentCalldata.root_balances;
     });
 
     it("should verify the proof of inclusion for the given public input", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await submitCommitment(summa, mstRoot, [rootSum]);
+      await submitCommitment(summa, commitmentMstRoot, rootBalances);
       expect(
-        await verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
+        await verifyInclusionProof(
+          summa,
+          inclusionProof,
+          leafHash,
+          inclusionMstRoot,
+          assetBalance1,
+          assetBalance2
+        )
       ).to.be.equal(true);
     });
 
     it("should not verify with invalid MST root", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await submitCommitment(summa, mstRoot, [rootSum]);
-      mstRoot = BigNumber.from(0);
+      await submitCommitment(summa, commitmentMstRoot, rootBalances);
+      inclusionMstRoot = BigNumber.from(0);
       await expect(
-        verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
+        verifyInclusionProof(
+          summa,
+          inclusionProof,
+          leafHash,
+          inclusionMstRoot,
+          assetBalance1,
+          assetBalance2
+        )
       ).to.be.revertedWith("Invalid MST root");
     });
 
     it("should not verify if the MST root lookup by timestamp returns an incorrect MST root", async () => {
       // The lookup will return a zero MST root as no MST root has been stored yet
       await expect(
-        verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
+        verifyInclusionProof(
+          summa,
+          inclusionProof,
+          leafHash,
+          inclusionMstRoot,
+          assetBalance1,
+          assetBalance2
+        )
       ).to.be.revertedWith("Invalid MST root");
+    });
+
+    it("should not verify with invalid root balances", async () => {
+      assetBalance1 = BigNumber.from(0);
+
+      await summa.submitProofOfAddressOwnership(ownedAddresses);
+      await submitCommitment(summa, commitmentMstRoot, rootBalances);
+      await expect(
+        verifyInclusionProof(
+          summa,
+          inclusionProof,
+          leafHash,
+          inclusionMstRoot,
+          assetBalance1,
+          assetBalance2
+        )
+      ).to.be.revertedWith("Invalid root balance");
     });
 
     it("should not verify with invalid leaf", async () => {
       leafHash = BigNumber.from(0);
 
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await submitCommitment(summa, mstRoot, [rootSum]);
+      await submitCommitment(summa, commitmentMstRoot, rootBalances);
       expect(
-        await verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
+        await verifyInclusionProof(
+          summa,
+          inclusionProof,
+          leafHash,
+          inclusionMstRoot,
+          assetBalance1,
+          assetBalance2
+        )
       ).to.be.equal(false);
     });
 
@@ -431,9 +504,16 @@ describe("Summa Contract", () => {
       inclusionProof = inclusionProof.replace("1", "2");
 
       await summa.submitProofOfAddressOwnership(ownedAddresses);
-      await submitCommitment(summa, mstRoot, [rootSum]);
+      await submitCommitment(summa, commitmentMstRoot, rootBalances);
       expect(
-        await verifyInclusionProof(summa, inclusionProof, leafHash, mstRoot)
+        await verifyInclusionProof(
+          summa,
+          inclusionProof,
+          leafHash,
+          inclusionMstRoot,
+          assetBalance1,
+          assetBalance2
+        )
       ).to.be.equal(false);
     });
   });
