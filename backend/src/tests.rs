@@ -277,7 +277,7 @@ mod test {
                 mst_root: "0x2E021D9BF99C5BD7267488B6A7A5CF5F7D00222A41B6A9B971899C44089E0C5"
                     .parse()
                     .unwrap(),
-                root_sums: vec![U256::from(556862), U256::from(556862)],
+                root_balances: vec![U256::from(556862), U256::from(556862)],
                 assets: vec![
                     Asset {
                         asset_name: "ETH".to_string(),
