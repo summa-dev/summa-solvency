@@ -115,7 +115,7 @@ contract Summa is Ownable {
     }
 
     /**
-     * @dev Submit proof of solvency for a CEX
+     * @dev Submit commitment for a CEX
      * @param mstRoot Merkle sum tree root of the CEX's liabilities
      * @param rootBalances The total sums of the assets included into the Merkle sum tree
      * @param assets The assets included into the Merkle sum tree

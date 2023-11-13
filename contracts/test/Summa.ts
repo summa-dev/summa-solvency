@@ -219,7 +219,7 @@ describe("Summa Contract", () => {
     });
   });
 
-  describe("submit solvency commitment", () => {
+  describe("submit commitment", () => {
     let mstRoot: BigNumber;
     let rootBalances: BigNumber[];
     let summa: Summa;
@@ -268,7 +268,7 @@ describe("Summa Contract", () => {
       rootBalances = commitmentCalldata.root_balances;
     });
 
-    it("should verify the proof of solvency for the given public input", async () => {
+    it("should submit commitment for the given public input", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(submitCommitment(summa, mstRoot, rootBalances))
