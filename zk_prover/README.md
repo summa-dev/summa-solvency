@@ -24,23 +24,19 @@ cargo doc --no-deps --open
 For testing purposes, it's not necessary to download the `ptau` file. The `generate_setup_artifacts` function can manage this by generating a new setup from a randomly generated value. This automated generation process is intended for testing and development convenience, and it should not be used in production.
 For real-world situations, you must provide the path of a specific `ptau` file to the `generate_setup_artifacts`. The circuit will use the randomness from the given file. You can find an example that initializes a `Snapshot` instance [here](https://github.com/summa-dev/summa-solvency/blob/11d4fce5d18f6175804aa792fc9fc5ac27bf5c00/backend/src/apis/snapshot.rs#L115-L116) in the backend.
 
-## Build a Solvency Verifier Contract
+## Build a Commitment
 
-A `gen_solvency_verifier.rs` script is provided to generate a solidity contract that can be used to verify the proof of solvency via a smart contract. Note that the function to verify such proof is a view function, which means that it can be called without spending gas and that it does not modify the state of the contract
+A `gen_commitment.rs` script is provided to generate a commitment out of a Merkle Sum Tree. In particular, the example takes a csv file located in "src/merkle_sum_tree/csv/entry_16.csv", build a Merkle Sum Tree and extract a commitment out it. The commitment is made of the `root_hash` and the `root_balances`. 
+
+The script will eventually generate a `commitment_solidity_calldata.json` file that contains some testing calldata to be used within `contracts` and `backend` to test the publishing of the commitment to the Summa Smart Contract.
 
 The script can be run as follows:
 
 ```
-cargo run --release --example gen_solvency_verifier
+cargo run --release --example gen_commitment
 ```
 
-The script will generate a new `SolvencyVerifier.sol` and `SolvencyVerifier.yul` contracts in `contracts/src`.
-
-Note that the generic parameters of the circuits `N_ASSETS` and `N_BYTES` are set to `2` and `14`. This means that the circuit is tuned to verify the proof of solvency for an exchange with 2 assets and a balances in a range of 14 bytes. These parameters can be changed in the script.
-
-Furthermore, the verifier is generated based on a specified `ptau` file, `hermez-raw-11`, for the generic parameters (`N_ASSETS`, `N_BYTES`), using the `generate_setup_artifacts` function. If you try to use different generic parameters, you may have to choose a different `ptau` file for that.
-
-On top of that the script will also generate a `solvency_proof_solidity_calldata.json` file that contains some testing calldata to be used within `contracts` and `backend` to test the verifier. Again, in the example, the proof is generated based on the `src/merkle_sum_tree/csv/entry_16.csv` file. If you want to generate a proof for a different file, you can change the path in the script.
+Note that the generic parameters of the Merkle Sum Tree `N_ASSETS` and `N_BYTES` are set to `2` and `14`. This means that this should go in pair with a Inclusion Verifier Circuit tuned to the same generic parameters.
 
 ## Build an Inclusion Verifier Contract
 
@@ -85,10 +81,6 @@ The benchmarking included the following areas:
 - Proving Key Gen for MstInclusion Circuit
 - ZK Proof Generation for MstInclusion Circuit
 - ZK Proof Verification for MstInclusion Circuit
-- Verification Key Gen for Solvency Circuit
-- Proving Key Gen for Solvency Circuit
-- ZK Proof Generation for Solvency Circuit
-- ZK Proof Verification for Solvency Circuit
 
 In order to run the benchmarking, we provide a set of dummy `username, balances` entries formatted in csv files. The csv files can be downloaded as follows
 
@@ -133,13 +125,3 @@ For Merkle Sum Tree Proof of Inclusion circuit
 | VK Gen    | Pk Gen    | Proof Generation | Proof Verification | Proof Size (bytes) |
 | --------- | --------- | ---------------- | ------------------ | ------------------ |
 | 88.92 ms  | 135.96 ms | 369.31 ms        | 3.65 ms            | 1632               |
-
-For Proof of Solvency circuit
-
-| VK Gen   | Pk Gen    | Proof Generation | Proof Verification | Proof Size (bytes) |
-| -------- | --------- | ---------------- | ------------------ | ------------------ |
-| 32.86 ms | 31.76  ms | 139.60 ms        | 4.09 ms            | 1568               |
-
-Gas cost to verify proof of solvency
-
-395579 gas units (run `cargo run --release --example gen_solvency_verifier`)

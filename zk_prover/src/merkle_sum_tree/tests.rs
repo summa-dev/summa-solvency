@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test {
 
-    use crate::merkle_sum_tree::utils::{big_uint_to_fp, poseidon_node};
+    use crate::merkle_sum_tree::utils::big_uint_to_fp;
     use crate::merkle_sum_tree::{Entry, MerkleSumTree, Tree};
     use num_bigint::{BigUint, ToBigUint};
 
@@ -81,7 +81,7 @@ mod test {
 
         // shouldn't verify a proof with a wrong root hash
         let mut proof_invalid_2 = proof.clone();
-        proof_invalid_2.root_hash = 0.into();
+        proof_invalid_2.root.hash = 0.into();
         assert!(!merkle_tree.verify_proof(&proof_invalid_2));
 
         // shouldn't verify a proof with a wrong computed balance
@@ -225,38 +225,5 @@ mod test {
 
         let fp_3 = fp_2 - fp;
         assert_eq!(fp_3, 18446744073709551613.into());
-    }
-
-    #[test]
-    fn test_penultimate_level_data() {
-        let merkle_tree =
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
-                .unwrap();
-
-        let root = merkle_tree.root();
-
-        let (node_left, node_right) = merkle_tree
-            .penultimate_level_data()
-            .expect("Failed to retrieve penultimate level data");
-
-        // perform hashing using poseidon node
-        let expected_root = poseidon_node(
-            node_left.hash,
-            node_left.balances,
-            node_right.hash,
-            node_right.balances,
-        );
-
-        assert_eq!(root.hash, expected_root);
-
-        assert_eq!(
-            root.balances[0],
-            node_left.balances[0] + node_right.balances[0]
-        );
-
-        assert_eq!(
-            root.balances[1],
-            node_left.balances[1] + node_right.balances[1]
-        );
     }
 }

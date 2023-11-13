@@ -12,7 +12,7 @@ The `Round` component represents a specific period or cycle in the Summa Proof o
 Key Features:
 - Initialization of a new round with specific parameters.
 - Building a snapshot of the current state.
-- Dispatching solvency proofs to the contract.
+- Submitting commitment to the contract.
 - Retrieving proofs of inclusion for specific users.
 
 ### AddressOwnership
@@ -46,21 +46,21 @@ cargo test --release -- --nocapture
 
 ## Important Notices
 
-### Generating and updating verifier contracts for Backend
+### Generating and updating verifier contract for Backend
 
-The verifier contracts in the backend were generated using a predefined set of parameters: `N_ASSETS = 2` and `N_BYTES=14`, as indicated [here](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_solvency_verifier.rs#L21-L22).
-If you intend to work with different parameters, you'll need to adjust these hard-coded values and then generate new verifier contracts. 
+The verifier contract in the backend were generated using a predefined set of parameters: `N_ASSETS = 2` and `N_BYTES=14`, as indicated [here](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_inclusion_verifier.rs#L21-L22).
+If you intend to work with different parameters, you'll need to adjust these hard-coded values and then generate new verifier contract. 
  
-The process described below assists in both generating the verifiers and updating the Summa contract, which integrates the new verifiers as constructors.
+The process described below assists in both generating the verifier and updating the Summa contract, which integrates the new verifier as constructors.
 
 #### Using the Bash Script
 
-We have provided a bash script to automate the process of updating the verifier contracts and the Summa contract. To use the script:
+We have provided a bash script to automate the process of updating the verifier contract and the Summa contract. To use the script:
 
 Ensure you have the necessary permissions to execute the script.
 
 ```
-backend $ chmod +x scripts/update_verifier_contracts.sh
+backend $ chmod +x scripts/update_verifier_contract.sh
 ```
 
 ## Summa solvency flow example
@@ -92,18 +92,13 @@ If executed successfully, you'll see:
 ```
 
 
-### 2. Submit Proof of Solvency
+### 2. Submit Commitment
 
-This step is also crucial for two primary reasons: 
- 
- first, to validate the root hash of the Merkle Sum Tree (`mst_root`); and second, to ensure that the assets held by the CEX exceed their liabilities, as confirmed through the proof verification on the Summa contract.
-The CEX must submit this proof of solvency to the Summa contract. 
+The CEX must submit a commitment to the Summa contract for each round. This commitment consists of a `timestamp`, the root hash of the Merkle Sum Tree (`mst_root`), and `balances`.
 
- Currently, it's a mandatory requirement to provide this proof before generating the inclusion proof for each user in the current round.
+Without publishing the commitment, users cannot verify their inclusion proof on the Summa contract. This is because the inclusion verifier function internally requires the `mst_root`, but users only know the `timestamp` associated with the round and the verifier functions does not requre `mst_root` directly.
 
-Without this verification, It seems the user may not trust to the inclusion proof for the round. becuase the `mst_root` is not published on contract. More specifically, it means that the `mst_root` is not correctly verified on the Summa contract.
-
-In here, we'll introduce you through the process of submitting a solvency proof using the `Round` to the Summa contract.
+In here, we'll introduce you through the process of submitting a commitment using the `Round` to the Summa contract.
 The Round serves as the core of the backend in Summa, and we have briefly described it in the Components section.
 
 To initialize the `Round` instance, you'll need paths to specific CSV files (`assets.csv` and `entry_16.csv`) and the `ptau/hermez-raw-11` file. Here's what each file does:

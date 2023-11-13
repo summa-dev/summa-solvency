@@ -23,22 +23,6 @@ pub(crate) type SetupArtifacts = (
     VerifyingKey<G1Affine>,
 );
 
-#[derive(Debug, Clone)]
-pub struct SolvencyProof {
-    public_inputs: Vec<U256>,
-    proof_calldata: Bytes,
-}
-
-impl SolvencyProof {
-    pub fn get_public_inputs(&self) -> &Vec<U256> {
-        &self.public_inputs
-    }
-
-    pub fn get_proof_calldata(&self) -> &Bytes {
-        &self.proof_calldata
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MstInclusionProof {
     public_inputs: Vec<U256>,

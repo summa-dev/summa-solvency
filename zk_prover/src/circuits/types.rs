@@ -6,3 +6,9 @@ pub struct ProofSolidityCallData {
     pub proof: String,
     pub public_inputs: Vec<U256>,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct CommitmentSolidityCallData {
+    pub root_hash: U256,
+    pub root_balances: Vec<U256>,
+}
