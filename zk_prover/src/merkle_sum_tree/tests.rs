@@ -41,24 +41,6 @@ mod test {
         // the balance total should be the same
         assert_eq!(root.balances, merkle_tree_2.root().balances);
 
-        // should retrun the index of an entry that exist in the tree
-        assert_eq!(
-            merkle_tree.index_of(
-                "AtwIxZHo",
-                [35479.to_biguint().unwrap(), 31699.to_biguint().unwrap()]
-            ),
-            Some(15)
-        );
-
-        // shouldn't retrun the index of an entry that doesn't exist in the tree
-        assert_eq!(
-            merkle_tree.index_of(
-                "AtwHHHHo",
-                [35478.to_biguint().unwrap(), 35478.to_biguint().unwrap()]
-            ),
-            None
-        );
-
         // should create valid proof for each entry in the tree and verify it
         for i in 0..15 {
             let proof = merkle_tree.generate_proof(i).unwrap();
@@ -148,17 +130,6 @@ mod test {
 
         let new_root_balances = sorted_merkle_tree.root().balances;
         let new_root_hash = sorted_merkle_tree.root().hash;
-
-        // The index of an entry should not be the same for sorted and unsorted MST
-        assert_ne!(
-            merkle_tree
-                .index_of(
-                    "AtwIxZHo",
-                    [35479.to_biguint().unwrap(), 31699.to_biguint().unwrap()]
-                )
-                .unwrap(),
-            sorted_merkle_tree.index_of_username("AtwIxZHo").unwrap()
-        );
 
         // The root balances should be the same for sorted and unsorted MST
         assert!(old_root_balances == new_root_balances);

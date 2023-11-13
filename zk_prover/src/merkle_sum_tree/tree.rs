@@ -83,18 +83,4 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
 
         proof.root.hash == node.hash && proof.root.balances == node.balances
     }
-
-    /// Returns the index of the user with the given username and balances in the tree
-    fn index_of(&self, username: &str, balances: [BigUint; N_ASSETS]) -> Option<usize>
-    where
-        [usize; N_ASSETS + 1]: Sized,
-    {
-        let entry: Entry<N_ASSETS> = Entry::new(username.to_string(), balances).unwrap();
-        let leaf = entry.compute_leaf();
-        let leaf_hash = leaf.hash;
-
-        self.nodes()[0]
-            .iter()
-            .position(|node| node.hash == leaf_hash)
-    }
 }
