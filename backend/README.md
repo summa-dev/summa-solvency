@@ -133,26 +133,18 @@ This is the final step in the Summa process and the only part that occurs on the
 
 Users receive the proof for a specific round and use methods available on the deployed Summa contract. Importantly, the Summa contract verifier function is a view function, meaning it doesn't consume gas or change the blockchain's state.
 
-In this step, you'll see:
+In this step, the user has to:
 
-- Retrieve the `mst_root` from the Summa contract and match it with the `root_hash` in the proof.
-- Ensure the `leaf_hash` aligns with the hash based on the `username` and `balances` provided by the CEX.
-- Use the `verify_inclusion_proof` method on the Summa contract to validate the proof.
+- Ensure the `leaf_hash` (public input of the proof) aligns with the Poseidon hash of the `username` and `balances` provided by the CEX.
+- Submit the proof to the `verify_inclusion_proof` method on the Summa contract  Which will:
+   - Retrieve the `mstRoot` from the Summa contract and match it with the `root_hash` in the proof.
+   - Retrieve the `rootBalances` from the Summa contract and match it with the `root_balances` in the proof
+   - Verify the zk Proof
 
 The result will display as:
 ```
 4. Verifying the proof on contract verifier for User #0: true
 ```
-
-### 4. Verify Proof of Inclusion
-
-This is the final step in the Summa process and the only part that occurs on the user side. Users receive the proof for a specific round and use methods available on the deployed Summa contract. Importantly, the Summa contract verifier function is a view function, meaning it doesn't consume gas or change the blockchain's state.
-
-In this step, you'll see:
-- Retrieve the `mst_root` from the Summa contract and match it with the `root_hash` in the proof.
-- Ensure the `leaf_hash` aligns with the hash based on the `username` and `balances` provided by the CEX.
-- Use the `verify_inclusion_proof` method on the Summa contract to validate the proof.
-The result will display as:
 
 **Note:** In a production environment, users can independently verify their proof using public interfaces, such as Etherscan, as shown below:
 ![Summa contract interface on Etherscan](summa_verifier_interface.png)
