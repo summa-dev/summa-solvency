@@ -177,13 +177,10 @@ mod test {
         let invalid_leaf_balances = [1000.to_biguint().unwrap(), 1000.to_biguint().unwrap()];
 
         // invalidate user entry
-        let invalid_entry = Entry::new(
-            circuit.merkle_proof.entry.username().to_string(),
-            invalid_leaf_balances,
-        )
-        .unwrap();
+        let invalid_entry =
+            Entry::new(circuit.entry.username().to_string(), invalid_leaf_balances).unwrap();
 
-        circuit.merkle_proof.entry = invalid_entry;
+        circuit.entry = invalid_entry;
 
         let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
         assert_eq!(
@@ -292,7 +289,7 @@ mod test {
         let instances = circuit.instances();
 
         // invalidate path index inside the circuit
-        circuit.merkle_proof.path_indices[0] = Fp::from(2);
+        circuit.path_indices[0] = Fp::from(2);
 
         let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 
@@ -413,7 +410,7 @@ mod test {
         let instances = circuit.instances();
 
         // swap indices
-        circuit.merkle_proof.path_indices[0] = Fp::from(1);
+        circuit.path_indices[0] = Fp::from(1);
 
         let invalid_prover = MockProver::run(K, &circuit, instances).unwrap();
 

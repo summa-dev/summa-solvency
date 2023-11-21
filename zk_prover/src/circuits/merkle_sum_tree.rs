@@ -21,14 +21,22 @@ use snark_verifier_sdk::CircuitExt;
 ///
 /// # Fields
 ///
-/// * `merkle_proof`: Merkle Proof of the entry to be verified inclusion of
+/// * `entry`: The entry to be verified inclusion of.
+/// * `path_indices`: The boolean indices of the path elements from the leaf to the root. 0 indicates that the element is on the right to the path, 1 indicates that the element is on the left to the path. The length of this vector is LEVELS
+/// * `sibling_leaf_node_hash_preimage`: The preimage of the hash that corresponds to the Sibling Leaf Node (part of the Merkle Proof).
+/// * `sibling_middle_node_hash_preimages`: The preimages of the hashes that corresponds to the Sibling Middle Nodes (part of the Merkle Proof).  
+/// * `root`: The root of the Merkle Sum Tree
 #[derive(Clone)]
 pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
 where
     [usize; N_ASSETS + 1]: Sized,
     [usize; N_ASSETS + 2]: Sized,
 {
-    pub merkle_proof: MerkleProof<N_ASSETS, N_BYTES>,
+    pub entry: Entry<N_ASSETS>,
+    pub path_indices: Vec<Fp>,
+    pub sibling_leaf_node_hash_preimage: [Fp; N_ASSETS + 1],
+    pub sibling_middle_node_hash_preimages: Vec<[Fp; N_ASSETS + 2]>,
+    pub root: Node<N_ASSETS>,
 }
 
 impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
@@ -43,11 +51,8 @@ where
     }
     /// Returns the values of the public inputs of the circuit. Namely the leaf hash to be verified inclusion of and the root hash of the merkle sum tree.
     fn instances(&self) -> Vec<Vec<Fp>> {
-        let mut instance = vec![
-            self.merkle_proof.entry.compute_leaf().hash,
-            self.merkle_proof.root.hash,
-        ];
-        instance.extend_from_slice(&self.merkle_proof.root.balances);
+        let mut instance = vec![self.entry.compute_leaf().hash, self.root.hash];
+        instance.extend_from_slice(&self.root.balances);
         vec![instance]
     }
 }
@@ -68,7 +73,11 @@ where
 {
     pub fn init_empty() -> Self {
         Self {
-            merkle_proof: MerkleProof::init_empty(),
+            entry: Entry::init_empty(),
+            path_indices: vec![Fp::zero(); LEVELS],
+            sibling_leaf_node_hash_preimage: [Fp::zero(); N_ASSETS + 1],
+            sibling_middle_node_hash_preimages: vec![[Fp::zero(); N_ASSETS + 2]; LEVELS],
+            root: Node::init_empty(),
         }
     }
 
@@ -83,7 +92,13 @@ where
             merkle_proof.sibling_middle_node_hash_preimages.len(),
             LEVELS - 1
         );
-        Self { merkle_proof }
+        Self {
+            entry: merkle_proof.entry,
+            path_indices: merkle_proof.path_indices,
+            sibling_leaf_node_hash_preimage: merkle_proof.sibling_leaf_node_hash_preimage,
+            sibling_middle_node_hash_preimages: merkle_proof.sibling_middle_node_hash_preimages,
+            root: merkle_proof.root,
+        }
     }
 }
 
@@ -228,7 +243,7 @@ where
         // Assign the entry username to the witness
         let username = self.assign_value_to_witness(
             layouter.namespace(|| "assign entry username"),
-            big_uint_to_fp(self.merkle_proof.entry.username_as_big_uint()),
+            big_uint_to_fp(self.entry.username_as_big_uint()),
             "entry username",
             config.advices[0],
         )?;
@@ -239,7 +254,7 @@ where
         for i in 0..N_ASSETS {
             let balance = self.assign_value_to_witness(
                 layouter.namespace(|| format!("assign entry balance {}", i)),
-                big_uint_to_fp(&self.merkle_proof.entry.balances()[i]),
+                big_uint_to_fp(&self.entry.balances()[i]),
                 "entry balance",
                 config.advices[1],
             )?;
@@ -288,7 +303,7 @@ where
                 // Assign username from sibling leaf node hash preimage to the circuit
                 let sibling_leaf_node_username = self.assign_value_to_witness(
                     layouter.namespace(|| format!("sibling leaf node username")),
-                    self.merkle_proof.sibling_leaf_node_hash_preimage[0],
+                    self.sibling_leaf_node_hash_preimage[0],
                     "sibling leaf node username",
                     config.advices[0],
                 )?;
@@ -297,7 +312,7 @@ where
                 for asset in 0..N_ASSETS {
                     let leaf_node_sibling_balance = self.assign_value_to_witness(
                         layouter.namespace(|| format!("sibling leaf node balance {}", asset)),
-                        self.merkle_proof.sibling_leaf_node_hash_preimage[asset + 1],
+                        self.sibling_leaf_node_hash_preimage[asset + 1],
                         "sibling leaf balance",
                         config.advices[1],
                     )?;
@@ -334,7 +349,7 @@ where
                 for asset in 0..N_ASSETS {
                     let middle_node_sibling_balance = self.assign_value_to_witness(
                         layouter.namespace(|| format!("sibling node balance {}", asset)),
-                        self.merkle_proof.sibling_middle_node_hash_preimages[level - 1][asset],
+                        self.sibling_middle_node_hash_preimages[level - 1][asset],
                         "sibling node balance",
                         config.advices[1],
                     )?;
@@ -344,7 +359,7 @@ where
                 // Assign middle_node_sibling_child_left_hash from middle node hash preimage to the circuit
                 let middle_node_sibling_child_left_hash = self.assign_value_to_witness(
                     layouter.namespace(|| format!("sibling left hash")),
-                    self.merkle_proof.sibling_middle_node_hash_preimages[level - 1][N_ASSETS],
+                    self.sibling_middle_node_hash_preimages[level - 1][N_ASSETS],
                     "sibling left hash",
                     config.advices[2],
                 )?;
@@ -352,7 +367,7 @@ where
                 // Assign middle_node_sibling_child_right_hash from middle node hash preimage to the circuit
                 let middle_node_sibling_child_right_hash = self.assign_value_to_witness(
                     layouter.namespace(|| format!("sibling right hash")),
-                    self.merkle_proof.sibling_middle_node_hash_preimages[level - 1][N_ASSETS + 1],
+                    self.sibling_middle_node_hash_preimages[level - 1][N_ASSETS + 1],
                     "sibling right hash",
                     config.advices[2],
                 )?;
@@ -383,7 +398,7 @@ where
             // For each level assign the swap bit to the circuit
             let swap_bit_level = self.assign_value_to_witness(
                 layouter.namespace(|| format!("{}: assign swap bit", namespace_prefix)),
-                self.merkle_proof.path_indices[level],
+                self.path_indices[level],
                 "swap bit",
                 config.advices[0],
             )?;
