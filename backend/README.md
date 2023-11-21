@@ -60,7 +60,7 @@ We have provided a bash script to automate the process of updating the verifier 
 Ensure you have the necessary permissions to execute the script.
 
 ```
-backend $ chmod +x scripts/update_verifier_contract.sh
+backend $ scripts/update_verifier_contract.sh
 ```
 
 ## Summa solvency flow example
