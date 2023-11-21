@@ -9,7 +9,7 @@ use summa_solvency::{
 };
 
 const SAMPLE_SIZE: usize = 10;
-const LEVELS: usize = 15;
+const LEVELS: usize = 20;
 const N_ASSETS: usize = 1;
 const PATH_NAME: &str = "one_asset";
 const N_BYTES: usize = 14;
