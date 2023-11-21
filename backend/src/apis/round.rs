@@ -63,12 +63,15 @@ where
         asset_csv_path: &str,
         params_path: &str,
         timestamp: u64,
-    ) -> Result<Round<'a, LEVELS, N_ASSETS, N_BYTES>, Box<dyn Error>> {
+    ) -> Result<Round<'a, LEVELS, N_ASSETS, N_BYTES>, Box<dyn Error>>
+    where
+        [(); N_ASSETS + 2]: Sized,
+    {
         Ok(Round {
             timestamp,
             snapshot: Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(mst, asset_csv_path, params_path)
                 .unwrap(),
-            signer: &signer,
+            signer,
         })
     }
 
@@ -102,7 +105,10 @@ where
     pub fn get_proof_of_inclusion(
         &self,
         user_index: usize,
-    ) -> Result<MstInclusionProof, &'static str> {
+    ) -> Result<MstInclusionProof, &'static str>
+    where
+        [(); N_ASSETS + 2]: Sized,
+    {
         Ok(self
             .snapshot
             .generate_proof_of_inclusion(user_index)
@@ -120,7 +126,10 @@ where
         mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
         asset_csv_path: &str,
         params_path: &str,
-    ) -> Result<Snapshot<LEVELS, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>> {
+    ) -> Result<Snapshot<LEVELS, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>>
+    where
+        [(); N_ASSETS + 2]: Sized,
+    {
         let assets_state = parse_asset_csv::<&str, N_ASSETS>(asset_csv_path).unwrap();
 
         let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
@@ -143,11 +152,12 @@ where
     pub fn generate_proof_of_inclusion(
         &self,
         user_index: usize,
-    ) -> Result<MstInclusionProof, &'static str> {
+    ) -> Result<MstInclusionProof, &'static str>
+    where
+        [(); N_ASSETS + 2]: Sized,
+    {
         let merkle_proof = self.mst.generate_proof(user_index).unwrap();
-        let user_entry = self.mst.get_entry(user_index).clone();
-        let circuit =
-            MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof, user_entry);
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
 
         // Currently, default manner of generating a inclusion proof for solidity-verifier.
         let calldata = gen_proof_solidity_calldata(
