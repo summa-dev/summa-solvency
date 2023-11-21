@@ -2,10 +2,7 @@ use crate::merkle_sum_tree::utils::{
     build_leaves_from_entries, build_merkle_tree_from_leaves, parse_csv_to_entries,
 };
 use crate::merkle_sum_tree::{Entry, Node, Tree};
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use num_bigint::BigUint;
-
-use super::big_uint_to_fp;
 
 /// Merkle Sum Tree Data Structure.
 ///
@@ -49,6 +46,10 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> Tree<N_ASSETS, N_BYTES>
 
     fn get_entry(&self, index: usize) -> &Entry<N_ASSETS> {
         &self.entries[index]
+    }
+
+    fn entries(&self) -> &[Entry<N_ASSETS>] {
+        &self.entries
     }
 }
 
@@ -149,10 +150,6 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
         Ok(root)
     }
 
-    pub fn entries(&self) -> &[Entry<N_ASSETS>] {
-        &self.entries
-    }
-
     /// Returns the index of the leaf with the matching username
     pub fn index_of_username(&self, username: &str) -> Result<usize, Box<dyn std::error::Error>>
     where
@@ -170,70 +167,5 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
                 .binary_search_by_key(&username, |entry| entry.username())
                 .map_err(|_| Box::from("Username not found"))
         }
-    }
-
-    /// Returns the hash preimage of a middle node.
-    pub fn get_middle_node_hash_preimage(
-        &self,
-        level: usize,
-        index: usize,
-    ) -> Result<[Fp; N_ASSETS + 2], Box<dyn std::error::Error>>
-    where
-        [usize; N_ASSETS + 2]: Sized,
-    {
-        if level == 0 || level > self.depth {
-            return Err(Box::from("Invalid depth"));
-        }
-
-        self.nodes
-            .get(level)
-            .and_then(|layer| layer.get(index))
-            .ok_or_else(|| Box::<dyn std::error::Error>::from("Node not found"))?;
-
-        // Assuming the left and right children are stored in order
-        let left_child = &self.nodes[level - 1][2 * index];
-        let right_child = &self.nodes[level - 1][2 * index + 1];
-
-        // Constructing preimage
-        let mut preimage = [Fp::zero(); N_ASSETS + 2];
-
-        // for each balance in the left and right child, add them together and store in preimage
-        for (i, balance) in preimage.iter_mut().enumerate().take(N_ASSETS) {
-            *balance = left_child.balances[i] + right_child.balances[i];
-        }
-
-        // Add left and right child hashes to preimage
-        preimage[N_ASSETS] = left_child.hash;
-        preimage[N_ASSETS + 1] = right_child.hash;
-
-        Ok(preimage)
-    }
-
-    /// Returns the hash preimage of a leaf node.
-    pub fn get_leaf_node_hash_preimage(
-        &self,
-        index: usize,
-    ) -> Result<[Fp; N_ASSETS + 1], Box<dyn std::error::Error>>
-    where
-        [usize; N_ASSETS + 1]: Sized,
-    {
-        // Fetch entry corresponding to index
-        let entry = self
-            .entries
-            .get(index)
-            .ok_or_else(|| Box::<dyn std::error::Error>::from("Node not found"))?;
-
-        // Constructing preimage
-        let mut preimage = [Fp::zero(); N_ASSETS + 1];
-
-        // Add username to preimage
-        preimage[0] = big_uint_to_fp(entry.username_as_big_uint());
-
-        // Add balances to preimage
-        for (i, balance) in preimage.iter_mut().enumerate().skip(1).take(N_ASSETS) {
-            *balance = big_uint_to_fp(&entry.balances()[i - 1]);
-        }
-
-        Ok(preimage)
     }
 }

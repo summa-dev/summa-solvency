@@ -75,7 +75,8 @@ where
     /// Initializes the circuit with the merkle proof and the entry of the user of which the inclusion is to be verified.
     pub fn init(merkle_proof: MerkleProof<N_ASSETS, N_BYTES>, entry: Entry<N_ASSETS>) -> Self
     where
-        [usize; N_ASSETS + 1]:,
+        [usize; N_ASSETS + 1]: Sized,
+        [usize; N_ASSETS + 2]: Sized,
     {
         assert_eq!(merkle_proof.path_indices.len(), LEVELS);
         assert_eq!(merkle_proof.sibling_hashes.len(), LEVELS);

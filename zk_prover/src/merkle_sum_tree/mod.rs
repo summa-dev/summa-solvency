@@ -7,11 +7,17 @@ pub mod utils;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
 #[derive(Clone, Debug)]
-pub struct MerkleProof<const N_ASSETS: usize, const N_BYTES: usize> {
+pub struct MerkleProof<const N_ASSETS: usize, const N_BYTES: usize> 
+where
+[usize; N_ASSETS + 1]: Sized,
+[usize; N_ASSETS + 2]: Sized,
+{
     pub leaf: Node<N_ASSETS>,
     pub root: Node<N_ASSETS>,
     pub sibling_hashes: Vec<Fp>,
     pub sibling_sums: Vec<[Fp; N_ASSETS]>,
+    pub sibling_leaf_hash_preimage: [Fp; N_ASSETS + 1],
+    pub sibling_node_hash_preimages: Vec<[Fp; N_ASSETS + 2]>,
     pub path_indices: Vec<Fp>,
 }
 
