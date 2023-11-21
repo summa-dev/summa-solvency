@@ -37,8 +37,8 @@ pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize, const
 impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitExt<Fp>
     for MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
 where
-    [usize; 2 * (1 + N_ASSETS)]: Sized,
     [usize; N_ASSETS + 1]: Sized,
+    [usize; N_ASSETS + 2]: Sized,
 {
     /// Returns the number of public inputs of the circuit. It is {2 + N_ASSETS}, namely the leaf hash to be verified inclusion of, the root hash of the merkle sum tree and the root balances of the merkle sum tree.
     fn num_instance(&self) -> Vec<usize> {
@@ -112,11 +112,12 @@ where
 #[derive(Debug, Clone)]
 pub struct MstInclusionConfig<const N_ASSETS: usize, const N_BYTES: usize>
 where
-    [usize; 2 * (1 + N_ASSETS)]: Sized,
+    [usize; N_ASSETS + 1]: Sized,
+    [usize; N_ASSETS + 2]: Sized,
 {
     merkle_sum_tree_config: MerkleSumTreeConfig,
-    poseidon_entry_config: PoseidonConfig<2, 1, { 1 + N_ASSETS }>,
-    poseidon_middle_config: PoseidonConfig<2, 1, { 2 * (1 + N_ASSETS) }>,
+    poseidon_entry_config: PoseidonConfig<2, 1, { N_ASSETS + 1 }>,
+    poseidon_middle_config: PoseidonConfig<2, 1, { N_ASSETS + 2 }>,
     range_check_config: RangeCheckConfig<N_BYTES>,
     instance: Column<Instance>,
     advices: [Column<Advice>; 3],
@@ -124,7 +125,8 @@ where
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> MstInclusionConfig<N_ASSETS, N_BYTES>
 where
-    [usize; 2 * (1 + N_ASSETS)]: Sized,
+    [usize; N_ASSETS + 1]: Sized,
+    [usize; N_ASSETS + 2]: Sized,
 {
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
         // the max number of advices columns needed is WIDTH + 1 given requirement of the poseidon config
@@ -142,7 +144,7 @@ where
         // enable constant for the fixed_column[2], this is required for the poseidon chip and the range check chip
         meta.enable_constant(fixed_columns[2]);
 
-        let poseidon_entry_config = PoseidonChip::<PoseidonSpec, 2, 1, { 1 + N_ASSETS }>::configure(
+        let poseidon_entry_config = PoseidonChip::<PoseidonSpec, 2, 1, { N_ASSETS + 1 }>::configure(
             meta,
             advices[0..2].try_into().unwrap(),
             advices[2],
@@ -152,7 +154,7 @@ where
 
         // in fact, the poseidon config requires #WIDTH advice columns for state and 1 for partial_sbox, #WIDTH fixed columns for rc_a and #WIDTH for rc_b
         let poseidon_middle_config =
-            PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::configure(
+            PoseidonChip::<PoseidonSpec, 2, 1, { N_ASSETS + 2 }>::configure(
                 meta,
                 advices[0..2].try_into().unwrap(),
                 advices[2],
@@ -197,7 +199,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> Circuit<F
     for MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; N_ASSETS + 1]: Sized,
-    [usize; 2 * (1 + N_ASSETS)]: Sized,
+    [usize; N_ASSETS + 2]: Sized,
 {
     type Config = MstInclusionConfig<N_ASSETS, N_BYTES>;
     type FloorPlanner = SimpleFloorPlanner;
@@ -220,14 +222,13 @@ where
         let merkle_sum_tree_chip =
             MerkleSumTreeChip::<N_ASSETS>::construct(config.merkle_sum_tree_config);
 
-        let poseidon_entry_chip = PoseidonChip::<PoseidonSpec, 2, 1, { 1 + N_ASSETS }>::construct(
+        let poseidon_entry_chip = PoseidonChip::<PoseidonSpec, 2, 1, { N_ASSETS + 1 }>::construct(
             config.poseidon_entry_config,
         );
 
-        let poseidon_middle_chip =
-            PoseidonChip::<PoseidonSpec, 2, 1, { 2 * (1 + N_ASSETS) }>::construct(
-                config.poseidon_middle_config,
-            );
+        let poseidon_middle_chip = PoseidonChip::<PoseidonSpec, 2, 1, { N_ASSETS + 2 }>::construct(
+            config.poseidon_middle_config,
+        );
 
         let range_check_chip = RangeCheckChip::<N_BYTES>::construct(config.range_check_config);
 
@@ -260,7 +261,7 @@ where
             .map(|x| x.to_owned())
             .collect();
 
-        let entry_hasher_input: [AssignedCell<Fp, Fp>; 1 + N_ASSETS] =
+        let entry_hasher_input: [AssignedCell<Fp, Fp>; N_ASSETS + 1] =
             match entry_hasher_input_vec.try_into() {
                 Ok(arr) => arr,
                 Err(_) => panic!("Failed to convert Vec to Array"),
@@ -347,16 +348,15 @@ where
                 right_balances.push(right_balance);
             }
 
-            // create an hash_input array of length  2 * (1 + N_ASSETS)  that contains the left hash, the left balances, the right hash and the right balances
-            let middle_hasher_input_vec: Vec<AssignedCell<Fp, Fp>> = [hash_left_current]
+            // create an hash_input array of length N_ASSETS + 2 that contains the next balances, the left hash and the right hash
+            let middle_hasher_input_vec: Vec<AssignedCell<Fp, Fp>> = next_balances
                 .iter()
-                .chain(left_balances.iter())
+                .chain([hash_left_current].iter())
                 .chain([hash_right_current].iter())
-                .chain(right_balances.iter())
                 .map(|x| x.to_owned())
                 .collect();
 
-            let middle_hasher_input: [AssignedCell<Fp, Fp>; 2 * (1 + N_ASSETS)] =
+            let middle_hasher_input: [AssignedCell<Fp, Fp>; N_ASSETS + 2] =
                 match middle_hasher_input_vec.try_into() {
                     Ok(arr) => arr,
                     Err(_) => panic!("Failed to convert Vec to Array"),
