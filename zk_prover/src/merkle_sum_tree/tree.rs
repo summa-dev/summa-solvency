@@ -112,8 +112,6 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
         let mut path_indices = vec![Fp::zero(); depth];
         let mut current_index = index;
 
-        let leaf = &nodes[0][index];
-
         for level in 0..depth {
             let position = current_index % 2;
             let sibling_index = current_index - position + (1 - position);
@@ -129,8 +127,10 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
             current_index /= 2;
         }
 
+        let entry = self.get_entry(index).clone();
+
         Ok(MerkleProof {
-            leaf: leaf.clone(),
+            entry,
             root: root.clone(),
             sibling_leaf_node_hash_preimage,
             sibling_middle_node_hash_preimages,
@@ -144,7 +144,7 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
         [usize; N_ASSETS + 1]: Sized,
         [usize; N_ASSETS + 2]: Sized,
     {
-        let mut node = proof.leaf.clone();
+        let mut node = proof.entry.compute_leaf();
 
         let sibling_leaf_node_balances = proof.sibling_leaf_node_hash_preimage[1..]
             .try_into()

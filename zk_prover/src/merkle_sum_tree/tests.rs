@@ -57,9 +57,9 @@ mod test {
             [35479.to_biguint().unwrap(), 35479.to_biguint().unwrap()],
         )
         .unwrap();
-        let invalid_leaf = invalid_entry.compute_leaf();
+        let invalid_entry = invalid_entry;
         let mut proof_invalid_1 = proof.clone();
-        proof_invalid_1.leaf = invalid_leaf;
+        proof_invalid_1.entry = invalid_entry;
         assert!(!merkle_tree.verify_proof(&proof_invalid_1));
 
         // shouldn't verify a proof with a wrong root hash

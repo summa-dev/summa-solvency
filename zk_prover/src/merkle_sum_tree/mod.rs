@@ -12,7 +12,7 @@ where
     [usize; N_ASSETS + 1]: Sized,
     [usize; N_ASSETS + 2]: Sized,
 {
-    pub leaf: Node<N_ASSETS>,
+    pub entry: Entry<N_ASSETS>,
     pub root: Node<N_ASSETS>,
     pub sibling_leaf_node_hash_preimage: [Fp; N_ASSETS + 1],
     pub sibling_middle_node_hash_preimages: Vec<[Fp; N_ASSETS + 2]>,

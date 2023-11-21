@@ -82,7 +82,7 @@ where
     }
 
     /// Initializes the circuit with the merkle proof and the entry of the user of which the inclusion is to be verified.
-    pub fn init(merkle_proof: MerkleProof<N_ASSETS, N_BYTES>, entry: Entry<N_ASSETS>) -> Self
+    pub fn init(merkle_proof: MerkleProof<N_ASSETS, N_BYTES>) -> Self
     where
         [usize; N_ASSETS + 1]: Sized,
         [usize; N_ASSETS + 2]: Sized,
@@ -92,12 +92,8 @@ where
             merkle_proof.sibling_middle_node_hash_preimages.len(),
             LEVELS - 1
         );
-
-        // assert that the entry leaf hash matches the leaf hash in the merkle proof
-        assert_eq!(merkle_proof.leaf.hash, entry.compute_leaf().hash);
-
         Self {
-            entry,
+            entry: merkle_proof.entry,
             path_indices: merkle_proof.path_indices,
             sibling_leaf_node_hash_preimage: merkle_proof.sibling_leaf_node_hash_preimage,
             sibling_middle_node_hash_preimages: merkle_proof.sibling_middle_node_hash_preimages,
