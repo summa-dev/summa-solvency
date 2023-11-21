@@ -66,10 +66,6 @@ mod test {
         let mut proof_invalid_2 = proof.clone();
         proof_invalid_2.root.hash = 0.into();
         assert!(!merkle_tree.verify_proof(&proof_invalid_2));
-
-        // shouldn't verify a proof with a wrong computed balance
-        let mut proof_invalid_3 = proof;
-        proof_invalid_3.sibling_sums[0] = [0.into(), 0.into()];
     }
 
     #[test]
