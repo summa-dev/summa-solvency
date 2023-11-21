@@ -15,7 +15,7 @@ impl<const N_ASSETS: usize> Node<N_ASSETS> {
     /// Builds a "middle" (non-leaf-level) node of the MST
     pub fn middle(child_l: &Node<N_ASSETS>, child_r: &Node<N_ASSETS>) -> Node<N_ASSETS>
     where
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
+        [(); N_ASSETS + 2]: Sized,
     {
         let mut balances_sum = [Fp::zero(); N_ASSETS];
         for (i, balance) in balances_sum.iter_mut().enumerate() {
@@ -23,12 +23,7 @@ impl<const N_ASSETS: usize> Node<N_ASSETS> {
         }
 
         Node {
-            hash: poseidon_node(
-                child_l.hash,
-                child_l.balances,
-                child_r.hash,
-                child_r.balances,
-            ),
+            hash: poseidon_node(balances_sum, child_l.hash, child_r.hash),
             balances: balances_sum,
         }
     }

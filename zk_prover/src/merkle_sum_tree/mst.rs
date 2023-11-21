@@ -8,8 +8,8 @@ use num_bigint::BigUint;
 ///
 /// A Merkle Sum Tree is a binary Merkle Tree with the following properties:
 /// * Each Entry of a Merkle Sum Tree is a pair of a username and #N_ASSETS balances.
-/// * Each Leaf Node contains a hash and #N_ASSETS balances. The hash is equal to `H(username, balance[0], balance[1], ... balance[N_ASSETS])`.
-/// * Each Middle Node contains a hash and #N_ASSETS balances. The hash is equal to `H(LeftChild.hash, LeftChild.balance[0], LeftChild.balance[1], LeftChild.balance[N_ASSETS], RightChild.hash, RightChild.balance[0], RightChild.balance[1], RightChild.balance[N_ASSETS])`. The balances are equal to the sum of the balances of the child nodes per each asset.
+/// * Each Leaf Node contains a hash and #N_ASSETS balances. The hash is equal to `H(username, balance[0], balance[1], ... balance[N_ASSETS])`. The balances are equal to the balances associated to the entry
+/// * Each Middle Node contains a hash and #N_ASSETS balances. The hash is equal to `H(LeftChild.balance[0] + RightChild.balance[0], LeftChild.balance[1] + RightChild.balance[1], ..., LeftChild.balance[N_ASSETS] + RightChild.balance[N_ASSETS], LeftChild.hash, RightChild.hash)`. The balances are equal to the sum of the balances of the child nodes per each asset.
 /// * The Root Node represents the committed state of the Tree and contains the sum of all the entries' balances per each asset.
 ///
 /// # Type Parameters
@@ -58,7 +58,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     pub fn new(path: &str) -> Result<Self, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
+        [usize; N_ASSETS + 2]: Sized,
     {
         let entries = parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
         Self::from_entries(entries, false)
@@ -72,7 +72,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     pub fn new_sorted(path: &str) -> Result<Self, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
+        [usize; N_ASSETS + 2]: Sized,
     {
         let mut entries = parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
 
@@ -87,7 +87,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     ) -> Result<MerkleSumTree<N_ASSETS, N_BYTES>, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
+        [usize; N_ASSETS + 2]: Sized,
     {
         let depth = (entries.len() as f64).log2().ceil() as usize;
 
@@ -123,7 +123,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     ) -> Result<Node<N_ASSETS>, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
+        [usize; N_ASSETS + 2]: Sized,
     {
         let index = self.index_of_username(username)?;
 

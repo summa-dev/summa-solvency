@@ -1,6 +1,5 @@
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use num_bigint::BigUint;
 
 /// A trait representing the basic operations for a Merkle-Sum-like Tree.
 pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
@@ -64,7 +63,7 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
     fn verify_proof(&self, proof: &MerkleProof<N_ASSETS, N_BYTES>) -> bool
     where
         [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
+        [usize; N_ASSETS + 2]: Sized,
     {
         let mut node = proof.leaf.clone();
 
