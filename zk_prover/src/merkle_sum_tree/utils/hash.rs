@@ -20,14 +20,14 @@ where
         .hash(hash_inputs)
 }
 
-pub fn poseidon_entry<const N_ASSETS: usize>(left: Fp, right: [Fp; N_ASSETS]) -> Fp
+pub fn poseidon_entry<const N_ASSETS: usize>(username: Fp, balances: [Fp; N_ASSETS]) -> Fp
 where
     [usize; N_ASSETS + 1]: Sized,
 {
     let mut hash_inputs: [Fp; N_ASSETS + 1] = [Fp::zero(); N_ASSETS + 1];
 
-    hash_inputs[0] = left;
-    hash_inputs[1..N_ASSETS + 1].copy_from_slice(&right);
+    hash_inputs[0] = username;
+    hash_inputs[1..N_ASSETS + 1].copy_from_slice(&balances);
 
     poseidon::Hash::<Fp, PoseidonSpec, ConstantLength<{ N_ASSETS + 1 }>, 2, 1>::init()
         .hash(hash_inputs)

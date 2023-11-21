@@ -1,9 +1,10 @@
 #[cfg(test)]
 mod test {
 
-    use crate::merkle_sum_tree::utils::big_uint_to_fp;
+    use crate::merkle_sum_tree::utils::{big_uint_to_fp, poseidon_entry, poseidon_node};
     use crate::merkle_sum_tree::{Entry, MerkleSumTree, Tree};
     use num_bigint::{BigUint, ToBigUint};
+    use rand::Rng as _;
 
     const N_ASSETS: usize = 2;
     const N_BYTES: usize = 8;
@@ -196,5 +197,80 @@ mod test {
 
         let fp_3 = fp_2 - fp;
         assert_eq!(fp_3, 18446744073709551613.into());
+    }
+
+    #[test]
+    fn get_middle_node_hash_preimage() {
+        let merkle_tree =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        let depth = *merkle_tree.depth();
+
+        // The tree has 16 leaves, so the levels are 0, 1, 2, 3, 4. Where level 0 is the leaves and level 4 is the root
+        // Fetch a random level from 1 to depth
+        let mut rng = rand::thread_rng();
+        let level = rng.gen_range(1..depth);
+
+        // Fetch a random index inside the level. For example level 1 has 8 nodes, so the index can be 0, 1, 2, 3, 4, 5, 6, 7
+        let index = rng.gen_range(0..merkle_tree.nodes()[level].len());
+
+        // Fetch middle node with index from level
+        let middle_node = merkle_tree.nodes()[level][index].clone();
+
+        // Fetch the hash preimage of the middle node
+        let hash_preimage = merkle_tree
+            .get_middle_node_hash_preimage(level, index)
+            .unwrap();
+
+        let mut balances = vec![];
+
+        // loop from 0 to N_ASSETS and push the value in the hash preimage to the balances vector
+        for i in 0..N_ASSETS {
+            balances.push(hash_preimage[i]);
+        }
+
+        // Perform the poseidon hash on the hash preimage
+        let hash = poseidon_node::<N_ASSETS>(
+            balances.try_into().unwrap(),
+            hash_preimage[2],
+            hash_preimage[3],
+        );
+
+        // The hash of the middle node should match the hash computed from the hash preimage
+        assert_eq!(middle_node.hash, hash);
+    }
+
+    #[test]
+    fn get_leaf_node_hash_preimage() {
+        let merkle_tree =
+            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+                .unwrap();
+
+        // Generate a random number between 0 and 15
+        let mut rng = rand::thread_rng();
+        let index = rng.gen_range(0..16);
+
+        // Fetch leaf with index
+        let leaf = merkle_tree.leaves()[index].clone();
+
+        // Fetch the hash preimage of the leaf
+        let hash_preimage = merkle_tree.get_leaf_node_hash_preimage(index).unwrap();
+
+        // Extract the balances from the hash preimage
+        let mut balances = vec![];
+
+        // loop from 1 to N_ASSETS + 1 and push the value in the hash preimage to the balances vector
+        for i in 1..N_ASSETS + 1 {
+            balances.push(hash_preimage[i]);
+        }
+
+        let username = hash_preimage[0];
+
+        // Perform the poseidon hash on the hash preimage
+        let hash = poseidon_entry::<N_ASSETS>(username, balances.try_into().unwrap());
+
+        // The hash of the middle node should match the hash computed from the hash preimage
+        assert_eq!(leaf.hash, hash);
     }
 }
