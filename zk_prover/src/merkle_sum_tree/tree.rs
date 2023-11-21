@@ -118,15 +118,11 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
             let position = current_index % 2;
             let sibling_index = current_index - position + (1 - position);
 
-            if sibling_index < nodes[level].len() {
-                let sibling_node = &nodes[level][sibling_index];
-
-                if level != 0 {
-                    // Fetch hash preimage for sibling middle nodes
-                    let sibling_node_preimage =
-                        self.get_middle_node_hash_preimage(level, sibling_index)?;
-                    sibling_middle_node_hash_preimages.push(sibling_node_preimage);
-                }
+            if sibling_index < nodes[level].len() && level != 0 {
+                // Fetch hash preimage for sibling middle nodes
+                let sibling_node_preimage =
+                    self.get_middle_node_hash_preimage(level, sibling_index)?;
+                sibling_middle_node_hash_preimages.push(sibling_node_preimage);
             }
 
             path_indices[level] = Fp::from(position as u64);

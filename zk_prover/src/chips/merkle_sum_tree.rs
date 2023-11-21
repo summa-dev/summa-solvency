@@ -1,4 +1,4 @@
-use halo2_proofs::circuit::{AssignedCell, Layouter, Value};
+use halo2_proofs::circuit::{AssignedCell, Layouter};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Selector};
 use halo2_proofs::poly::Rotation;
@@ -88,19 +88,21 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         }
     }
 
-    /// Assign the hashes for node in a region following this layout on 3 advice columns:
+    /// Swap the values of two cells in a region following this layout on 3 advice columns:
     ///
     /// | a              | b                 | c          |
     /// | ------------   | -------------     | ---------- |
-    /// | `current_hash` | `element_hash`    | `swap_bit` |
-    /// | `current_hash` | `element_hash`    | -          |
+    /// | `current_hash` | `sibling_hash`    | `1`        |
+    /// | `sibling_hash` | `current_hash`    | -          |
     ///
     /// At row 0 bool_and_swap_selector is enabled
-    pub fn assign_nodes_hashes_per_level(
+    /// If swap_bit is 0, the values will remain the same on the next row
+    /// If swap_bit is 1, the values will be swapped on the next row
+    pub fn swap_hashes_per_level(
         &self,
         mut layouter: impl Layouter<Fp>,
         current_hash: &AssignedCell<Fp, Fp>,
-        element_hash: Fp,
+        sibling_hash: &AssignedCell<Fp, Fp>,
         swap_bit_assigned: &AssignedCell<Fp, Fp>,
     ) -> Result<(AssignedCell<Fp, Fp>, AssignedCell<Fp, Fp>), Error> {
         layouter.assign_region(
@@ -118,11 +120,11 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
                 )?;
 
                 // assign the element hash to the column self.config.advice[1] at offset 0
-                let r1 = region.assign_advice(
-                    || "element hash",
+                let r1 = sibling_hash.copy_advice(
+                    || "copy element hash from assigned value",
+                    &mut region,
                     self.config.advice[1],
                     0,
-                    || Value::known(element_hash),
                 )?;
 
                 // assign the swap_bit to the column self.config.advice[2] at offset 0
@@ -171,16 +173,18 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
     ///
     /// | a                 | b                 | c          |
     /// | ------------      | -------------     | ---------- |
-    /// | `current_balance` | `element_balance` | `swap_bit` |
+    /// | `current_balance` | `element_balance` | `0`        |
     /// | `current_balance` | `element_balance` | `sum`      |
     ///
     /// At row 0 bool_and_swap_selector is enabled.
     /// At row 1 sum_selector is enabled
-    pub fn assign_nodes_balance_per_asset(
+    /// If swap_bit is 0, the values will remain the same on the next row
+    /// If swap_bit is 1, the values will be swapped on the next row
+    pub fn swap_balances_per_level(
         &self,
         mut layouter: impl Layouter<Fp>,
         current_balance: &AssignedCell<Fp, Fp>,
-        element_balance: Fp,
+        element_balance: &AssignedCell<Fp, Fp>,
         swap_bit_assigned: &AssignedCell<Fp, Fp>,
     ) -> Result<
         (
@@ -205,11 +209,11 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
                 )?;
 
                 // assign the element_balance to the column self.config.advice[1] at offset 0
-                let r1 = region.assign_advice(
+                let r1 = element_balance.copy_advice(
                     || "element balance",
+                    &mut region,
                     self.config.advice[1],
                     0,
-                    || Value::known(element_balance),
                 )?;
 
                 // assign the swap_bit to the column self.config.advice[2] at offset 0

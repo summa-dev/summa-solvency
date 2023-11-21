@@ -11,7 +11,7 @@ use halo2_proofs::plonk::{
 };
 use snark_verifier_sdk::CircuitExt;
 
-/// Circuit for verifying inclusion of a leaf_hash inside a merkle sum tree with a given root.
+/// Circuit for verifying inclusion of an entry (username, balances) inside a merkle sum tree with a given root.
 ///
 /// # Type Parameters
 ///
@@ -22,15 +22,20 @@ use snark_verifier_sdk::CircuitExt;
 /// # Fields
 ///
 /// * `entry`: The entry to be verified inclusion of.
-/// * `path_element_hashes`: The hashes of the path elements from the leaf to root. The length of this vector is LEVELS
-/// * `path_element_balances`: The balances of the path elements from the leaf to the root. The length of this vector is LEVELS
 /// * `path_indices`: The boolean indices of the path elements from the leaf to the root. 0 indicates that the element is on the right to the path, 1 indicates that the element is on the left to the path. The length of this vector is LEVELS
+/// * `sibling_leaf_node_hash_preimage`: The preimage of the hash that corresponds to the Sibling Leaf Node (part of the Merkle Proof).
+/// * `sibling_middle_node_hash_preimages`: The preimages of the hashes that corresponds to the Sibling Middle Nodes (part of the Merkle Proof).  
+/// * `root`: The root of the Merkle Sum Tree
 #[derive(Clone)]
-pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
+pub struct MstInclusionCircuit<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
+where
+    [usize; N_ASSETS + 1]: Sized,
+    [usize; N_ASSETS + 2]: Sized,
+{
     pub entry: Entry<N_ASSETS>,
-    pub path_element_hashes: Vec<Fp>,
-    pub path_element_balances: Vec<[Fp; N_ASSETS]>,
     pub path_indices: Vec<Fp>,
+    pub sibling_leaf_node_hash_preimage: [Fp; N_ASSETS + 1],
+    pub sibling_middle_node_hash_preimages: Vec<[Fp; N_ASSETS + 2]>,
     pub root: Node<N_ASSETS>,
 }
 
@@ -54,6 +59,9 @@ where
 
 impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> CircuitBase
     for MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
+where
+    [usize; N_ASSETS + 1]: Sized,
+    [usize; N_ASSETS + 2]: Sized,
 {
 }
 
@@ -61,13 +69,14 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
     MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; N_ASSETS + 1]: Sized,
+    [usize; N_ASSETS + 2]: Sized,
 {
     pub fn init_empty() -> Self {
         Self {
             entry: Entry::init_empty(),
-            path_element_hashes: vec![Fp::zero(); LEVELS],
-            path_element_balances: vec![[Fp::zero(); N_ASSETS]; LEVELS],
             path_indices: vec![Fp::zero(); LEVELS],
+            sibling_leaf_node_hash_preimage: [Fp::zero(); N_ASSETS + 1],
+            sibling_middle_node_hash_preimages: vec![[Fp::zero(); N_ASSETS + 2]; LEVELS],
             root: Node::init_empty(),
         }
     }
@@ -79,17 +88,19 @@ where
         [usize; N_ASSETS + 2]: Sized,
     {
         assert_eq!(merkle_proof.path_indices.len(), LEVELS);
-        assert_eq!(merkle_proof.sibling_hashes.len(), LEVELS);
-        assert_eq!(merkle_proof.sibling_sums.len(), LEVELS);
+        assert_eq!(
+            merkle_proof.sibling_middle_node_hash_preimages.len(),
+            LEVELS - 1
+        );
 
         // assert that the entry leaf hash matches the leaf hash in the merkle proof
         assert_eq!(merkle_proof.leaf.hash, entry.compute_leaf().hash);
 
         Self {
             entry,
-            path_element_hashes: merkle_proof.sibling_hashes,
-            path_element_balances: merkle_proof.sibling_sums,
             path_indices: merkle_proof.path_indices,
+            sibling_leaf_node_hash_preimage: merkle_proof.sibling_leaf_node_hash_preimage,
+            sibling_middle_node_hash_preimages: merkle_proof.sibling_middle_node_hash_preimages,
             root: merkle_proof.root,
         }
     }
@@ -108,6 +119,7 @@ where
 /// * `poseidon_middle_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1 and input length of 2 * (1 + N_ASSETS). Needed to perform hashings from the leaf to the root.
 /// * `range_check_config`: Configuration for the range check chip
 /// * `instance`: Instance column used to store the public inputs
+/// * `advices`: Advice columns used to store the private inputs
 
 #[derive(Debug, Clone)]
 pub struct MstInclusionConfig<const N_ASSETS: usize, const N_BYTES: usize>
@@ -232,7 +244,7 @@ where
 
         let range_check_chip = RangeCheckChip::<N_BYTES>::construct(config.range_check_config);
 
-        // Assign the entry username
+        // Assign the entry username to the witness
         let username = self.assign_value_to_witness(
             layouter.namespace(|| "assign entry username"),
             big_uint_to_fp(self.entry.username_as_big_uint()),
@@ -240,7 +252,7 @@ where
             config.advices[0],
         )?;
 
-        // Assign the entry balances
+        // Assign the entry balances to the witness
         let mut current_balances = vec![];
 
         for i in 0..N_ASSETS {
@@ -254,7 +266,7 @@ where
         }
 
         // Perform the hashing to username and balances to obtain the leaf hash
-        // create an hash_input array of length 1 + N_ASSETS that contains the entry username and the entry balances
+        // create an hash_input array of length N_ASSETS + 1 that contains the entry username and the entry balances
         let entry_hasher_input_vec: Vec<AssignedCell<Fp, Fp>> = [username]
             .iter()
             .chain(current_balances.iter())
@@ -287,7 +299,107 @@ where
         for level in 0..LEVELS {
             let namespace_prefix = format!("level {}", level);
 
-            // For each level assign the index to the circuit
+            let sibling_hash: AssignedCell<Fp, Fp>; // hash of the sibling node
+            let mut sibling_balances: Vec<AssignedCell<Fp, Fp>> = vec![]; // balances of the sibling node
+
+            // Perform the hashing of sibling leaf hash preimage to obtain the sibling leaf hash
+            if level == 0 {
+                // Assign username from sibling leaf node hash preimage to the circuit
+                let sibling_leaf_node_username = self.assign_value_to_witness(
+                    layouter.namespace(|| format!("sibling leaf node username")),
+                    self.sibling_leaf_node_hash_preimage[0],
+                    "sibling leaf node username",
+                    config.advices[0],
+                )?;
+
+                // Assign balances from sibling leaf node hash preimage to the circuit
+                for asset in 0..N_ASSETS {
+                    let leaf_node_sibling_balance = self.assign_value_to_witness(
+                        layouter.namespace(|| format!("sibling leaf node balance {}", asset)),
+                        self.sibling_leaf_node_hash_preimage[asset + 1],
+                        "sibling leaf balance",
+                        config.advices[1],
+                    )?;
+                    sibling_balances.push(leaf_node_sibling_balance);
+                }
+
+                // create an hash_input array of length N_ASSETS + 1 that contains the sibling_leaf_node_username and the sibling_balances (the sibling leaf node hash preimage)
+                let sibling_hasher_input_vec: Vec<AssignedCell<Fp, Fp>> =
+                    [sibling_leaf_node_username]
+                        .iter()
+                        .chain(sibling_balances.iter())
+                        .map(|x| x.to_owned())
+                        .collect();
+
+                let sibling_hasher_input: [AssignedCell<Fp, Fp>; N_ASSETS + 1] =
+                    match sibling_hasher_input_vec.try_into() {
+                        Ok(arr) => arr,
+                        Err(_) => panic!("Failed to convert Vec to Array"),
+                    };
+
+                // compute the sibling hash
+                let computed_sibling_hash = poseidon_entry_chip.hash(
+                    layouter.namespace(|| format!("{}: perform poseidon hash", namespace_prefix)),
+                    sibling_hasher_input,
+                )?;
+
+                sibling_hash = computed_sibling_hash;
+            }
+            // Other levels
+            // Assign sibling node hash preimage to the circuit (split it in balances, left child hash and right child hash)
+            // Perform the hashing of sibling node hash preimage to obtain the sibling node hash
+            else {
+                // Assign balances from sibling middle node hash preimage to the circuit
+                for asset in 0..N_ASSETS {
+                    let middle_node_sibling_balance = self.assign_value_to_witness(
+                        layouter.namespace(|| format!("sibling node balance {}", asset)),
+                        self.sibling_middle_node_hash_preimages[level - 1][asset],
+                        "sibling node balance",
+                        config.advices[1],
+                    )?;
+                    sibling_balances.push(middle_node_sibling_balance);
+                }
+
+                // Assign middle_node_sibling_child_left_hash from middle node hash preimage to the circuit
+                let middle_node_sibling_child_left_hash = self.assign_value_to_witness(
+                    layouter.namespace(|| format!("sibling left hash")),
+                    self.sibling_middle_node_hash_preimages[level - 1][N_ASSETS],
+                    "sibling left hash",
+                    config.advices[2],
+                )?;
+
+                // Assign middle_node_sibling_child_right_hash from middle node hash preimage to the circuit
+                let middle_node_sibling_child_right_hash = self.assign_value_to_witness(
+                    layouter.namespace(|| format!("sibling right hash")),
+                    self.sibling_middle_node_hash_preimages[level - 1][N_ASSETS + 1],
+                    "sibling right hash",
+                    config.advices[2],
+                )?;
+
+                // create an hash_input array of length 2 + N_ASSETS that contains the sibling balances, the middle_node_sibling_child_left_hash and the middle_node_sibling_child_right_hash
+                let sibling_hasher_input_vec: Vec<AssignedCell<Fp, Fp>> = sibling_balances
+                    .iter()
+                    .chain([middle_node_sibling_child_left_hash].iter())
+                    .chain([middle_node_sibling_child_right_hash].iter())
+                    .map(|x| x.to_owned())
+                    .collect();
+
+                let sibling_hasher_input: [AssignedCell<Fp, Fp>; N_ASSETS + 2] =
+                    match sibling_hasher_input_vec.try_into() {
+                        Ok(arr) => arr,
+                        Err(_) => panic!("Failed to convert Vec to Array"),
+                    };
+
+                // compute the sibling hash
+                let computed_sibling_hash = poseidon_middle_chip.hash(
+                    layouter.namespace(|| format!("{}: perform poseidon hash", namespace_prefix)),
+                    sibling_hasher_input,
+                )?;
+
+                sibling_hash = computed_sibling_hash;
+            };
+
+            // For each level assign the swap bit to the circuit
             let swap_bit_level = self.assign_value_to_witness(
                 layouter.namespace(|| format!("{}: assign swap bit", namespace_prefix)),
                 self.path_indices[level],
@@ -295,12 +407,12 @@ where
                 config.advices[0],
             )?;
 
-            // For each level assign the hashes to the circuit
+            // For every level, perform the swap of the hashes (between `current_hash` and `sibling_hash`) according to the swap bit
             let (hash_left_current, hash_right_current) = merkle_sum_tree_chip
-                .assign_nodes_hashes_per_level(
-                    layouter.namespace(|| format!("{}: assign nodes hashes", namespace_prefix)),
+                .swap_hashes_per_level(
+                    layouter.namespace(|| format!("{}: swap hashes", namespace_prefix)),
                     &current_hash,
-                    self.path_element_hashes[level],
+                    &sibling_hash,
                     &swap_bit_level,
                 )?;
 
@@ -308,10 +420,10 @@ where
             let mut left_balances = vec![];
             let mut right_balances = vec![];
 
-            // Within each level, assign the balances to the circuit per asset
+            // For every level, perform the swap of the balances (between `current_balances` and `sibling_balances`) according to the swap bit
             for asset in 0..N_ASSETS {
                 let (left_balance, right_balance, next_balance) = merkle_sum_tree_chip
-                    .assign_nodes_balance_per_asset(
+                    .swap_balances_per_level(
                         layouter.namespace(|| {
                             format!(
                                 "{}: asset {}: assign nodes balance",
@@ -319,7 +431,7 @@ where
                             )
                         }),
                         &current_balances[asset],
-                        self.path_element_balances[level][asset],
+                        &sibling_balances[asset],
                         &swap_bit_level,
                     )?;
 
