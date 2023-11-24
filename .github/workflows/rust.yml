@@ -31,8 +31,6 @@ jobs:
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: "nightly-3e962e2efe17396886fcb1fd141ccf4204cd3a21"
 
       - name: Test backend
         env:
