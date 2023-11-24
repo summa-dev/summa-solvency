@@ -28,7 +28,7 @@ pub struct RangeCheckConfig<const N_BYTES: usize> {
     lookup_enable_selector: Selector,
 }
 
-/// Helper chip that verfiies that the value witnessed in a given cell lies within a given range defined by N_BYTES.
+/// Helper chip that verifies that the value witnessed in a given cell lies within a given range defined by N_BYTES.
 /// For example, Let's say we want to constraint 0x1f2f3f4f to be within the range N_BYTES=4.
 ///
 /// `z(0) = 0x1f2f3f4f`
@@ -47,7 +47,7 @@ pub struct RangeCheckConfig<const N_BYTES: usize> {
 ///
 /// The column z contains the witnessed value to be checked at offset 0
 /// At offset i, the column z contains the value z(i+1) = (z(i) - k(i)) / 2^8 (shift right by 8 bits) where k(i) is the i-th decomposition big-endian of `value`
-/// The contraints that are enforced are:
+/// The constraints that are enforced are:
 /// - z(i) - 2^8⋅z(i+1) ∈ lookup_u8 (enabled by lookup_enable_selector at offset [0, N_BYTES - 1])
 /// - z(N_BYTES) == 0
 #[derive(Debug, Clone)]
@@ -155,6 +155,7 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
     }
 
     /// Loads the lookup table with values from `0` to `2^8 - 1`
+    // Audit: Is there a way to share the range check lookup table between all chip instantiations?
     pub fn load(&self, layouter: &mut impl Layouter<Fp>) -> Result<(), Error> {
         let range = 1 << (8);
 

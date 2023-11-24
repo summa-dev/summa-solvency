@@ -300,11 +300,11 @@ where
         let mut right_balances = vec![];
 
         // assign penultimate nodes balances per each asset according to the swap bit
-        for asset in 0..N_ASSETS {
+        for (asset, left_node_balance) in left_node_balances.iter().enumerate().take(N_ASSETS) {
             let (left_balance, right_balance, next_balance) = merkle_sum_tree_chip
                 .assign_nodes_balance_per_asset(
                     layouter.namespace(|| format!("asset {}: assign nodes balances", asset)),
-                    &left_node_balances[asset],
+                    left_node_balance,
                     self.right_node_balances[asset],
                     swap_bit.clone(),
                 )?;
@@ -335,7 +335,7 @@ where
             hash_input,
         )?;
 
-        // expose the root hash, as public input
+        // expose the root hash as public input
         self.expose_public(
             layouter.namespace(|| "public root hash"),
             &root_hash,

@@ -20,7 +20,7 @@ pub struct MerkleSumTreeConfig {
 /// Chip that performs various constraints related to a Merkle Sum Tree data structure such as:
 ///
 /// * `s * swap_bit * (1 - swap_bit) = 0` (if `bool_and_swap_selector` is toggled). It basically enforces that swap_bit is either a 0 or 1.
-/// * `s * (swap_bit * 2 * (elelment_r_cur - elelment_l_cur)  - (elelment_l_next - elelment_l_cur) - (elelment_r_cur - elelment_r_next)) = 0`. Enforces that if the swap_bit is equal to 1, the values will be swapped on the next row (if `bool_and_swap_selector` is toggled).
+/// * `s * (swap_bit * 2 * (element_r_cur - element_l_cur)  - (element_l_next - element_l_cur) - (element_r_cur - element_r_next)) = 0`. Enforces that if the swap_bit is equal to 1, the values will be swapped on the next row (if `bool_and_swap_selector` is toggled).
 /// If the swap_bit is equal to 0, the values will remain the same on the next row (if `bool_and_swap_selector` is toggled).
 /// * `s * (left_balance + right_balance - computed_sum)`. It constraints the computed sum to be equal to the sum of the left and right balances (if `sum_selector` is toggled).
 #[derive(Debug, Clone)]
@@ -59,6 +59,22 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
             let element_l_next = meta.query_advice(col_a, Rotation::next());
             let element_r_next = meta.query_advice(col_b, Rotation::next());
 
+            // Audit: The constraint is aimed at checking the correct swap of the values. If swap_bit is 1,
+            // element_l_cur == element_r_next and element_r_cur == element_l_next.
+            // If swap_bit is 0, element_l_cur == element_l_next and element_r_cur == element_r_next.
+            // However, if we combine the two equations, there's a potential for unintended solutions
+            // that satisfy the composite equation without satisfying the intended individual constraints.
+            // For the case where swap_bit = 0:
+            // element_l_cur − element_l_next + element_r_next − element_r_cur = 0
+            // Here, it's theoretically possible to cheat by picking element_l_cur, element_l_next,
+            // element_r_cur, and element_r_next such that they don't individually satisfy
+            // element_l_cur − element_l_next = 0 and element_l_cur − element_l_next = 0
+            // but still satisfy the combined equation.
+            // For example, if element_l_cur = 3 and element_l_next = 1, and element_r_cur = 2 and element_r_next = 4,
+            // the composite equation would still be satisfied because:
+            // 3 − 1 + 4 − 2 = 0
+            // even though neither element_l_cur = element_l_next nor element_r_cur = element_r_next.
+            // Splitting the constraint into two separate constraints would prevent this and also make the constraints more human-readable.
             let swap_constraint = s
                 * ((swap_bit
                     * Expression::Constant(Fp::from(2))

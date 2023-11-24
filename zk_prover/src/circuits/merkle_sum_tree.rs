@@ -222,8 +222,7 @@ where
                 config.poseidon_middle_config.clone(),
             );
 
-        let range_check_chip =
-            RangeCheckChip::<N_BYTES>::construct(config.range_check_config.clone());
+        let range_check_chip = RangeCheckChip::<N_BYTES>::construct(config.range_check_config);
 
         // Assign the entry username
         let username = self.assign_value_to_witness(
@@ -302,7 +301,7 @@ where
             let mut right_balances = vec![];
 
             // Within each level, assign the balances to the circuit per asset
-            for asset in 0..N_ASSETS {
+            for (asset, current_balance) in current_balances.iter().enumerate().take(N_ASSETS) {
                 let (left_balance, right_balance, next_balance) = merkle_sum_tree_chip
                     .assign_nodes_balance_per_asset(
                         layouter.namespace(|| {
@@ -311,7 +310,7 @@ where
                                 namespace_prefix, asset
                             )
                         }),
-                        &current_balances[asset],
+                        current_balance,
                         self.path_element_balances[level][asset],
                         swap_bit_level.clone(),
                     )?;
