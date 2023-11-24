@@ -1,6 +1,7 @@
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use num_bigint::BigUint;
+
+use super::Asset;
 
 /// A trait representing the basic operations for a Merkle-Sum-like Tree.
 pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
@@ -15,6 +16,9 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
 
     /// Returns a slice of the nodes.
     fn nodes(&self) -> &[Vec<Node<N_ASSETS>>];
+
+    /// Returns the assets whose balances are in the tree. The order of assets and balances is supposed to agree for all the entries.
+    fn assets(&self) -> &[Asset];
 
     fn get_entry(&self, index: usize) -> &Entry<N_ASSETS>;
 

@@ -16,6 +16,7 @@ pub struct MerkleProof<const N_ASSETS: usize, const N_BYTES: usize> {
 }
 
 pub use entry::Entry;
+pub use mst::Asset;
 pub use mst::MerkleSumTree;
 pub use node::Node;
 pub use tree::Tree;

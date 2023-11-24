@@ -22,6 +22,7 @@ pub struct MerkleSumTree<const N_ASSETS: usize, const N_BYTES: usize> {
     nodes: Vec<Vec<Node<N_ASSETS>>>,
     depth: usize,
     entries: Vec<Entry<N_ASSETS>>,
+    assets: Vec<Asset>,
     is_sorted: bool,
 }
 
@@ -47,42 +48,53 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> Tree<N_ASSETS, N_BYTES>
     fn get_entry(&self, index: usize) -> &Entry<N_ASSETS> {
         &self.entries[index]
     }
+
+    fn assets(&self) -> &[Asset] {
+        &self.assets
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Asset {
+    pub name: String,
+    pub chain: String,
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTES> {
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The CSV file must be formatted as follows:
     ///
-    /// `username;balances`
+    /// `username,balance_<asset>_<chain>,balance_<asset>_<chain>,...`
     ///
-    /// `dxGaEAii;11888,41163`
+    /// `dxGaEAii,11888,41163`
     pub fn new(path: &str) -> Result<Self, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
         [usize; 2 * (1 + N_ASSETS)]: Sized,
     {
-        let entries = parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
-        Self::from_entries(entries, false)
+        let (assets, entries) = parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
+        Self::from_entries(entries, assets, false)
     }
 
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The MST leaves are sorted by the username byte values. The CSV file must be formatted as follows:
     ///
-    /// `username;balances`
+    /// `username,balance_<asset>_<chain>,balance_<asset>_<chain>,...`
     ///
-    /// `dxGaEAii;11888,41163`
+    /// `dxGaEAii,11888,41163`
     pub fn new_sorted(path: &str) -> Result<Self, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
         [usize; 2 * (1 + N_ASSETS)]: Sized,
     {
-        let mut entries = parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
+        let (assets, mut entries) = parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
 
         entries.sort_by(|a, b| a.username().cmp(b.username()));
 
-        Self::from_entries(entries, true)
+        Self::from_entries(entries, assets, true)
     }
 
     pub fn from_entries(
         entries: Vec<Entry<N_ASSETS>>,
+        assets: Vec<Asset>,
         is_sorted: bool,
     ) -> Result<MerkleSumTree<N_ASSETS, N_BYTES>, Box<dyn std::error::Error>>
     where
@@ -102,6 +114,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
             nodes,
             depth,
             entries,
+            assets,
             is_sorted,
         })
     }
