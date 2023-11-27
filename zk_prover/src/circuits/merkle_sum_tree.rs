@@ -3,7 +3,8 @@ use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
 use crate::circuits::traits::CircuitBase;
-use crate::merkle_sum_tree::{big_uint_to_fp, Entry, MerkleProof, Node};
+use crate::merkle_sum_tree::utils::big_uint_to_fp;
+use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{

@@ -13,7 +13,7 @@ use nova_scotia::{
 use nova_snark::{provider, CompressedSNARK, PublicParams};
 use num_bigint::BigUint;
 use serde_json::json;
-use summa_solvency::merkle_sum_tree::big_intify_username;
+use summa_solvency::merkle_sum_tree::utils::big_intify_username;
 
 const N_ASSETS: usize = 2;
 

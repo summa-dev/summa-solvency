@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod test {
 
-    use crate::merkle_sum_tree::utils::{big_uint_to_fp, poseidon_entry, poseidon_node};
-    use crate::merkle_sum_tree::{Entry, MerkleSumTree, Tree};
+    use crate::merkle_sum_tree::utils::big_uint_to_fp;
+    use crate::merkle_sum_tree::{Entry, MerkleSumTree, Node, Tree};
     use num_bigint::{BigUint, ToBigUint};
     use rand::Rng as _;
 
@@ -219,22 +219,10 @@ mod test {
             .get_middle_node_hash_preimage(level, index)
             .unwrap();
 
-        let mut balances = vec![];
-
-        // loop from 0 to N_ASSETS and push the value in the hash preimage to the balances vector
-        for i in 0..N_ASSETS {
-            balances.push(hash_preimage[i]);
-        }
-
-        // Perform the poseidon hash on the hash preimage
-        let hash = poseidon_node::<N_ASSETS>(
-            balances.try_into().unwrap(),
-            hash_preimage[2],
-            hash_preimage[3],
-        );
+        let computed_middle_node = Node::<N_ASSETS>::middle_node_from_preimage(hash_preimage);
 
         // The hash of the middle node should match the hash computed from the hash preimage
-        assert_eq!(middle_node.hash, hash);
+        assert_eq!(middle_node.hash, computed_middle_node.hash);
     }
 
     #[test]
@@ -253,20 +241,9 @@ mod test {
         // Fetch the hash preimage of the leaf
         let hash_preimage = merkle_tree.get_leaf_node_hash_preimage(index).unwrap();
 
-        // Extract the balances from the hash preimage
-        let mut balances = vec![];
+        let computed_leaf = Node::<N_ASSETS>::leaf_node_from_preimage(hash_preimage);
 
-        // loop from 1 to N_ASSETS + 1 and push the value in the hash preimage to the balances vector
-        for i in 1..N_ASSETS + 1 {
-            balances.push(hash_preimage[i]);
-        }
-
-        let username = hash_preimage[0];
-
-        // Perform the poseidon hash on the hash preimage
-        let hash = poseidon_entry::<N_ASSETS>(username, balances.try_into().unwrap());
-
-        // The hash of the middle node should match the hash computed from the hash preimage
-        assert_eq!(leaf.hash, hash);
+        // The hash of the leaf should match the hash computed from the hash preimage
+        assert_eq!(leaf.hash, computed_leaf.hash);
     }
 }

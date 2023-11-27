@@ -23,4 +23,3 @@ pub use entry::Entry;
 pub use mst::MerkleSumTree;
 pub use node::Node;
 pub use tree::Tree;
-pub use utils::{big_intify_username, big_uint_to_fp};

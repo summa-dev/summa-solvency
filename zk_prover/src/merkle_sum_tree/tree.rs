@@ -1,5 +1,4 @@
-use crate::merkle_sum_tree::big_uint_to_fp;
-use crate::merkle_sum_tree::utils::{poseidon_entry, poseidon_node};
+use crate::merkle_sum_tree::utils::big_uint_to_fp;
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
@@ -146,19 +145,8 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
     {
         let mut node = proof.entry.compute_leaf();
 
-        let sibling_leaf_node_balances = proof.sibling_leaf_node_hash_preimage[1..]
-            .try_into()
-            .unwrap();
-
-        let sibling_leaf_node_hash = poseidon_entry::<N_ASSETS>(
-            proof.sibling_leaf_node_hash_preimage[0],
-            sibling_leaf_node_balances,
-        );
-
-        let sibling_leaf_node = Node {
-            hash: sibling_leaf_node_hash,
-            balances: sibling_leaf_node_balances,
-        };
+        let sibling_leaf_node =
+            Node::<N_ASSETS>::leaf_node_from_preimage(proof.sibling_leaf_node_hash_preimage);
 
         if proof.path_indices[0] == 0.into() {
             node = Node::middle(&node, &sibling_leaf_node);
@@ -167,25 +155,9 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
         }
 
         for i in 1..proof.path_indices.len() {
-            let sibling_middle_node_balances = proof.sibling_middle_node_hash_preimages[i - 1]
-                [0..N_ASSETS]
-                .try_into()
-                .unwrap();
-
-            let sibling_middle_node_child_left_hash =
-                proof.sibling_middle_node_hash_preimages[i - 1][N_ASSETS];
-
-            let sibling_middle_node_child_right_hash =
-                proof.sibling_middle_node_hash_preimages[i - 1][N_ASSETS + 1];
-
-            let sibling_node = Node {
-                hash: poseidon_node::<N_ASSETS>(
-                    sibling_middle_node_balances,
-                    sibling_middle_node_child_left_hash,
-                    sibling_middle_node_child_right_hash,
-                ),
-                balances: sibling_middle_node_balances,
-            };
+            let sibling_node = Node::<N_ASSETS>::middle_node_from_preimage(
+                proof.sibling_middle_node_hash_preimages[i - 1],
+            );
 
             if proof.path_indices[i] == 0.into() {
                 node = Node::middle(&node, &sibling_node);
