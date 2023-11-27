@@ -55,7 +55,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
     Round<'_, LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; N_ASSETS + 1]: Sized,
-    [usize; 2 * (1 + N_ASSETS)]: Sized,
+    [usize; N_ASSETS + 2]: Sized,
 {
     pub fn new<'a>(
         signer: &'a SummaSigner,
@@ -120,7 +120,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
     Snapshot<LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; N_ASSETS + 1]: Sized,
-    [usize; 2 * (1 + N_ASSETS)]: Sized,
+    [usize; N_ASSETS + 2]: Sized,
 {
     pub fn new(
         mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
