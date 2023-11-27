@@ -8,8 +8,8 @@ use num_bigint::BigUint;
 ///
 /// A Merkle Sum Tree is a binary Merkle Tree with the following properties:
 /// * Each Entry of a Merkle Sum Tree is a pair of a username and #N_ASSETS balances.
-/// * Each Leaf Node contains a hash and #N_ASSETS balances. The hash is equal to `H(username, balance[0], balance[1], ... balance[N_ASSETS])`. The balances are equal to the balances associated to the entry
-/// * Each Middle Node contains a hash and #N_ASSETS balances. The hash is equal to `H(LeftChild.balance[0] + RightChild.balance[0], LeftChild.balance[1] + RightChild.balance[1], ..., LeftChild.balance[N_ASSETS] + RightChild.balance[N_ASSETS], LeftChild.hash, RightChild.hash)`. The balances are equal to the sum of the balances of the child nodes per each asset.
+/// * Each Leaf Node contains a hash and #N_ASSETS balances. The hash is equal to `H(username, balance[0], balance[1], ... balance[N_ASSETS - 1])`. The balances are equal to the balances associated to the entry
+/// * Each Middle Node contains a hash and #N_ASSETS balances. The hash is equal to `H(LeftChild.balance[0] + RightChild.balance[0], LeftChild.balance[1] + RightChild.balance[1], ..., LeftChild.balance[N_ASSETS - 1] + RightChild.balance[N_ASSETS - 1], LeftChild.hash, RightChild.hash)`. The balances are equal to the sum of the balances of the child nodes per each asset.
 /// * The Root Node represents the committed state of the Tree and contains the sum of all the entries' balances per each asset.
 ///
 /// # Type Parameters
