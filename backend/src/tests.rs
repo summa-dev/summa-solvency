@@ -57,26 +57,6 @@ pub async fn initialize_test_env(
             .await;
     }
 
-    // Mock ERC20 contract deployment
-    // Creating a factory to deploy a mock ERC20 contract
-    let factory = ContractFactory::new(
-        MOCKERC20_ABI.to_owned(),
-        MOCKERC20_BYTECODE.to_owned(),
-        Arc::clone(&client),
-    );
-
-    // Deploy Mock ERC20 contract
-    let mock_erc20_deployment = factory.deploy(()).unwrap().send().await.unwrap();
-
-    // Creating an interface for the deployed mock ERC20 contract
-    let mock_erc20 = MockERC20::new(mock_erc20_deployment.address(), Arc::clone(&client));
-
-    // Mint some token to `cex_addr_2`
-    let mint_call = mock_erc20.mint(cex_addr_2, U256::from(556863));
-    assert!(mint_call.send().await.is_ok());
-
-    time::sleep(Duration::from_millis(500)).await;
-
     if block_time != None {
         time::sleep(Duration::from_secs(block_time.unwrap())).await;
     };
