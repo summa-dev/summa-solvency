@@ -13,21 +13,21 @@ describe("Summa Contract", () => {
     summa: Summa,
     mstRoot: BigNumber,
     rootBalances: BigNumber[],
-    assets = [
+    cryptocurrencies = [
       {
         chain: "ETH",
-        assetName: "ETH",
+        name: "ETH",
       },
       {
         chain: "BTC",
-        assetName: "BTC",
+        name: "BTC",
       },
     ]
   ): any {
     return summa.submitCommitment(
       mstRoot,
       rootBalances,
-      assets,
+      cryptocurrencies,
       BigNumber.from(1693559255)
     );
   }
@@ -37,12 +37,12 @@ describe("Summa Contract", () => {
     inclusionProof: string,
     leafHash: BigNumber,
     mstRoot: BigNumber,
-    assetBalance1: BigNumber,
-    assetBalance2: BigNumber
+    balance1: BigNumber,
+    balance2: BigNumber
   ): any {
     return summa.verifyInclusionProof(
       inclusionProof,
-      [leafHash, mstRoot, assetBalance1, assetBalance2],
+      [leafHash, mstRoot, balance1, balance2],
       1693559255
     );
   }
@@ -277,8 +277,11 @@ describe("Summa Contract", () => {
           BigNumber.from(1693559255),
           mstRoot,
           rootBalances,
-          (assets: [Summa.AssetStruct]) => {
-            return assets[0].chain == "ETH" && assets[0].assetName == "ETH";
+          (cryptocurrencies: [Summa.CryptocurrencyStruct]) => {
+            return (
+              cryptocurrencies[0].chain == "ETH" &&
+              cryptocurrencies[0].name == "ETH"
+            );
           }
         );
     });
@@ -291,7 +294,7 @@ describe("Summa Contract", () => {
           [
             {
               chain: "ETH",
-              assetName: "ETH",
+              name: "ETH",
             },
           ],
           BigNumber.from(1693559255)
@@ -309,34 +312,34 @@ describe("Summa Contract", () => {
       ).to.be.revertedWith("All root sums should be greater than zero");
     });
 
-    it("should revert with invalid assets", async () => {
+    it("should revert with invalid cryptocurrencies", async () => {
       await summa.submitProofOfAddressOwnership(ownedAddresses);
 
       await expect(
         submitCommitment(summa, mstRoot, rootBalances, [
           {
             chain: "BTC",
-            assetName: "BTC",
+            name: "BTC",
           },
           {
             chain: "",
-            assetName: "ETH",
+            name: "ETH",
           },
         ])
-      ).to.be.revertedWith("Invalid asset");
+      ).to.be.revertedWith("Invalid cryptocurrency");
 
       await expect(
         submitCommitment(summa, mstRoot, rootBalances, [
           {
             chain: "ETH",
-            assetName: "ETH",
+            name: "ETH",
           },
           {
             chain: "BTC",
-            assetName: "",
+            name: "",
           },
         ])
-      ).to.be.revertedWith("Invalid asset");
+      ).to.be.revertedWith("Invalid cryptocurrency");
     });
 
     it("should not submit invalid root", async () => {
@@ -345,11 +348,13 @@ describe("Summa Contract", () => {
       ).to.be.revertedWith("Invalid MST root");
     });
 
-    it("should revert if asset and sum count don't match", async () => {
+    it("should revert if cryptocurrency and liability counts don't match", async () => {
       rootBalances = [BigNumber.from(10000000)];
       await expect(
         submitCommitment(summa, mstRoot, rootBalances)
-      ).to.be.revertedWith("Root asset sums and asset number mismatch");
+      ).to.be.revertedWith(
+        "Root liabilities sums and liabilities number mismatch"
+      );
     });
   });
 
@@ -358,8 +363,8 @@ describe("Summa Contract", () => {
     let rootBalances: BigNumber[];
     let inclusionMstRoot: BigNumber;
     let leafHash: BigNumber;
-    let assetBalance1: BigNumber;
-    let assetBalance2: BigNumber;
+    let balance1: BigNumber;
+    let balance2: BigNumber;
     let summa: Summa;
     let account1: SignerWithAddress;
     let account2: SignerWithAddress;
@@ -405,8 +410,8 @@ describe("Summa Contract", () => {
       inclusionProof = inclusionCalldata.proof;
       leafHash = inclusionCalldata.public_inputs[0];
       inclusionMstRoot = inclusionCalldata.public_inputs[1];
-      assetBalance1 = inclusionCalldata.public_inputs[2];
-      assetBalance2 = inclusionCalldata.public_inputs[3];
+      balance1 = inclusionCalldata.public_inputs[2];
+      balance2 = inclusionCalldata.public_inputs[3];
 
       const commitmentCalldataJson = fs.readFileSync(
         path.resolve(
@@ -430,8 +435,8 @@ describe("Summa Contract", () => {
           inclusionProof,
           leafHash,
           inclusionMstRoot,
-          assetBalance1,
-          assetBalance2
+          balance1,
+          balance2
         )
       ).to.be.equal(true);
     });
@@ -446,8 +451,8 @@ describe("Summa Contract", () => {
           inclusionProof,
           leafHash,
           inclusionMstRoot,
-          assetBalance1,
-          assetBalance2
+          balance1,
+          balance2
         )
       ).to.be.revertedWith("Invalid MST root");
     });
@@ -460,14 +465,14 @@ describe("Summa Contract", () => {
           inclusionProof,
           leafHash,
           inclusionMstRoot,
-          assetBalance1,
-          assetBalance2
+          balance1,
+          balance2
         )
       ).to.be.revertedWith("Invalid MST root");
     });
 
     it("should not verify with invalid root balances", async () => {
-      assetBalance1 = BigNumber.from(0);
+      balance1 = BigNumber.from(0);
 
       await summa.submitProofOfAddressOwnership(ownedAddresses);
       await submitCommitment(summa, commitmentMstRoot, rootBalances);
@@ -477,8 +482,8 @@ describe("Summa Contract", () => {
           inclusionProof,
           leafHash,
           inclusionMstRoot,
-          assetBalance1,
-          assetBalance2
+          balance1,
+          balance2
         )
       ).to.be.revertedWith("Invalid root balance");
     });
@@ -494,8 +499,8 @@ describe("Summa Contract", () => {
           inclusionProof,
           leafHash,
           inclusionMstRoot,
-          assetBalance1,
-          assetBalance2
+          balance1,
+          balance2
         )
       ).to.be.equal(false);
     });
@@ -511,8 +516,8 @@ describe("Summa Contract", () => {
           inclusionProof,
           leafHash,
           inclusionMstRoot,
-          assetBalance1,
-          assetBalance2
+          balance1,
+          balance2
         )
       ).to.be.equal(false);
     });

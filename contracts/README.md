@@ -1,6 +1,6 @@
 # Summa Smart Contract
 
-The [Summa smart contract](src/Summa.sol) acts as a registrar for Centralized Exchanges (CEXs) to commit to their liabilities by submitting a Merkle sum tree (MST) root of all the CEX user asset balances. Users can then verify their inclusion into the liabilities commitment, and the public can compare the committed total sums with the assets owned by the CEX onchain.
+The [Summa smart contract](src/Summa.sol) acts as a registrar for Centralized Exchanges (CEXs) to commit to their liabilities by submitting a Merkle sum tree (MST) root of all the CEX liabilities owed to its users. Users can then verify their inclusion into the liabilities commitment, and the public can compare the committed total sums with the assets owned by the CEX onchain.
 
 ## Features
 

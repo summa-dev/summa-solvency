@@ -24,27 +24,27 @@ contract Summa is Ownable {
     }
 
     /**
-     * @dev Struct representing an asset owned by the CEX
-     * @param assetName The name of the asset
-     * @param chain The name of the chain name where the asset lives (e.g., ETH, BTC)
+     * @dev Struct identifying a cryptocurrency traded on the CEX
+     * @param name The name of the cryptocurrency
+     * @param chain The name of the chain name where the cryptocurrency lives (e.g., ETH, BTC)
      */
-    struct Asset {
-        string assetName;
+    struct Cryptocurrency {
+        string name;
         string chain;
     }
 
     /**
      * @dev Struct representing a commitment submitted by the CEX.
      * @param mstRoot Merkle sum tree root of the CEX's liabilities
-     * @param rootBalances The total sums of the assets included in the tree
-     * @param assetChains The chains where the CEX holds the assets included into the tree
-     * @param assetNames The names of the assets included into the tree
+     * @param rootBalances The total sums of the liabilities included in the tree
+     * @param blockchainNames The names of the blockchains where the CEX holds the cryptocurrencies included into the tree
+     * @param cryptocurrencyNames The names of the cryptocurrencies included into the tree
      */
     struct Commitment {
         uint256 mstRoot;
         uint256[] rootBalances;
-        string[] assetNames;
-        string[] assetChains;
+        string[] cryptocurrencyNames;
+        string[] blockchainNames;
     }
 
     // User inclusion proof verifier
@@ -78,7 +78,7 @@ contract Summa is Ownable {
         uint256 indexed timestamp,
         uint256 mstRoot,
         uint256[] rootBalances,
-        Asset[] assets
+        Cryptocurrency[] cryptocurrencies
     );
 
     constructor(IVerifier _inclusionVerifier) {
@@ -117,49 +117,51 @@ contract Summa is Ownable {
     /**
      * @dev Submit commitment for a CEX
      * @param mstRoot Merkle sum tree root of the CEX's liabilities
-     * @param rootBalances The total sums of the assets included into the Merkle sum tree
-     * @param assets The assets included into the Merkle sum tree
+     * @param rootBalances The total sums of the liabilities included into the Merkle sum tree
+     * @param cryptocurrencies The cryptocurrencies included into the Merkle sum tree
      * @param timestamp The timestamp at which the CEX took the snapshot of its assets and liabilities
      */
     function submitCommitment(
         uint256 mstRoot,
         uint256[] memory rootBalances,
-        Asset[] memory assets,
+        Cryptocurrency[] memory cryptocurrencies,
         uint256 timestamp
     ) public onlyOwner {
         require(mstRoot != 0, "Invalid MST root");
         require(
-            rootBalances.length == assets.length,
-            "Root asset sums and asset number mismatch"
+            rootBalances.length == cryptocurrencies.length,
+            "Root liabilities sums and liabilities number mismatch"
         );
-        string[] memory assetNames = new string[](assets.length);
-        string[] memory assetChains = new string[](assets.length);
-        for (uint i = 0; i < assets.length; i++) {
+        string[] memory cryptocurrencyNames = new string[](
+            cryptocurrencies.length
+        );
+        string[] memory blockchainNames = new string[](cryptocurrencies.length);
+        for (uint i = 0; i < cryptocurrencies.length; i++) {
             require(
-                bytes(assets[i].chain).length != 0 &&
-                    bytes(assets[i].assetName).length != 0,
-                "Invalid asset"
+                bytes(cryptocurrencies[i].chain).length != 0 &&
+                    bytes(cryptocurrencies[i].name).length != 0,
+                "Invalid cryptocurrency"
             );
             require(
                 rootBalances[i] != 0,
                 "All root sums should be greater than zero"
             );
-            assetNames[i] = assets[i].assetName;
-            assetChains[i] = assets[i].chain;
+            cryptocurrencyNames[i] = cryptocurrencies[i].name;
+            blockchainNames[i] = cryptocurrencies[i].chain;
         }
 
         commitments[timestamp] = Commitment(
             mstRoot,
             rootBalances,
-            assetNames,
-            assetChains
+            cryptocurrencyNames,
+            blockchainNames
         );
 
         emit LiabilitiesCommitmentSubmitted(
             timestamp,
             mstRoot,
             rootBalances,
-            assets
+            cryptocurrencies
         );
     }
 
