@@ -112,8 +112,8 @@ where
 /// # Fields
 ///
 /// * `merkle_sum_tree_config`: Configuration for the merkle sum tree
-/// * `poseidon_entry_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1 and input length of 1 + N_ASSETS. Needed to perform the hashing from the entry to the leaf.
-/// * `poseidon_middle_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1 and input length of 2 * (1 + N_ASSETS). Needed to perform hashings from the leaf to the root.
+/// * `poseidon_entry_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1 and input length of N_ASSETS + 1. Needed to perform the hashing from the entry to the leaf.
+/// * `poseidon_middle_config`: Configuration for the poseidon hash function with WIDTH = 2 and RATE = 1 and input length of N_ASSETS + 2. Needed to perform hashings from the leaf to the root.
 /// * `range_check_config`: Configuration for the range check chip
 /// * `instance`: Instance column used to store the public inputs
 /// * `advices`: Advice columns used to store the private inputs
