@@ -7,7 +7,7 @@ use halo2_proofs::{
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
-use crate::contracts::{generated::summa_contract::summa::Asset, signer::SummaSigner};
+use crate::contracts::{generated::summa_contract::summa::Cryptocurrency, signer::SummaSigner};
 use summa_solvency::{
     circuits::{
         merkle_sum_tree::MstInclusionCircuit,
@@ -89,13 +89,13 @@ where
                 root_sums,
                 self.snapshot
                     .mst
-                    .assets()
+                    .cryptocurrencies()
                     .iter()
-                    .map(|asset| Asset {
-                        asset_name: asset.name.clone(),
-                        chain: asset.chain.clone(),
+                    .map(|cryptocurrency| Cryptocurrency {
+                        name: cryptocurrency.name.clone(),
+                        chain: cryptocurrency.chain.clone(),
                     })
-                    .collect::<Vec<Asset>>()
+                    .collect::<Vec<Cryptocurrency>>()
                     .as_slice()
                     .try_into()
                     .unwrap(),

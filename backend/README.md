@@ -102,9 +102,9 @@ Without publishing the commitment, users cannot verify their inclusion proof on 
 In here, we'll introduce you through the process of submitting a commitment using the `Round` to the Summa contract.
 The Round serves as the core of the backend in Summa, and we have briefly described it in the Components section.
 
-To initialize the `Round` instance, you'll need paths to the user asset balances CSV file (`entry_16.csv`) and the `ptau/hermez-raw-11` file. The files serve the following purpose:
+To initialize the `Round` instance, you'll need paths to the liabilities CSV file (`entry_16.csv`) and the `ptau/hermez-raw-11` file. The files serve the following purpose:
 
-- `entry_16.csv`: contains the username and asset balance entries for each CEX user (necessary to build the commitment). Asset balance column names have the following format: `balance_<ASSET>_<CHAIN>`, where <ASSET> and <CHAIN> are the names of the assets and their corresponding blockchains. <CHAIN> values are the same as in the Address Ownership Proof step;
+- `entry_16.csv`: contains the username and liabilities entries for each CEX user (necessary to build the commitment). Liabilities column names have the following format: `balance_<CRYPTOCURRENCY>_<CHAIN>`, where <CRYPTOCURRENCY> and <CHAIN> are the names of the cryptocurrencies and their corresponding blockchains. <CHAIN> values are the same as in the Address Ownership Proof step;
 - `ptau/hermez-raw-11`: contains parameters for constructing the zk circuits.
 
 Using the `Round` instance, the solvency proof is dispatched to the Summa contract with the `dispatch_solvency_proof` method.

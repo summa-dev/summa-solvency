@@ -1,4 +1,4 @@
-use crate::merkle_sum_tree::{Asset, Entry};
+use crate::merkle_sum_tree::{Cryptocurrency, Entry};
 use num_bigint::BigUint;
 use std::collections::HashMap;
 use std::error::Error;
@@ -7,19 +7,19 @@ use std::path::Path;
 
 pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize, const N_BYTES: usize>(
     path: P,
-) -> Result<(Vec<Asset>, Vec<Entry<N_ASSETS>>), Box<dyn Error>> {
+) -> Result<(Vec<Cryptocurrency>, Vec<Entry<N_ASSETS>>), Box<dyn Error>> {
     let file = File::open(path)?;
     let mut rdr = csv::ReaderBuilder::new().from_reader(file);
 
     let headers = rdr.headers()?.clone();
-    let mut assets: Vec<Asset> = Vec::with_capacity(N_ASSETS);
+    let mut cryptocurrencies: Vec<Cryptocurrency> = Vec::with_capacity(N_ASSETS);
 
-    // Extracting asset names from column names
+    // Extracting cryptocurrency names from column names
     for header in headers.iter().skip(1) {
         // Skipping 'username' column
         let parts: Vec<&str> = header.split('_').collect();
         if parts.len() == 3 && parts[0] == "balance" {
-            assets.push(Asset {
+            cryptocurrencies.push(Cryptocurrency {
                 name: parts[1].to_owned(),
                 chain: parts[2].to_owned(),
             });
@@ -37,16 +37,16 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize, const N_BYTES
         let username = record.get("username").ok_or("Username not found")?.clone();
 
         let mut balances_big_int = Vec::new();
-        for asset in &assets {
+        for cryptocurrency in &cryptocurrencies {
             let balance_str = record
-                .get(format!("balance_{}_{}", asset.name, asset.chain).as_str())
+                .get(format!("balance_{}_{}", cryptocurrency.name, cryptocurrency.chain).as_str())
                 .ok_or(format!(
                     "Balance for {} on {} not found",
-                    asset.name, asset.chain
+                    cryptocurrency.name, cryptocurrency.chain
                 ))?;
             let balance = BigUint::parse_bytes(balance_str.as_bytes(), 10).ok_or(format!(
                 "Invalid balance for {} on {}",
-                asset.name, asset.chain
+                cryptocurrency.name, cryptocurrency.chain
             ))?;
             balances_big_int.push(balance);
         }
@@ -71,5 +71,5 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize, const N_BYTES
         }
     }
 
-    Ok((assets, entries))
+    Ok((cryptocurrencies, entries))
 }

@@ -121,7 +121,7 @@ mod test {
     use crate::apis::{address_ownership::AddressOwnership, round::Round};
     use crate::contracts::{
         generated::summa_contract::{
-            AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
+            AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Cryptocurrency,
             LiabilitiesCommitmentSubmittedFilter,
         },
         signer::{AddressInput, SummaSigner},
@@ -273,13 +273,13 @@ mod test {
                     .parse()
                     .unwrap(),
                 root_balances: vec![U256::from(556862), U256::from(556862)],
-                assets: vec![
-                    Asset {
-                        asset_name: "ETH".to_string(),
+                cryptocurrencies: vec![
+                    Cryptocurrency {
+                        name: "ETH".to_string(),
                         chain: "ETH".to_string(),
                     },
-                    Asset {
-                        asset_name: "USDT".to_string(),
+                    Cryptocurrency {
+                        name: "USDT".to_string(),
                         chain: "ETH".to_string(),
                     },
                 ],

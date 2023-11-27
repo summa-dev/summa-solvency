@@ -8,7 +8,7 @@ use serde_json::Value;
 use std::{error::Error, fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc};
 use tokio::sync::Mutex;
 
-use super::generated::summa_contract::{AddressOwnershipProof, Asset};
+use super::generated::summa_contract::{AddressOwnershipProof, Cryptocurrency};
 use crate::contracts::generated::summa_contract::Summa;
 
 pub enum AddressInput {
@@ -108,14 +108,17 @@ impl SummaSigner {
         &self,
         mst_root: U256,
         root_sums: Vec<U256>,
-        assets: Vec<Asset>,
+        cryptocurrencies: Vec<Cryptocurrency>,
         timestamp: U256,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let lock_guard = self.nonce_lock.lock().await;
 
-        let submit_liability_commitment = &self
-            .summa_contract
-            .submit_commitment(mst_root, root_sums, assets, timestamp);
+        let submit_liability_commitment = &self.summa_contract.submit_commitment(
+            mst_root,
+            root_sums,
+            cryptocurrencies,
+            timestamp,
+        );
 
         // To prevent nonce collision, we lock the nonce before sending the transaction
         let tx = submit_liability_commitment.send().await?;
