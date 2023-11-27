@@ -121,7 +121,7 @@ mod test {
     use crate::apis::{address_ownership::AddressOwnership, round::Round};
     use crate::contracts::{
         generated::summa_contract::{
-            AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
+            AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Cryptocurrency,
             LiabilitiesCommitmentSubmittedFilter,
         },
         signer::{AddressInput, SummaSigner},
@@ -163,16 +163,13 @@ mod test {
         )
         .await?;
 
-        let asset_csv = "src/apis/csv/assets.csv";
         let params_path = "ptau/hermez-raw-11";
         let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
         let mst = MerkleSumTree::new(entry_csv).unwrap();
 
         let mut round_one =
-            Round::<4, 2, 14>::new(&signer, Box::new(mst.clone()), asset_csv, params_path, 1)
-                .unwrap();
-        let mut round_two =
-            Round::<4, 2, 14>::new(&signer, Box::new(mst), asset_csv, params_path, 2).unwrap();
+            Round::<4, 2, 14>::new(&signer, Box::new(mst.clone()), params_path, 1).unwrap();
+        let mut round_two = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, 2).unwrap();
 
         // Checking block number before sending transaction of liability commitment
         let outer_provider: Provider<Http> = Provider::try_from(anvil.endpoint().as_str())?;
@@ -246,12 +243,10 @@ mod test {
 
         // Initialize round
         let params_path = "ptau/hermez-raw-11";
-        let asset_csv = "src/apis/csv/assets.csv";
         let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
 
         let mst = MerkleSumTree::new(entry_csv).unwrap();
-        let mut round =
-            Round::<4, 2, 14>::new(&signer, Box::new(mst), asset_csv, params_path, 1).unwrap();
+        let mut round = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, 1).unwrap();
 
         let mut liability_commitment_logs = summa_contract
             .liabilities_commitment_submitted_filter()
@@ -278,13 +273,13 @@ mod test {
                     .parse()
                     .unwrap(),
                 root_balances: vec![U256::from(556862), U256::from(556862)],
-                assets: vec![
-                    Asset {
-                        asset_name: "ETH".to_string(),
+                cryptocurrencies: vec![
+                    Cryptocurrency {
+                        name: "ETH".to_string(),
                         chain: "ETH".to_string(),
                     },
-                    Asset {
-                        asset_name: "USDT".to_string(),
+                    Cryptocurrency {
+                        name: "USDT".to_string(),
                         chain: "ETH".to_string(),
                     },
                 ],

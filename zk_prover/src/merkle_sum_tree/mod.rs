@@ -27,6 +27,7 @@ where
 }
 
 pub use entry::Entry;
+pub use mst::Cryptocurrency;
 pub use mst::MerkleSumTree;
 pub use node::Node;
 pub use tree::Tree;

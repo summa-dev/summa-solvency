@@ -7,8 +7,7 @@ use halo2_proofs::{
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
-use super::csv_parser::parse_asset_csv;
-use crate::contracts::{generated::summa_contract::summa::Asset, signer::SummaSigner};
+use crate::contracts::{generated::summa_contract::summa::Cryptocurrency, signer::SummaSigner};
 use summa_solvency::{
     circuits::{
         merkle_sum_tree::MstInclusionCircuit,
@@ -40,8 +39,7 @@ impl MstInclusionProof {
 }
 
 pub struct Snapshot<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
-    mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
-    assets_state: [Asset; N_ASSETS],
+    pub mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
     trusted_setup: SetupArtifacts,
 }
 
@@ -60,7 +58,6 @@ where
     pub fn new<'a>(
         signer: &'a SummaSigner,
         mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
-        asset_csv_path: &str,
         params_path: &str,
         timestamp: u64,
     ) -> Result<Round<'a, LEVELS, N_ASSETS, N_BYTES>, Box<dyn Error>>
@@ -69,9 +66,8 @@ where
     {
         Ok(Round {
             timestamp,
-            snapshot: Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(mst, asset_csv_path, params_path)
-                .unwrap(),
-            signer,
+            snapshot: Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(mst, params_path).unwrap(),
+            signer: &signer,
         })
     }
 
@@ -94,7 +90,18 @@ where
             .submit_commitment(
                 mst_root,
                 root_sums,
-                self.snapshot.assets_state.to_vec(),
+                self.snapshot
+                    .mst
+                    .cryptocurrencies()
+                    .iter()
+                    .map(|cryptocurrency| Cryptocurrency {
+                        name: cryptocurrency.name.clone(),
+                        chain: cryptocurrency.chain.clone(),
+                    })
+                    .collect::<Vec<Cryptocurrency>>()
+                    .as_slice()
+                    .try_into()
+                    .unwrap(),
                 U256::from(self.get_timestamp()),
             )
             .await?;
@@ -124,14 +131,8 @@ where
 {
     pub fn new(
         mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
-        asset_csv_path: &str,
         params_path: &str,
-    ) -> Result<Snapshot<LEVELS, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>>
-    where
-        [(); N_ASSETS + 2]: Sized,
-    {
-        let assets_state = parse_asset_csv::<&str, N_ASSETS>(asset_csv_path).unwrap();
-
+    ) -> Result<Snapshot<LEVELS, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>> {
         let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
 
         // get k from ptau file name
@@ -144,7 +145,6 @@ where
 
         Ok(Snapshot {
             mst,
-            assets_state,
             trusted_setup: mst_inclusion_setup_artifacts,
         })
     }

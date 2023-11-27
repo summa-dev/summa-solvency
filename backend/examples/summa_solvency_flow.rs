@@ -58,20 +58,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //
     // Initialize the `Round` instance to submit the liability commitment.
     let params_path = "ptau/hermez-raw-11";
-    let assets_csv_path = "src/apis/csv/assets.csv";
     let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
     let mst = MerkleSumTree::new(entry_csv).unwrap();
 
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
-    let mut round = Round::<4, 2, 14>::new(
-        &signer,
-        Box::new(mst),
-        assets_csv_path,
-        params_path,
-        timestamp,
-    )
-    .unwrap();
+    let mut round = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, timestamp).unwrap();
 
     // Sends the commitment, which should ideally complete without errors.
     round.dispatch_commitment().await?;
