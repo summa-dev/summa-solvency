@@ -7,12 +7,13 @@ use serde_json::{from_reader, to_string_pretty};
 use summa_backend::{
     apis::{
         address_ownership::AddressOwnership,
+        leaf_hash_from_inputs,
         round::{MstInclusionProof, Round},
     },
     contracts::signer::{AddressInput, SummaSigner},
     tests::initialize_test_env,
 };
-use summa_solvency::merkle_sum_tree::{utils::generate_leaf_hash, MerkleSumTree};
+use summa_solvency::merkle_sum_tree::MerkleSumTree;
 
 const N_ASSETS: usize = 2;
 const USER_INDEX: usize = 0;
@@ -111,12 +112,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // It's assumed that both `user_name` and `balances` are provided by the CEX.
     // The `balances` represent the user's balances on the CEX at `snapshot_time`.
     let user_name = "dxGaEAii".to_string();
-    let balances = vec![11888, 41163];
+    let balances = vec!["11888".to_string(), "41163".to_string()];
 
     let leaf_hash = public_inputs[0];
     assert_eq!(
         leaf_hash,
-        generate_leaf_hash::<N_ASSETS>(user_name.clone(), balances.clone())
+        leaf_hash_from_inputs::<N_ASSETS>(user_name.clone(), balances.clone())
     );
 
     // Get `mst_root` from contract. the `mst_root` is disptached by CEX with specific time `snapshot_time`.
