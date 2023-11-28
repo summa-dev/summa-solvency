@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use ethers::{
-    prelude::{ContractFactory, SignerMiddleware},
+    prelude::SignerMiddleware,
     providers::{Http, Middleware, Provider},
     signers::{LocalWallet, Signer},
     types::{H160, U256},
@@ -10,7 +10,6 @@ use ethers::{
 use tokio::time;
 
 use crate::contracts::generated::{inclusion_verifier::InclusionVerifier, summa_contract::Summa};
-use crate::contracts::mock::mock_erc20::{MockERC20, MOCKERC20_ABI, MOCKERC20_BYTECODE};
 
 // Setup test environment on the anvil instance
 pub async fn initialize_test_env(
