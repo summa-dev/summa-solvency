@@ -2,6 +2,7 @@ use crate::merkle_sum_tree::utils::{
     build_leaves_from_entries, build_merkle_tree_from_leaves, parse_csv_to_entries,
 };
 use crate::merkle_sum_tree::{Entry, Node, Tree};
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use num_bigint::BigUint;
 
 /// Merkle Sum Tree Data Structure.
@@ -154,7 +155,15 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
             let parent_index = current_index / 2;
             let left_child = &self.nodes[depth - 1][2 * parent_index];
             let right_child = &self.nodes[depth - 1][2 * parent_index + 1];
-            self.nodes[depth][parent_index] = Node::<N_ASSETS>::middle(left_child, right_child);
+
+            let mut hash_preimage = [Fp::zero(); N_ASSETS + 2];
+            for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_ASSETS) {
+                *balance = left_child.balances[i] + right_child.balances[i];
+            }
+            hash_preimage[N_ASSETS] = left_child.hash;
+            hash_preimage[N_ASSETS + 1] = right_child.hash;
+
+            self.nodes[depth][parent_index] = Node::middle_node_from_preimage(&hash_preimage);
             current_index = parent_index;
         }
 

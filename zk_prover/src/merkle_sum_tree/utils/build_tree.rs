@@ -70,7 +70,18 @@ where
     let results: Vec<Node<N_ASSETS>> = (0..tree[level - 1].len())
         .into_par_iter()
         .step_by(2)
-        .map(|index| Node::middle(&tree[level - 1][index], &tree[level - 1][index + 1]))
+        .map(|index| {
+            let mut hash_preimage = [Fp::zero(); N_ASSETS + 2];
+
+            for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_ASSETS) {
+                *balance =
+                    tree[level - 1][index].balances[i] + tree[level - 1][index + 1].balances[i];
+            }
+
+            hash_preimage[N_ASSETS] = tree[level - 1][index].hash;
+            hash_preimage[N_ASSETS + 1] = tree[level - 1][index + 1].hash;
+            Node::middle_node_from_preimage(&hash_preimage)
+        })
         .collect();
 
     for (index, new_node) in results.into_iter().enumerate() {

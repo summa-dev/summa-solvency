@@ -219,7 +219,7 @@ mod test {
             .get_middle_node_hash_preimage(level, index)
             .unwrap();
 
-        let computed_middle_node = Node::<N_ASSETS>::middle_node_from_preimage(hash_preimage);
+        let computed_middle_node = Node::<N_ASSETS>::middle_node_from_preimage(&hash_preimage);
 
         // The hash of the middle node should match the hash computed from the hash preimage
         assert_eq!(middle_node.hash, computed_middle_node.hash);

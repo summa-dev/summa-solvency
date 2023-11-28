@@ -1,7 +1,7 @@
 use crate::merkle_sum_tree::utils::big_uint_to_fp;
+use crate::merkle_sum_tree::Cryptocurrency;
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use crate::merkle_sum_tree::Cryptocurrency;
 
 /// A trait representing the basic operations for a Merkle-Sum-like Tree.
 pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
@@ -152,21 +152,39 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
         let sibling_leaf_node =
             Node::<N_ASSETS>::leaf_node_from_preimage(proof.sibling_leaf_node_hash_preimage);
 
+        let mut hash_preimage = [Fp::zero(); N_ASSETS + 2];
+        for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_ASSETS) {
+            *balance = node.balances[i] + sibling_leaf_node.balances[i];
+        }
+
         if proof.path_indices[0] == 0.into() {
-            node = Node::middle(&node, &sibling_leaf_node);
+            hash_preimage[N_ASSETS] = node.hash;
+            hash_preimage[N_ASSETS + 1] = sibling_leaf_node.hash;
+            node = Node::middle_node_from_preimage(&hash_preimage);
         } else {
-            node = Node::middle(&sibling_leaf_node, &node);
+            hash_preimage[N_ASSETS] = sibling_leaf_node.hash;
+            hash_preimage[N_ASSETS + 1] = node.hash;
+            node = Node::middle_node_from_preimage(&hash_preimage);
         }
 
         for i in 1..proof.path_indices.len() {
             let sibling_node = Node::<N_ASSETS>::middle_node_from_preimage(
-                proof.sibling_middle_node_hash_preimages[i - 1],
+                &proof.sibling_middle_node_hash_preimages[i - 1],
             );
 
+            let mut hash_preimage = [Fp::zero(); N_ASSETS + 2];
+            for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_ASSETS) {
+                *balance = node.balances[i] + sibling_node.balances[i];
+            }
+
             if proof.path_indices[i] == 0.into() {
-                node = Node::middle(&node, &sibling_node);
+                hash_preimage[N_ASSETS] = node.hash;
+                hash_preimage[N_ASSETS + 1] = sibling_node.hash;
+                node = Node::middle_node_from_preimage(&hash_preimage);
             } else {
-                node = Node::middle(&sibling_node, &node);
+                hash_preimage[N_ASSETS] = sibling_node.hash;
+                hash_preimage[N_ASSETS + 1] = node.hash;
+                node = Node::middle_node_from_preimage(&hash_preimage);
             }
         }
 
