@@ -59,14 +59,18 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
             let element_l_next = meta.query_advice(col_a, Rotation::next());
             let element_r_next = meta.query_advice(col_b, Rotation::next());
 
-            let swap_constraint = s
-                * ((swap_bit
-                    * Expression::Constant(Fp::from(2))
-                    * (element_r_cur.clone() - element_l_cur.clone())
-                    - (element_l_next - element_l_cur))
-                    - (element_r_cur - element_r_next));
+            // element_l_next = (element_r_cur - element_l_cur)*s + element_l_cur
+            let swap_constraint_1 = s.clone()
+                * ((element_r_cur.clone() - element_l_cur.clone()) * swap_bit.clone()
+                    + element_l_cur.clone()
+                    - element_l_next);
 
-            vec![swap_constraint]
+            // element_r_next = (element_l_cur - element_r_cur)*s + element_r_cur
+            let swap_constraint_2 = s
+                * ((element_l_cur - element_r_cur.clone()) * swap_bit + element_r_cur
+                    - element_r_next);
+
+            vec![swap_constraint_1, swap_constraint_2]
         });
 
         meta.create_gate("sum constraint", |meta| {
