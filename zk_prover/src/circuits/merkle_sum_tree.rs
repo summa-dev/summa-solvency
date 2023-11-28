@@ -130,6 +130,7 @@ where
     range_check_config: RangeCheckConfig<N_BYTES>,
     instance: Column<Instance>,
     advices: [Column<Advice>; 3],
+    fixed_columns: [Column<Fixed>; 5],
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> MstInclusionConfig<N_ASSETS, N_BYTES>
@@ -200,6 +201,7 @@ where
             range_check_config,
             instance,
             advices,
+            fixed_columns,
         }
     }
 }
@@ -290,8 +292,8 @@ where
             config.instance,
         )?;
 
-        // load range check chip
-        range_check_chip.load(&mut layouter)?;
+        // load lookup table for range check
+        self.load(&mut layouter, config.fixed_columns[4])?;
 
         for level in 0..LEVELS {
             let namespace_prefix = format!("level {}", level);

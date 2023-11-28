@@ -1,8 +1,11 @@
-use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
+use crate::{
+    chips::range::range_check::{RangeCheckChip, RangeCheckConfig},
+    circuits::traits::CircuitBase,
+};
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value},
     halo2curves::bn256::Fr as Fp,
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector},
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Selector},
     poly::Rotation,
 };
 
@@ -88,6 +91,7 @@ impl AddChip {
 pub struct TestConfig<const N_BYTES: usize> {
     pub addchip_config: AddConfig,
     pub range_check_config: RangeCheckConfig<N_BYTES>,
+    pub lookup_u8_table: Column<Fixed>,
 }
 
 // The test circuit takes two inputs a and b.
@@ -99,6 +103,9 @@ struct TestCircuit<const N_BYTES: usize> {
     pub b: Fp,
 }
 
+/// Inherit the `CircuitBase` trait for the `TestCircuit` struct.
+impl<const N_BYTES: usize> CircuitBase for TestCircuit<N_BYTES> {}
+
 impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
     type Config = TestConfig<N_BYTES>;
     type FloorPlanner = SimpleFloorPlanner;
@@ -109,7 +116,7 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
         let z = meta.advice_column();
-        let range = meta.fixed_column();
+        let lookup_u8_table = meta.fixed_column();
 
         let a = meta.advice_column();
         let b = meta.advice_column();
@@ -127,7 +134,7 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
         let lookup_enable_selector = meta.complex_selector();
 
         let range_check_config =
-            RangeCheckChip::<N_BYTES>::configure(meta, z, range, lookup_enable_selector);
+            RangeCheckChip::<N_BYTES>::configure(meta, z, lookup_u8_table, lookup_enable_selector);
 
         let addchip_config = AddChip::configure(meta, a, b, c, add_selector);
 
@@ -135,6 +142,7 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
             TestConfig {
                 addchip_config,
                 range_check_config,
+                lookup_u8_table,
             }
         }
     }
@@ -149,11 +157,11 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
         let (a_cell, b_cell, c_cell) =
             addchip.assign(self.a, self.b, layouter.namespace(|| "add chip"))?;
 
+        // Load the lookup table
+        self.load(&mut layouter, config.lookup_u8_table)?;
+
         // Initiate the range check chip
         let range_chip = RangeCheckChip::construct(config.range_check_config);
-
-        // Load the lookup table
-        range_chip.load(&mut layouter)?;
 
         // check range on a, b and c
         range_chip.assign(

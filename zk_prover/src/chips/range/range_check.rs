@@ -17,14 +17,12 @@ use super::utils::decompose_fp_to_bytes;
 /// # Fields
 ///
 /// * `z`: Advice column for the value to be checked and its running sum.
-/// * `range`: Fixed column for the lookup table. It contains the values from 0 to 2^8 - 1.
 /// * `lookup_enable_selector`: Selector to enable the lookup check.
 ///
 /// Patterned after [halo2_gadgets](https://github.com/privacy-scaling-explorations/halo2/blob/main/halo2_gadgets/src/utilities/decompose_running_sum.rs)
 #[derive(Debug, Copy, Clone)]
 pub struct RangeCheckConfig<const N_BYTES: usize> {
     z: Column<Advice>,
-    range: Column<Fixed>,
     lookup_enable_selector: Selector,
 }
 
@@ -48,7 +46,7 @@ pub struct RangeCheckConfig<const N_BYTES: usize> {
 /// The column z contains the witnessed value to be checked at offset 0
 /// At offset i, the column z contains the value z(i+1) = (z(i) - k(i)) / 2^8 (shift right by 8 bits) where k(i) is the i-th decomposition big-endian of `value`
 /// The constraints that are enforced are:
-/// - z(i) - 2^8⋅z(i+1) ∈ lookup_u8 (enabled by lookup_enable_selector at offset [0, N_BYTES - 1])
+/// - z(i) - 2^8⋅z(i+1) ∈ lookup_u8_table (enabled by lookup_enable_selector at offset [0, N_BYTES - 1])
 /// - z(N_BYTES) == 0
 #[derive(Debug, Clone)]
 pub struct RangeCheckChip<const N_BYTES: usize> {
@@ -61,13 +59,15 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
     }
 
     /// Configures the Range Chip
+    /// Note: the lookup table should be loaded with values from `0` to `2^8 - 1` otherwise the range check will fail.
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
         z: Column<Advice>,
-        range: Column<Fixed>,
+        lookup_u8_table: Column<Fixed>,
         lookup_enable_selector: Selector,
     ) -> RangeCheckConfig<N_BYTES> {
-        meta.annotate_lookup_any_column(range, || "LOOKUP_MAXBITS_RANGE");
+
+        meta.annotate_lookup_any_column(lookup_u8_table, || "LOOKUP_MAXBITS_RANGE");
 
         meta.lookup_any(
             "range u8 check for difference between each interstitial running sum output",
@@ -76,7 +76,7 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
                 let z_next = meta.query_advice(z, Rotation::next());
 
                 let lookup_enable_selector = meta.query_selector(lookup_enable_selector);
-                let u8_range = meta.query_fixed(range, Rotation::cur());
+                let u8_range = meta.query_fixed(lookup_u8_table, Rotation::cur());
 
                 let diff = z_cur - z_next * Expression::Constant(Fp::from(1 << 8));
 
@@ -86,7 +86,6 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
 
         RangeCheckConfig {
             z,
-            range,
             lookup_enable_selector,
         }
     }
@@ -149,26 +148,6 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
                 // Constrain the final running sum output to be zero.
                 region.constrain_constant(zs[N_BYTES].cell(), Fp::from(0))?;
 
-                Ok(())
-            },
-        )
-    }
-
-    /// Loads the lookup table with values from `0` to `2^8 - 1`
-    pub fn load(&self, layouter: &mut impl Layouter<Fp>) -> Result<(), Error> {
-        let range = 1 << (8);
-
-        layouter.assign_region(
-            || format!("load range check table of {} bits", 8),
-            |mut region| {
-                for i in 0..range {
-                    region.assign_fixed(
-                        || "assign cell in fixed column",
-                        self.config.range,
-                        i,
-                        || Value::known(Fp::from(i as u64)),
-                    )?;
-                }
                 Ok(())
             },
         )

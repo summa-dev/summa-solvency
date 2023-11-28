@@ -1,6 +1,6 @@
 use halo2_proofs::circuit::{Layouter, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::plonk::{Advice, Column, Error};
+use halo2_proofs::plonk::{Advice, Column, Error, Fixed};
 use halo2_proofs::{circuit::AssignedCell, plonk::Instance};
 
 /// Trait containing common methods for all circuits
@@ -28,6 +28,26 @@ pub trait CircuitBase {
         layouter.assign_region(
             || format!("assign {}", object_to_assign),
             |mut region| region.assign_advice(|| "value", advice_col, 0, || Value::known(value)),
+        )
+    }
+
+    /// /// Loads the lookup table with values from `0` to `2^8 - 1`
+    fn load(&self, layouter: &mut impl Layouter<Fp>, column: Column<Fixed>) -> Result<(), Error> {
+        let range = 1 << (8);
+
+        layouter.assign_region(
+            || format!("load range check table of {} bits", 8),
+            |mut region| {
+                for i in 0..range {
+                    region.assign_fixed(
+                        || "assign cell in fixed column",
+                        column,
+                        i,
+                        || Value::known(Fp::from(i as u64)),
+                    )?;
+                }
+                Ok(())
+            },
         )
     }
 }
