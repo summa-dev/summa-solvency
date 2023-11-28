@@ -53,14 +53,17 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
     Round<'_, LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; N_ASSETS + 1]: Sized,
-    [usize; 2 * (1 + N_ASSETS)]: Sized,
+    [usize; N_ASSETS + 2]: Sized,
 {
     pub fn new<'a>(
         signer: &'a SummaSigner,
         mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
         params_path: &str,
         timestamp: u64,
-    ) -> Result<Round<'a, LEVELS, N_ASSETS, N_BYTES>, Box<dyn Error>> {
+    ) -> Result<Round<'a, LEVELS, N_ASSETS, N_BYTES>, Box<dyn Error>>
+    where
+        [(); N_ASSETS + 2]: Sized,
+    {
         Ok(Round {
             timestamp,
             snapshot: Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(mst, params_path).unwrap(),
@@ -109,7 +112,10 @@ where
     pub fn get_proof_of_inclusion(
         &self,
         user_index: usize,
-    ) -> Result<MstInclusionProof, &'static str> {
+    ) -> Result<MstInclusionProof, &'static str>
+    where
+        [(); N_ASSETS + 2]: Sized,
+    {
         Ok(self
             .snapshot
             .generate_proof_of_inclusion(user_index)
@@ -121,7 +127,7 @@ impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
     Snapshot<LEVELS, N_ASSETS, N_BYTES>
 where
     [usize; N_ASSETS + 1]: Sized,
-    [usize; 2 * (1 + N_ASSETS)]: Sized,
+    [usize; N_ASSETS + 2]: Sized,
 {
     pub fn new(
         mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
@@ -146,11 +152,12 @@ where
     pub fn generate_proof_of_inclusion(
         &self,
         user_index: usize,
-    ) -> Result<MstInclusionProof, &'static str> {
+    ) -> Result<MstInclusionProof, &'static str>
+    where
+        [(); N_ASSETS + 2]: Sized,
+    {
         let merkle_proof = self.mst.generate_proof(user_index).unwrap();
-        let user_entry = self.mst.get_entry(user_index).clone();
-        let circuit =
-            MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof, user_entry);
+        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
 
         // Currently, default manner of generating a inclusion proof for solidity-verifier.
         let calldata = gen_proof_solidity_calldata(

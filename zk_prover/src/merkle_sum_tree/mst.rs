@@ -2,14 +2,15 @@ use crate::merkle_sum_tree::utils::{
     build_leaves_from_entries, build_merkle_tree_from_leaves, parse_csv_to_entries,
 };
 use crate::merkle_sum_tree::{Entry, Node, Tree};
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use num_bigint::BigUint;
 
 /// Merkle Sum Tree Data Structure.
 ///
 /// A Merkle Sum Tree is a binary Merkle Tree with the following properties:
 /// * Each Entry of a Merkle Sum Tree is a pair of a username and #N_ASSETS balances.
-/// * Each Leaf Node contains a hash and #N_ASSETS balances. The hash is equal to `H(username, balance[0], balance[1], ... balance[N_ASSETS])`.
-/// * Each Middle Node contains a hash and #N_ASSETS balances. The hash is equal to `H(LeftChild.hash, LeftChild.balance[0], LeftChild.balance[1], LeftChild.balance[N_ASSETS], RightChild.hash, RightChild.balance[0], RightChild.balance[1], RightChild.balance[N_ASSETS])`. The balances are equal to the sum of the balances of the child nodes per each cryptocurrency.
+/// * Each Leaf Node contains a hash and #N_ASSETS balances. The hash is equal to `H(username, balance[0], balance[1], ... balance[N_ASSETS - 1])`. The balances are equal to the balances associated to the entry
+/// * Each Middle Node contains a hash and #N_ASSETS balances. The hash is equal to `H(LeftChild.balance[0] + RightChild.balance[0], LeftChild.balance[1] + RightChild.balance[1], ..., LeftChild.balance[N_ASSETS - 1] + RightChild.balance[N_ASSETS - 1], LeftChild.hash, RightChild.hash)`. The balances are equal to the sum of the balances of the child nodes per each cryptocurrency.
 /// * The Root Node represents the committed state of the Tree and contains the sum of all the entries' balances per each cryptocurrency.
 ///
 /// # Type Parameters
@@ -49,6 +50,9 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> Tree<N_ASSETS, N_BYTES>
         &self.entries[index]
     }
 
+    fn entries(&self) -> &[Entry<N_ASSETS>] {
+        &self.entries
+    }
     fn cryptocurrencies(&self) -> &[Cryptocurrency] {
         &self.cryptocurrencies
     }
@@ -69,7 +73,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     pub fn new(path: &str) -> Result<Self, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
+        [usize; N_ASSETS + 2]: Sized,
     {
         let (cryptocurrencies, entries) = parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
         Self::from_entries(entries, cryptocurrencies, false)
@@ -83,7 +87,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     pub fn new_sorted(path: &str) -> Result<Self, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
+        [usize; N_ASSETS + 2]: Sized,
     {
         let (cryptocurrencies, mut entries) =
             parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
@@ -100,7 +104,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     ) -> Result<MerkleSumTree<N_ASSETS, N_BYTES>, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
+        [usize; N_ASSETS + 2]: Sized,
     {
         let depth = (entries.len() as f64).log2().ceil() as usize;
 
@@ -137,7 +141,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     ) -> Result<Node<N_ASSETS>, Box<dyn std::error::Error>>
     where
         [usize; N_ASSETS + 1]: Sized,
-        [usize; 2 * (1 + N_ASSETS)]: Sized,
+        [usize; N_ASSETS + 2]: Sized,
     {
         let index = self.index_of_username(username)?;
 
@@ -151,17 +155,21 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
             let parent_index = current_index / 2;
             let left_child = &self.nodes[depth - 1][2 * parent_index];
             let right_child = &self.nodes[depth - 1][2 * parent_index + 1];
-            self.nodes[depth][parent_index] = Node::<N_ASSETS>::middle(left_child, right_child);
+
+            let mut hash_preimage = [Fp::zero(); N_ASSETS + 2];
+            for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_ASSETS) {
+                *balance = left_child.balances[i] + right_child.balances[i];
+            }
+            hash_preimage[N_ASSETS] = left_child.hash;
+            hash_preimage[N_ASSETS + 1] = right_child.hash;
+
+            self.nodes[depth][parent_index] = Node::middle_node_from_preimage(&hash_preimage);
             current_index = parent_index;
         }
 
         let root = self.nodes[self.depth][0].clone();
 
         Ok(root)
-    }
-
-    pub fn entries(&self) -> &[Entry<N_ASSETS>] {
-        &self.entries
     }
 
     /// Returns the index of the leaf with the matching username

@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use ethers::{
-    prelude::{ContractFactory, SignerMiddleware},
+    prelude::SignerMiddleware,
     providers::{Http, Middleware, Provider},
     signers::{LocalWallet, Signer},
     types::{H160, U256},
@@ -10,7 +10,6 @@ use ethers::{
 use tokio::time;
 
 use crate::contracts::generated::{inclusion_verifier::InclusionVerifier, summa_contract::Summa};
-use crate::contracts::mock::mock_erc20::{MockERC20, MOCKERC20_ABI, MOCKERC20_BYTECODE};
 
 // Setup test environment on the anvil instance
 pub async fn initialize_test_env(
@@ -56,26 +55,6 @@ pub async fn initialize_test_env(
             .request::<(H160, U256), ()>("anvil_setBalance", (addr, U256::from(278432)))
             .await;
     }
-
-    // Mock ERC20 contract deployment
-    // Creating a factory to deploy a mock ERC20 contract
-    let factory = ContractFactory::new(
-        MOCKERC20_ABI.to_owned(),
-        MOCKERC20_BYTECODE.to_owned(),
-        Arc::clone(&client),
-    );
-
-    // Deploy Mock ERC20 contract
-    let mock_erc20_deployment = factory.deploy(()).unwrap().send().await.unwrap();
-
-    // Creating an interface for the deployed mock ERC20 contract
-    let mock_erc20 = MockERC20::new(mock_erc20_deployment.address(), Arc::clone(&client));
-
-    // Mint some token to `cex_addr_2`
-    let mint_call = mock_erc20.mint(cex_addr_2, U256::from(556863));
-    assert!(mint_call.send().await.is_ok());
-
-    time::sleep(Duration::from_millis(500)).await;
 
     if block_time != None {
         time::sleep(Duration::from_secs(block_time.unwrap())).await;
@@ -269,7 +248,7 @@ mod test {
             liability_commitment_logs[0],
             LiabilitiesCommitmentSubmittedFilter {
                 timestamp: U256::from(1),
-                mst_root: "0x2E021D9BF99C5BD7267488B6A7A5CF5F7D00222A41B6A9B971899C44089E0C5"
+                mst_root: "0x18d6ab953235a811edffa4cead74ea045e7cd2085771a2269d59dca054c955b1"
                     .parse()
                     .unwrap(),
                 root_balances: vec![U256::from(556862), U256::from(556862)],

@@ -1,9 +1,6 @@
 #![feature(generic_const_exprs)]
 use criterion::{criterion_group, criterion_main, Criterion};
-use halo2_proofs::{
-    halo2curves::bn256::Fr as Fp,
-    plonk::{keygen_pk, keygen_vk},
-};
+use halo2_proofs::plonk::{keygen_pk, keygen_vk};
 use snark_verifier_sdk::CircuitExt;
 use summa_solvency::{
     circuits::merkle_sum_tree::MstInclusionCircuit,
@@ -12,7 +9,7 @@ use summa_solvency::{
 };
 
 const SAMPLE_SIZE: usize = 10;
-const LEVELS: usize = 15;
+const LEVELS: usize = 20;
 const N_ASSETS: usize = 1;
 const PATH_NAME: &str = "one_asset";
 const N_BYTES: usize = 14;
@@ -112,10 +109,8 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let user_index = 0;
 
     let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
-    let user_entry = merkle_sum_tree.get_entry(user_index);
 
-    let circuit =
-        MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof, user_entry.clone());
+    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
 
     let bench_name = format!(
         "generate zk proof - tree of 2 power of {} entries with {} assets mst inclusion circuit",
@@ -147,10 +142,8 @@ fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let user_index = 0;
 
     let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
-    let user_entry = merkle_sum_tree.get_entry(user_index);
 
-    let circuit =
-        MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof, user_entry.clone());
+    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
 
     let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
 

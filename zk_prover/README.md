@@ -100,9 +100,9 @@ To run the benches
 
 You can set the following parameters to run the benches:
 
-- `LEVELS` -> the number of entries in the merkle sum tree. By default it is set to 15, which means that the benches will run for 2^15 entries.
+- `LEVELS` -> the number of entries in the merkle sum tree. By default it is set to 20, which means that the benches will run for 2^20 entries.
 - `SAMPLE_SIZE` -> the number of samples to run for each bench. By default it is set to 10, which is the minimum allowed by criterion.rs
-- `N_ASSETS and PATH_NAME` -> the number of assets to be used in the benchmarking. By default it is set to 2. For now you can only switch it between 1 and 2 as these are the only csv folder available. More will be added soon.
+- `N_ASSETS and PATH_NAME` -> the number of assets to be used in the benchmarking. By default it is set to 1. For now you can only switch it between 1 and 2 as these are the only csv folder available. More will be added soon.
 
 Note that the `k` of the circuit may vary based on the LEVELS
 
@@ -110,18 +110,21 @@ Furthermore the benchmarking function `verify_zk_proof_benchmark` will also prin
 
 ## Current Benches
 
-Run on AWS EC2 instance `m7a.8xlarge` with 32 vcores and 128GB RAM
+Run on MacBook Pro 2023, M2 Pro, 32GB RAM, 12 cores
 
-Benches run after PR #80 (`add solidity verifier`). In order to achieve small proof size, to be cheap to verify on-chain.
+2^20 entries (1048576) users, 1 asset
 
-2^28 entries (268435456) users, one asset. Range is 14 bytes, considering SHIBA INU token supply (110 bits) as the upper bound.
+| MST init              |
+| --------              |
+| 73.695 s              |
 
-| MST init |
-| -------- |
-| 7143.9 s |
+| MST init (sorted)     |
+| --------              |
+| 73.847 s              |
 
 For Merkle Sum Tree Proof of Inclusion circuit
 
-| VK Gen    | Pk Gen    | Proof Generation | Proof Verification | Proof Size (bytes) |
-| --------- | --------- | ---------------- | ------------------ | ------------------ |
-| 88.92 ms  | 135.96 ms | 369.31 ms        | 3.65 ms            | 1632               |
+| VK Gen             | Pk Gen              | Proof Generation    | Proof Verification  | Proof Size (bytes) |
+| ------------------ | ------------------- | ------------------- | ------------------- | ------------------ |
+| 183.25 ms          | 116.32 ms           | 517.98 ms           | 3.3291 ms           | 1632               |
+
