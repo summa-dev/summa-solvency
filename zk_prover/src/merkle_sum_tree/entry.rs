@@ -1,7 +1,5 @@
 use crate::merkle_sum_tree::utils::big_intify_username;
-use crate::merkle_sum_tree::utils::big_uint_to_fp;
 use crate::merkle_sum_tree::Node;
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use num_bigint::BigUint;
 
 /// An entry in the Merkle Sum Tree from the database of the CEX.
@@ -36,13 +34,7 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
     where
         [usize; N_ASSETS + 1]: Sized,
     {
-        let mut hash_preimage = [Fp::zero(); N_ASSETS + 1];
-        hash_preimage[0] = big_uint_to_fp(&self.username_as_big_uint);
-        for (i, balance) in hash_preimage.iter_mut().enumerate().skip(1) {
-            *balance = big_uint_to_fp(&self.balances[i - 1]);
-        }
-
-        Node::leaf_node_from_preimage(hash_preimage)
+        Node::leaf(&self.username_as_big_uint, &self.balances)
     }
 
     /// Stores the new balance values
@@ -53,13 +45,7 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
         [usize; N_ASSETS + 1]: Sized,
     {
         self.balances = updated_balances.clone();
-
-        let mut hash_preimage = [Fp::zero(); N_ASSETS + 1];
-        hash_preimage[0] = big_uint_to_fp(&self.username_as_big_uint);
-        for (i, balance) in hash_preimage.iter_mut().enumerate().skip(1) {
-            *balance = big_uint_to_fp(&self.balances[i - 1]);
-        }
-        Node::leaf_node_from_preimage(hash_preimage)
+        Node::leaf(&self.username_as_big_uint, updated_balances)
     }
 
     pub fn balances(&self) -> &[BigUint; N_ASSETS] {

@@ -1,6 +1,8 @@
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
+use crate::merkle_sum_tree::utils::big_uint_to_fp;
 use halo2_gadgets::poseidon::primitives::{self as poseidon, ConstantLength};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use num_bigint::BigUint;
 
 #[derive(Clone, Debug)]
 pub struct Node<const N_ASSETS: usize> {
@@ -8,6 +10,50 @@ pub struct Node<const N_ASSETS: usize> {
     pub balances: [Fp; N_ASSETS],
 }
 impl<const N_ASSETS: usize> Node<N_ASSETS> {
+    /// Builds a leaf-level node of the MST
+    /// The leaf node hash is equal to `H(username, balance[0], balance[1], ... balance[N_ASSETS - 1])`
+    /// The balances are equal to `balance[0], balance[1], ... balance[N_ASSETS - 1]`
+    pub fn leaf(username: &BigUint, balances: &[BigUint; N_ASSETS]) -> Node<N_ASSETS>
+    where
+        [usize; N_ASSETS + 1]: Sized,
+    {
+        Node {
+            hash: Self::poseidon_hash_leaf(
+                big_uint_to_fp(username),
+                balances
+                    .iter()
+                    .map(big_uint_to_fp)
+                    .collect::<Vec<Fp>>()
+                    .try_into()
+                    .unwrap(),
+            ),
+            //Map the array of balances using big_int_to_fp:
+            balances: balances
+                .iter()
+                .map(big_uint_to_fp)
+                .collect::<Vec<Fp>>()
+                .try_into()
+                .unwrap(),
+        }
+    }
+    /// Builds a "middle" (non-leaf-level) node of the MST
+    /// The middle node hash is equal to `H(LeftChild.balance[0] + RightChild.balance[0], LeftChild.balance[1] + RightChild.balance[1], ..., LeftChild.balance[N_ASSETS - 1] + RightChild.balance[N_ASSETS - 1], LeftChild.hash, RightChild.hash)`
+    /// The balances are equal to `LeftChild.balance[0] + RightChild.balance[0], LeftChild.balance[1] + RightChild.balance[1], ..., LeftChild.balance[N_ASSETS - 1] + RightChild.balance[N_ASSETS - 1]`
+    pub fn middle(child_l: &Node<N_ASSETS>, child_r: &Node<N_ASSETS>) -> Node<N_ASSETS>
+    where
+        [(); N_ASSETS + 2]: Sized,
+    {
+        let mut balances_sum = [Fp::zero(); N_ASSETS];
+        for (i, balance) in balances_sum.iter_mut().enumerate() {
+            *balance = child_l.balances[i] + child_r.balances[i];
+        }
+
+        Node {
+            hash: Self::poseidon_hash_middle(balances_sum, child_l.hash, child_r.hash),
+            balances: balances_sum,
+        }
+    }
+
     pub fn init_empty() -> Node<N_ASSETS>
     where
         [usize; N_ASSETS + 1]: Sized,
@@ -18,9 +64,6 @@ impl<const N_ASSETS: usize> Node<N_ASSETS> {
         }
     }
 
-    /// Builds a leaf-level node of the MST
-    /// The hash preimage must be equal to `username, balance[0], balance[1], ... balance[N_ASSETS - 1]`
-    /// The balances are equal to `balance[0], balance[1], ... balance[N_ASSETS - 1]`
     pub fn leaf_node_from_preimage(preimage: [Fp; N_ASSETS + 1]) -> Node<N_ASSETS>
     where
         [usize; N_ASSETS + 1]: Sized,
