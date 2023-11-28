@@ -20,7 +20,7 @@ pub struct MerkleSumTreeConfig {
 /// Chip that performs various constraints related to a Merkle Sum Tree data structure such as:
 ///
 /// * `s * swap_bit * (1 - swap_bit) = 0` (if `bool_and_swap_selector` is toggled). It basically enforces that swap_bit is either a 0 or 1.
-/// * `s * (swap_bit * 2 * (elelment_r_cur - elelment_l_cur)  - (elelment_l_next - elelment_l_cur) - (elelment_r_cur - elelment_r_next)) = 0`. Enforces that if the swap_bit is equal to 1, the values will be swapped on the next row (if `bool_and_swap_selector` is toggled).
+/// * `s * (swap_bit * 2 * (element_r_cur - element_l_cur)  - (element_l_next - element_l_cur) - (element_r_cur - element_r_next)) = 0`. Enforces that if the swap_bit is equal to 1, the values will be swapped on the next row (if `bool_and_swap_selector` is toggled).
 /// If the swap_bit is equal to 0, the values will remain the same on the next row (if `bool_and_swap_selector` is toggled).
 /// * `s * (left_balance + right_balance - computed_sum)`. It constraints the computed sum to be equal to the sum of the left and right balances (if `sum_selector` is toggled).
 #[derive(Debug, Clone)]

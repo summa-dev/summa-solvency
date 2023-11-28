@@ -30,7 +30,7 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize, const N_BYTES
     }
 
     let mut entries = Vec::new();
-    let mut balances_acc: Vec<BigUint> = vec![BigUint::from(0 as usize); N_ASSETS];
+    let mut balances_acc: Vec<BigUint> = vec![BigUint::from(0_usize); N_ASSETS];
 
     for result in rdr.deserialize() {
         let record: HashMap<String, String> = result?;
@@ -63,7 +63,7 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize, const N_BYTES
 
     // Iterate through the balance accumulator and throw error if any balance is not in range 0, 2 ^ (8 * N_BYTES):
     for balance in balances_acc {
-        if balance >= BigUint::from(2 as usize).pow(8 * N_BYTES as u32) {
+        if balance >= BigUint::from(2_usize).pow(8 * N_BYTES as u32) {
             return Err(
                 "Accumulated balance is not in the expected range, proof generation will fail!"
                     .into(),
