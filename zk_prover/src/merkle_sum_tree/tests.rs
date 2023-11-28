@@ -241,7 +241,7 @@ mod test {
         // Fetch the hash preimage of the leaf
         let hash_preimage = merkle_tree.get_leaf_node_hash_preimage(index).unwrap();
 
-        let computed_leaf = Node::<N_ASSETS>::leaf_node_from_preimage(hash_preimage);
+        let computed_leaf = Node::<N_ASSETS>::leaf_node_from_preimage(&hash_preimage);
 
         // The hash of the leaf should match the hash computed from the hash preimage
         assert_eq!(leaf.hash, computed_leaf.hash);

@@ -150,7 +150,7 @@ pub trait Tree<const N_ASSETS: usize, const N_BYTES: usize> {
         let mut node = proof.entry.compute_leaf();
 
         let sibling_leaf_node =
-            Node::<N_ASSETS>::leaf_node_from_preimage(proof.sibling_leaf_node_hash_preimage);
+            Node::<N_ASSETS>::leaf_node_from_preimage(&proof.sibling_leaf_node_hash_preimage);
 
         let mut hash_preimage = [Fp::zero(); N_ASSETS + 2];
         for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_ASSETS) {

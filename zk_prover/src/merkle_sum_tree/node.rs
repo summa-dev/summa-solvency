@@ -17,24 +17,13 @@ impl<const N_ASSETS: usize> Node<N_ASSETS> {
     where
         [usize; N_ASSETS + 1]: Sized,
     {
-        Node {
-            hash: Self::poseidon_hash_leaf(
-                big_uint_to_fp(username),
-                balances
-                    .iter()
-                    .map(big_uint_to_fp)
-                    .collect::<Vec<Fp>>()
-                    .try_into()
-                    .unwrap(),
-            ),
-            //Map the array of balances using big_int_to_fp:
-            balances: balances
-                .iter()
-                .map(big_uint_to_fp)
-                .collect::<Vec<Fp>>()
-                .try_into()
-                .unwrap(),
+        let mut hash_preimage = [Fp::zero(); N_ASSETS + 1];
+        hash_preimage[0] = big_uint_to_fp(username);
+        for (i, balance) in hash_preimage.iter_mut().enumerate().skip(1) {
+            *balance = big_uint_to_fp(&balances[i - 1]);
         }
+
+        Node::leaf_node_from_preimage(&hash_preimage)
     }
     /// Builds a "middle" (non-leaf-level) node of the MST
     /// The middle node hash is equal to `H(LeftChild.balance[0] + RightChild.balance[0], LeftChild.balance[1] + RightChild.balance[1], ..., LeftChild.balance[N_ASSETS - 1] + RightChild.balance[N_ASSETS - 1], LeftChild.hash, RightChild.hash)`
@@ -43,15 +32,14 @@ impl<const N_ASSETS: usize> Node<N_ASSETS> {
     where
         [(); N_ASSETS + 2]: Sized,
     {
-        let mut balances_sum = [Fp::zero(); N_ASSETS];
-        for (i, balance) in balances_sum.iter_mut().enumerate() {
+        let mut hash_preimage = [Fp::zero(); N_ASSETS + 2];
+        for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_ASSETS) {
             *balance = child_l.balances[i] + child_r.balances[i];
         }
+        hash_preimage[N_ASSETS] = child_l.hash;
+        hash_preimage[N_ASSETS + 1] = child_r.hash;
 
-        Node {
-            hash: Self::poseidon_hash_middle(balances_sum, child_l.hash, child_r.hash),
-            balances: balances_sum,
-        }
+        Node::middle_node_from_preimage(&hash_preimage)
     }
 
     pub fn init_empty() -> Node<N_ASSETS>
@@ -64,7 +52,7 @@ impl<const N_ASSETS: usize> Node<N_ASSETS> {
         }
     }
 
-    pub fn leaf_node_from_preimage(preimage: [Fp; N_ASSETS + 1]) -> Node<N_ASSETS>
+    pub fn leaf_node_from_preimage(preimage: &[Fp; N_ASSETS + 1]) -> Node<N_ASSETS>
     where
         [usize; N_ASSETS + 1]: Sized,
     {
