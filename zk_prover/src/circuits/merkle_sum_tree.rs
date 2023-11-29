@@ -16,7 +16,7 @@ use snark_verifier_sdk::CircuitExt;
 ///
 /// # Type Parameters
 ///
-/// * `LEVELS`: The number of levels of the merkle sum tree
+/// * `LEVELS`: The number of levels of the merkle sum tree. In particular, it indicates the number of hashing operations that are performed from the leaf to the root. For example a tree with 16 entries has 4 levels.
 /// * `N_ASSETS`: The number of assets for which the solvency is verified.
 /// * `N_BYTES`: The number of bytes in which the balances should lie
 ///
