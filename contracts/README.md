@@ -39,5 +39,11 @@ npx hardhat coverage
 npx hardhat run scripts/deploy.ts --network localhost
 ```
 
+The following Summa contract parameters are passed to its constructor inside the deployment script:
+
+- verifier contract address (set automatically after the script deploys the verifier);
+- the number of levels of the Merkle sum tree;
+- the number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree.
+
 The deployment script writes the latest deployment address for the chain to the [deployments](./../backend/src/contracts/deployments.json) file in the backend project. This data can later be used by the backend module to connect to the deployed contract.
 The deployment script will copy the contract ABIs from the ./artifacts/src/ to the [backend](./../backend/src/contracts/abi/) module. The backend buildscript will then be able to generate the updated contract interfaces (see the backend [readme](./../backend/README.md)).

@@ -1,6 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use ethers::{
+    abi::Token,
     prelude::SignerMiddleware,
     providers::{Http, Middleware, Provider},
     signers::{LocalWallet, Signer},
@@ -56,22 +57,32 @@ pub async fn initialize_test_env(
             .await;
     }
 
-    if block_time != None {
+    if block_time.is_some() {
         time::sleep(Duration::from_secs(block_time.unwrap())).await;
     };
 
-    let inclusion_verifer_contract = InclusionVerifier::deploy(Arc::clone(&client), ())
+    let inclusion_verifier_contract = InclusionVerifier::deploy(Arc::clone(&client), ())
         .unwrap()
         .send()
         .await
         .unwrap();
 
-    if block_time != None {
+    if block_time.is_some() {
         time::sleep(Duration::from_secs(block_time.unwrap())).await;
     };
 
+    // The number of levels of the Merkle sum tree
+    let mst_levels = 20;
+    // The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
+    let balance_byte_range = 14;
+
+    let args: &[Token] = &[
+        Token::Address(inclusion_verifier_contract.address()),
+        Token::Uint(mst_levels.into()),
+        Token::Uint(balance_byte_range.into()),
+    ];
     // Deploy Summa contract
-    let summa_contract = Summa::deploy(Arc::clone(&client), inclusion_verifer_contract.address())
+    let summa_contract = Summa::deploy(Arc::clone(&client), args)
         .unwrap()
         .send()
         .await

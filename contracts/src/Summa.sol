@@ -10,6 +10,15 @@ import "./interfaces/IVerifier.sol";
 
 contract Summa is Ownable {
     /**
+     * @dev Struct representing the configuration of the Summa instance
+     * @param mstLevels The number of levels of the Merkle sum tree
+     * @param balanceByteRange The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
+     */
+    struct SummaConfig {
+        uint256 mstLevels;
+        uint256 balanceByteRange;
+    }
+    /**
      * @dev Struct representing an address ownership proof submitted by the CEX
      * @param cexAddress The address owned by the CEX (submitted as a string, as it can be a non-EVM address)
      * @param chain The name of the chain name where the address belongs (e.g., ETH, BTC)
@@ -47,6 +56,9 @@ contract Summa is Ownable {
         string[] blockchainNames;
     }
 
+    // Summa configuration
+    SummaConfig public config;
+
     // User inclusion proof verifier
     IVerifier private immutable inclusionVerifier;
 
@@ -81,8 +93,13 @@ contract Summa is Ownable {
         Cryptocurrency[] cryptocurrencies
     );
 
-    constructor(IVerifier _inclusionVerifier) {
+    constructor(
+        IVerifier _inclusionVerifier,
+        uint mstLevels,
+        uint balanceByteRange
+    ) {
         inclusionVerifier = _inclusionVerifier;
+        config = SummaConfig(mstLevels, balanceByteRange);
     }
 
     /**
