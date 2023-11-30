@@ -59,7 +59,8 @@ describe("Summa Contract", () => {
 
     const summa = await ethers.deployContract("Summa", [
       inclusionVerifier.address,
-      20, // The number of levels of the Merkle sum tree
+      4, // The number of levels of the Merkle sum tree
+      2, //The number of cryptocurrency balances per user included in the Merkle sum tree
       14, // The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
     ]);
     await summa.deployed();

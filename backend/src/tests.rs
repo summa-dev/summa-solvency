@@ -72,13 +72,16 @@ pub async fn initialize_test_env(
     };
 
     // The number of levels of the Merkle sum tree
-    let mst_levels = 20;
+    let mst_levels = 4;
+    //The number of cryptocurrency balances per user included in the Merkle sum tree
+    let balance_count = 2;
     // The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
     let balance_byte_range = 14;
 
     let args: &[Token] = &[
         Token::Address(inclusion_verifier_contract.address()),
         Token::Uint(mst_levels.into()),
+        Token::Uint(balance_count.into()),
         Token::Uint(balance_byte_range.into()),
     ];
     // Deploy Summa contract

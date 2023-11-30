@@ -12,11 +12,13 @@ contract Summa is Ownable {
     /**
      * @dev Struct representing the configuration of the Summa instance
      * @param mstLevels The number of levels of the Merkle sum tree
+     * @param balanceCount The number of cryptocurrency balances per user included in the Merkle sum tree
      * @param balanceByteRange The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
      */
     struct SummaConfig {
-        uint256 mstLevels;
-        uint256 balanceByteRange;
+        uint16 mstLevels;
+        uint16 balanceCount;
+        uint8 balanceByteRange;
     }
     /**
      * @dev Struct representing an address ownership proof submitted by the CEX
@@ -95,11 +97,12 @@ contract Summa is Ownable {
 
     constructor(
         IVerifier _inclusionVerifier,
-        uint mstLevels,
-        uint balanceByteRange
+        uint16 mstLevels,
+        uint16 balanceCount,
+        uint8 balanceByteRange
     ) {
         inclusionVerifier = _inclusionVerifier;
-        config = SummaConfig(mstLevels, balanceByteRange);
+        config = SummaConfig(mstLevels, balanceCount, balanceByteRange);
     }
 
     /**
