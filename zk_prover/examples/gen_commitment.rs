@@ -8,12 +8,12 @@ use summa_solvency::{
     merkle_sum_tree::{MerkleSumTree, Tree},
 };
 
-const N_ASSETS: usize = 2;
+const N_CURRENCIES: usize = 2;
 const N_BYTES: usize = 14;
 
 fn main() {
     let merkle_sum_tree =
-        MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+        MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
 
     let root = merkle_sum_tree.root();
 

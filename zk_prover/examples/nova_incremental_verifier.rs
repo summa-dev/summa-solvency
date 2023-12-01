@@ -15,7 +15,7 @@ use num_bigint::BigUint;
 use serde_json::json;
 use summa_solvency::merkle_sum_tree::utils::big_intify_username;
 
-const N_ASSETS: usize = 2;
+const N_CURRENCIES: usize = 2;
 
 /// In this scenario the Exchange is generating an incremental inclusion proof for a user after 3 rounds.
 /// It means that starting from this proof, the user can verify their correct inclusion in the Liabilities Tree for each round up to round 3 in a single proof.
@@ -26,18 +26,16 @@ fn run_test(circuit_filepath: String, witness_gen_filepath: String) {
     let liabilities_state_0 = Fr::from_str("0").unwrap();
 
     // Merkle Proof represents the inclusion proof for the user 0 for each state
-    let merkle_proof_1 =
-        build_merkle_proof("examples/states/entry_16_1.csv".to_string(), 0).unwrap();
+    let merkle_proof_1 = build_merkle_proof("../csv/states/entry_16_1.csv".to_string(), 0).unwrap();
     let liabilities_state_1 =
         build_liabilities_state_cur(liabilities_state_0, merkle_proof_1.root.hash);
 
-    let merkle_proof_2 =
-        build_merkle_proof("examples/states/entry_16_2.csv".to_string(), 0).unwrap();
+    let merkle_proof_2 = build_merkle_proof("../csv/states/entry_16_2.csv".to_string(), 0).unwrap();
     let liabilities_state_2 =
         build_liabilities_state_cur(liabilities_state_1, merkle_proof_2.root.hash);
 
     let merkle_proof_3 =
-        build_merkle_proof("examples/states/entry_16_3.csv".to_string(), 0).unwrap();
+        build_merkle_proof("../csv/states/entry_16_3.csv".to_string(), 0).unwrap();
     let liabilities_state_3 =
         build_liabilities_state_cur(liabilities_state_2, merkle_proof_3.root.hash);
 
@@ -240,24 +238,28 @@ use poseidon_rs::{Fr, Poseidon};
 
 // Note that we cannot reuse the MerkleSumTree implementation from zk_prover because it is not compatible with circom's Poseidon Hasher
 #[derive(Clone, Debug)]
-struct Node<const N_ASSETS: usize> {
+struct Node<const N_CURRENCIES: usize> {
     hash: Fr,
-    balance: [Fr; N_ASSETS],
+    balance: [Fr; N_CURRENCIES],
 }
 
 #[derive(Clone, Debug)]
-struct MerkleProof<const N_ASSETS: usize> {
+struct MerkleProof<const N_CURRENCIES: usize> {
     username: String,
     user_balances: Vec<String>,
     path_element_hashes: Vec<String>,
     path_element_balances: Vec<Vec<String>>,
     path_indices: Vec<String>,
-    root: Node<N_ASSETS>,
+    root: Node<N_CURRENCIES>,
 }
 
-impl<const N_ASSETS: usize> Node<N_ASSETS> {
+impl<const N_CURRENCIES: usize> Node<N_CURRENCIES> {
     /// Constructs a new Node given left and right child hashes.
-    fn new(left: &Node<N_ASSETS>, right: &Node<N_ASSETS>, hasher: &Poseidon) -> Node<N_ASSETS> {
+    fn new(
+        left: &Node<N_CURRENCIES>,
+        right: &Node<N_CURRENCIES>,
+        hasher: &Poseidon,
+    ) -> Node<N_CURRENCIES> {
         let mut input = vec![left.hash];
         input.extend(left.balance);
         input.push(right.hash);
@@ -265,8 +267,8 @@ impl<const N_ASSETS: usize> Node<N_ASSETS> {
 
         let mut balance = vec![];
 
-        // iterate over N_ASSETS
-        for i in 0..N_ASSETS {
+        // iterate over N_CURRENCIES
+        for i in 0..N_CURRENCIES {
             let mut sum = Fr::from_str("0").unwrap();
             sum.add_assign(&left.balance[i]);
             sum.add_assign(&right.balance[i]);
@@ -282,7 +284,10 @@ impl<const N_ASSETS: usize> Node<N_ASSETS> {
 }
 
 /// Generates a Merkle proof of inclusion for a leaf at a given index
-fn build_merkle_proof(csv_filepath: String, user_index: usize) -> Option<MerkleProof<N_ASSETS>> {
+fn build_merkle_proof(
+    csv_filepath: String,
+    user_index: usize,
+) -> Option<MerkleProof<N_CURRENCIES>> {
     let file = File::open(csv_filepath).expect("Unable to open file");
     let reader = BufReader::new(file);
 
@@ -310,7 +315,7 @@ fn build_merkle_proof(csv_filepath: String, user_index: usize) -> Option<MerkleP
             .map(|balance_str| Fr::from_str(balance_str).unwrap())
             .collect();
 
-        assert_eq!(balances.len(), N_ASSETS);
+        assert_eq!(balances.len(), N_CURRENCIES);
 
         // capture user's data if the index matches
         if idx == user_index {

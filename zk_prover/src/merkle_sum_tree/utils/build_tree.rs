@@ -2,23 +2,23 @@ use crate::merkle_sum_tree::{Entry, Node};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use rayon::prelude::*;
 
-pub fn build_merkle_tree_from_leaves<const N_ASSETS: usize>(
-    leaves: &[Node<N_ASSETS>],
+pub fn build_merkle_tree_from_leaves<const N_CURRENCIES: usize>(
+    leaves: &[Node<N_CURRENCIES>],
     depth: usize,
-    nodes: &mut Vec<Vec<Node<N_ASSETS>>>,
-) -> Result<Node<N_ASSETS>, Box<dyn std::error::Error>>
+    nodes: &mut Vec<Vec<Node<N_CURRENCIES>>>,
+) -> Result<Node<N_CURRENCIES>, Box<dyn std::error::Error>>
 where
-    [usize; N_ASSETS + 1]: Sized,
-    [usize; N_ASSETS + 2]: Sized,
+    [usize; N_CURRENCIES + 1]: Sized,
+    [usize; N_CURRENCIES + 2]: Sized,
 {
     let n = leaves.len();
 
-    let mut tree: Vec<Vec<Node<N_ASSETS>>> = Vec::with_capacity(depth + 1);
+    let mut tree: Vec<Vec<Node<N_CURRENCIES>>> = Vec::with_capacity(depth + 1);
 
     tree.push(vec![
         Node {
             hash: Fp::from(0),
-            balances: [Fp::from(0); N_ASSETS]
+            balances: [Fp::from(0); N_CURRENCIES]
         };
         n
     ]);
@@ -30,7 +30,7 @@ where
         tree.push(vec![
             Node {
                 hash: Fp::from(0),
-                balances: [Fp::from(0); N_ASSETS]
+                balances: [Fp::from(0); N_CURRENCIES]
             };
             nodes_in_level
         ]);
@@ -49,11 +49,11 @@ where
     Ok(root)
 }
 
-pub fn build_leaves_from_entries<const N_ASSETS: usize>(
-    entries: &[Entry<N_ASSETS>],
-) -> Vec<Node<N_ASSETS>>
+pub fn build_leaves_from_entries<const N_CURRENCIES: usize>(
+    entries: &[Entry<N_CURRENCIES>],
+) -> Vec<Node<N_CURRENCIES>>
 where
-    [usize; N_ASSETS + 1]: Sized,
+    [usize; N_CURRENCIES + 1]: Sized,
 {
     let leaves = entries
         .par_iter()
@@ -63,23 +63,23 @@ where
     leaves
 }
 
-fn build_middle_level<const N_ASSETS: usize>(level: usize, tree: &mut [Vec<Node<N_ASSETS>>])
+fn build_middle_level<const N_CURRENCIES: usize>(level: usize, tree: &mut [Vec<Node<N_CURRENCIES>>])
 where
-    [usize; N_ASSETS + 2]: Sized,
+    [usize; N_CURRENCIES + 2]: Sized,
 {
-    let results: Vec<Node<N_ASSETS>> = (0..tree[level - 1].len())
+    let results: Vec<Node<N_CURRENCIES>> = (0..tree[level - 1].len())
         .into_par_iter()
         .step_by(2)
         .map(|index| {
-            let mut hash_preimage = [Fp::zero(); N_ASSETS + 2];
+            let mut hash_preimage = [Fp::zero(); N_CURRENCIES + 2];
 
-            for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_ASSETS) {
+            for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_CURRENCIES) {
                 *balance =
                     tree[level - 1][index].balances[i] + tree[level - 1][index + 1].balances[i];
             }
 
-            hash_preimage[N_ASSETS] = tree[level - 1][index].hash;
-            hash_preimage[N_ASSETS + 1] = tree[level - 1][index + 1].hash;
+            hash_preimage[N_CURRENCIES] = tree[level - 1][index].hash;
+            hash_preimage[N_CURRENCIES + 1] = tree[level - 1][index + 1].hash;
             Node::middle_node_from_preimage(&hash_preimage)
         })
         .collect();

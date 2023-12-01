@@ -10,7 +10,7 @@ use summa_solvency::{
 
 const SAMPLE_SIZE: usize = 10;
 const LEVELS: usize = 20;
-const N_ASSETS: usize = 1;
+const N_CURRENCIES: usize = 1;
 const PATH_NAME: &str = "one_asset";
 const N_BYTES: usize = 14;
 
@@ -23,13 +23,13 @@ fn build_mstree(_c: &mut Criterion) {
     );
 
     let bench_name = format!(
-        "build Merkle sum tree for 2 power of {} entries with {} assets",
-        LEVELS, N_ASSETS
+        "build Merkle sum tree for 2 power of {} entries with {} currencies",
+        LEVELS, N_CURRENCIES
     );
 
     criterion.bench_function(&bench_name, |b| {
         b.iter(|| {
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new(&csv_file).unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new(&csv_file).unwrap();
         })
     });
 }
@@ -43,13 +43,13 @@ fn build_sorted_mstree(_c: &mut Criterion) {
     );
 
     let bench_name = format!(
-        "build sorted Merkle sum tree for 2 power of {} entries with {} assets",
-        LEVELS, N_ASSETS
+        "build sorted Merkle sum tree for 2 power of {} entries with {} currencies",
+        LEVELS, N_CURRENCIES
     );
 
     criterion.bench_function(&bench_name, |b| {
         b.iter(|| {
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new_sorted(&csv_file).unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new_sorted(&csv_file).unwrap();
         })
     });
 }
@@ -57,13 +57,13 @@ fn build_sorted_mstree(_c: &mut Criterion) {
 fn verification_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init_empty();
 
     let (params, _, _) = generate_setup_artifacts(13, None, empty_circuit.clone()).unwrap();
 
     let bench_name = format!(
-        "gen verification key for 2 power of {} entries with {} assets mst inclusion circuit",
-        LEVELS, N_ASSETS
+        "gen verification key for 2 power of {} entries with {} currencies mst inclusion circuit",
+        LEVELS, N_CURRENCIES
     );
     criterion.bench_function(&bench_name, |b| {
         b.iter(|| {
@@ -75,13 +75,13 @@ fn verification_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
 fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init_empty();
 
     let (params, _, vk) = generate_setup_artifacts(13, None, empty_circuit.clone()).unwrap();
 
     let bench_name = format!(
-        "gen proving key for 2 power of {} entries with {} assets mst inclusion circuit",
-        LEVELS, N_ASSETS
+        "gen proving key for 2 power of {} entries with {} currencies mst inclusion circuit",
+        LEVELS, N_CURRENCIES
     );
     criterion.bench_function(&bench_name, |b| {
         b.iter(|| {
@@ -93,7 +93,7 @@ fn proving_key_gen_mst_inclusion_circuit(_c: &mut Criterion) {
 fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init_empty();
 
     let (params, pk, _) = generate_setup_artifacts(13, None, empty_circuit).unwrap();
 
@@ -102,7 +102,7 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
         PATH_NAME, PATH_NAME, LEVELS
     );
 
-    let merkle_sum_tree = MerkleSumTree::<N_ASSETS, N_BYTES>::new(&csv_file).unwrap();
+    let merkle_sum_tree = MerkleSumTree::<N_CURRENCIES, N_BYTES>::new(&csv_file).unwrap();
 
     // Only now we can instantiate the circuit with the actual inputs
 
@@ -110,11 +110,11 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 
     let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
-    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+    let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
     let bench_name = format!(
-        "generate zk proof - tree of 2 power of {} entries with {} assets mst inclusion circuit",
-        LEVELS, N_ASSETS
+        "generate zk proof - tree of 2 power of {} entries with {} currencies mst inclusion circuit",
+        LEVELS, N_CURRENCIES
     );
     criterion.bench_function(&bench_name, |b| {
         b.iter(|| {
@@ -126,7 +126,7 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);
 
-    let empty_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
+    let empty_circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init_empty();
 
     let (params, pk, vk) = generate_setup_artifacts(13, None, empty_circuit).unwrap();
 
@@ -135,7 +135,7 @@ fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
         PATH_NAME, PATH_NAME, LEVELS
     );
 
-    let merkle_sum_tree = MerkleSumTree::<N_ASSETS, N_BYTES>::new(&csv_file).unwrap();
+    let merkle_sum_tree = MerkleSumTree::<N_CURRENCIES, N_BYTES>::new(&csv_file).unwrap();
 
     // Only now we can instantiate the circuit with the actual inputs
 
@@ -143,15 +143,15 @@ fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
 
     let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
-    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+    let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
     let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
 
     println!("proof size in bytes: {}", proof.len());
 
     let bench_name = format!(
-        "verify zk proof - tree of 2 power of {} entries with {} assets mst inclusion circuit",
-        LEVELS, N_ASSETS
+        "verify zk proof - tree of 2 power of {} entries with {} currencies mst inclusion circuit",
+        LEVELS, N_CURRENCIES
     );
     criterion.bench_function(&bench_name, |b| {
         b.iter(|| {

@@ -73,15 +73,15 @@ pub async fn initialize_test_env(
 
     // The number of levels of the Merkle sum tree
     let mst_levels = 4;
-    //The number of cryptocurrency assets per user included in the Merkle sum tree
-    let assets_count = 2;
+    //The number of cryptocurrencies supported by the Merkle sum tree
+    let currencies_count = 2;
     // The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
     let balance_byte_range = 14;
 
     let args: &[Token] = &[
         Token::Address(inclusion_verifier_contract.address()),
         Token::Uint(mst_levels.into()),
-        Token::Uint(assets_count.into()),
+        Token::Uint(currencies_count.into()),
         Token::Uint(balance_byte_range.into()),
     ];
     // Deploy Summa contract
@@ -157,7 +157,7 @@ mod test {
         .await?;
 
         let params_path = "ptau/hermez-raw-11";
-        let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
+        let entry_csv = "../csv/entry_16.csv";
         let mst = MerkleSumTree::new(entry_csv).unwrap();
 
         let mut round_one =
@@ -202,7 +202,7 @@ mod test {
         .await?;
 
         let mut address_ownership_client =
-            AddressOwnership::new(&signer, "src/apis/csv/signatures.csv").unwrap();
+            AddressOwnership::new(&signer, "../csv/signatures.csv").unwrap();
 
         address_ownership_client
             .dispatch_proof_of_address_ownership()
@@ -236,7 +236,7 @@ mod test {
 
         // Initialize round
         let params_path = "ptau/hermez-raw-11";
-        let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
+        let entry_csv = "../csv/entry_16.csv";
 
         let mst = MerkleSumTree::new(entry_csv).unwrap();
         let mut round = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, 1).unwrap();

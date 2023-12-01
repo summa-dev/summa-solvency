@@ -52,7 +52,7 @@ mod tests {
 
     #[test]
     fn test_parse_csv_to_signature() {
-        let path = "src/apis/csv/signatures.csv";
+        let path = "../csv/signatures.csv";
         let address_ownership = parse_signature_csv(path).unwrap();
 
         let first_address_ownership = AddressOwnershipProof {

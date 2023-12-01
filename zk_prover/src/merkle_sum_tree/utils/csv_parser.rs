@@ -5,14 +5,14 @@ use std::error::Error;
 use std::fs::File;
 use std::path::Path;
 
-pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize, const N_BYTES: usize>(
+pub fn parse_csv_to_entries<P: AsRef<Path>, const N_CURRENCIES: usize, const N_BYTES: usize>(
     path: P,
-) -> Result<(Vec<Cryptocurrency>, Vec<Entry<N_ASSETS>>), Box<dyn Error>> {
+) -> Result<(Vec<Cryptocurrency>, Vec<Entry<N_CURRENCIES>>), Box<dyn Error>> {
     let file = File::open(path)?;
     let mut rdr = csv::ReaderBuilder::new().from_reader(file);
 
     let headers = rdr.headers()?.clone();
-    let mut cryptocurrencies: Vec<Cryptocurrency> = Vec::with_capacity(N_ASSETS);
+    let mut cryptocurrencies: Vec<Cryptocurrency> = Vec::with_capacity(N_CURRENCIES);
 
     // Extracting cryptocurrency names from column names
     for header in headers.iter().skip(1) {
@@ -30,7 +30,7 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize, const N_BYTES
     }
 
     let mut entries = Vec::new();
-    let mut balances_acc: Vec<BigUint> = vec![BigUint::from(0_usize); N_ASSETS];
+    let mut balances_acc: Vec<BigUint> = vec![BigUint::from(0_usize); N_CURRENCIES];
 
     for result in rdr.deserialize() {
         let record: HashMap<String, String> = result?;

@@ -15,7 +15,7 @@ use summa_backend::{
 };
 use summa_solvency::merkle_sum_tree::MerkleSumTree;
 
-const N_ASSETS: usize = 2;
+const N_CURRENCIES: usize = 2;
 const USER_INDEX: usize = 0;
 
 #[tokio::main]
@@ -43,7 +43,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .await?;
 
     // Each CEX prepares its own `signature` CSV file.
-    let signature_csv_path = "src/apis/csv/signatures.csv";
+    let signature_csv_path = "../csv/signatures.csv";
     let mut address_ownership_client = AddressOwnership::new(&signer, signature_csv_path).unwrap();
 
     // Dispatch the proof of address ownership.
@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //
     // Initialize the `Round` instance to submit the liability commitment.
     let params_path = "ptau/hermez-raw-11";
-    let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
+    let entry_csv = "../csv/entry_16.csv";
     let mst = MerkleSumTree::new(entry_csv).unwrap();
 
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
@@ -109,7 +109,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let leaf_hash = public_inputs[0];
     assert_eq!(
         leaf_hash,
-        leaf_hash_from_inputs::<N_ASSETS>(user_name.clone(), balances.clone())
+        leaf_hash_from_inputs::<N_CURRENCIES>(user_name.clone(), balances.clone())
     );
 
     // Get `mst_root` from contract. the `mst_root` is disptached by CEX with specific time `snapshot_time`.

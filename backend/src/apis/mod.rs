@@ -7,9 +7,12 @@ use num_bigint::BigUint;
 use num_traits::Num;
 use summa_solvency::merkle_sum_tree::Entry;
 
-pub fn leaf_hash_from_inputs<const N_ASSETS: usize>(username: String, balances: Vec<String>) -> U256
+pub fn leaf_hash_from_inputs<const N_CURRENCIES: usize>(
+    username: String,
+    balances: Vec<String>,
+) -> U256
 where
-    [usize; N_ASSETS + 1]: Sized,
+    [usize; N_CURRENCIES + 1]: Sized,
 {
     // Convert balances to BigUint
     let balances: Vec<BigUint> = balances
@@ -17,7 +20,7 @@ where
         .map(|balance| BigUint::from_str_radix(balance, 10).unwrap())
         .collect();
 
-    let entry: Entry<N_ASSETS> = Entry::new(username, balances.try_into().unwrap()).unwrap();
+    let entry: Entry<N_CURRENCIES> = Entry::new(username, balances.try_into().unwrap()).unwrap();
 
     // Convert Fp to U256
     let hash_str = format!("{:?}", entry.compute_leaf().hash);
