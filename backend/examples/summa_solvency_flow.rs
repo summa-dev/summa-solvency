@@ -43,7 +43,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .await?;
 
     // Each CEX prepares its own `signature` CSV file.
-    let signature_csv_path = "src/apis/csv/signatures.csv";
+    let signature_csv_path = "../csv/signatures.csv";
     let mut address_ownership_client = AddressOwnership::new(&signer, signature_csv_path).unwrap();
 
     // Dispatch the proof of address ownership.

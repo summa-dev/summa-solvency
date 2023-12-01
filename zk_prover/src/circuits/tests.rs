@@ -25,8 +25,7 @@ mod test {
     #[test]
     fn test_valid_merkle_sum_tree() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
-                .unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
 
         for user_index in 0..16 {
             // get proof for entry ˆuser_indexˆ
@@ -56,8 +55,7 @@ mod test {
         let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
 
         let merkle_sum_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
-                .unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
 
         let user_index = 0;
 
@@ -93,8 +91,7 @@ mod test {
     #[test]
     fn test_invalid_root_hash() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
-                .unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
         let user_index = 0;
 
         let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
@@ -133,8 +130,7 @@ mod test {
         let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
 
         let merkle_sum_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
-                .unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
 
         let user_index = 0;
 
@@ -162,8 +158,7 @@ mod test {
     #[test]
     fn test_invalid_entry_balance_as_witness() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
-                .unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
 
         let user_index = 0;
 
@@ -238,8 +233,7 @@ mod test {
     #[test]
     fn test_invalid_leaf_hash_as_instance() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
-                .unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
 
         let user_index = 0;
 
@@ -276,8 +270,7 @@ mod test {
     #[test]
     fn test_non_binary_index() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
-                .unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
 
         let user_index = 0;
 
@@ -441,8 +434,7 @@ mod test {
     #[test]
     fn test_swapping_index() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
-                .unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
 
         let user_index = 0;
 
@@ -482,8 +474,7 @@ mod test {
         use plotters::prelude::*;
 
         let merkle_sum_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
-                .unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
 
         let user_index = 0;
 
