@@ -8,29 +8,29 @@ use num_bigint::BigUint;
 /// Merkle Sum Tree Data Structure.
 ///
 /// A Merkle Sum Tree is a binary Merkle Tree with the following properties:
-/// * Each Entry of a Merkle Sum Tree is a pair of a username and #N_ASSETS balances.
-/// * Each Leaf Node contains a hash and #N_ASSETS balances. The hash is equal to `H(username, balance[0], balance[1], ... balance[N_ASSETS - 1])`. The balances are equal to the balances associated to the entry
-/// * Each Middle Node contains a hash and #N_ASSETS balances. The hash is equal to `H(LeftChild.balance[0] + RightChild.balance[0], LeftChild.balance[1] + RightChild.balance[1], ..., LeftChild.balance[N_ASSETS - 1] + RightChild.balance[N_ASSETS - 1], LeftChild.hash, RightChild.hash)`. The balances are equal to the sum of the balances of the child nodes per each cryptocurrency.
+/// * Each Entry of a Merkle Sum Tree is a pair of a username and #N_CURRENCIES balances.
+/// * Each Leaf Node contains a hash and #N_CURRENCIES balances. The hash is equal to `H(username, balance[0], balance[1], ... balance[N_CURRENCIES - 1])`. The balances are equal to the balances associated to the entry
+/// * Each Middle Node contains a hash and #N_CURRENCIES balances. The hash is equal to `H(LeftChild.balance[0] + RightChild.balance[0], LeftChild.balance[1] + RightChild.balance[1], ..., LeftChild.balance[N_CURRENCIES - 1] + RightChild.balance[N_CURRENCIES - 1], LeftChild.hash, RightChild.hash)`. The balances are equal to the sum of the balances of the child nodes per each cryptocurrency.
 /// * The Root Node represents the committed state of the Tree and contains the sum of all the entries' balances per each cryptocurrency.
 ///
 /// # Type Parameters
 ///
-/// * `N_ASSETS`: The number of cryptocurrencies for each user account
+/// * `N_CURRENCIES`: The number of cryptocurrencies for each user account
 /// * `N_BYTES`: Range in which each node balance should lie
 #[derive(Debug, Clone)]
-pub struct MerkleSumTree<const N_ASSETS: usize, const N_BYTES: usize> {
-    root: Node<N_ASSETS>,
-    nodes: Vec<Vec<Node<N_ASSETS>>>,
+pub struct MerkleSumTree<const N_CURRENCIES: usize, const N_BYTES: usize> {
+    root: Node<N_CURRENCIES>,
+    nodes: Vec<Vec<Node<N_CURRENCIES>>>,
     depth: usize,
-    entries: Vec<Entry<N_ASSETS>>,
+    entries: Vec<Entry<N_CURRENCIES>>,
     cryptocurrencies: Vec<Cryptocurrency>,
     is_sorted: bool,
 }
 
-impl<const N_ASSETS: usize, const N_BYTES: usize> Tree<N_ASSETS, N_BYTES>
-    for MerkleSumTree<N_ASSETS, N_BYTES>
+impl<const N_CURRENCIES: usize, const N_BYTES: usize> Tree<N_CURRENCIES, N_BYTES>
+    for MerkleSumTree<N_CURRENCIES, N_BYTES>
 {
-    fn root(&self) -> &Node<N_ASSETS> {
+    fn root(&self) -> &Node<N_CURRENCIES> {
         &self.root
     }
 
@@ -38,19 +38,19 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> Tree<N_ASSETS, N_BYTES>
         &self.depth
     }
 
-    fn leaves(&self) -> &[Node<N_ASSETS>] {
+    fn leaves(&self) -> &[Node<N_CURRENCIES>] {
         &self.nodes[0]
     }
 
-    fn nodes(&self) -> &[Vec<Node<N_ASSETS>>] {
+    fn nodes(&self) -> &[Vec<Node<N_CURRENCIES>>] {
         &self.nodes
     }
 
-    fn get_entry(&self, index: usize) -> &Entry<N_ASSETS> {
+    fn get_entry(&self, index: usize) -> &Entry<N_CURRENCIES> {
         &self.entries[index]
     }
 
-    fn entries(&self) -> &[Entry<N_ASSETS>] {
+    fn entries(&self) -> &[Entry<N_CURRENCIES>] {
         &self.entries
     }
     fn cryptocurrencies(&self) -> &[Cryptocurrency] {
@@ -64,7 +64,7 @@ pub struct Cryptocurrency {
     pub chain: String,
 }
 
-impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTES> {
+impl<const N_CURRENCIES: usize, const N_BYTES: usize> MerkleSumTree<N_CURRENCIES, N_BYTES> {
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The CSV file must be formatted as follows:
     ///
     /// `username,balance_<cryptocurrency>_<chain>,balance_<cryptocurrency>_<chain>,...`
@@ -72,10 +72,10 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     /// `dxGaEAii,11888,41163`
     pub fn new(path: &str) -> Result<Self, Box<dyn std::error::Error>>
     where
-        [usize; N_ASSETS + 1]: Sized,
-        [usize; N_ASSETS + 2]: Sized,
+        [usize; N_CURRENCIES + 1]: Sized,
+        [usize; N_CURRENCIES + 2]: Sized,
     {
-        let (cryptocurrencies, entries) = parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
+        let (cryptocurrencies, entries) = parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path)?;
         Self::from_entries(entries, cryptocurrencies, false)
     }
 
@@ -86,11 +86,11 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     /// `dxGaEAii,11888,41163`
     pub fn new_sorted(path: &str) -> Result<Self, Box<dyn std::error::Error>>
     where
-        [usize; N_ASSETS + 1]: Sized,
-        [usize; N_ASSETS + 2]: Sized,
+        [usize; N_CURRENCIES + 1]: Sized,
+        [usize; N_CURRENCIES + 2]: Sized,
     {
         let (cryptocurrencies, mut entries) =
-            parse_csv_to_entries::<&str, N_ASSETS, N_BYTES>(path)?;
+            parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path)?;
 
         entries.sort_by(|a, b| a.username().cmp(b.username()));
 
@@ -98,13 +98,13 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     }
 
     pub fn from_entries(
-        entries: Vec<Entry<N_ASSETS>>,
+        entries: Vec<Entry<N_CURRENCIES>>,
         cryptocurrencies: Vec<Cryptocurrency>,
         is_sorted: bool,
-    ) -> Result<MerkleSumTree<N_ASSETS, N_BYTES>, Box<dyn std::error::Error>>
+    ) -> Result<MerkleSumTree<N_CURRENCIES, N_BYTES>, Box<dyn std::error::Error>>
     where
-        [usize; N_ASSETS + 1]: Sized,
-        [usize; N_ASSETS + 2]: Sized,
+        [usize; N_CURRENCIES + 1]: Sized,
+        [usize; N_CURRENCIES + 2]: Sized,
     {
         let depth = (entries.len() as f64).log2().ceil() as usize;
 
@@ -137,11 +137,11 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     pub fn update_leaf(
         &mut self,
         username: &str,
-        new_balances: &[BigUint; N_ASSETS],
-    ) -> Result<Node<N_ASSETS>, Box<dyn std::error::Error>>
+        new_balances: &[BigUint; N_CURRENCIES],
+    ) -> Result<Node<N_CURRENCIES>, Box<dyn std::error::Error>>
     where
-        [usize; N_ASSETS + 1]: Sized,
-        [usize; N_ASSETS + 2]: Sized,
+        [usize; N_CURRENCIES + 1]: Sized,
+        [usize; N_CURRENCIES + 2]: Sized,
     {
         let index = self.index_of_username(username)?;
 
@@ -156,12 +156,12 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
             let left_child = &self.nodes[depth - 1][2 * parent_index];
             let right_child = &self.nodes[depth - 1][2 * parent_index + 1];
 
-            let mut hash_preimage = [Fp::zero(); N_ASSETS + 2];
-            for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_ASSETS) {
+            let mut hash_preimage = [Fp::zero(); N_CURRENCIES + 2];
+            for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_CURRENCIES) {
                 *balance = left_child.balances[i] + right_child.balances[i];
             }
-            hash_preimage[N_ASSETS] = left_child.hash;
-            hash_preimage[N_ASSETS + 1] = right_child.hash;
+            hash_preimage[N_CURRENCIES] = left_child.hash;
+            hash_preimage[N_CURRENCIES + 1] = right_child.hash;
 
             self.nodes[depth][parent_index] = Node::middle_node_from_preimage(&hash_preimage);
             current_index = parent_index;
@@ -175,7 +175,7 @@ impl<const N_ASSETS: usize, const N_BYTES: usize> MerkleSumTree<N_ASSETS, N_BYTE
     /// Returns the index of the leaf with the matching username
     pub fn index_of_username(&self, username: &str) -> Result<usize, Box<dyn std::error::Error>>
     where
-        [usize; N_ASSETS + 1]: Sized,
+        [usize; N_CURRENCIES + 1]: Sized,
     {
         if !self.is_sorted {
             self.entries

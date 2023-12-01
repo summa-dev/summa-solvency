@@ -21,7 +21,7 @@ use summa_solvency::{
 };
 
 const LEVELS: usize = 4;
-const N_ASSETS: usize = 2;
+const N_CURRENCIES: usize = 2;
 const N_BYTES: usize = 14;
 
 fn main() {
@@ -29,7 +29,7 @@ fn main() {
     assert!(!is_there_risk_of_overflow(N_BYTES, LEVELS), "There is a risk of balance overflow in the Merkle Root, given the combination of `N_BYTES` and `LEVELS`");
 
     // In order to generate the verifier we create the circuit using the init_empty() method, which means that the circuit is not initialized with any data.
-    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
+    let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init_empty();
 
     // generate a universal trusted setup for testing, along with the verification key (vk) and the proving key (pk).
     let (params, pk, _) =
@@ -41,7 +41,7 @@ fn main() {
     let yul_output_path = "../contracts/src/InclusionVerifier.yul";
     let sol_output_path = "../contracts/src/InclusionVerifier.sol";
 
-    let deployment_code = gen_evm_verifier_shplonk::<MstInclusionCircuit<LEVELS, N_ASSETS, N_BYTES>>(
+    let deployment_code = gen_evm_verifier_shplonk::<MstInclusionCircuit<LEVELS, N_CURRENCIES, N_BYTES>>(
         &params,
         pk.get_vk(),
         num_instances,
@@ -51,7 +51,7 @@ fn main() {
     write_verifier_sol_from_yul(yul_output_path, sol_output_path).unwrap();
 
     let merkle_sum_tree =
-        MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+        MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
 
     // In order to generate a proof for testing purpose we create the circuit using the init() method
     // which takes as input the merkle sum tree and the index of the leaf we are generating the proof for.
@@ -61,7 +61,7 @@ fn main() {
     let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
     // Generate the circuit with the actual inputs
-    let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+    let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
     let instances = circuit.instances();
 

@@ -26,11 +26,11 @@ pub struct MerkleSumTreeConfig {
 /// * `s * (left_balance + right_balance - computed_sum)`. It constraints the computed sum to be equal to the sum of the left and right balances (if `sum_selector` is toggled).
 
 #[derive(Debug, Clone)]
-pub struct MerkleSumTreeChip<const N_ASSETS: usize> {
+pub struct MerkleSumTreeChip<const N_CURRENCIES: usize> {
     config: MerkleSumTreeConfig,
 }
 
-impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
+impl<const N_CURRENCIES: usize> MerkleSumTreeChip<N_CURRENCIES> {
     pub fn construct(config: MerkleSumTreeConfig) -> Self {
         Self { config }
     }
@@ -76,7 +76,7 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         });
 
         meta.create_gate("sum constraint", |meta| {
-            (0..N_ASSETS)
+            (0..N_CURRENCIES)
                 .map(|_| {
                     let left_balance = meta.query_advice(col_a, Rotation::cur());
                     let right_balance = meta.query_advice(col_b, Rotation::cur());
@@ -175,7 +175,7 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         )
     }
 
-    /// Assign the nodes balance for a single asset in a region following this layout on 3 advice columns:
+    /// Assign the nodes balance for a single currency in a region following this layout on 3 advice columns:
     ///
     /// | a                 | b                 | c          |
     /// | ------------      | -------------     | ---------- |
@@ -201,7 +201,7 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
         Error,
     > {
         layouter.assign_region(
-            || "assign nodes balances per asset",
+            || "assign nodes balances per currency",
             |mut region| {
                 // enable the bool_and_swap_selector at row 0
                 self.config.bool_and_swap_selector.enable(&mut region, 0)?;
@@ -245,14 +245,14 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
                 });
 
                 // Perform the assignment according to the swap at offset 1
-                let left_balance_asset = region.assign_advice(
+                let left_currency_balance = region.assign_advice(
                     || "assign left balance after swap",
                     self.config.advice[0],
                     1,
                     || l1_val,
                 )?;
 
-                let right_balance_asset = region.assign_advice(
+                let right_currency_balance = region.assign_advice(
                     || "assign right balance after swap",
                     self.config.advice[1],
                     1,
@@ -267,7 +267,7 @@ impl<const N_ASSETS: usize> MerkleSumTreeChip<N_ASSETS> {
                 let sum_cell =
                     region.assign_advice(|| "sum of balances", self.config.advice[2], 1, || sum)?;
 
-                Ok((left_balance_asset, right_balance_asset, sum_cell))
+                Ok((left_currency_balance, right_currency_balance, sum_cell))
             },
         )
     }

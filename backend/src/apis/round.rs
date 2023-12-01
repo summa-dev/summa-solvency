@@ -38,35 +38,35 @@ impl MstInclusionProof {
     }
 }
 
-pub struct Snapshot<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
-    pub mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
+pub struct Snapshot<const LEVELS: usize, const N_CURRENCIES: usize, const N_BYTES: usize> {
+    pub mst: Box<dyn Tree<N_CURRENCIES, N_BYTES>>,
     trusted_setup: SetupArtifacts,
 }
 
-pub struct Round<'a, const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize> {
+pub struct Round<'a, const LEVELS: usize, const N_CURRENCIES: usize, const N_BYTES: usize> {
     timestamp: u64,
-    snapshot: Snapshot<LEVELS, N_ASSETS, N_BYTES>,
+    snapshot: Snapshot<LEVELS, N_CURRENCIES, N_BYTES>,
     signer: &'a SummaSigner,
 }
 
-impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
-    Round<'_, LEVELS, N_ASSETS, N_BYTES>
+impl<const LEVELS: usize, const N_CURRENCIES: usize, const N_BYTES: usize>
+    Round<'_, LEVELS, N_CURRENCIES, N_BYTES>
 where
-    [usize; N_ASSETS + 1]: Sized,
-    [usize; N_ASSETS + 2]: Sized,
+    [usize; N_CURRENCIES + 1]: Sized,
+    [usize; N_CURRENCIES + 2]: Sized,
 {
     pub fn new<'a>(
         signer: &'a SummaSigner,
-        mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
+        mst: Box<dyn Tree<N_CURRENCIES, N_BYTES>>,
         params_path: &str,
         timestamp: u64,
-    ) -> Result<Round<'a, LEVELS, N_ASSETS, N_BYTES>, Box<dyn Error>>
+    ) -> Result<Round<'a, LEVELS, N_CURRENCIES, N_BYTES>, Box<dyn Error>>
     where
-        [(); N_ASSETS + 2]: Sized,
+        [(); N_CURRENCIES + 2]: Sized,
     {
         Ok(Round {
             timestamp,
-            snapshot: Snapshot::<LEVELS, N_ASSETS, N_BYTES>::new(mst, params_path).unwrap(),
+            snapshot: Snapshot::<LEVELS, N_CURRENCIES, N_BYTES>::new(mst, params_path).unwrap(),
             signer: &signer,
         })
     }
@@ -114,7 +114,7 @@ where
         user_index: usize,
     ) -> Result<MstInclusionProof, &'static str>
     where
-        [(); N_ASSETS + 2]: Sized,
+        [(); N_CURRENCIES + 2]: Sized,
     {
         Ok(self
             .snapshot
@@ -123,17 +123,17 @@ where
     }
 }
 
-impl<const LEVELS: usize, const N_ASSETS: usize, const N_BYTES: usize>
-    Snapshot<LEVELS, N_ASSETS, N_BYTES>
+impl<const LEVELS: usize, const N_CURRENCIES: usize, const N_BYTES: usize>
+    Snapshot<LEVELS, N_CURRENCIES, N_BYTES>
 where
-    [usize; N_ASSETS + 1]: Sized,
-    [usize; N_ASSETS + 2]: Sized,
+    [usize; N_CURRENCIES + 1]: Sized,
+    [usize; N_CURRENCIES + 2]: Sized,
 {
     pub fn new(
-        mst: Box<dyn Tree<N_ASSETS, N_BYTES>>,
+        mst: Box<dyn Tree<N_CURRENCIES, N_BYTES>>,
         params_path: &str,
-    ) -> Result<Snapshot<LEVELS, N_ASSETS, N_BYTES>, Box<dyn std::error::Error>> {
-        let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
+    ) -> Result<Snapshot<LEVELS, N_CURRENCIES, N_BYTES>, Box<dyn std::error::Error>> {
+        let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init_empty();
 
         // get k from ptau file name
         let parts: Vec<&str> = params_path.split("-").collect();
@@ -154,10 +154,10 @@ where
         user_index: usize,
     ) -> Result<MstInclusionProof, &'static str>
     where
-        [(); N_ASSETS + 2]: Sized,
+        [(); N_CURRENCIES + 2]: Sized,
     {
         let merkle_proof = self.mst.generate_proof(user_index).unwrap();
-        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+        let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
         // Currently, default manner of generating a inclusion proof for solidity-verifier.
         let calldata = gen_proof_solidity_calldata(

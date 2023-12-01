@@ -15,7 +15,7 @@ use summa_backend::{
 };
 use summa_solvency::merkle_sum_tree::MerkleSumTree;
 
-const N_ASSETS: usize = 2;
+const N_CURRENCIES: usize = 2;
 const USER_INDEX: usize = 0;
 
 #[tokio::main]
@@ -109,7 +109,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let leaf_hash = public_inputs[0];
     assert_eq!(
         leaf_hash,
-        leaf_hash_from_inputs::<N_ASSETS>(user_name.clone(), balances.clone())
+        leaf_hash_from_inputs::<N_CURRENCIES>(user_name.clone(), balances.clone())
     );
 
     // Get `mst_root` from contract. the `mst_root` is disptached by CEX with specific time `snapshot_time`.

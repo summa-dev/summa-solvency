@@ -17,7 +17,7 @@ mod test {
     use num_bigint::ToBigUint;
     use snark_verifier_sdk::CircuitExt;
 
-    const N_ASSETS: usize = 2;
+    const N_CURRENCIES: usize = 2;
     const LEVELS: usize = 4;
     const N_BYTES: usize = 14;
     const K: u32 = 11;
@@ -25,19 +25,19 @@ mod test {
     #[test]
     fn test_valid_merkle_sum_tree() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
 
         for user_index in 0..16 {
             // get proof for entry ˆuser_indexˆ
             let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
-            let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+            let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
             let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
             assert_eq!(circuit.instances()[0].len(), circuit.num_instance()[0]);
-            assert_eq!(circuit.instances()[0].len(), 2 + N_ASSETS);
+            assert_eq!(circuit.instances()[0].len(), 2 + N_CURRENCIES);
 
             valid_prover.assert_satisfied();
         }
@@ -45,7 +45,7 @@ mod test {
 
     #[test]
     fn test_valid_merkle_sum_tree_with_full_prover() {
-        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
+        let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init_empty();
 
         // Generate a universal trusted setup for testing purposes.
         //
@@ -56,7 +56,7 @@ mod test {
         let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
 
         let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
 
         let user_index = 0;
@@ -65,7 +65,7 @@ mod test {
         let user_entry = merkle_sum_tree.get_entry(user_index);
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+        let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
         // Generate the proof
         let proof = full_prover(&params, &pk, circuit.clone(), circuit.instances());
@@ -82,9 +82,9 @@ mod test {
         let expected_root_hash = merkle_sum_tree.root().hash;
         assert_eq!(circuit.instances()[0][1], expected_root_hash);
 
-        // public inputs [2, 2+N_ASSETS - 1] are the root balances
+        // public inputs [2, 2+N_CURRENCIES - 1] are the root balances
         let expected_root_balances = merkle_sum_tree.root().balances;
-        for i in 0..N_ASSETS {
+        for i in 0..N_CURRENCIES {
             assert_eq!(circuit.instances()[0][2 + i], expected_root_balances[i]);
         }
     }
@@ -93,13 +93,13 @@ mod test {
     #[test]
     fn test_invalid_root_hash() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
         let user_index = 0;
 
         let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
-        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+        let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
         let mut instances = circuit.instances();
         let invalid_root_hash = Fp::from(1000u64);
@@ -127,13 +127,13 @@ mod test {
 
     #[test]
     fn test_invalid_root_hash_as_instance_with_full_prover() {
-        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
+        let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init_empty();
 
         // generate a universal trusted setup for testing, along with the verification key (vk) and the proving key (pk).
         let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
 
         let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
 
         let user_index = 0;
@@ -141,7 +141,7 @@ mod test {
         let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+        let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
         let invalid_root_hash = Fp::from(1000u64);
 
@@ -162,7 +162,7 @@ mod test {
     #[test]
     fn test_invalid_entry_balance_as_witness() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
 
         let user_index = 0;
@@ -170,7 +170,7 @@ mod test {
         let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
-        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+        let mut circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
         let instances = circuit.instances();
 
@@ -203,14 +203,14 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 2).into(),
                     location: FailureLocation::InRegion {
-                        region: (111, "assign nodes balances per asset").into(),
+                        region: (111, "assign nodes balances per currency").into(),
                         offset: 1
                     }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 2).into(),
                     location: FailureLocation::InRegion {
-                        region: (112, "assign nodes balances per asset").into(),
+                        region: (112, "assign nodes balances per currency").into(),
                         offset: 1
                     }
                 },
@@ -238,7 +238,7 @@ mod test {
     #[test]
     fn test_invalid_leaf_hash_as_instance() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
 
         let user_index = 0;
@@ -246,7 +246,7 @@ mod test {
         let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
-        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+        let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
         let mut instances = circuit.instances();
         let invalid_leaf_hash = Fp::from(1000u64);
@@ -272,11 +272,11 @@ mod test {
         );
     }
 
-    // Passing a non binary index should fail the bool constraint inside "assign nodes hashes per merkle tree level" and "assign nodes balances per asset" region and the permutation check between the computed root hash and the instance column root hash
+    // Passing a non binary index should fail the bool constraint inside "assign nodes hashes per merkle tree level" and "assign nodes balances per currency" region and the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_non_binary_index() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
 
         let user_index = 0;
@@ -284,7 +284,7 @@ mod test {
         let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
-        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+        let mut circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
         let instances = circuit.instances();
 
@@ -307,7 +307,7 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((6, "bool constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (27, "assign nodes balances per asset").into(),
+                        region: (27, "assign nodes balances per currency").into(),
                         offset: 0
                     },
                     cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
@@ -315,7 +315,7 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((6, "bool constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (28, "assign nodes balances per asset").into(),
+                        region: (28, "assign nodes balances per currency").into(),
                         offset: 0
                     },
                     cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
@@ -373,7 +373,7 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((7, "swap constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (27, "assign nodes balances per asset").into(),
+                        region: (27, "assign nodes balances per currency").into(),
                         offset: 0
                     },
                     cell_values: vec![
@@ -386,7 +386,7 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((7, "swap constraint").into(), 1, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (27, "assign nodes balances per asset").into(),
+                        region: (27, "assign nodes balances per currency").into(),
                         offset: 0
                     },
                     cell_values: vec![
@@ -399,7 +399,7 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((7, "swap constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (28, "assign nodes balances per asset").into(),
+                        region: (28, "assign nodes balances per currency").into(),
                         offset: 0
                     },
                     cell_values: vec![
@@ -412,7 +412,7 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((7, "swap constraint").into(), 1, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (28, "assign nodes balances per asset").into(),
+                        region: (28, "assign nodes balances per currency").into(),
                         offset: 0
                     },
                     cell_values: vec![
@@ -441,7 +441,7 @@ mod test {
     #[test]
     fn test_swapping_index() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
 
         let user_index = 0;
@@ -449,7 +449,7 @@ mod test {
         let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
-        let mut circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+        let mut circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
         let instances = circuit.instances();
 
@@ -482,14 +482,14 @@ mod test {
         use plotters::prelude::*;
 
         let merkle_sum_tree =
-            MerkleSumTree::<N_ASSETS, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv")
                 .unwrap();
 
         let user_index = 0;
 
         let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
 
-        let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init(merkle_proof);
+        let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
 
         let root = BitMapBackend::new("prints/mst-inclusion-layout.png", (2048, 32768))
             .into_drawing_area();
