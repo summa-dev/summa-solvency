@@ -1,5 +1,8 @@
 #![feature(generic_const_exprs)]
 
+use halo2_proofs::halo2curves::{bn256::Fr as Fp, ff::PrimeField};
+use num_bigint::BigInt;
+use num_traits::Num;
 use serde_json::to_string_pretty;
 use snark_verifier_sdk::{
     evm::{evm_verify, gen_evm_proof_shplonk, gen_evm_verifier_shplonk},
@@ -22,6 +25,9 @@ const N_ASSETS: usize = 2;
 const N_BYTES: usize = 14;
 
 fn main() {
+    // Assert that there is no risk of overflow in the Merkle Root given the combination of `N_BYTES` and `LEVELS`
+    assert!(!is_there_risk_of_overflow(N_BYTES, LEVELS), "There is a risk of balance overflow in the Merkle Root, given the combination of `N_BYTES` and `LEVELS`");
+
     // In order to generate the verifier we create the circuit using the init_empty() method, which means that the circuit is not initialized with any data.
     let circuit = MstInclusionCircuit::<LEVELS, N_ASSETS, N_BYTES>::init_empty();
 
@@ -82,4 +88,32 @@ fn main() {
     let gas_cost = evm_verify(deployment_code, instances, proof);
 
     print!("gas_cost: {:?}", gas_cost);
+}
+
+// Calculate the maximum value that the Merkle Root can have, given N_BYTES and LEVELS
+fn calculate_max_root_balance(n_bytes: usize, n_levels: usize) -> BigInt {
+    // The max value that can be stored in a leaf node or a sibling node, according to the constraint set in the circuit
+    let max_value: BigInt = BigInt::from(2).pow(n_bytes as u32 * 8) - 1;
+
+    // Initialize the max balance value at the max leaf value
+    let mut max_balance = max_value.clone();
+
+    // Perform the summation for each level up the Merkle Root
+    for _ in 0..n_levels {
+        max_balance += max_value.clone();
+    }
+
+    max_balance
+}
+
+// Given a combination of `N_BYTES` and `LEVELS`, check if there is a risk of overflow in the Merkle Root
+fn is_there_risk_of_overflow(n_bytes: usize, n_levels: usize) -> bool {
+    // Calculate the max balance value
+    let max_balance = calculate_max_root_balance(n_bytes, n_levels);
+
+    // The modulus of the BN256 curve
+    let modulus = BigInt::from_str_radix(&Fp::MODULUS[2..], 16).unwrap();
+
+    // Check if the max balance value is greater than the prime
+    max_balance > modulus
 }
