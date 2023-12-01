@@ -15,8 +15,17 @@ async function main() {
   );
   await inclusionVerifier.deployed();
 
+  // The number of levels of the Merkle sum tree
+  const mstLevels = 4;
+  //The number of cryptocurrency assets per user included in the Merkle sum tree
+  const assetsCount = 2;
+  // The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
+  const balanceByteRange = 14;
   const summa = await ethers.deployContract("Summa", [
     inclusionVerifier.address,
+    mstLevels,
+    assetsCount,
+    balanceByteRange,
   ]);
 
   await summa.deployed();

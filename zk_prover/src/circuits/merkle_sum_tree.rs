@@ -16,7 +16,7 @@ use snark_verifier_sdk::CircuitExt;
 ///
 /// # Type Parameters
 ///
-/// * `LEVELS`: The number of levels of the merkle sum tree
+/// * `LEVELS`: The number of levels of the merkle sum tree. In particular, it indicates the number of hashing operations that are performed from the leaf to the root. For example a tree with 16 entries has 4 levels.
 /// * `N_ASSETS`: The number of assets for which the solvency is verified.
 /// * `N_BYTES`: The number of bytes in which the balances should lie
 ///
@@ -130,6 +130,7 @@ where
     range_check_config: RangeCheckConfig<N_BYTES>,
     instance: Column<Instance>,
     advices: [Column<Advice>; 3],
+    fixed_columns: [Column<Fixed>; 5],
 }
 
 impl<const N_ASSETS: usize, const N_BYTES: usize> MstInclusionConfig<N_ASSETS, N_BYTES>
@@ -200,6 +201,7 @@ where
             range_check_config,
             instance,
             advices,
+            fixed_columns,
         }
     }
 }
@@ -290,8 +292,8 @@ where
             config.instance,
         )?;
 
-        // load range check chip
-        range_check_chip.load(&mut layouter)?;
+        // load lookup table for range check
+        self.load(&mut layouter, config.fixed_columns[4])?;
 
         for level in 0..LEVELS {
             let namespace_prefix = format!("level {}", level);
@@ -339,6 +341,29 @@ where
                     layouter.namespace(|| format!("{}: perform poseidon hash", namespace_prefix)),
                     sibling_hasher_input,
                 )?;
+
+                // For level 0, perform range check on the leaf node balances and on the sibling node balances
+                for asset in 0..N_ASSETS {
+                    // Each balance cell is constrained to be within the range defined by N_BYTES
+                    range_check_chip.assign(
+                        layouter.namespace(|| {
+                            format!(
+                                "{}: asset {}: range check leaf balance",
+                                namespace_prefix, asset
+                            )
+                        }),
+                        &current_balances[asset],
+                    )?;
+                    range_check_chip.assign(
+                        layouter.namespace(|| {
+                            format!(
+                                "{}: asset {}: range check sibling balance",
+                                namespace_prefix, asset
+                            )
+                        }),
+                        &sibling_balances[asset],
+                    )?;
+                }
 
                 sibling_hash = computed_sibling_hash;
             }
@@ -393,6 +418,20 @@ where
                     sibling_hasher_input,
                 )?;
 
+                // For other levels, only perform range on the sibling node balances. Any risk of overflow of the `current_balances` will be checked during verification
+                for asset in 0..N_ASSETS {
+                    // Each balance cell is constrained to be within the range defined by N_BYTES
+                    range_check_chip.assign(
+                        layouter.namespace(|| {
+                            format!(
+                                "{}: asset {}: range check sibling balance",
+                                namespace_prefix, asset
+                            )
+                        }),
+                        &sibling_balances[asset],
+                    )?;
+                }
+
                 sibling_hash = computed_sibling_hash;
             };
 
@@ -431,26 +470,6 @@ where
                         &sibling_balances[asset],
                         &swap_bit_level,
                     )?;
-
-                // Each balance cell is constrained to be within the range defined by N_BYTES
-                range_check_chip.assign(
-                    layouter.namespace(|| {
-                        format!(
-                            "{}: asset {}: range check left balance",
-                            namespace_prefix, asset
-                        )
-                    }),
-                    &left_balance,
-                )?;
-                range_check_chip.assign(
-                    layouter.namespace(|| {
-                        format!(
-                            "{}: asset {}: range check right balance",
-                            namespace_prefix, asset
-                        )
-                    }),
-                    &right_balance,
-                )?;
 
                 next_balances.push(next_balance);
                 left_balances.push(left_balance);
@@ -498,12 +517,6 @@ where
                 config.instance,
             )?;
         }
-
-        // perform range check on the balances of the root to make sure these lie in the range defined by N_BYTES
-        for balance in current_balances.iter() {
-            range_check_chip.assign(layouter.namespace(|| "range check root balance"), balance)?;
-        }
-
         Ok(())
     }
 }

@@ -113,7 +113,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (127, "permute state").into(),
+                        region: (121, "permute state").into(),
                         offset: 36
                     }
                 },
@@ -189,29 +189,29 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (22, "assign nodes hashes per merkle tree level").into(),
+                        region: (26, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
                     }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (127, "permute state").into(),
+                        region: (121, "permute state").into(),
                         offset: 36
                     }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 0).into(),
+                    column: (Any::advice(), 2).into(),
                     location: FailureLocation::InRegion {
-                        region: (128, "assign value to perform range check").into(),
-                        offset: 0
+                        region: (111, "assign nodes balances per asset").into(),
+                        offset: 1
                     }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 0).into(),
+                    column: (Any::advice(), 2).into(),
                     location: FailureLocation::InRegion {
-                        region: (129, "assign value to perform range check").into(),
-                        offset: 0
+                        region: (112, "assign nodes balances per asset").into(),
+                        offset: 1
                     }
                 },
                 VerifyFailure::Permutation {
@@ -260,7 +260,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (22, "assign nodes hashes per merkle tree level").into(),
+                        region: (26, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
                     }
                 },
@@ -299,7 +299,7 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((6, "bool constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (22, "assign nodes hashes per merkle tree level").into(),
+                        region: (26, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
                     },
                     cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
@@ -307,7 +307,7 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((6, "bool constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (23, "assign nodes balances per asset").into(),
+                        region: (27, "assign nodes balances per asset").into(),
                         offset: 0
                     },
                     cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
@@ -315,7 +315,7 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((6, "bool constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (26, "assign nodes balances per asset").into(),
+                        region: (28, "assign nodes balances per asset").into(),
                         offset: 0
                     },
                     cell_values: vec![(((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),]
@@ -323,7 +323,7 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((7, "swap constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (22, "assign nodes hashes per merkle tree level").into(),
+                        region: (26, "assign nodes hashes per merkle tree level").into(),
                         offset: 0
                     },
                     cell_values: vec![
@@ -342,6 +342,26 @@ mod test {
                             "0x17ef9d8ee0e2c8470814651413b71009a607a020214f749687384a7b7a7eb67a"
                                 .to_string()
                         ),
+                        (((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),
+                    ]
+                },
+                VerifyFailure::ConstraintNotSatisfied {
+                    constraint: ((7, "swap constraint").into(), 1, "").into(),
+                    location: FailureLocation::InRegion {
+                        region: (26, "assign nodes hashes per merkle tree level").into(),
+                        offset: 0
+                    },
+                    cell_values: vec![
+                        (
+                            ((Any::advice(), 0).into(), 0).into(),
+                            "0xe113acd03b98f0bab0ef6f577245d5d008cbcc19ef2dab3608aa4f37f72a407"
+                                .to_string()
+                        ),
+                        (
+                            ((Any::advice(), 1).into(), 0).into(),
+                            "0x17ef9d8ee0e2c8470814651413b71009a607a020214f749687384a7b7a7eb67a"
+                                .to_string()
+                        ),
                         (
                             ((Any::advice(), 1).into(), 1).into(),
                             "0xe113acd03b98f0bab0ef6f577245d5d008cbcc19ef2dab3608aa4f37f72a407"
@@ -353,12 +373,24 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((7, "swap constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (23, "assign nodes balances per asset").into(),
+                        region: (27, "assign nodes balances per asset").into(),
                         offset: 0
                     },
                     cell_values: vec![
                         (((Any::advice(), 0).into(), 0).into(), "0x2e70".to_string()),
                         (((Any::advice(), 0).into(), 1).into(), "0x108ef".to_string()),
+                        (((Any::advice(), 1).into(), 0).into(), "0x108ef".to_string()),
+                        (((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),
+                    ]
+                },
+                VerifyFailure::ConstraintNotSatisfied {
+                    constraint: ((7, "swap constraint").into(), 1, "").into(),
+                    location: FailureLocation::InRegion {
+                        region: (27, "assign nodes balances per asset").into(),
+                        offset: 0
+                    },
+                    cell_values: vec![
+                        (((Any::advice(), 0).into(), 0).into(), "0x2e70".to_string()),
                         (((Any::advice(), 1).into(), 0).into(), "0x108ef".to_string()),
                         (((Any::advice(), 1).into(), 1).into(), "0x2e70".to_string()),
                         (((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),
@@ -367,12 +399,24 @@ mod test {
                 VerifyFailure::ConstraintNotSatisfied {
                     constraint: ((7, "swap constraint").into(), 0, "").into(),
                     location: FailureLocation::InRegion {
-                        region: (26, "assign nodes balances per asset").into(),
+                        region: (28, "assign nodes balances per asset").into(),
                         offset: 0
                     },
                     cell_values: vec![
                         (((Any::advice(), 0).into(), 0).into(), "0xa0cb".to_string()),
                         (((Any::advice(), 0).into(), 1).into(), "0x48db".to_string()),
+                        (((Any::advice(), 1).into(), 0).into(), "0x48db".to_string()),
+                        (((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),
+                    ]
+                },
+                VerifyFailure::ConstraintNotSatisfied {
+                    constraint: ((7, "swap constraint").into(), 1, "").into(),
+                    location: FailureLocation::InRegion {
+                        region: (28, "assign nodes balances per asset").into(),
+                        offset: 0
+                    },
+                    cell_values: vec![
+                        (((Any::advice(), 0).into(), 0).into(), "0xa0cb".to_string()),
                         (((Any::advice(), 1).into(), 0).into(), "0x48db".to_string()),
                         (((Any::advice(), 1).into(), 1).into(), "0xa0cb".to_string()),
                         (((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),
@@ -381,7 +425,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (127, "permute state").into(),
+                        region: (121, "permute state").into(),
                         offset: 36
                     }
                 },
@@ -420,7 +464,7 @@ mod test {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
-                        region: (127, "permute state").into(),
+                        region: (121, "permute state").into(),
                         offset: 36
                     }
                 },
