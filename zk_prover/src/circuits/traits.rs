@@ -31,9 +31,9 @@ pub trait CircuitBase {
         )
     }
 
-    /// /// Loads the lookup table with values from `0` to `2^8 - 1`
+    /// Loads the lookup table with values from `0` to `2^8 - 1`
     fn load(&self, layouter: &mut impl Layouter<Fp>, column: Column<Fixed>) -> Result<(), Error> {
-        let range = 1 << (8);
+        let range = 1 << 8;
 
         layouter.assign_region(
             || format!("load range check table of {} bits", 8),
