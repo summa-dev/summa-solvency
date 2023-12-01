@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //
     // Initialize the `Round` instance to submit the liability commitment.
     let params_path = "ptau/hermez-raw-11";
-    let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
+    let entry_csv = "../csv/entry_16.csv";
     let mst = MerkleSumTree::new(entry_csv).unwrap();
 
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.

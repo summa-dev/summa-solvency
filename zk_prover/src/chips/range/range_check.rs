@@ -66,7 +66,6 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
         lookup_u8_table: Column<Fixed>,
         lookup_enable_selector: Selector,
     ) -> RangeCheckConfig<N_BYTES> {
-
         meta.annotate_lookup_any_column(lookup_u8_table, || "LOOKUP_MAXBITS_RANGE");
 
         meta.lookup_any(

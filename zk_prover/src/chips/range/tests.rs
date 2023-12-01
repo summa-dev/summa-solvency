@@ -103,6 +103,32 @@ struct TestCircuit<const N_BYTES: usize> {
     pub b: Fp,
 }
 
+impl<const N_BYTES: usize> TestCircuit<N_BYTES> {
+    /// Loads the lookup table with values from `0` to `2^8 - 1`
+    pub fn load(
+        &self,
+        layouter: &mut impl Layouter<Fp>,
+        column: Column<Fixed>,
+    ) -> Result<(), Error> {
+        let range = 1 << 8;
+
+        layouter.assign_region(
+            || format!("load range check table of {} bits", 8),
+            |mut region| {
+                for i in 0..range {
+                    region.assign_fixed(
+                        || "assign cell in fixed column",
+                        column,
+                        i,
+                        || Value::known(Fp::from(i as u64)),
+                    )?;
+                }
+                Ok(())
+            },
+        )
+    }
+}
+
 /// Inherit the `CircuitBase` trait for the `TestCircuit` struct.
 impl<const N_BYTES: usize> CircuitBase for TestCircuit<N_BYTES> {}
 

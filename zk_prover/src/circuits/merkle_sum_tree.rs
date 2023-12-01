@@ -5,7 +5,7 @@ use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
 use crate::circuits::traits::CircuitBase;
 use crate::merkle_sum_tree::utils::big_uint_to_fp;
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
-use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
+use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
     Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Instance, Selector,
@@ -100,6 +100,30 @@ where
             sibling_middle_node_hash_preimages: merkle_proof.sibling_middle_node_hash_preimages,
             root: merkle_proof.root,
         }
+    }
+
+    /// Loads the lookup table with values from `0` to `2^8 - 1`
+    pub fn load(
+        &self,
+        layouter: &mut impl Layouter<Fp>,
+        column: Column<Fixed>,
+    ) -> Result<(), Error> {
+        let range = 1 << 8;
+
+        layouter.assign_region(
+            || format!("load range check table of {} bits", 8),
+            |mut region| {
+                for i in 0..range {
+                    region.assign_fixed(
+                        || "assign cell in fixed column",
+                        column,
+                        i,
+                        || Value::known(Fp::from(i as u64)),
+                    )?;
+                }
+                Ok(())
+            },
+        )
     }
 }
 

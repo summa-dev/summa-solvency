@@ -26,18 +26,16 @@ fn run_test(circuit_filepath: String, witness_gen_filepath: String) {
     let liabilities_state_0 = Fr::from_str("0").unwrap();
 
     // Merkle Proof represents the inclusion proof for the user 0 for each state
-    let merkle_proof_1 =
-        build_merkle_proof("examples/states/entry_16_1.csv".to_string(), 0).unwrap();
+    let merkle_proof_1 = build_merkle_proof("../csv/states/entry_16_1.csv".to_string(), 0).unwrap();
     let liabilities_state_1 =
         build_liabilities_state_cur(liabilities_state_0, merkle_proof_1.root.hash);
 
-    let merkle_proof_2 =
-        build_merkle_proof("examples/states/entry_16_2.csv".to_string(), 0).unwrap();
+    let merkle_proof_2 = build_merkle_proof("../csv/states/entry_16_2.csv".to_string(), 0).unwrap();
     let liabilities_state_2 =
         build_liabilities_state_cur(liabilities_state_1, merkle_proof_2.root.hash);
 
     let merkle_proof_3 =
-        build_merkle_proof("examples/states/entry_16_3.csv".to_string(), 0).unwrap();
+        build_merkle_proof("../csv/states/entry_16_3.csv".to_string(), 0).unwrap();
     let liabilities_state_3 =
         build_liabilities_state_cur(liabilities_state_2, merkle_proof_3.root.hash);
 
@@ -257,7 +255,11 @@ struct MerkleProof<const N_CURRENCIES: usize> {
 
 impl<const N_CURRENCIES: usize> Node<N_CURRENCIES> {
     /// Constructs a new Node given left and right child hashes.
-    fn new(left: &Node<N_CURRENCIES>, right: &Node<N_CURRENCIES>, hasher: &Poseidon) -> Node<N_CURRENCIES> {
+    fn new(
+        left: &Node<N_CURRENCIES>,
+        right: &Node<N_CURRENCIES>,
+        hasher: &Poseidon,
+    ) -> Node<N_CURRENCIES> {
         let mut input = vec![left.hash];
         input.extend(left.balance);
         input.push(right.hash);
@@ -282,7 +284,10 @@ impl<const N_CURRENCIES: usize> Node<N_CURRENCIES> {
 }
 
 /// Generates a Merkle proof of inclusion for a leaf at a given index
-fn build_merkle_proof(csv_filepath: String, user_index: usize) -> Option<MerkleProof<N_CURRENCIES>> {
+fn build_merkle_proof(
+    csv_filepath: String,
+    user_index: usize,
+) -> Option<MerkleProof<N_CURRENCIES>> {
     let file = File::open(csv_filepath).expect("Unable to open file");
     let reader = BufReader::new(file);
 

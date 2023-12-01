@@ -41,17 +41,18 @@ fn main() {
     let yul_output_path = "../contracts/src/InclusionVerifier.yul";
     let sol_output_path = "../contracts/src/InclusionVerifier.sol";
 
-    let deployment_code = gen_evm_verifier_shplonk::<MstInclusionCircuit<LEVELS, N_CURRENCIES, N_BYTES>>(
-        &params,
-        pk.get_vk(),
-        num_instances,
-        Some(Path::new(yul_output_path)),
-    );
+    let deployment_code =
+        gen_evm_verifier_shplonk::<MstInclusionCircuit<LEVELS, N_CURRENCIES, N_BYTES>>(
+            &params,
+            pk.get_vk(),
+            num_instances,
+            Some(Path::new(yul_output_path)),
+        );
 
     write_verifier_sol_from_yul(yul_output_path, sol_output_path).unwrap();
 
     let merkle_sum_tree =
-        MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("src/merkle_sum_tree/csv/entry_16.csv").unwrap();
+        MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
 
     // In order to generate a proof for testing purpose we create the circuit using the init() method
     // which takes as input the merkle sum tree and the index of the leaf we are generating the proof for.
