@@ -94,27 +94,18 @@ fn main() {
 // Calculate the maximum value that the Merkle Root can have, given N_BYTES and LEVELS
 fn calculate_max_root_balance(n_bytes: usize, n_levels: usize) -> BigInt {
     // The max value that can be stored in a leaf node or a sibling node, according to the constraint set in the circuit
-    let max_value: BigInt = BigInt::from(2).pow(n_bytes as u32 * 8) - 1;
-
-    // Initialize the max balance value at the max leaf value
-    let mut max_balance = max_value.clone();
-
-    // Perform the summation for each level up the Merkle Root
-    for _ in 0..n_levels {
-        max_balance += max_value.clone();
-    }
-
-    max_balance
+    let max_leaf_value = BigInt::from(2).pow(n_bytes as u32 * 8) - 1;
+    max_leaf_value * (n_levels + 1)
 }
 
 // Given a combination of `N_BYTES` and `LEVELS`, check if there is a risk of overflow in the Merkle Root
 fn is_there_risk_of_overflow(n_bytes: usize, n_levels: usize) -> bool {
-    // Calculate the max balance value
-    let max_balance = calculate_max_root_balance(n_bytes, n_levels);
+    // Calculate the max root balance value
+    let max_root_balance = calculate_max_root_balance(n_bytes, n_levels);
 
     // The modulus of the BN256 curve
     let modulus = BigInt::from_str_radix(&Fp::MODULUS[2..], 16).unwrap();
 
     // Check if the max balance value is greater than the prime
-    max_balance > modulus
+    max_root_balance > modulus
 }
