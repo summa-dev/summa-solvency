@@ -2,7 +2,10 @@
 mod test {
 
     use crate::circuits::solvency_v2::SolvencyV2;
-    use crate::circuits::utils::{full_prover, full_verifier, generate_setup_artifacts};
+    use crate::circuits::utils::{
+        full_prover, full_verifier, generate_setup_artifacts, open_grand_sum,
+        verify_grand_sum_opening, verify_kzg_proof,
+    };
     use crate::utils::parse_csv_to_entries;
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
@@ -76,6 +79,15 @@ mod test {
 
         let (_, entries) = parse_csv_to_entries::<&str, N_ASSETS_V2, N_BYTES_V2>(path).unwrap();
 
+        // Calculate total for all entry columns
+        let mut total: Vec<BigUint> = vec![BigUint::from(0u32); N_ASSETS_V2];
+
+        for entry in &entries {
+            for (i, balance) in entry.balances().iter().enumerate() {
+                total[i] += balance;
+            }
+        }
+
         let circuit = SolvencyV2::<N_BYTES_V2, N_USERS, N_ASSETS_V2>::init(entries);
 
         let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
@@ -83,13 +95,37 @@ mod test {
         valid_prover.assert_satisfied();
 
         // Generate the proof
-        let proof = full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
-
-        // let unblinded_commitments: Vec<_> =
-        //     proof.commitments.iter().map(|c| c.to_bytes()).collect();
+        let (proof, advice_commitments, advice_polys) =
+            full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
 
         // verify the proof to be true
         assert!(full_verifier(&params, &vk, proof, vec![vec![]]));
+
+        // We know what column is the balance column
+        let balance_column_index = 1;
+        let balances_commitment = advice_commitments[balance_column_index];
+
+        let kzg_proof = open_grand_sum(
+            &balances_commitment,
+            &advice_polys.advice_polys[balance_column_index],
+            &advice_polys.advice_blinds[balance_column_index],
+            &params,
+        );
+
+        let (verified, grand_sum) = verify_grand_sum_opening(
+            &params,
+            kzg_proof,
+            Fp::zero(),
+            u64::try_from(advice_polys.advice_polys[balance_column_index].len()).unwrap(),
+        );
+
+        assert!(verified);
+
+        println!("grand sum {:?}", grand_sum);
+
+        assert_eq!(total[balance_column_index - 1], grand_sum);
+
+        //TODO next: make openings at "user" points
     }
 
     #[cfg(feature = "dev-graph")]

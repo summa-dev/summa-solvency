@@ -13,7 +13,8 @@ use halo2_proofs::{
         ff::{PrimeField, WithSmallOrderMulGroup},
     },
     plonk::{
-        create_proof, keygen_pk, keygen_vk, verify_proof, Circuit, Error, ProvingKey, VerifyingKey,
+        create_proof, keygen_pk, keygen_vk, verify_proof, AdviceSingle, Circuit, Error, ProvingKey,
+        VerifyingKey,
     },
     poly::{
         commitment::{Blind, CommitmentScheme, Params, ParamsProver, Prover, Verifier},
@@ -29,6 +30,7 @@ use halo2_proofs::{
         TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
+use num_bigint::BigUint;
 use rand::rngs::OsRng;
 use regex_simple::Regex;
 
@@ -89,7 +91,11 @@ pub fn full_prover<C: Circuit<Fp>>(
     pk: &ProvingKey<G1Affine>,
     circuit: C,
     public_inputs: Vec<Vec<Fp>>,
-) -> Vec<u8> {
+) -> (
+    Vec<u8>,
+    Vec<G1Affine>,
+    AdviceSingle<halo2_proofs::halo2curves::bn256::G1Affine, Coeff>,
+) {
     let pf_time = start_timer!(|| "Creating proof");
 
     let instance: Vec<&[Fp]> = public_inputs.iter().map(|input| &input[..]).collect();
@@ -106,55 +112,68 @@ pub fn full_prover<C: Circuit<Fp>>(
     >(params, pk, &[circuit], instances, OsRng, &mut transcript);
     let result_unwrapped = result.unwrap();
     result_unwrapped.0.expect("prover should not fail");
-    let advice_polys = result_unwrapped.1;
+    let advice_polys = result_unwrapped.1.clone();
     let proof = transcript.finalize();
 
-    // We know what column is the balance column
-    let balance_column_index = 1;
-
-    let mut readable_transcript: Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>> =
+    let mut transcript_clone: Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>> =
         Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]).clone();
 
     //Read the commitment points for all the  advice polynomials from the proof transcript and put them into a vector
     let mut advice_commitments = Vec::new();
     for _ in 0..advice_polys[0].advice_polys.len() {
-        let point = readable_transcript.read_point().unwrap();
+        let point = transcript_clone.read_point().unwrap();
         advice_commitments.push(point);
     }
 
-    let balances_commitment = advice_commitments[balance_column_index];
+    end_timer!(pf_time);
+    let advice_polys = advice_polys[0].clone();
+    (proof, advice_commitments.clone(), advice_polys)
+}
 
+/// Creates the univariate polynomial grand sum opening
+pub fn open_grand_sum(
+    balances_commitment: &G1Affine,
+    advice_poly: &Polynomial<Fp, Coeff>,
+    advice_blind: &Blind<Fp>,
+    params: &ParamsKZG<Bn256>,
+) -> Vec<u8> {
     let challenge = Fp::zero();
-    let kzg_proof = create_kzg_proof::<
+    create_kzg_proof::<
         KZGCommitmentScheme<Bn256>,
         ProverSHPLONK<'_, Bn256>,
         Challenge255<G1Affine>,
         Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
     >(
         params,
-        advice_polys[0].advice_polys[balance_column_index].clone(),
-        balances_commitment,
-        advice_polys[0].advice_blinds[balance_column_index],
+        advice_poly.clone(),
+        *balances_commitment,
+        *advice_blind,
         challenge,
-    );
+    )
+}
 
-    let kzg_verification_result = verify_kzg_proof::<
+pub fn verify_grand_sum_opening(
+    params: &ParamsKZG<Bn256>,
+    kzg_proof: Vec<u8>,
+    challenge: Fp,
+    polynomial_degree: u64,
+) -> (bool, BigUint) {
+    let (verified, constant_term) = verify_kzg_proof::<
         KZGCommitmentScheme<Bn256>,
         VerifierSHPLONK<'_, Bn256>,
         Challenge255<G1Affine>,
         Blake2bRead<_, _, Challenge255<_>>,
         AccumulatorStrategy<_>,
-    >(params, balances_commitment, &kzg_proof, challenge);
+    >(params, &kzg_proof, challenge);
 
-    if kzg_verification_result {
-        println!("KZG verified successfully");
+    if !verified {
+        (false, BigUint::from(0u8))
     } else {
-        println!("KZG verification failed");
+        (
+            true,
+            fp_to_big_uint(constant_term * Fp::from(polynomial_degree)),
+        )
     }
-
-    //TODO next: make openings at "user" points
-    end_timer!(pf_time);
-    proof
 }
 
 fn create_kzg_proof<
@@ -183,10 +202,7 @@ where
 
     // Evaluate polynomial at the challenge
     let eval_at_challenge = eval_polynomial(&poly, challenge /*challenge.get_scalar()*/);
-    println!(
-        "wrote eval at challenge {:?}",
-        fp_to_big_uint(eval_at_challenge)
-    );
+
     // Write evaluation to transcript
     transcript.write_scalar(eval_at_challenge).unwrap();
 
@@ -207,7 +223,7 @@ where
     transcript.finalize()
 }
 
-fn verify_kzg_proof<
+pub fn verify_kzg_proof<
     'a,
     'params,
     Scheme: CommitmentScheme<Curve = halo2_proofs::halo2curves::bn256::G1Affine, Scalar = Fp>,
@@ -217,10 +233,9 @@ fn verify_kzg_proof<
     Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
 >(
     params: &'params Scheme::ParamsVerifier,
-    commitment_point: G1Affine,
     proof: &'a [u8],
     challenge: Fp,
-) -> bool
+) -> (bool, Fp)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3>,
 {
@@ -229,26 +244,8 @@ where
     // Read the commitment from the transcript
     let read_commitment = transcript.read_point().unwrap();
 
-    // Ensure the commitment matches the one provided
-    if read_commitment != commitment_point {
-        return false;
-    }
-
-    // Extract challenge from the transcript
-    //let challenge = Fp::zero(); //transcript.squeeze_challenge();
-    println!("challenge {:?}", fp_to_big_uint(challenge));
-
     // Read the polynomial evaluation from the transcript
     let eval_at_challenge = transcript.read_scalar().unwrap();
-    println!(
-        "read eval at challenge {:?}",
-        fp_to_big_uint(eval_at_challenge)
-    );
-
-    println!(
-        "grand sum {:?}",
-        fp_to_big_uint(&Fp::from(512) * eval_at_challenge)
-    );
 
     // Prepare verifier query for the commitment
     let queries = [VerifierQuery::new_commitment(
@@ -271,7 +268,7 @@ where
         .unwrap();
 
     // Return the result of the verification
-    strategy.finalize()
+    (strategy.finalize(), eval_at_challenge)
 }
 
 /// Verifies a proof given the public setup, the verification key, the proof and the public inputs of the circuit.
