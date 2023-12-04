@@ -29,7 +29,7 @@ fn build_mstree(_c: &mut Criterion) {
 
     criterion.bench_function(&bench_name, |b| {
         b.iter(|| {
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new(&csv_file).unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv(&csv_file).unwrap();
         })
     });
 }
@@ -49,7 +49,7 @@ fn build_sorted_mstree(_c: &mut Criterion) {
 
     criterion.bench_function(&bench_name, |b| {
         b.iter(|| {
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new_sorted(&csv_file).unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv_sorted(&csv_file).unwrap();
         })
     });
 }
@@ -102,7 +102,7 @@ fn generate_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
         PATH_NAME, PATH_NAME, LEVELS
     );
 
-    let merkle_sum_tree = MerkleSumTree::<N_CURRENCIES, N_BYTES>::new(&csv_file).unwrap();
+    let merkle_sum_tree = MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv(&csv_file).unwrap();
 
     // Only now we can instantiate the circuit with the actual inputs
 
@@ -135,7 +135,7 @@ fn verify_zk_proof_mst_inclusion_circuit(_c: &mut Criterion) {
         PATH_NAME, PATH_NAME, LEVELS
     );
 
-    let merkle_sum_tree = MerkleSumTree::<N_CURRENCIES, N_BYTES>::new(&csv_file).unwrap();
+    let merkle_sum_tree = MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv(&csv_file).unwrap();
 
     // Only now we can instantiate the circuit with the actual inputs
 

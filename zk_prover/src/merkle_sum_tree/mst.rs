@@ -65,17 +65,40 @@ pub struct Cryptocurrency {
 }
 
 impl<const N_CURRENCIES: usize, const N_BYTES: usize> MerkleSumTree<N_CURRENCIES, N_BYTES> {
+    pub fn new(
+        root: Node<N_CURRENCIES>,
+        nodes: Vec<Vec<Node<N_CURRENCIES>>>,
+        depth: usize,
+        entries: Vec<Entry<N_CURRENCIES>>,
+        cryptocurrencies: Vec<Cryptocurrency>,
+        is_sorted: bool,
+    ) -> Result<Self, Box<dyn std::error::Error>>
+    where
+        [usize; N_CURRENCIES + 1]: Sized,
+        [usize; N_CURRENCIES + 2]: Sized,
+    {
+        Ok(MerkleSumTree::<N_CURRENCIES, N_BYTES> {
+            root,
+            nodes,
+            depth,
+            entries,
+            cryptocurrencies,
+            is_sorted,
+        })
+    }
+
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The CSV file must be formatted as follows:
     ///
     /// `username,balance_<cryptocurrency>_<chain>,balance_<cryptocurrency>_<chain>,...`
     ///
     /// `dxGaEAii,11888,41163`
-    pub fn new(path: &str) -> Result<Self, Box<dyn std::error::Error>>
+    pub fn from_csv(path: &str) -> Result<Self, Box<dyn std::error::Error>>
     where
         [usize; N_CURRENCIES + 1]: Sized,
         [usize; N_CURRENCIES + 2]: Sized,
     {
-        let (cryptocurrencies, entries) = parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path)?;
+        let (cryptocurrencies, entries) =
+            parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path)?;
         Self::from_entries(entries, cryptocurrencies, false)
     }
 
@@ -84,7 +107,7 @@ impl<const N_CURRENCIES: usize, const N_BYTES: usize> MerkleSumTree<N_CURRENCIES
     /// `username,balance_<cryptocurrency>_<chain>,balance_<cryptocurrency>_<chain>,...`
     ///
     /// `dxGaEAii,11888,41163`
-    pub fn new_sorted(path: &str) -> Result<Self, Box<dyn std::error::Error>>
+    pub fn from_csv_sorted(path: &str) -> Result<Self, Box<dyn std::error::Error>>
     where
         [usize; N_CURRENCIES + 1]: Sized,
         [usize; N_CURRENCIES + 2]: Sized,
