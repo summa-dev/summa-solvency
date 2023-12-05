@@ -27,8 +27,5 @@ regex-simple = { version = "1", package = "regex" }
 num-traits = "0.2.16"
 rayon = "1.8.0"
 
-[patch."https://github.com/privacy-scaling-explorations/halo2?rev=v2023_04_20"]
-halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2" }
-
 [dev-dependencies]
 criterion= "0.3"
