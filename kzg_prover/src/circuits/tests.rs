@@ -3,8 +3,8 @@ mod test {
 
     use crate::circuits::solvency_v2::SolvencyV2;
     use crate::circuits::utils::{
-        full_prover, full_verifier, generate_setup_artifacts, open_grand_sum,
-        verify_grand_sum_opening, verify_kzg_proof,
+        full_prover, full_verifier, generate_setup_artifacts, open_grand_sums,
+        verify_grand_sum_openings, verify_kzg_proof,
     };
     use crate::utils::parse_csv_to_entries;
     use halo2_proofs::{
@@ -13,21 +13,20 @@ mod test {
         plonk::Any,
     };
     use num_bigint::{BigUint, ToBigUint};
-    //use snark_verifier_sdk::CircuitExt;
 
     const K: u32 = 9;
 
-    const N_BYTES_V2: usize = 8;
-    const N_ASSETS_V2: usize = 2;
-    const N_USERS_V2: usize = 16;
+    const N_BYTES: usize = 8;
+    const N_CURRENCIES: usize = 2;
+    const N_USERS: usize = 16;
 
     #[test]
     fn test_valid_solvency_v2() {
         let path = "src/csv/entry_16.csv";
 
-        let (_, entries) = parse_csv_to_entries::<&str, N_ASSETS_V2, N_BYTES_V2>(path).unwrap();
+        let (_, entries) = parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path).unwrap();
 
-        let circuit = SolvencyV2::<N_BYTES_V2, N_USERS_V2, N_ASSETS_V2>::init(entries);
+        let circuit = SolvencyV2::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries);
 
         let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
 
@@ -64,7 +63,7 @@ mod test {
         const N_USERS: usize = 16;
 
         // Initialize an empty circuit
-        let circuit = SolvencyV2::<N_BYTES_V2, N_USERS, N_ASSETS_V2>::init_empty();
+        let circuit = SolvencyV2::<N_BYTES, N_USERS, N_CURRENCIES>::init_empty();
 
         // Generate a universal trusted setup for testing purposes.
         //
@@ -77,53 +76,63 @@ mod test {
         // Only now we can instantiate the circuit with the actual inputs
         let path = "src/csv/entry_16.csv";
 
-        let (_, entries) = parse_csv_to_entries::<&str, N_ASSETS_V2, N_BYTES_V2>(path).unwrap();
+        let (_, entries) = parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path).unwrap();
 
         // Calculate total for all entry columns
-        let mut total: Vec<BigUint> = vec![BigUint::from(0u32); N_ASSETS_V2];
+        let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
 
         for entry in &entries {
             for (i, balance) in entry.balances().iter().enumerate() {
-                total[i] += balance;
+                csv_total[i] += balance;
             }
         }
 
-        let circuit = SolvencyV2::<N_BYTES_V2, N_USERS, N_ASSETS_V2>::init(entries);
+        let circuit = SolvencyV2::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries);
 
         let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
 
         valid_prover.assert_satisfied();
 
-        // Generate the proof
-        let (proof, advice_commitments, advice_polys) =
-            full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
+        // 1. Proving phase
+        // The Custodian generates the ZK proof
+        let (zk_proof, advice_polys) = full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
 
-        // verify the proof to be true
-        assert!(full_verifier(&params, &vk, proof, vec![vec![]]));
+        // Both the Custodian and the Verifier know what column range are the balance columns
+        let balance_column_range = 1..N_CURRENCIES + 1;
 
-        // We know what column is the balance column
-        let balance_column_index = 1;
-        let balances_commitment = advice_commitments[balance_column_index];
-
-        let kzg_proof = open_grand_sum(
-            &balances_commitment,
-            &advice_polys.advice_polys[balance_column_index],
-            &advice_polys.advice_blinds[balance_column_index],
+        // The Custodian makes an opening at x = 0 for the Verifier
+        // (The first column is the user IDs)
+        let kzg_proofs = open_grand_sums::<N_CURRENCIES>(
+            &advice_polys.advice_polys,
+            &advice_polys.advice_blinds,
             &params,
+            balance_column_range,
         );
 
-        let (verified, grand_sum) = verify_grand_sum_opening(
+        // 2. Verification phase
+        // The Verifier verifies the ZK proof
+        assert!(full_verifier(&params, &vk, &zk_proof, vec![vec![]]));
+
+        // The Custodian communicates the polynomial degree to the Verifier
+        let poly_degree = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
+
+        // Both the Custodian and the Verifier know what column range are the balance columns
+        let balance_column_range = 1..N_CURRENCIES + 1;
+
+        // The Custodian communicates the KZG opening transcripts to the Verifier
+        // The Verifier verifies the KZG opening transcripts and calculates the grand sums
+        let (verified, grand_sum) = verify_grand_sum_openings::<N_CURRENCIES>(
             &params,
-            kzg_proof,
-            Fp::zero(),
-            u64::try_from(advice_polys.advice_polys[balance_column_index].len()).unwrap(),
+            &zk_proof,
+            kzg_proofs,
+            poly_degree,
+            balance_column_range,
         );
 
-        assert!(verified);
-
-        println!("grand sum {:?}", grand_sum);
-
-        assert_eq!(total[balance_column_index - 1], grand_sum);
+        for i in 0..N_CURRENCIES {
+            assert!(verified[i]);
+            assert_eq!(csv_total[i], grand_sum[i]);
+        }
 
         //TODO next: make openings at "user" points
     }
@@ -135,9 +144,9 @@ mod test {
 
         let path = "src/merkle_sum_tree/csv/entry_16.csv";
 
-        let (_, entries) = parse_csv_to_entries::<&str, N_ASSETS_V2, N_BYTES_V2>(path).unwrap();
+        let (_, entries) = parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path).unwrap();
 
-        let circuit = SolvencyV2::<N_BYTES_V2, N_USERS_V2, N_ASSETS_V2>::init(entries);
+        let circuit = SolvencyV2::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries);
 
         let root =
             BitMapBackend::new("prints/solvency-v2-layout.png", (2048, 32768)).into_drawing_area();

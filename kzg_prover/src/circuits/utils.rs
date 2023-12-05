@@ -1,8 +1,4 @@
-use std::{
-    fs::File,
-    io::{BufRead, BufReader, Write},
-    path::PathBuf,
-};
+use std::{fs::File, ops::Range};
 
 use ark_std::{end_timer, start_timer};
 use ethers::types::U256;
@@ -32,7 +28,6 @@ use halo2_proofs::{
 };
 use num_bigint::BigUint;
 use rand::rngs::OsRng;
-use regex_simple::Regex;
 
 use crate::utils::fp_to_big_uint;
 
@@ -93,7 +88,6 @@ pub fn full_prover<C: Circuit<Fp>>(
     public_inputs: Vec<Vec<Fp>>,
 ) -> (
     Vec<u8>,
-    Vec<G1Affine>,
     AdviceSingle<halo2_proofs::halo2curves::bn256::G1Affine, Coeff>,
 ) {
     let pf_time = start_timer!(|| "Creating proof");
@@ -115,65 +109,76 @@ pub fn full_prover<C: Circuit<Fp>>(
     let advice_polys = result_unwrapped.1.clone();
     let proof = transcript.finalize();
 
-    let mut transcript_clone: Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>> =
-        Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]).clone();
-
-    //Read the commitment points for all the  advice polynomials from the proof transcript and put them into a vector
-    let mut advice_commitments = Vec::new();
-    for _ in 0..advice_polys[0].advice_polys.len() {
-        let point = transcript_clone.read_point().unwrap();
-        advice_commitments.push(point);
-    }
-
     end_timer!(pf_time);
     let advice_polys = advice_polys[0].clone();
-    (proof, advice_commitments.clone(), advice_polys)
+    (proof, advice_polys)
 }
 
 /// Creates the univariate polynomial grand sum opening
-pub fn open_grand_sum(
-    balances_commitment: &G1Affine,
-    advice_poly: &Polynomial<Fp, Coeff>,
-    advice_blind: &Blind<Fp>,
+/// The challenge is set to zero to obtain the constant term of the polynomial
+pub fn open_grand_sums<const N_CURRENCIES: usize>(
+    advice_poly: &[Polynomial<Fp, Coeff>],
+    advice_blind: &[Blind<Fp>],
     params: &ParamsKZG<Bn256>,
-) -> Vec<u8> {
+    balance_column_range: Range<usize>,
+) -> Vec<Vec<u8>> {
     let challenge = Fp::zero();
-    create_kzg_proof::<
-        KZGCommitmentScheme<Bn256>,
-        ProverSHPLONK<'_, Bn256>,
-        Challenge255<G1Affine>,
-        Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
-    >(
-        params,
-        advice_poly.clone(),
-        *balances_commitment,
-        *advice_blind,
-        challenge,
-    )
+    let mut kzg_proofs = Vec::new();
+    balance_column_range.for_each(|i| {
+        kzg_proofs.push(
+            create_kzg_proof::<
+                KZGCommitmentScheme<Bn256>,
+                ProverSHPLONK<'_, Bn256>,
+                Challenge255<G1Affine>,
+                Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
+            >(params, advice_poly[i].clone(), advice_blind[i], challenge)
+            .to_vec(),
+        )
+    });
+    kzg_proofs
 }
 
-pub fn verify_grand_sum_opening(
+pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
     params: &ParamsKZG<Bn256>,
-    kzg_proof: Vec<u8>,
-    challenge: Fp,
+    zk_proof: &[u8],
+    kzg_proofs: Vec<Vec<u8>>,
     polynomial_degree: u64,
-) -> (bool, BigUint) {
-    let (verified, constant_term) = verify_kzg_proof::<
-        KZGCommitmentScheme<Bn256>,
-        VerifierSHPLONK<'_, Bn256>,
-        Challenge255<G1Affine>,
-        Blake2bRead<_, _, Challenge255<_>>,
-        AccumulatorStrategy<_>,
-    >(params, &kzg_proof, challenge);
+    balance_column_range: Range<usize>,
+) -> (Vec<bool>, Vec<BigUint>) {
+    let mut transcript: Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>> =
+        Blake2bRead::<_, _, Challenge255<_>>::init(zk_proof);
 
-    if !verified {
-        (false, BigUint::from(0u8))
-    } else {
-        (
-            true,
-            fp_to_big_uint(constant_term * Fp::from(polynomial_degree)),
-        )
+    //Read the commitment points for all the  advice polynomials from the proof transcript and put them into a vector
+    let mut advice_commitments = Vec::new();
+    for i in 0..N_CURRENCIES + balance_column_range.start {
+        let point = transcript.read_point().unwrap();
+        // Skip the balances column commitment
+        if i != 0 {
+            advice_commitments.push(point);
+        }
     }
+
+    let mut verification_results = Vec::<bool>::new();
+    let mut constant_terms = Vec::<BigUint>::new();
+
+    for (i, advice_commitment) in advice_commitments.iter().enumerate() {
+        let (verified, constant_term) =
+            verify_kzg_proof::<
+                KZGCommitmentScheme<Bn256>,
+                VerifierSHPLONK<'_, Bn256>,
+                Challenge255<G1Affine>,
+                Blake2bRead<_, _, Challenge255<_>>,
+                AccumulatorStrategy<_>,
+            >(params, &kzg_proofs[i], Fp::zero(), *advice_commitment);
+        verification_results.push(verified);
+
+        if verified {
+            constant_terms.push(fp_to_big_uint(constant_term * Fp::from(polynomial_degree)));
+        } else {
+            constant_terms.push(BigUint::from(0u8));
+        }
+    }
+    (verification_results, constant_terms)
 }
 
 fn create_kzg_proof<
@@ -185,7 +190,6 @@ fn create_kzg_proof<
 >(
     params: &'params Scheme::ParamsProver,
     poly: Polynomial<<Scheme as CommitmentScheme>::Scalar, Coeff>,
-    commitment_point: G1Affine,
     blind: Blind<Fp>,
     challenge: Fp,
 ) -> Vec<u8>
@@ -193,9 +197,6 @@ where
     Scheme::Scalar: WithSmallOrderMulGroup<3>,
 {
     let mut transcript = T::init(vec![]);
-
-    // Write the pre-existing commitment to the transcript
-    transcript.write_point(commitment_point).unwrap();
 
     // Extract challenge from the transcript
     // let challenge = Fp::zero(); //transcript.squeeze_challenge();
@@ -235,21 +236,19 @@ pub fn verify_kzg_proof<
     params: &'params Scheme::ParamsVerifier,
     proof: &'a [u8],
     challenge: Fp,
+    commitment_point: G1Affine,
 ) -> (bool, Fp)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3>,
 {
     let mut transcript = T::init(proof);
 
-    // Read the commitment from the transcript
-    let read_commitment = transcript.read_point().unwrap();
-
     // Read the polynomial evaluation from the transcript
     let eval_at_challenge = transcript.read_scalar().unwrap();
 
     // Prepare verifier query for the commitment
     let queries = [VerifierQuery::new_commitment(
-        &read_commitment,
+        &commitment_point,
         challenge, /* .get_scalar()*/
         eval_at_challenge,
     )];
@@ -275,13 +274,13 @@ where
 pub fn full_verifier(
     params: &ParamsKZG<Bn256>,
     vk: &VerifyingKey<G1Affine>,
-    proof: Vec<u8>,
+    proof: &[u8],
     public_inputs: Vec<Vec<Fp>>,
 ) -> bool {
     let verifier_params = params.verifier_params();
     let strategy = SingleStrategy::new(params);
     let mut transcript: Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>> =
-        Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+        Blake2bRead::<_, _, Challenge255<_>>::init(proof);
 
     let instance: Vec<&[Fp]> = public_inputs.iter().map(|input| &input[..]).collect();
     let instances = &[&instance[..]];
@@ -296,350 +295,9 @@ pub fn full_verifier(
     .is_ok()
 }
 
-/// Generate a solidity verifier contract from its yul code.
-/// patterned after https://github.com/zkonduit/ezkl/blob/main/src/eth.rs#L326-L602
-fn fix_verifier_sol(yul_code_path: PathBuf) -> Result<String, Box<dyn std::error::Error>> {
-    let file = File::open(yul_code_path.clone())?;
-    let reader = BufReader::new(file);
-
-    let mut transcript_addrs: Vec<u32> = Vec::new();
-    let mut modified_lines: Vec<String> = Vec::new();
-
-    // convert calldataload 0x0 to 0x40 to read from pubInputs, and the rest
-    // from proof
-    let calldata_pattern = Regex::new(r"^.*(calldataload\((0x[a-f0-9]+)\)).*$")?;
-    let mstore_pattern = Regex::new(r"^\s*(mstore\(0x([0-9a-fA-F]+)+),.+\)")?;
-    let mstore8_pattern = Regex::new(r"^\s*(mstore8\((\d+)+),.+\)")?;
-    let mstoren_pattern = Regex::new(r"^\s*(mstore\((\d+)+),.+\)")?;
-    let mload_pattern = Regex::new(r"(mload\((0x[0-9a-fA-F]+))\)")?;
-    let keccak_pattern = Regex::new(r"(keccak256\((0x[0-9a-fA-F]+))")?;
-    let modexp_pattern =
-        Regex::new(r"(staticcall\(gas\(\), 0x5, (0x[0-9a-fA-F]+), 0xc0, (0x[0-9a-fA-F]+), 0x20)")?;
-    let ecmul_pattern =
-        Regex::new(r"(staticcall\(gas\(\), 0x7, (0x[0-9a-fA-F]+), 0x60, (0x[0-9a-fA-F]+), 0x40)")?;
-    let ecadd_pattern =
-        Regex::new(r"(staticcall\(gas\(\), 0x6, (0x[0-9a-fA-F]+), 0x80, (0x[0-9a-fA-F]+), 0x40)")?;
-    let ecpairing_pattern =
-        Regex::new(r"(staticcall\(gas\(\), 0x8, (0x[0-9a-fA-F]+), 0x180, (0x[0-9a-fA-F]+), 0x20)")?;
-    let bool_pattern = Regex::new(r":bool")?;
-
-    // Count the number of pub inputs
-    let mut start = None;
-    let mut end = None;
-    for (i, line) in reader.lines().enumerate() {
-        let line = line?;
-        if line.trim().starts_with("mstore(0x20") && start.is_none() {
-            start = Some(i as u32);
-        }
-
-        if line.trim().starts_with("mstore(0x0") {
-            end = Some(i as u32);
-            break;
-        }
-    }
-
-    let num_pubinputs = if let Some(s) = start {
-        end.unwrap() - s
-    } else {
-        0
-    };
-
-    let mut max_pubinputs_addr = 0;
-    if num_pubinputs > 0 {
-        max_pubinputs_addr = num_pubinputs * 32 - 32;
-    }
-    // println!("max_pubinputs_addr {}", max_pubinputs_addr);
-
-    let file = File::open(yul_code_path)?;
-    let reader = BufReader::new(file);
-
-    for line in reader.lines() {
-        let mut line = line?;
-        let m = bool_pattern.captures(&line);
-        if m.is_some() {
-            line = line.replace(":bool", "");
-        }
-
-        let m = calldata_pattern.captures(&line);
-        if let Some(m) = m {
-            let calldata_and_addr = m.get(1).unwrap().as_str();
-            let addr = m.get(2).unwrap().as_str();
-            let addr_as_num = u32::from_str_radix(addr.strip_prefix("0x").unwrap(), 16)?;
-
-            if addr_as_num <= max_pubinputs_addr {
-                let pub_addr = format!("{:#x}", addr_as_num + 32);
-                // println!("pub_addr {}", pub_addr);
-                line = line.replace(
-                    calldata_and_addr,
-                    &format!("mload(add(pubInputs, {}))", pub_addr),
-                );
-            } else {
-                let proof_addr = format!("{:#x}", addr_as_num - max_pubinputs_addr);
-                // println!("proof_addr {}", proof_addr);
-                line = line.replace(
-                    calldata_and_addr,
-                    &format!("mload(add(proof, {}))", proof_addr),
-                );
-            }
-        }
-
-        let m = mstore8_pattern.captures(&line);
-        if let Some(m) = m {
-            let mstore = m.get(1).unwrap().as_str();
-            let addr = m.get(2).unwrap().as_str();
-            let addr_as_num = addr.parse::<u32>()?;
-            let transcript_addr = format!("{:#x}", addr_as_num);
-            transcript_addrs.push(addr_as_num);
-            line = line.replace(
-                mstore,
-                &format!("mstore8(add(transcript, {})", transcript_addr),
-            );
-        }
-
-        let m = mstoren_pattern.captures(&line);
-        if let Some(m) = m {
-            let mstore = m.get(1).unwrap().as_str();
-            let addr = m.get(2).unwrap().as_str();
-            let addr_as_num = addr.parse::<u32>()?;
-            let transcript_addr = format!("{:#x}", addr_as_num);
-            transcript_addrs.push(addr_as_num);
-            line = line.replace(
-                mstore,
-                &format!("mstore(add(transcript, {})", transcript_addr),
-            );
-        }
-
-        let m = modexp_pattern.captures(&line);
-        if let Some(m) = m {
-            let modexp = m.get(1).unwrap().as_str();
-            let start_addr = m.get(2).unwrap().as_str();
-            let result_addr = m.get(3).unwrap().as_str();
-            let start_addr_as_num =
-                u32::from_str_radix(start_addr.strip_prefix("0x").unwrap(), 16)?;
-            let result_addr_as_num =
-                u32::from_str_radix(result_addr.strip_prefix("0x").unwrap(), 16)?;
-
-            let transcript_addr = format!("{:#x}", start_addr_as_num);
-            transcript_addrs.push(start_addr_as_num);
-            let result_addr = format!("{:#x}", result_addr_as_num);
-            line = line.replace(
-                modexp,
-                &format!(
-                    "staticcall(gas(), 0x5, add(transcript, {}), 0xc0, add(transcript, {}), 0x20",
-                    transcript_addr, result_addr
-                ),
-            );
-        }
-
-        let m = ecmul_pattern.captures(&line);
-        if let Some(m) = m {
-            let ecmul = m.get(1).unwrap().as_str();
-            let start_addr = m.get(2).unwrap().as_str();
-            let result_addr = m.get(3).unwrap().as_str();
-            let start_addr_as_num =
-                u32::from_str_radix(start_addr.strip_prefix("0x").unwrap(), 16)?;
-            let result_addr_as_num =
-                u32::from_str_radix(result_addr.strip_prefix("0x").unwrap(), 16)?;
-
-            let transcript_addr = format!("{:#x}", start_addr_as_num);
-            let result_addr = format!("{:#x}", result_addr_as_num);
-            transcript_addrs.push(start_addr_as_num);
-            transcript_addrs.push(result_addr_as_num);
-            line = line.replace(
-                ecmul,
-                &format!(
-                    "staticcall(gas(), 0x7, add(transcript, {}), 0x60, add(transcript, {}), 0x40",
-                    transcript_addr, result_addr
-                ),
-            );
-        }
-
-        let m = ecadd_pattern.captures(&line);
-        if let Some(m) = m {
-            let ecadd = m.get(1).unwrap().as_str();
-            let start_addr = m.get(2).unwrap().as_str();
-            let result_addr = m.get(3).unwrap().as_str();
-            let start_addr_as_num =
-                u32::from_str_radix(start_addr.strip_prefix("0x").unwrap(), 16)?;
-            let result_addr_as_num =
-                u32::from_str_radix(result_addr.strip_prefix("0x").unwrap(), 16)?;
-
-            let transcript_addr = format!("{:#x}", start_addr_as_num);
-            let result_addr = format!("{:#x}", result_addr_as_num);
-            transcript_addrs.push(start_addr_as_num);
-            transcript_addrs.push(result_addr_as_num);
-            line = line.replace(
-                ecadd,
-                &format!(
-                    "staticcall(gas(), 0x6, add(transcript, {}), 0x80, add(transcript, {}), 0x40",
-                    transcript_addr, result_addr
-                ),
-            );
-        }
-
-        let m = ecpairing_pattern.captures(&line);
-        if let Some(m) = m {
-            let ecpairing = m.get(1).unwrap().as_str();
-            let start_addr = m.get(2).unwrap().as_str();
-            let result_addr = m.get(3).unwrap().as_str();
-            let start_addr_as_num =
-                u32::from_str_radix(start_addr.strip_prefix("0x").unwrap(), 16)?;
-            let result_addr_as_num =
-                u32::from_str_radix(result_addr.strip_prefix("0x").unwrap(), 16)?;
-
-            let transcript_addr = format!("{:#x}", start_addr_as_num);
-            let result_addr = format!("{:#x}", result_addr_as_num);
-            transcript_addrs.push(start_addr_as_num);
-            transcript_addrs.push(result_addr_as_num);
-            line = line.replace(
-                ecpairing,
-                &format!(
-                    "staticcall(gas(), 0x8, add(transcript, {}), 0x180, add(transcript, {}), 0x20",
-                    transcript_addr, result_addr
-                ),
-            );
-        }
-
-        let m = mstore_pattern.captures(&line);
-        if let Some(m) = m {
-            let mstore = m.get(1).unwrap().as_str();
-            let addr = m.get(2).unwrap().as_str();
-            let addr_as_num = u32::from_str_radix(addr, 16)?;
-            let transcript_addr = format!("{:#x}", addr_as_num);
-            transcript_addrs.push(addr_as_num);
-            line = line.replace(
-                mstore,
-                &format!("mstore(add(transcript, {})", transcript_addr),
-            );
-        }
-
-        let m = keccak_pattern.captures(&line);
-        if let Some(m) = m {
-            let keccak = m.get(1).unwrap().as_str();
-            let addr = m.get(2).unwrap().as_str();
-            let addr_as_num = u32::from_str_radix(addr.strip_prefix("0x").unwrap(), 16)?;
-            let transcript_addr = format!("{:#x}", addr_as_num);
-            transcript_addrs.push(addr_as_num);
-            line = line.replace(
-                keccak,
-                &format!("keccak256(add(transcript, {})", transcript_addr),
-            );
-        }
-
-        // mload can show up multiple times per line
-        loop {
-            let m = mload_pattern.captures(&line);
-            if m.is_none() {
-                break;
-            }
-            let mload = m.as_ref().unwrap().get(1).unwrap().as_str();
-            let addr = m.as_ref().unwrap().get(2).unwrap().as_str();
-
-            let addr_as_num = u32::from_str_radix(addr.strip_prefix("0x").unwrap(), 16)?;
-            let transcript_addr = format!("{:#x}", addr_as_num);
-            transcript_addrs.push(addr_as_num);
-            line = line.replace(
-                mload,
-                &format!("mload(add(transcript, {})", transcript_addr),
-            );
-        }
-
-        modified_lines.push(line);
-    }
-
-    // get the max transcript addr
-    let max_transcript_addr = transcript_addrs.iter().max().unwrap() / 32;
-    let mut contract = format!(
-        "// SPDX-License-Identifier: MIT
-    pragma solidity ^0.8.17;
-
-    contract Verifier {{
-        function verify(
-            uint256[] memory pubInputs,
-            bytes memory proof
-        ) public view returns (bool) {{
-            bool success = true;
-            bytes32[{}] memory transcript;
-            assembly {{
-        ",
-        max_transcript_addr
-    )
-    .trim()
-    .to_string();
-
-    // using a boxed Write trait object here to show it works for any Struct impl'ing Write
-    // you may also use a std::fs::File here
-    let write: Box<&mut dyn std::fmt::Write> = Box::new(&mut contract);
-
-    for line in modified_lines[16..modified_lines.len() - 7].iter() {
-        write!(write, "{}", line).unwrap();
-    }
-    writeln!(write, "}} return success; }} }}")?;
-    Ok(contract)
-}
-
-/// Generate the proof Solidity calldata for a circuit
-// pub fn gen_proof_solidity_calldata<C: Circuit<Fp>>(
-//     params: &ParamsKZG<Bn256>,
-//     pk: &ProvingKey<G1Affine>,
-//     circuit: C,
-// ) -> (Bytes, Vec<U256>) {
-//     let instances = circuit.instances();
-
-//     let pf_time = start_timer!(|| "Creating proof");
-//     // To generate the proof calldata, make sure you have installed `solc`
-//     let proof_calldata = gen_evm_proof_shplonk(params, pk, circuit, instances.clone());
-//     end_timer!(pf_time);
-
-//     let mut public_inputs = vec![];
-//     let flattened_instances = instances.into_iter().flatten();
-
-//     for val in flattened_instances {
-//         public_inputs.push(field_element_to_solidity_calldata(val));
-//     }
-
-//     let solidity_proof_calldata = Bytes::from(proof_calldata);
-
-//     (solidity_proof_calldata, public_inputs)
-// }
-
 /// Converts a field element to a Solidity calldata
 pub fn field_element_to_solidity_calldata(field_element: Fp) -> U256 {
     let bytes = field_element.to_repr();
     let u = U256::from_little_endian(bytes.as_slice());
     u
 }
-
-/// Generates the solidity code for the verification contract starting from the yul code (yul_code_path) and writes it to sol_code_path
-pub fn write_verifier_sol_from_yul(
-    yul_code_path: &str,
-    sol_code_path: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let output = fix_verifier_sol(PathBuf::from(yul_code_path))?;
-
-    let mut f = File::create(sol_code_path)?;
-    f.write_all(output.as_bytes())?;
-
-    Ok(())
-}
-
-// Compiles the verification protocol and returns the cost estimate
-// num_instance indicates the number of values in the instance column of the circuit. If there are more than one instance column, num_instance is equal to the sum of the number of values in each instance column.
-// num_commitment is equal to the number of witness polynomials + the number of chunks of the quotient polynomial
-// num_evaluation is equal to number of evaluations points of the polynomials that are part of the transcript
-// num_msm indicates the number of msm operations that are part of the protocol
-// num_pairing indicates the number of pairing operations that are part of the protocol
-// pub fn get_verification_cost<C: Circuit<Fp>>(
-//     params: &ParamsKZG<Bn256>,
-//     pk: &ProvingKey<G1Affine>,
-//     circuit: C,
-// ) {
-//     let protocol = compile(
-//         params,
-//         pk.get_vk(),
-//         Config::kzg().with_num_instance(circuit.num_instance()),
-//     );
-
-//     let cost = PlonkSuccinctVerifier::<KzgAs<Bn256, Bdfg21>>::estimate_cost(&protocol);
-//     dbg!(cost);
-// }
