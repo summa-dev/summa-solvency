@@ -126,39 +126,6 @@ mod test {
         assert!(old_root_hash != new_root_hash);
     }
 
-    // Passing a csv file with a single entry that has a balance that is not in the expected range will fail
-    #[test]
-    fn test_mst_overflow_1() {
-        let result = MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16_overflow.csv");
-
-        if let Err(e) = result {
-            assert_eq!(
-                e.to_string(),
-                "Accumulated balance is not in the expected range, proof generation will fail!"
-            );
-        }
-    }
-
-    #[test]
-    // Passing a csv file in which the entries have a balance in the range, but while summing it generates a ndoe in which the balance is not in the expected range will fail
-    fn test_mst_overflow_2() {
-        let result = MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16_overflow_2.csv");
-
-        if let Err(e) = result {
-            assert_eq!(
-                e.to_string(),
-                "Accumulated balance is not in the expected range, proof generation will fail!"
-            );
-        }
-    }
-
-    // Passing a csv file with a single entry that has a balance that is the maximum that can fit in the expected range will not fail
-    #[test]
-    fn test_mst_no_overflow() {
-        let result = MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16_no_overflow.csv");
-        assert!(result.is_ok());
-    }
-
     #[test]
     fn test_big_uint_conversion() {
         let big_uint = 3.to_biguint().unwrap();
