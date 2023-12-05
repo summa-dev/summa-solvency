@@ -50,9 +50,16 @@ where
 {
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
         // We need 1 advice column for the username, N_ASSETS for the balances. The advice column for the balances is passed to the `range_check_chip`
-        //TODO: unblinded only for the balances, usernames can stay blinded
-        let advices: [Column<Advice>; N_ASSETS + 1] =
-            std::array::from_fn(|_| meta.unblinded_advice_column());
+        // The first advice column is used to store the username and should be a regular (blinded) advice column
+        // The remaining advice columns are used to store the balances and should be the unblinded advice columns
+        // This is necessary to correctly evaluate the grand sum of the balance polynomials
+        let advices: [Column<Advice>; N_ASSETS + 1] = std::array::from_fn(|i| {
+            if i == 0 {
+                meta.advice_column()
+            } else {
+                meta.unblinded_advice_column()
+            }
+        });
 
         // we need a fixed column for the range check
         let range = meta.fixed_column();
