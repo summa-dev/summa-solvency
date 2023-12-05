@@ -114,8 +114,8 @@ pub fn full_prover<C: Circuit<Fp>>(
     (proof, advice_polys)
 }
 
-/// Creates the univariate polynomial grand sum opening
-/// The challenge is set to zero to obtain the constant term of the polynomial
+/// Creates the univariate polynomial grand sum openings
+/// The challenge is set to zero to obtain the constant term of the polynomials
 pub fn open_grand_sums<const N_CURRENCIES: usize>(
     advice_poly: &[Polynomial<Fp, Coeff>],
     advice_blind: &[Blind<Fp>],
@@ -138,6 +138,7 @@ pub fn open_grand_sums<const N_CURRENCIES: usize>(
     kzg_proofs
 }
 
+/// Verifies the univariate polynomial grand sum openings
 pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
     params: &ParamsKZG<Bn256>,
     zk_proof: &[u8],
@@ -181,6 +182,7 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
     (verification_results, constant_terms)
 }
 
+/// Creates a KZG proof for a polynomial evaluation at a challenge
 fn create_kzg_proof<
     'params,
     Scheme: CommitmentScheme<Curve = halo2_proofs::halo2curves::bn256::G1Affine, Scalar = Fp>,
@@ -198,21 +200,14 @@ where
 {
     let mut transcript = T::init(vec![]);
 
-    // Extract challenge from the transcript
-    // let challenge = Fp::zero(); //transcript.squeeze_challenge();
-
     // Evaluate polynomial at the challenge
-    let eval_at_challenge = eval_polynomial(&poly, challenge /*challenge.get_scalar()*/);
+    let eval_at_challenge = eval_polynomial(&poly, challenge);
 
     // Write evaluation to transcript
     transcript.write_scalar(eval_at_challenge).unwrap();
 
     // Prepare prover query for the polynomial
-    let queries = [ProverQuery::new(
-        challenge, /*challenge.get_scalar()*/
-        &poly, blind,
-    )]
-    .to_vec();
+    let queries = [ProverQuery::new(challenge, &poly, blind)].to_vec();
 
     // Create proof
     let prover = P::new(params);
@@ -224,6 +219,7 @@ where
     transcript.finalize()
 }
 
+/// Verifies a KZG proof for a polynomial evaluation at a challenge
 pub fn verify_kzg_proof<
     'a,
     'params,
@@ -249,7 +245,7 @@ where
     // Prepare verifier query for the commitment
     let queries = [VerifierQuery::new_commitment(
         &commitment_point,
-        challenge, /* .get_scalar()*/
+        challenge,
         eval_at_challenge,
     )];
 
