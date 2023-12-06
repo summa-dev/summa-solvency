@@ -5,12 +5,12 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed};
 
 #[derive(Clone)]
-pub struct SolvencyV2<const N_BYTES: usize, const N_USERS: usize, const N_ASSETS: usize> {
+pub struct UnivariateGrandSum<const N_BYTES: usize, const N_USERS: usize, const N_ASSETS: usize> {
     pub entries: Vec<Entry<N_ASSETS>>,
 }
 
 impl<const N_BYTES: usize, const N_USERS: usize, const N_ASSETS: usize>
-    SolvencyV2<N_BYTES, N_USERS, N_ASSETS>
+    UnivariateGrandSum<N_BYTES, N_USERS, N_ASSETS>
 {
     pub fn init_empty() -> Self {
         Self {
@@ -36,7 +36,7 @@ impl<const N_BYTES: usize, const N_USERS: usize, const N_ASSETS: usize>
 /// * `range_check_config`: Configuration for the range check chip
 /// * `advices`: Advice columns used to store the private inputs
 #[derive(Debug, Clone)]
-pub struct SolvencyV2Config<const N_BYTES: usize, const N_ASSETS: usize>
+pub struct UnivariateGrandSumConfig<const N_BYTES: usize, const N_ASSETS: usize>
 where
     [(); N_ASSETS + 1]:,
 {
@@ -44,7 +44,7 @@ where
     range: Column<Fixed>,
 }
 
-impl<const N_BYTES: usize, const N_ASSETS: usize> SolvencyV2Config<N_BYTES, N_ASSETS>
+impl<const N_BYTES: usize, const N_ASSETS: usize> UnivariateGrandSumConfig<N_BYTES, N_ASSETS>
 where
     [(); N_ASSETS + 1]:,
 {
@@ -116,11 +116,11 @@ where
 }
 
 impl<const N_BYTES: usize, const N_USERS: usize, const N_ASSETS: usize> Circuit<Fp>
-    for SolvencyV2<N_BYTES, N_USERS, N_ASSETS>
+    for UnivariateGrandSum<N_BYTES, N_USERS, N_ASSETS>
 where
     [(); N_ASSETS + 1]:,
 {
-    type Config = SolvencyV2Config<N_BYTES, N_ASSETS>;
+    type Config = UnivariateGrandSumConfig<N_BYTES, N_ASSETS>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -129,7 +129,7 @@ where
 
     /// Configures the circuit
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        SolvencyV2Config::<N_BYTES, N_ASSETS>::configure(meta)
+        UnivariateGrandSumConfig::<N_BYTES, N_ASSETS>::configure(meta)
     }
 
     fn synthesize(

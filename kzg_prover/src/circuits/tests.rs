@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test {
 
-    use crate::circuits::solvency_v2::SolvencyV2;
+    use crate::circuits::univariate_grand_sum::UnivariateGrandSum;
     use crate::circuits::utils::{
         full_prover, full_verifier, generate_setup_artifacts, open_grand_sums, open_user_balances,
         verify_grand_sum_openings, verify_user_inclusion,
@@ -32,7 +32,7 @@ mod test {
             parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
                 .unwrap();
 
-        let circuit = SolvencyV2::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
+        let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
         let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
 
@@ -69,7 +69,7 @@ mod test {
         const N_USERS: usize = 16;
 
         // Initialize an empty circuit
-        let circuit = SolvencyV2::<N_BYTES, N_USERS, N_CURRENCIES>::init_empty();
+        let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init_empty();
 
         // Generate a universal trusted setup for testing purposes.
         //
@@ -98,7 +98,7 @@ mod test {
             }
         }
 
-        let circuit = SolvencyV2::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
+        let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
         let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
 
@@ -187,16 +187,22 @@ mod test {
     fn print_solvency_v2_circuit() {
         use plotters::prelude::*;
 
-        let path = "src/merkle_sum_tree/csv/entry_16.csv";
+        let path = "src/csv/entry_16.csv";
 
-        let (_, entries) = parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path).unwrap();
+        let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
+        let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
+        let _ =
+            parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
+                .unwrap();
 
-        let circuit = SolvencyV2::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries);
+        let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries);
 
-        let root =
-            BitMapBackend::new("prints/solvency-v2-layout.png", (2048, 32768)).into_drawing_area();
+        let root = BitMapBackend::new("prints/univariate-grand-sum-layout.png", (2048, 32768))
+            .into_drawing_area();
         root.fill(&WHITE).unwrap();
-        let root = root.titled("Summa v2 Layout", ("sans-serif", 60)).unwrap();
+        let root = root
+            .titled("Univariate Grand Sum Layout", ("sans-serif", 60))
+            .unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
             .render(K, &circuit, &root)
