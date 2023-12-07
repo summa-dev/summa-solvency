@@ -65,7 +65,7 @@ pub struct Cryptocurrency {
 }
 
 impl<const N_CURRENCIES: usize, const N_BYTES: usize> MerkleSumTree<N_CURRENCIES, N_BYTES> {
-    pub fn new(
+    pub fn from_params(
         root: Node<N_CURRENCIES>,
         nodes: Vec<Vec<Node<N_CURRENCIES>>>,
         depth: usize,

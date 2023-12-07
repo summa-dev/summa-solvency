@@ -266,6 +266,39 @@ mod test {
         );
     }
 
+    // Building a proof using as input a csv file with an entry that is not in range [0, 2^N_BYTES*8 - 1] should fail the range check constraint on the leaf balance
+    #[test]
+    fn test_balance_not_in_range() {
+        let merkle_sum_tree =
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_16_overflow.csv")
+                .unwrap();
+
+        let user_index = 0;
+
+        let merkle_proof = merkle_sum_tree.generate_proof(user_index).unwrap();
+
+        let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
+
+        let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
+
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 2).into(),
+                    location: FailureLocation::OutsideRegion { row: 246 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 0).into(),
+                    location: FailureLocation::InRegion {
+                        region: (21, "assign value to perform range check").into(),
+                        offset: 14
+                    }
+                },
+            ])
+        );
+    }
+
     // Passing a non binary index should fail the bool constraint inside "assign nodes hashes per merkle tree level" and "assign nodes balances per currency" region and the permutation check between the computed root hash and the instance column root hash
     #[test]
     fn test_non_binary_index() {
