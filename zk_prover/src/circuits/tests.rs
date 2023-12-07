@@ -270,7 +270,8 @@ mod test {
     #[test]
     fn test_balance_not_in_range() {
         let merkle_sum_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16_overflow.csv").unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_16_overflow.csv")
+                .unwrap();
 
         let user_index = 0;
 
