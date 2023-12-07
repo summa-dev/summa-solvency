@@ -41,7 +41,7 @@ mod test {
         assert_eq!(root.balances, merkle_tree_2.root().balances);
 
         // should create valid proof for each entry in the tree and verify it
-        for i in 0..15 {
+        for i in 0..=15 {
             let proof = merkle_tree.generate_proof(i).unwrap();
             assert!(merkle_tree.verify_proof(&proof));
         }
@@ -197,5 +197,57 @@ mod test {
 
         // The hash of the leaf should match the hash computed from the hash preimage
         assert_eq!(leaf.hash, computed_leaf.hash);
+    }
+
+    #[test]
+    fn test_tree_with_zero_element_1() {
+        // create new merkle tree
+        let merkle_tree =
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_13.csv").unwrap();
+
+        // get root
+        let root = merkle_tree.root();
+
+        // expect root hash to be different than 0
+        assert!(root.hash != 0.into());
+        // expect balance to match the sum of all entries
+        assert!(root.balances == [385969.into(), 459661.into()]);
+        // expect depth to be 4
+        assert!(*merkle_tree.depth() == 4_usize);
+
+        // should create valid proof for each entry in the tree and verify it
+        for i in 0..=15 {
+            let proof = merkle_tree.generate_proof(i).unwrap();
+            assert!(merkle_tree.verify_proof(&proof));
+        }
+
+        // shouldn't create a proof for an entry that doesn't exist in the tree
+        assert!(merkle_tree.generate_proof(16).is_err());
+    }
+
+    #[test]
+    fn test_tree_with_zero_element_2() {
+        // create new merkle tree
+        let merkle_tree =
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_17.csv").unwrap();
+
+        // get root
+        let root = merkle_tree.root();
+
+        // expect root hash to be different than 0
+        assert!(root.hash != 0.into());
+        // expect balance to match the sum of all entries
+        assert!(root.balances == [556863.into(), 556863.into()]);
+        // expect depth to be 5
+        assert!(*merkle_tree.depth() == 5_usize);
+
+        // should create valid proof for each entry in the tree and verify it
+        for i in 0..=31 {
+            let proof = merkle_tree.generate_proof(i).unwrap();
+            assert!(merkle_tree.verify_proof(&proof));
+        }
+
+        // shouldn't create a proof for an entry that doesn't exist in the tree
+        assert!(merkle_tree.generate_proof(32).is_err());
     }
 }
