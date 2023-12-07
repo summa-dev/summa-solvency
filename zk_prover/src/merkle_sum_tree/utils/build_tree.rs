@@ -57,7 +57,15 @@ where
 {
     let leaves = entries
         .par_iter()
-        .map(|entry| entry.compute_leaf())
+        .map(|entry| {
+            // If the entry is the zero entry and `N_CURRENCIES == 1`, then we return the precomputed zero leaf
+            // Otherwise, we compute the leaf
+            if entry == &Entry::<N_CURRENCIES>::zero_entry() && N_CURRENCIES == 1 {
+                Node::zero_leaf_one_currency()
+            } else {
+                entry.compute_leaf()
+            }
+        })
         .collect::<Vec<_>>();
 
     leaves

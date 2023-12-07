@@ -1,10 +1,10 @@
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::merkle_sum_tree::utils::big_uint_to_fp;
 use halo2_gadgets::poseidon::primitives::{self as poseidon, ConstantLength};
-use halo2_proofs::halo2curves::bn256::Fr as Fp;
+use halo2_proofs::halo2curves::{bn256::Fr as Fp, ff::PrimeField};
 use num_bigint::BigUint;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Node<const N_CURRENCIES: usize> {
     pub hash: Fp,
     pub balances: [Fp; N_CURRENCIES],
@@ -25,6 +25,7 @@ impl<const N_CURRENCIES: usize> Node<N_CURRENCIES> {
 
         Node::leaf_node_from_preimage(&hash_preimage)
     }
+
     /// Builds a "middle" (non-leaf-level) node of the MST
     /// The middle node hash is equal to `H(LeftChild.balance[0] + RightChild.balance[0], LeftChild.balance[1] + RightChild.balance[1], ..., LeftChild.balance[N_CURRENCIES - 1] + RightChild.balance[N_CURRENCIES - 1], LeftChild.hash, RightChild.hash)`
     /// The balances are equal to `LeftChild.balance[0] + RightChild.balance[0], LeftChild.balance[1] + RightChild.balance[1], ..., LeftChild.balance[N_CURRENCIES - 1] + RightChild.balance[N_CURRENCIES - 1]`
@@ -42,12 +43,32 @@ impl<const N_CURRENCIES: usize> Node<N_CURRENCIES> {
         Node::middle_node_from_preimage(&hash_preimage)
     }
 
+    /// Returns an empty node where the hash is 0 and the balances are all 0
     pub fn init_empty() -> Node<N_CURRENCIES>
     where
         [usize; N_CURRENCIES + 1]: Sized,
     {
         Node {
             hash: Fp::zero(),
+            balances: [Fp::zero(); N_CURRENCIES],
+        }
+    }
+
+    /// Returns a precomputed leaf corresponding to the zero entry. This is only available for `N_CURRENCIES = 1`
+    pub fn zero_leaf_one_currency() -> Node<N_CURRENCIES>
+    where
+        [usize; N_CURRENCIES + 1]: Sized,
+    {
+        assert_eq!(
+            N_CURRENCIES, 1,
+            "The precomputed zero leaf is only available for one currency"
+        );
+
+        Node {
+            hash: Fp::from_str_vartime(
+                "10865674922793988839901443192062719143824483286381764215326752926618228994500",
+            )
+            .unwrap(),
             balances: [Fp::zero(); N_CURRENCIES],
         }
     }

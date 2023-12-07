@@ -115,7 +115,7 @@ impl<const N_CURRENCIES: usize, const N_BYTES: usize> MerkleSumTree<N_CURRENCIES
         // Pad the entries with empty entries to make the number of entries equal to 2^depth
         if entries.len() < 2usize.pow(depth as u32) {
             entries.extend(vec![
-                Entry::init_empty();
+                Entry::zero_entry();
                 2usize.pow(depth as u32) - entries.len()
             ]);
         }
