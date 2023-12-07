@@ -1664,7 +1664,7 @@ checksum = "eabb4a44450da02c90444cf74558da904edde8fb4e9035a9a6a4e15445af0bd7"
 [[package]]
 name = "halo2_proofs"
 version = "0.2.0"
-source = "git+https://github.com/summa-dev/halo2?branch=v2-PoC#16934009f5355f9bbc6e0ae0d51bca6601ff4700"
+source = "git+https://github.com/summa-dev/halo2#8386d6e64fc33baccf626869123185890b8284dc"
 dependencies = [
  "blake2b_simd",
  "ff",
