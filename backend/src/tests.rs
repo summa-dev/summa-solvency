@@ -158,7 +158,7 @@ mod test {
 
         let params_path = "ptau/hermez-raw-11";
         let entry_csv = "../csv/entry_16.csv";
-        let mst = MerkleSumTree::new(entry_csv).unwrap();
+        let mst = MerkleSumTree::from_csv(entry_csv).unwrap();
 
         let mut round_one =
             Round::<4, 2, 14>::new(&signer, Box::new(mst.clone()), params_path, 1).unwrap();
@@ -238,7 +238,7 @@ mod test {
         let params_path = "ptau/hermez-raw-11";
         let entry_csv = "../csv/entry_16.csv";
 
-        let mst = MerkleSumTree::new(entry_csv).unwrap();
+        let mst = MerkleSumTree::from_csv(entry_csv).unwrap();
         let mut round = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, 1).unwrap();
 
         let mut liability_commitment_logs = summa_contract

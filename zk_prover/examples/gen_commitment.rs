@@ -13,7 +13,7 @@ const N_BYTES: usize = 14;
 
 fn main() {
     let merkle_sum_tree =
-        MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
+        MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_16.csv").unwrap();
 
     let root = merkle_sum_tree.root();
 

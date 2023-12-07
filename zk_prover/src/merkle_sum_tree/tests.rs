@@ -13,7 +13,7 @@ mod test {
     fn test_mst() {
         // create new merkle tree
         let merkle_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_16.csv").unwrap();
 
         // get root
         let root = merkle_tree.root();
@@ -33,7 +33,7 @@ mod test {
 
         // Should generate different root hashes when changing the entry order
         let merkle_tree_2 =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16_switched_order.csv")
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_16_switched_order.csv")
                 .unwrap();
         assert_ne!(root.hash, merkle_tree_2.root().hash);
 
@@ -69,13 +69,14 @@ mod test {
     #[test]
     fn test_update_mst_leaf() {
         let merkle_tree_1 =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_16.csv").unwrap();
 
         let root_hash_1 = merkle_tree_1.root().hash;
 
         //Create the second tree with the 7th entry different from the the first tree
         let mut merkle_tree_2 =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16_modified.csv").unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_16_modified.csv")
+                .unwrap();
 
         let root_hash_2 = merkle_tree_2.root().hash;
         assert!(root_hash_1 != root_hash_2);
@@ -94,7 +95,7 @@ mod test {
     #[test]
     fn test_update_invalid_mst_leaf() {
         let mut merkle_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new_sorted("../csv/entry_16.csv").unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv_sorted("../csv/entry_16.csv").unwrap();
 
         let new_root = merkle_tree.update_leaf(
             "non_existing_user", //This username is not present in the tree
@@ -109,13 +110,13 @@ mod test {
     #[test]
     fn test_sorted_mst() {
         let merkle_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_16.csv").unwrap();
 
         let old_root_balances = merkle_tree.root().balances;
         let old_root_hash = merkle_tree.root().hash;
 
         let sorted_merkle_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new_sorted("../csv/entry_16.csv").unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv_sorted("../csv/entry_16.csv").unwrap();
 
         let new_root_balances = sorted_merkle_tree.root().balances;
         let new_root_hash = sorted_merkle_tree.root().hash;
@@ -151,7 +152,7 @@ mod test {
     #[test]
     fn get_middle_node_hash_preimage() {
         let merkle_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_16.csv").unwrap();
 
         let depth = *merkle_tree.depth();
 
@@ -180,7 +181,7 @@ mod test {
     #[test]
     fn get_leaf_node_hash_preimage() {
         let merkle_tree =
-            MerkleSumTree::<N_CURRENCIES, N_BYTES>::new("../csv/entry_16.csv").unwrap();
+            MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv("../csv/entry_16.csv").unwrap();
 
         // Generate a random number between 0 and 15
         let mut rng = rand::thread_rng();
