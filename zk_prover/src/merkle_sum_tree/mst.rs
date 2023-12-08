@@ -38,10 +38,6 @@ impl<const N_CURRENCIES: usize, const N_BYTES: usize> Tree<N_CURRENCIES, N_BYTES
         &self.depth
     }
 
-    fn leaves(&self) -> &[Node<N_CURRENCIES>] {
-        &self.nodes[0]
-    }
-
     fn nodes(&self) -> &[Vec<Node<N_CURRENCIES>>] {
         &self.nodes
     }
@@ -50,9 +46,6 @@ impl<const N_CURRENCIES: usize, const N_BYTES: usize> Tree<N_CURRENCIES, N_BYTES
         &self.entries[index]
     }
 
-    fn entries(&self) -> &[Entry<N_CURRENCIES>] {
-        &self.entries
-    }
     fn cryptocurrencies(&self) -> &[Cryptocurrency] {
         &self.cryptocurrencies
     }
@@ -65,28 +58,14 @@ pub struct Cryptocurrency {
 }
 
 impl<const N_CURRENCIES: usize, const N_BYTES: usize> MerkleSumTree<N_CURRENCIES, N_BYTES> {
-    pub fn from_params(
-        root: Node<N_CURRENCIES>,
-        nodes: Vec<Vec<Node<N_CURRENCIES>>>,
-        depth: usize,
-        entries: Vec<Entry<N_CURRENCIES>>,
-        cryptocurrencies: Vec<Cryptocurrency>,
-        is_sorted: bool,
-    ) -> Result<Self, Box<dyn std::error::Error>>
-    where
-        [usize; N_CURRENCIES + 1]: Sized,
-        [usize; N_CURRENCIES + 2]: Sized,
-    {
-        Ok(MerkleSumTree::<N_CURRENCIES, N_BYTES> {
-            root,
-            nodes,
-            depth,
-            entries,
-            cryptocurrencies,
-            is_sorted,
-        })
+    /// Returns the leaves of the tree
+    pub fn leaves(&self) -> &[Node<N_CURRENCIES>] {
+        &self.nodes[0]
     }
-
+    /// Returns the entries of the tree
+    pub fn entries(&self) -> &[Entry<N_CURRENCIES>] {
+        &self.entries
+    }
     /// Builds a Merkle Sum Tree from a CSV file stored at `path`. The CSV file must be formatted as follows:
     ///
     /// `username,balance_<cryptocurrency>_<chain>,balance_<cryptocurrency>_<chain>,...`
@@ -120,8 +99,9 @@ impl<const N_CURRENCIES: usize, const N_BYTES: usize> MerkleSumTree<N_CURRENCIES
         Self::from_entries(entries, cryptocurrencies, true)
     }
 
+    /// Builds a Merkle Sum Tree from a vector of entries
     pub fn from_entries(
-        entries: Vec<Entry<N_CURRENCIES>>,
+        mut entries: Vec<Entry<N_CURRENCIES>>,
         cryptocurrencies: Vec<Cryptocurrency>,
         is_sorted: bool,
     ) -> Result<MerkleSumTree<N_CURRENCIES, N_BYTES>, Box<dyn std::error::Error>>
@@ -133,11 +113,42 @@ impl<const N_CURRENCIES: usize, const N_BYTES: usize> MerkleSumTree<N_CURRENCIES
 
         let mut nodes = vec![];
 
+        // Pad the entries with empty entries to make the number of entries equal to 2^depth
+        if entries.len() < 2usize.pow(depth as u32) {
+            entries.extend(vec![
+                Entry::zero_entry();
+                2usize.pow(depth as u32) - entries.len()
+            ]);
+        }
+
         let leaves = build_leaves_from_entries(&entries);
 
         let root = build_merkle_tree_from_leaves(&leaves, depth, &mut nodes)?;
 
         Ok(MerkleSumTree {
+            root,
+            nodes,
+            depth,
+            entries,
+            cryptocurrencies,
+            is_sorted,
+        })
+    }
+
+    /// Builds a Merkle Sum Tree from a root node, a vector of nodes, a depth, a vector of entries, a vector of cryptocurrencies and a boolean indicating whether the leaves are sorted by the username byte values.
+    pub fn from_params(
+        root: Node<N_CURRENCIES>,
+        nodes: Vec<Vec<Node<N_CURRENCIES>>>,
+        depth: usize,
+        entries: Vec<Entry<N_CURRENCIES>>,
+        cryptocurrencies: Vec<Cryptocurrency>,
+        is_sorted: bool,
+    ) -> Result<Self, Box<dyn std::error::Error>>
+    where
+        [usize; N_CURRENCIES + 1]: Sized,
+        [usize; N_CURRENCIES + 2]: Sized,
+    {
+        Ok(MerkleSumTree::<N_CURRENCIES, N_BYTES> {
             root,
             nodes,
             depth,
