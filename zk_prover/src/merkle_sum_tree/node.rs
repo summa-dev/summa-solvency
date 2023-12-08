@@ -1,7 +1,7 @@
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::merkle_sum_tree::utils::big_uint_to_fp;
 use halo2_gadgets::poseidon::primitives::{self as poseidon, ConstantLength};
-use halo2_proofs::halo2curves::{bn256::Fr as Fp, ff::PrimeField};
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use num_bigint::BigUint;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -50,25 +50,6 @@ impl<const N_CURRENCIES: usize> Node<N_CURRENCIES> {
     {
         Node {
             hash: Fp::zero(),
-            balances: [Fp::zero(); N_CURRENCIES],
-        }
-    }
-
-    /// Returns a precomputed leaf corresponding to the zero entry. This is only available for `N_CURRENCIES = 1`
-    pub fn zero_leaf_one_currency() -> Node<N_CURRENCIES>
-    where
-        [usize; N_CURRENCIES + 1]: Sized,
-    {
-        assert_eq!(
-            N_CURRENCIES, 1,
-            "The precomputed zero leaf is only available for one currency"
-        );
-
-        Node {
-            hash: Fp::from_str_vartime(
-                "10865674922793988839901443192062719143824483286381764215326752926618228994500",
-            )
-            .unwrap(),
             balances: [Fp::zero(); N_CURRENCIES],
         }
     }
