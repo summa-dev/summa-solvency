@@ -11,9 +11,6 @@ pub trait Tree<const N_CURRENCIES: usize, const N_BYTES: usize> {
     /// Returns the depth of the tree.
     fn depth(&self) -> &usize;
 
-    /// Returns a slice of the leaf nodes.
-    fn leaves(&self) -> &[Node<N_CURRENCIES>];
-
     /// Returns a slice of the nodes.
     fn nodes(&self) -> &[Vec<Node<N_CURRENCIES>>];
 
@@ -21,8 +18,6 @@ pub trait Tree<const N_CURRENCIES: usize, const N_BYTES: usize> {
     fn cryptocurrencies(&self) -> &[Cryptocurrency];
 
     fn get_entry(&self, index: usize) -> &Entry<N_CURRENCIES>;
-
-    fn entries(&self) -> &[Entry<N_CURRENCIES>];
 
     /// Returns the hash preimage of a middle node.
     fn get_middle_node_hash_preimage(
