@@ -23,7 +23,7 @@ mod test {
     const N_USERS: usize = 16;
 
     #[test]
-    fn test_valid_solvency_v2() {
+    fn test_valid_univariate_grand_sum_prover() {
         let path = "src/csv/entry_16.csv";
 
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
@@ -40,7 +40,7 @@ mod test {
     }
 
     #[test]
-    fn test_valid_solvency_v2_full_prover() {
+    fn test_valid_univariate_grand_sum_full_prover() {
         const N_USERS: usize = 16;
 
         // Initialize an empty circuit
@@ -85,22 +85,22 @@ mod test {
             full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
 
         // Both the Custodian and the Verifier know what column range are the balance columns
+        // (The first column is the user IDs)
         let balance_column_range = 1..N_CURRENCIES + 1;
 
-        // The Custodian makes an opening at x = 0 for the Verifier
-        // (The first column is the user IDs)
-        let kzg_proofs = open_grand_sums::<N_CURRENCIES>(
+        // The Custodian makes multi-openings at x = 0 for the Verifier
+        let grand_sums_multi_proof = open_grand_sums::<N_CURRENCIES>(
             &advice_polys.advice_polys,
             &advice_polys.advice_blinds,
             &params,
             balance_column_range,
         );
 
-        // The Custodian creates a KZG proof of the 4th user balances inclusion
+        // The Custodian creates a KZG multi-proof of the 4th user balances inclusion
         let user_index = 3_u16;
 
         let balance_column_range = 1..N_CURRENCIES + 1;
-        let balance_opening_proofs = open_user_balances::<N_CURRENCIES>(
+        let balance_openings_multi_proof = open_user_balances::<N_CURRENCIES>(
             &advice_polys.advice_polys,
             &advice_polys.advice_blinds,
             &params,
@@ -122,39 +122,56 @@ mod test {
         // Both the Custodian and the Verifier know what column range are the balance columns
         let balance_column_range = 1..N_CURRENCIES + 1;
 
-        // The Custodian communicates the KZG opening transcripts to the Verifier
-        // The Verifier verifies the KZG opening transcripts and calculates the grand sums
+        // The Custodian communicates the KZG multi-opening transcript to the Verifier
+        // The Verifier verifies the KZG multi-opening and calculates the grand sums
         let (verified, grand_sum) = verify_grand_sum_openings::<N_CURRENCIES>(
             &params,
             &zk_snark_proof,
-            kzg_proofs,
+            grand_sums_multi_proof,
             poly_degree,
             balance_column_range,
         );
 
+        assert!(verified);
         for i in 0..N_CURRENCIES {
-            assert!(verified[i]);
             assert_eq!(csv_total[i], grand_sum[i]);
         }
 
         let balance_column_range = 1..N_CURRENCIES + 1;
+        // The Verifier verifies the inclusion of the 4th user balances
         let (balances_verified, balance_values) = verify_user_inclusion::<N_CURRENCIES>(
             &params,
             &zk_snark_proof,
-            balance_opening_proofs,
+            &balance_openings_multi_proof,
             balance_column_range,
             omega,
             user_index,
         );
 
+        assert!(balances_verified);
         let fourth_user_csv_entry = entries.get(user_index as usize).unwrap();
         for i in 0..N_CURRENCIES {
-            assert!(balances_verified[i]);
             assert_eq!(
                 *fourth_user_csv_entry.balances().get(i).unwrap(),
                 balance_values[i]
             );
         }
+
+        let balance_column_range = 1..N_CURRENCIES + 1;
+
+        // Test failure case with the wrong group generator
+        // Slightly modify the generator
+        let bad_omega = omega.sub(&Fp::one());
+        let (balances_verified, _) = verify_user_inclusion::<N_CURRENCIES>(
+            &params,
+            &zk_snark_proof,
+            &balance_openings_multi_proof,
+            balance_column_range,
+            bad_omega,
+            user_index,
+        );
+        //The verification should fail
+        assert!(!balances_verified);
     }
 
     #[cfg(feature = "dev-graph")]
