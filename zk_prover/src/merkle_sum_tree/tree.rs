@@ -11,9 +11,6 @@ pub trait Tree<const N_CURRENCIES: usize, const N_BYTES: usize> {
     /// Returns the depth of the tree.
     fn depth(&self) -> &usize;
 
-    /// Returns a slice of the leaf nodes.
-    fn leaves(&self) -> &[Node<N_CURRENCIES>];
-
     /// Returns a slice of the nodes.
     fn nodes(&self) -> &[Vec<Node<N_CURRENCIES>>];
 
@@ -21,8 +18,6 @@ pub trait Tree<const N_CURRENCIES: usize, const N_BYTES: usize> {
     fn cryptocurrencies(&self) -> &[Cryptocurrency];
 
     fn get_entry(&self, index: usize) -> &Entry<N_CURRENCIES>;
-
-    fn entries(&self) -> &[Entry<N_CURRENCIES>];
 
     /// Returns the hash preimage of a middle node.
     fn get_middle_node_hash_preimage(
@@ -70,10 +65,7 @@ pub trait Tree<const N_CURRENCIES: usize, const N_BYTES: usize> {
         [usize; N_CURRENCIES + 1]: Sized,
     {
         // Fetch entry corresponding to index
-        let entry = self
-            .entries()
-            .get(index)
-            .ok_or_else(|| Box::<dyn std::error::Error>::from("Node not found"))?;
+        let entry = self.get_entry(index);
 
         // Constructing preimage
         let mut preimage = [Fp::zero(); N_CURRENCIES + 1];

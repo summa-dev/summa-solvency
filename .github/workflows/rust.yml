@@ -51,9 +51,12 @@ jobs:
           cd zk_prover
           cargo test --release --features dev-graph -- --nocapture
 
-      - name: Test Nova Prover
+      - name: Test Zk Prover examples
         run: |
           cd zk_prover
+          cargo run --release --example gen_inclusion_verifier
+          cargo run --release --example gen_commitment
+          cargo run --release --example gen_inclusion_proof
           cargo run --release --example nova_incremental_verifier
 
       - name: Install Foundry
@@ -64,7 +67,7 @@ jobs:
           cd backend
           cargo test --release -- --nocapture
 
-      - name: Test example
+      - name: Test backend example
         run: |
           cd backend
           cargo run --release --example summa_solvency_flow

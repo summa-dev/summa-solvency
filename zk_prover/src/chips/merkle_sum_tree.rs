@@ -192,14 +192,7 @@ impl<const N_CURRENCIES: usize> MerkleSumTreeChip<N_CURRENCIES> {
         current_balance: &AssignedCell<Fp, Fp>,
         element_balance: &AssignedCell<Fp, Fp>,
         swap_bit_assigned: &AssignedCell<Fp, Fp>,
-    ) -> Result<
-        (
-            AssignedCell<Fp, Fp>,
-            AssignedCell<Fp, Fp>,
-            AssignedCell<Fp, Fp>,
-        ),
-        Error,
-    > {
+    ) -> Result<AssignedCell<Fp, Fp>, Error> {
         layouter.assign_region(
             || "assign nodes balances per currency",
             |mut region| {
@@ -267,7 +260,7 @@ impl<const N_CURRENCIES: usize> MerkleSumTreeChip<N_CURRENCIES> {
                 let sum_cell =
                     region.assign_advice(|| "sum of balances", self.config.advice[2], 1, || sum)?;
 
-                Ok((left_currency_balance, right_currency_balance, sum_cell))
+                Ok(sum_cell)
             },
         )
     }
