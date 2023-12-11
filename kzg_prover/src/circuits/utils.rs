@@ -141,11 +141,11 @@ pub fn open_grand_sums<const N_CURRENCIES: usize>(
     .to_vec()
 }
 
-pub fn open_user_balances<const N_CURRENCIES: usize>(
+pub fn open_user_points<const N_CURRENCIES: usize>(
     advice_polys: &[Polynomial<Fp, Coeff>],
     advice_blinds: &[Blind<Fp>],
     params: &ParamsKZG<Bn256>,
-    balance_column_range: Range<usize>,
+    column_range: Range<usize>,
     omega: Fp,
     user_index: u16,
 ) -> Vec<u8> {
@@ -157,7 +157,7 @@ pub fn open_user_balances<const N_CURRENCIES: usize>(
         Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
     >(
         params,
-        &advice_polys[balance_column_range],
+        &advice_polys[column_range],
         advice_blinds,
         omega_raised,
     )
@@ -221,13 +221,10 @@ pub fn verify_user_inclusion<const N_CURRENCIES: usize>(
 
     //Read the commitment points for all the  advice polynomials from the proof transcript and put them into a vector
     let mut advice_commitments = Vec::new();
-    for i in 0..N_CURRENCIES + balance_column_range.start {
+    (0..N_CURRENCIES + balance_column_range.start).for_each(|_| {
         let point = transcript.read_point().unwrap();
-        // Skip the balances column commitment
-        if i != 0 {
-            advice_commitments.push(point);
-        }
-    }
+        advice_commitments.push(point);
+    });
 
     let mut verification_results = Vec::<bool>::new();
 

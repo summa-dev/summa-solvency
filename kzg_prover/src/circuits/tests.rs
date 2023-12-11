@@ -3,7 +3,7 @@ mod test {
 
     use crate::circuits::univariate_grand_sum::UnivariateGrandSum;
     use crate::circuits::utils::{
-        full_prover, full_verifier, generate_setup_artifacts, open_grand_sums, open_user_balances,
+        full_prover, full_verifier, generate_setup_artifacts, open_grand_sums, open_user_points,
         verify_grand_sum_openings, verify_user_inclusion,
     };
     use crate::cryptocurrency::Cryptocurrency;
@@ -96,15 +96,15 @@ mod test {
             balance_column_range,
         );
 
-        // The Custodian creates a KZG multi-proof of the 4th user balances inclusion
+        // The Custodian creates a KZG multi-proof of the 4th user ID & balances inclusion
         let user_index = 3_u16;
 
-        let balance_column_range = 1..N_CURRENCIES + 1;
-        let balance_openings_multi_proof = open_user_balances::<N_CURRENCIES>(
+        let column_range = 0..N_CURRENCIES + 1;
+        let openings_multi_proof = open_user_points::<N_CURRENCIES>(
             &advice_polys.advice_polys,
             &advice_polys.advice_blinds,
             &params,
-            balance_column_range,
+            column_range,
             omega,
             user_index,
         );
@@ -137,24 +137,32 @@ mod test {
             assert_eq!(csv_total[i], grand_sum[i]);
         }
 
-        let balance_column_range = 1..N_CURRENCIES + 1;
+        let column_range = 0..N_CURRENCIES + 1;
         // The Verifier verifies the inclusion of the 4th user balances
-        let (balances_verified, balance_values) = verify_user_inclusion::<N_CURRENCIES>(
+        const N_POINTS: usize = N_CURRENCIES + 1;
+        let (inclusion_verified, id_and_balance_values) = verify_user_inclusion::<N_POINTS>(
             &params,
             &zk_snark_proof,
-            &balance_openings_multi_proof,
-            balance_column_range,
+            &openings_multi_proof,
+            column_range,
             omega,
             user_index,
         );
 
-        assert!(balances_verified);
+        assert!(inclusion_verified);
         let fourth_user_csv_entry = entries.get(user_index as usize).unwrap();
-        for i in 0..N_CURRENCIES {
-            assert_eq!(
-                *fourth_user_csv_entry.balances().get(i).unwrap(),
-                balance_values[i]
-            );
+        for i in 0..N_CURRENCIES + 1 {
+            if i == 0 {
+                assert_eq!(
+                    *fourth_user_csv_entry.username_as_big_uint(),
+                    id_and_balance_values[i]
+                );
+            } else {
+                assert_eq!(
+                    *fourth_user_csv_entry.balances().get(i - 1).unwrap(),
+                    id_and_balance_values[i]
+                );
+            }
         }
 
         let balance_column_range = 1..N_CURRENCIES + 1;
@@ -165,7 +173,7 @@ mod test {
         let (balances_verified, _) = verify_user_inclusion::<N_CURRENCIES>(
             &params,
             &zk_snark_proof,
-            &balance_openings_multi_proof,
+            &openings_multi_proof,
             balance_column_range,
             bad_omega,
             user_index,
