@@ -100,7 +100,7 @@ where
         entries: &[Entry<N_ASSETS>],
     ) -> Result<Vec<Vec<AssignedCell<Fp, Fp>>>, Error> {
         layouter.assign_region(
-            || "assign entries and accumulated balance to table",
+            || "assign entries to the table",
             |mut region| {
                 // create a bidimensional vector to store the assigned balances. The first dimension is the number of entries, the second dimension is the number of balances
                 let mut assigned_balances = vec![vec![]];

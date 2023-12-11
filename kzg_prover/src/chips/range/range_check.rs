@@ -128,9 +128,6 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
         let mut zs = Vec::with_capacity(N_BYTES);
         let mut z = element.clone();
 
-        // print assigned element
-        println!("element: {:?}", element);
-
         // Calculate 1 / 2^8
         let two_pow_eight_inv = Value::known(Fp::from(1 << 8).invert().unwrap());
 

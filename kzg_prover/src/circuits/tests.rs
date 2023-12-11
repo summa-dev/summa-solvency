@@ -9,11 +9,7 @@ mod test {
     use crate::cryptocurrency::Cryptocurrency;
     use crate::entry::Entry;
     use crate::utils::parse_csv_to_entries;
-    use halo2_proofs::{
-        dev::{FailureLocation, MockProver, VerifyFailure},
-        halo2curves::bn256::Fr as Fp,
-        plonk::Any,
-    };
+    use halo2_proofs::dev::MockProver;
     use num_bigint::BigUint;
 
     const K: u32 = 9;
@@ -28,9 +24,8 @@ mod test {
 
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
-        let _ =
-            parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
-                .unwrap();
+        parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
+            .unwrap();
 
         let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
@@ -60,9 +55,8 @@ mod test {
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
 
-        let _ =
-            parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
-                .unwrap();
+        parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
+            .unwrap();
 
         // Calculate total for all entry columns
         let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
