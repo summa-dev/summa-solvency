@@ -85,10 +85,10 @@ The benchmarking included the following areas:
 In order to run the benchmarking, we provide a set of dummy `username, balances` entries formatted in csv files. The csv files can be downloaded as follows
 
 ```bash
-mkdir -p benche/csv
-cd benche/csv
+mkdir -p benches/csv
+cd benches/csv
 wget https://summa-solvency.s3.eu-central-1.amazonaws.com/1_entry_2_20.zip
-unzip sample_csv_files_for_bench.zip
+unzip 1_entry_2_20.zip
 ```
 
 The file naming convention, such as `1_entry_2_20.csv`, follows the pattern `[number of cryptocurrency]_entry_2_[power of 2]`. In this example, `1_entry` indicates a single currency, and the `2_20` part represents $2^{20}$ entries in the file. These entries, which are intended to populate the Merkle sum tree and feed the zk prover, correspond to the number of users on the exchange.
