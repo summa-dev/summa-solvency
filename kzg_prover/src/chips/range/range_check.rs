@@ -1,5 +1,5 @@
 use halo2_proofs::arithmetic::Field;
-use halo2_proofs::circuit::{AssignedCell, Layouter, Region, Value};
+use halo2_proofs::circuit::{AssignedCell, Region, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed};
 use halo2_proofs::poly::Rotation;
@@ -24,7 +24,6 @@ use crate::chips::range::utils::decompose_fp_to_bytes;
 #[derive(Debug, Copy, Clone)]
 pub struct RangeCheckConfig<const N_BYTES: usize> {
     zs: [Column<Advice>; N_BYTES],
-    range: Column<Fixed>,
 }
 
 /// Helper chip that verfiies that the element witnessed in a given cell lies within a given range defined by N_BYTES.
@@ -109,7 +108,7 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
             );
         }
 
-        RangeCheckConfig { zs, range }
+        RangeCheckConfig { zs }
     }
 
     /// Assign the truncated right-shifted values of the element to be checked to the corresponding columns zs at offset 0 starting from the element to be checked.

@@ -2,7 +2,7 @@ use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value},
     halo2curves::bn256::Fr as Fp,
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Selector},
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Selector},
     poly::Rotation,
 };
 
@@ -88,6 +88,7 @@ impl AddChip {
 pub struct TestConfig<const N_BYTES: usize> {
     pub addchip_config: AddConfig,
     pub range_check_config: RangeCheckConfig<N_BYTES>,
+    pub range: Column<Fixed>,
 }
 
 // The test circuit takes two inputs a and b.
@@ -137,6 +138,7 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
             TestConfig {
                 addchip_config,
                 range_check_config,
+                range,
             }
         }
     }
@@ -150,6 +152,22 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
         let range_chip = RangeCheckChip::construct(config.range_check_config);
 
         // Load the lookup table
+        let range = 1 << 8;
+
+        layouter.assign_region(
+            || format!("load range check table of {} bits", 8 * N_BYTES),
+            |mut region| {
+                for i in 0..range {
+                    region.assign_fixed(
+                        || "assign cell in fixed column",
+                        config.range,
+                        i,
+                        || Value::known(Fp::from(i as u64)),
+                    )?;
+                }
+                Ok(())
+            },
+        )?;
 
         // Initiate the add chip
         let addchip = AddChip::construct(config.addchip_config);
@@ -219,7 +237,7 @@ mod testing {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 4).into(),
                     location: FailureLocation::InRegion {
-                        region: (1, "Perform range check on c").into(),
+                        region: (2, "Perform range check on c").into(),
                         offset: 0
                     }
                 },
@@ -252,7 +270,7 @@ mod testing {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 6).into(),
                     location: FailureLocation::InRegion {
-                        region: (1, "Perform range check on c").into(),
+                        region: (2, "Perform range check on c").into(),
                         offset: 0
                     }
                 },
