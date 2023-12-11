@@ -92,7 +92,7 @@ pub struct TestConfig<const N_BYTES: usize> {
 
 // The test circuit takes two inputs a and b.
 // It adds them together by using the add chip to produce c = a + b.
-// Performs a range check on a, b and c. Each value should lie in N_BYTES.
+// Performs a range check on c that should lie in N_BYTES.
 #[derive(Default, Clone, Debug)]
 struct TestCircuit<const N_BYTES: usize> {
     pub a: Fp,
@@ -108,14 +108,12 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        let z = meta.advice_column();
         let range = meta.fixed_column();
 
         let a = meta.advice_column();
         let b = meta.advice_column();
         let c = meta.advice_column();
 
-        meta.enable_equality(z);
         meta.enable_equality(a);
         meta.enable_equality(b);
         meta.enable_equality(c);
@@ -123,11 +121,15 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
         let constants = meta.fixed_column();
         meta.enable_constant(constants);
 
-        let add_selector = meta.selector();
-        let lookup_enable_selector = meta.complex_selector();
+        let zs = [(); N_BYTES].map(|_| meta.advice_column());
 
-        let range_check_config =
-            RangeCheckChip::<N_BYTES>::configure(meta, z, range, lookup_enable_selector);
+        for z in zs.iter() {
+            meta.enable_equality(*z);
+        }
+
+        let add_selector = meta.selector();
+
+        let range_check_config = RangeCheckChip::<N_BYTES>::configure(meta, c, zs, range);
 
         let addchip_config = AddChip::configure(meta, a, b, c, add_selector);
 
@@ -146,8 +148,7 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
     ) -> Result<(), Error> {
         // Initiate the add chip
         let addchip = AddChip::construct(config.addchip_config);
-        let (a_cell, b_cell, c_cell) =
-            addchip.assign(self.a, self.b, layouter.namespace(|| "add chip"))?;
+        let (_, _, c_cell) = addchip.assign(self.a, self.b, layouter.namespace(|| "add chip"))?;
 
         // Initiate the range check chip
         let range_chip = RangeCheckChip::construct(config.range_check_config);
@@ -155,15 +156,7 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
         // Load the lookup table
         range_chip.load(&mut layouter)?;
 
-        // check range on a, b and c
-        range_chip.assign(
-            layouter.namespace(|| "checking value a is in range"),
-            &a_cell,
-        )?;
-        range_chip.assign(
-            layouter.namespace(|| "checking value b is in range"),
-            &b_cell,
-        )?;
+        // check range on c
         range_chip.assign(
             layouter.namespace(|| "checking value c is in range"),
             &c_cell,
@@ -217,15 +210,15 @@ mod testing {
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 0).into(),
-                    location: FailureLocation::InRegion {
-                        region: (4, "assign value to perform range check").into(),
-                        offset: 2
-                    }
+                    column: (Any::Fixed, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 0 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::Fixed, 1).into(),
-                    location: FailureLocation::OutsideRegion { row: 2 }
+                    column: (Any::advice(), 4).into(),
+                    location: FailureLocation::InRegion {
+                        region: (2, "assign values to zs column").into(),
+                        offset: 0
+                    }
                 },
             ])
         );
@@ -250,15 +243,15 @@ mod testing {
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 0).into(),
-                    location: FailureLocation::InRegion {
-                        region: (4, "assign value to perform range check").into(),
-                        offset: 4
-                    }
+                    column: (Any::Fixed, 1).into(),
+                    location: FailureLocation::OutsideRegion { row: 0 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::Fixed, 1).into(),
-                    location: FailureLocation::OutsideRegion { row: 2 }
+                    column: (Any::advice(), 6).into(),
+                    location: FailureLocation::InRegion {
+                        region: (2, "assign values to zs column").into(),
+                        offset: 0
+                    }
                 },
             ])
         );
