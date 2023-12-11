@@ -123,8 +123,8 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
 
         let zs = [(); N_BYTES].map(|_| meta.advice_column());
 
-        for z in zs.iter() {
-            meta.enable_equality(*z);
+        for column in zs.iter() {
+            meta.enable_equality(*column);
         }
 
         let add_selector = meta.selector();
@@ -146,20 +146,23 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
         config: Self::Config,
         mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
-        // Initiate the add chip
-        let addchip = AddChip::construct(config.addchip_config);
-        let (_, _, c_cell) = addchip.assign(self.a, self.b, layouter.namespace(|| "add chip"))?;
-
         // Initiate the range check chip
         let range_chip = RangeCheckChip::construct(config.range_check_config);
 
         // Load the lookup table
-        range_chip.load(&mut layouter)?;
 
-        // check range on c
-        range_chip.assign(
-            layouter.namespace(|| "checking value c is in range"),
-            &c_cell,
+        // Initiate the add chip
+        let addchip = AddChip::construct(config.addchip_config);
+        let (_, _, c) = addchip.assign(self.a, self.b, layouter.namespace(|| "add chip"))?;
+
+        // Perform the range check
+        layouter.assign_region(
+            || "Perform range check on c",
+            |mut region| {
+                range_chip.assign(&c, &mut region)?;
+
+                Ok(())
+            },
         )?;
 
         Ok(())
@@ -216,7 +219,7 @@ mod testing {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 4).into(),
                     location: FailureLocation::InRegion {
-                        region: (2, "assign values to zs column").into(),
+                        region: (1, "Perform range check on c").into(),
                         offset: 0
                     }
                 },
@@ -249,7 +252,7 @@ mod testing {
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 6).into(),
                     location: FailureLocation::InRegion {
-                        region: (2, "assign values to zs column").into(),
+                        region: (1, "Perform range check on c").into(),
                         offset: 0
                     }
                 },

@@ -1,5 +1,5 @@
 use halo2_proofs::arithmetic::Field;
-use halo2_proofs::circuit::{AssignedCell, Layouter, Value};
+use halo2_proofs::circuit::{AssignedCell, Layouter, Region, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed};
 use halo2_proofs::poly::Rotation;
@@ -80,6 +80,7 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
             "range u8 check for difference between the element to be checked and the 0-th truncated right-shifted value of the element",
             |meta| {
                 let element = meta.query_advice(z, Rotation::cur());
+
                 let zero_truncation = meta.query_advice(zs[0], Rotation::cur());
 
                 let u8_range = meta.query_fixed(range, Rotation::cur());
@@ -114,68 +115,46 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
     /// Assign the truncated right-shifted values of the element to be checked to the corresponding columns zs at offset 0 starting from the element to be checked.
     pub fn assign(
         &self,
-        mut layouter: impl Layouter<Fp>,
         element: &AssignedCell<Fp, Fp>,
+        region: &mut Region<'_, Fp>,
     ) -> Result<(), Error> {
-        layouter.assign_region(
-            || "assign values to zs column",
-            |mut region| {
-                // Decompose the element in #N_BYTES bytes
-                let ks = element
-                    .value()
-                    .copied()
-                    .map(|x| decompose_fp_to_bytes(x, N_BYTES))
-                    .transpose_vec(N_BYTES);
+        // Decompose the element in #N_BYTES bytes
+        let ks = element
+            .value()
+            .copied()
+            .map(|x| decompose_fp_to_bytes(x, N_BYTES))
+            .transpose_vec(N_BYTES);
 
-                // Initalize an empty vector of cells for the truncated right-shifted values of the element to be checked.
-                let mut zs = Vec::with_capacity(N_BYTES);
-                let mut z = element.clone();
+        // Initalize an empty vector of cells for the truncated right-shifted values of the element to be checked.
+        let mut zs = Vec::with_capacity(N_BYTES);
+        let mut z = element.clone();
 
-                // Calculate 1 / 2^8
-                let two_pow_eight_inv = Value::known(Fp::from(1 << 8).invert().unwrap());
+        // print assigned element
+        println!("element: {:?}", element);
 
-                // Perform the assignment of the truncated right-shifted values to zs columns.
-                for (i, k) in ks.iter().enumerate() {
-                    let zs_next = {
-                        let k = k.map(|byte| Fp::from(byte as u64));
-                        let zs_next_val = (z.value().copied() - k) * two_pow_eight_inv;
-                        region.assign_advice(
-                            || format!("zs_{:?}", i),
-                            self.config.zs[i],
-                            0,
-                            || zs_next_val,
-                        )?
-                    };
-                    // Update `z`.
-                    z = zs_next;
-                    zs.push(z.clone());
-                }
+        // Calculate 1 / 2^8
+        let two_pow_eight_inv = Value::known(Fp::from(1 << 8).invert().unwrap());
 
-                // Constrain the final running sum output to be zero.
-                region.constrain_constant(zs[N_BYTES - 1].cell(), Fp::from(0))?;
+        // Perform the assignment of the truncated right-shifted values to zs columns.
+        for (i, k) in ks.iter().enumerate() {
+            let zs_next = {
+                let k = k.map(|byte| Fp::from(byte as u64));
+                let zs_next_val = (z.value().copied() - k) * two_pow_eight_inv;
+                region.assign_advice(
+                    || format!("zs_{:?}", i),
+                    self.config.zs[i],
+                    0,
+                    || zs_next_val,
+                )?
+            };
+            // Update `z`.
+            z = zs_next;
+            zs.push(z.clone());
+        }
 
-                Ok(())
-            },
-        )
-    }
+        // Constrain the final running sum output to be zero.
+        region.constrain_constant(zs[N_BYTES - 1].cell(), Fp::from(0))?;
 
-    /// Loads the lookup table with values from `0` to `2^8 - 1`
-    pub fn load(&self, layouter: &mut impl Layouter<Fp>) -> Result<(), Error> {
-        let range = 1 << (8);
-
-        layouter.assign_region(
-            || format!("load range check table of {} bits", 8),
-            |mut region| {
-                for i in 0..range {
-                    region.assign_fixed(
-                        || "assign cell in fixed column",
-                        self.config.range,
-                        i,
-                        || Value::known(Fp::from(i as u64)),
-                    )?;
-                }
-                Ok(())
-            },
-        )
+        Ok(())
     }
 }
