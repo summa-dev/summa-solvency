@@ -55,20 +55,9 @@ pub fn build_leaves_from_entries<const N_CURRENCIES: usize>(
 where
     [usize; N_CURRENCIES + 1]: Sized,
 {
-    // Precompute the zero leaf (this will only be used if we encounter a zero entry)
-    let zero_leaf = Entry::<N_CURRENCIES>::zero_entry().compute_leaf();
-
     let leaves = entries
         .par_iter()
-        .map(|entry| {
-            // If the entry is the zero entry then we return the precomputed zero leaf
-            // Otherwise, we compute the leaf as usual
-            if entry == &Entry::<N_CURRENCIES>::zero_entry() {
-                zero_leaf.clone()
-            } else {
-                entry.compute_leaf()
-            }
-        })
+        .map(|entry| entry.compute_leaf())
         .collect::<Vec<_>>();
 
     leaves

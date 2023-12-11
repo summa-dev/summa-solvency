@@ -74,7 +74,7 @@ where
 {
     pub fn init_empty() -> Self {
         Self {
-            entry: Entry::zero_entry(),
+            entry: Entry::init_empty(),
             path_indices: vec![Fp::zero(); LEVELS],
             sibling_leaf_node_hash_preimage: [Fp::zero(); N_CURRENCIES + 1],
             sibling_middle_node_hash_preimages: vec![[Fp::zero(); N_CURRENCIES + 2]; LEVELS],
@@ -456,22 +456,27 @@ where
                 )?;
 
             let mut next_balances = vec![];
+            let mut left_balances = vec![];
+            let mut right_balances = vec![];
 
             // For every level, perform the swap of the balances (between `current_balances` and `sibling_balances`) according to the swap bit
             for currency in 0..N_CURRENCIES {
-                let next_balance = merkle_sum_tree_chip.swap_balances_per_level(
-                    layouter.namespace(|| {
-                        format!(
-                            "{}: currency {}: assign nodes balance",
-                            namespace_prefix, currency
-                        )
-                    }),
-                    &current_balances[currency],
-                    &sibling_balances[currency],
-                    &swap_bit_level,
-                )?;
+                let (left_balance, right_balance, next_balance) = merkle_sum_tree_chip
+                    .swap_balances_per_level(
+                        layouter.namespace(|| {
+                            format!(
+                                "{}: currency {}: assign nodes balance",
+                                namespace_prefix, currency
+                            )
+                        }),
+                        &current_balances[currency],
+                        &sibling_balances[currency],
+                        &swap_bit_level,
+                    )?;
 
                 next_balances.push(next_balance);
+                left_balances.push(left_balance);
+                right_balances.push(right_balance);
             }
 
             // create an hash_input array of length N_CURRENCIES + 2 that contains the next balances, the left hash and the right hash

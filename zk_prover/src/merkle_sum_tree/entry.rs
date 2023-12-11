@@ -4,7 +4,7 @@ use num_bigint::BigUint;
 
 /// An entry in the Merkle Sum Tree from the database of the CEX.
 /// It contains the username and the balances of the user.
-#[derive(Clone, Debug, std::cmp::PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Entry<const N_CURRENCIES: usize> {
     username_as_big_uint: BigUint,
     balances: [BigUint; N_CURRENCIES],
@@ -20,14 +20,13 @@ impl<const N_CURRENCIES: usize> Entry<N_CURRENCIES> {
         })
     }
 
-    /// Returns a zero entry where the username is 0 and the balances are all 0
-    pub fn zero_entry() -> Self {
+    pub fn init_empty() -> Self {
         let empty_balances: [BigUint; N_CURRENCIES] = std::array::from_fn(|_| BigUint::from(0u32));
 
         Entry {
             username_as_big_uint: BigUint::from(0u32),
             balances: empty_balances,
-            username: "0".to_string(),
+            username: "".to_string(),
         }
     }
 
@@ -41,10 +40,7 @@ impl<const N_CURRENCIES: usize> Entry<N_CURRENCIES> {
     /// Stores the new balance values
     ///
     /// Returns the updated node
-    pub fn recompute_leaf(
-        &mut self,
-        updated_balances: &[BigUint; N_CURRENCIES],
-    ) -> Node<N_CURRENCIES>
+    pub fn recompute_leaf(&mut self, updated_balances: &[BigUint; N_CURRENCIES]) -> Node<N_CURRENCIES>
     where
         [usize; N_CURRENCIES + 1]: Sized,
     {
