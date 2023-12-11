@@ -177,7 +177,7 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
         layouter.assign_region(
             || "Perform range check on c",
             |mut region| {
-                range_chip.assign(&c, &mut region)?;
+                range_chip.assign(&mut region, &c)?;
 
                 Ok(())
             },

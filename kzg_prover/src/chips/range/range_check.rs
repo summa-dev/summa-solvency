@@ -114,8 +114,8 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
     /// Assign the truncated right-shifted values of the element to be checked to the corresponding columns zs at offset 0 starting from the element to be checked.
     pub fn assign(
         &self,
-        element: &AssignedCell<Fp, Fp>,
         region: &mut Region<'_, Fp>,
+        element: &AssignedCell<Fp, Fp>,
     ) -> Result<(), Error> {
         // Decompose the element in #N_BYTES bytes
         let ks = element

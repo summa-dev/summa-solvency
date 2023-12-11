@@ -96,7 +96,7 @@ where
     }
     /// Assigns the entries to the circuit
     /// At row i, the username is set to the username of the i-th entry, the balance is set to the balance of the i-th entry
-    ///
+    /// Returns a bidimensional vector of the assigned balances to the circuit.
     pub fn assign_entries(
         &self,
         mut layouter: impl Layouter<Fp>,
@@ -105,8 +105,8 @@ where
         layouter.assign_region(
             || "assign entries to the table",
             |mut region| {
-                // create a bidimensional vector to store the assigned balances. The first dimension is the number of entries, the second dimension is N_CURRENCIES
-                let mut assigned_balances = vec![Vec::with_capacity(N_CURRENCIES)];
+                // create a bidimensional vector to store the assigned balances. The first dimension is N_USERS, the second dimension is N_CURRENCIES
+                let mut assigned_balances = vec![];
 
                 for (i, entry) in entries.iter().enumerate() {
                     region.assign_advice(
@@ -190,12 +190,13 @@ where
             config.assign_entries(layouter.namespace(|| "assign entries"), &self.entries)?;
 
         // Perform range check on the assigned balances
-        for (_, assigned_balances_row) in assigned_balances.iter().enumerate() {
-            for (j, assigned_balance) in assigned_balances_row.iter().enumerate() {
+        for i in 0..N_USERS {
+            for j in 0..N_CURRENCIES {
                 layouter.assign_region(
-                    || "Perform range check on assigned balance",
+                    || format!("Perform range check on balance {} of user {}", j, i),
                     |mut region| {
-                        range_check_chips[j].assign(assigned_balance, &mut region)?;
+                        range_check_chips[j].assign(&mut region, &assigned_balances[i][j])?;
+
                         Ok(())
                     },
                 )?;
