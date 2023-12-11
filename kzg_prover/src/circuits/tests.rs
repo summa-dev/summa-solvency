@@ -39,31 +39,6 @@ mod test {
         assert_eq!(valid_prover.verify_par(), Ok(()))
     }
 
-    // #[test]
-    // fn test_overflow_solvency_v2() {
-    //     let path = "src/merkle_sum_tree/csv/entry_16_overflow.csv";
-
-    //     // Setting N_BYTES to 9 to not trigger the overflow error during the parsing of the csv
-    //     let (_, entries) =
-    //         parse_csv_to_entries::<&str, N_ASSETS_V2, { N_BYTES_V2 + 1 }>(path).unwrap();
-
-    //     let circuit = SolvencyV2::<N_BYTES_V2, N_USERS_V2, N_ASSETS_V2>::init(entries);
-
-    //     let invalid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
-
-    //     assert_eq!(
-    //         invalid_prover.verify(),
-    //         Err(vec![VerifyFailure::Lookup {
-    //             name: "advice cell should be in range [0, 2^8 - 1]".to_string(),
-    //             lookup_index: (0),
-    //             location: FailureLocation::InRegion {
-    //                 region: (0, "assign entries and accumulated balance to table").into(),
-    //                 offset: 0
-    //             }
-    //         }])
-    //     );
-    // }
-
     #[test]
     fn test_valid_solvency_v2_full_prover() {
         const N_USERS: usize = 16;
