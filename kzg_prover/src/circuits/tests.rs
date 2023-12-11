@@ -9,7 +9,8 @@ mod test {
     use crate::cryptocurrency::Cryptocurrency;
     use crate::entry::Entry;
     use crate::utils::parse_csv_to_entries;
-    use halo2_proofs::dev::MockProver;
+    use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
+    use halo2_proofs::plonk::Any;
     use num_bigint::BigUint;
 
     const K: u32 = 9;
@@ -149,6 +150,49 @@ mod test {
                 balance_values[i]
             );
         }
+    }
+
+    // Building a proof using as input a csv file with an entry that is not in range [0, 2^N_BYTES*8 - 1] should fail the range check constraint on the leaf balance
+    #[test]
+    fn test_balance_not_in_range() {
+        let path = "../csv/entry_16_overflow.csv";
+
+        let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
+        let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
+        parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
+            .unwrap();
+
+        let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
+
+        let invalid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
+
+        assert_eq!(
+            invalid_prover.verify(),
+            Err(vec![
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 256 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Fixed, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 259 }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 10).into(),
+                    location: FailureLocation::InRegion {
+                        region: (2, "Perform range check on balance 0 of user 0").into(),
+                        offset: 0
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 18).into(),
+                    location: FailureLocation::InRegion {
+                        region: (5, "Perform range check on balance 1 of user 1").into(),
+                        offset: 0
+                    }
+                },
+            ])
+        );
     }
 
     #[cfg(feature = "dev-graph")]
