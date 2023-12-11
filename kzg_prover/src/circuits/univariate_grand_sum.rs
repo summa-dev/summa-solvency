@@ -196,7 +196,6 @@ where
                     || format!("Perform range check on balance {} of user {}", j, i),
                     |mut region| {
                         range_check_chips[j].assign(&mut region, &assigned_balances[i][j])?;
-
                         Ok(())
                     },
                 )?;
