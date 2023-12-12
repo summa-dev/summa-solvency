@@ -1,16 +1,18 @@
+use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
 use crate::entry::Entry;
 use crate::utils::big_uint_to_fp;
-use halo2_proofs::circuit::{Layouter, SimpleFloorPlanner, Value};
+use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed};
 
 #[derive(Clone)]
-pub struct UnivariateGrandSum<const N_BYTES: usize, const N_USERS: usize, const N_ASSETS: usize> {
-    pub entries: Vec<Entry<N_ASSETS>>,
+pub struct UnivariateGrandSum<const N_BYTES: usize, const N_USERS: usize, const N_CURRENCIES: usize>
+{
+    pub entries: Vec<Entry<N_CURRENCIES>>,
 }
 
-impl<const N_BYTES: usize, const N_USERS: usize, const N_ASSETS: usize>
-    UnivariateGrandSum<N_BYTES, N_USERS, N_ASSETS>
+impl<const N_BYTES: usize, const N_USERS: usize, const N_CURRENCIES: usize>
+    UnivariateGrandSum<N_BYTES, N_USERS, N_CURRENCIES>
 {
     pub fn init_empty() -> Self {
         Self {
@@ -19,7 +21,7 @@ impl<const N_BYTES: usize, const N_USERS: usize, const N_ASSETS: usize>
     }
 
     /// Initializes the circuit with the user entries that are part of the solvency proof
-    pub fn init(user_entries: Vec<Entry<N_ASSETS>>) -> Self {
+    pub fn init(user_entries: Vec<Entry<N_CURRENCIES>>) -> Self {
         Self {
             entries: user_entries,
         }
@@ -34,97 +36,118 @@ impl<const N_BYTES: usize, const N_USERS: usize, const N_ASSETS: usize>
 /// # Type Parameters
 ///
 /// * `N_BYTES`: The number of bytes in which the balances should lie
+/// * `N_CURRENCIES`: The number of currencies for which the solvency is verified.
 ///
 /// # Fields
 ///
-/// * `range_check_config`: Configuration for the range check chip
-/// * `advices`: Advice columns used to store the private inputs
+/// * `username`: Advice column used to store the usernames of the users
+/// * `balances`: Advice columns used to store the balances of the users
+/// * `range_check_configs`: Configurations for the range check chip
+/// * `range`: Fixed column used to store the lookup table for the range check chip
 #[derive(Debug, Clone)]
-pub struct UnivariateGrandSumConfig<const N_BYTES: usize, const N_ASSETS: usize>
+pub struct UnivariateGrandSumConfig<const N_BYTES: usize, const N_CURRENCIES: usize>
 where
-    [(); N_ASSETS + 1]:,
+    [(); N_CURRENCIES + 1]:,
 {
-    advices: [Column<Advice>; N_ASSETS + 1],
+    username: Column<Advice>,
+    balances: [Column<Advice>; N_CURRENCIES],
+    range_check_configs: [RangeCheckConfig<N_BYTES>; N_CURRENCIES],
     range: Column<Fixed>,
 }
 
-impl<const N_BYTES: usize, const N_ASSETS: usize> UnivariateGrandSumConfig<N_BYTES, N_ASSETS>
+impl<const N_BYTES: usize, const N_CURRENCIES: usize>
+    UnivariateGrandSumConfig<N_BYTES, N_CURRENCIES>
 where
-    [(); N_ASSETS + 1]:,
+    [(); N_CURRENCIES + 1]:,
 {
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
-        // We need 1 advice column for the username, N_ASSETS for the balances. The advice column for the balances is passed to the `range_check_chip`
-        // The first advice column is used to store the username and should be a regular (blinded) advice column
-        // The remaining advice columns are used to store the balances and should be the unblinded advice columns
-        // This is necessary to correctly evaluate the grand sum of the balance polynomials
-        let advices: [Column<Advice>; N_ASSETS + 1] = std::array::from_fn(|i| {
-            if i == 0 {
-                meta.advice_column()
-            } else {
-                meta.unblinded_advice_column()
-            }
-        });
+        let username = meta.advice_column();
 
-        // we need a fixed column for the range check
+        let balances = [(); N_CURRENCIES].map(|_| meta.unblinded_advice_column());
+
         let range = meta.fixed_column();
 
         meta.enable_constant(range);
 
         meta.annotate_lookup_any_column(range, || "LOOKUP_MAXBITS_RANGE");
 
-        // meta.lookup_any("advice cell should be in range [0, 2^8 - 1]", |meta| {
-        //     let balance = meta.query_advice(advices[1], Rotation::cur());
-        //     let u8_range = meta.query_fixed(range, Rotation::cur());
+        // Create an empty array of range check configs
+        let mut range_check_configs = Vec::with_capacity(N_CURRENCIES);
 
-        //     vec![(balance, u8_range)]
-        // });
+        for i in 0..N_CURRENCIES {
+            let z = balances[i];
+            // Create N_BYTES advice columns for each range check chip
+            let zs = [(); N_BYTES].map(|_| meta.advice_column());
+
+            for column in zs.iter() {
+                meta.enable_equality(*column);
+            }
+
+            let range_check_config = RangeCheckChip::<N_BYTES>::configure(meta, z, zs, range);
+
+            range_check_configs.push(range_check_config);
+        }
 
         let instance = meta.instance_column();
         meta.enable_equality(instance);
 
-        Self { advices, range }
+        Self {
+            username,
+            balances,
+            range_check_configs: range_check_configs.try_into().unwrap(),
+            range,
+        }
     }
-
     /// Assigns the entries to the circuit
     /// At row i, the username is set to the username of the i-th entry, the balance is set to the balance of the i-th entry
+    /// Returns a bidimensional vector of the assigned balances to the circuit.
     pub fn assign_entries(
         &self,
         mut layouter: impl Layouter<Fp>,
-        entries: &[Entry<N_ASSETS>],
-    ) -> Result<(), Error> {
+        entries: &[Entry<N_CURRENCIES>],
+    ) -> Result<Vec<Vec<AssignedCell<Fp, Fp>>>, Error> {
         layouter.assign_region(
-            || "assign entries and accumulated balance to table",
+            || "assign entries to the table",
             |mut region| {
+                // create a bidimensional vector to store the assigned balances. The first dimension is N_USERS, the second dimension is N_CURRENCIES
+                let mut assigned_balances = vec![];
+
                 for (i, entry) in entries.iter().enumerate() {
                     region.assign_advice(
                         || "username",
-                        self.advices[0],
+                        self.username,
                         i,
                         || Value::known(big_uint_to_fp(entry.username_as_big_uint())),
                     )?;
 
+                    let mut assigned_balances_row = vec![];
+
                     for (j, balance) in entry.balances().iter().enumerate() {
-                        region.assign_advice(
+                        let assigned_balance = region.assign_advice(
                             || format!("balance {}", j),
-                            self.advices[j + 1],
+                            self.balances[j],
                             i,
                             || Value::known(big_uint_to_fp(balance)),
                         )?;
+
+                        assigned_balances_row.push(assigned_balance);
                     }
+
+                    assigned_balances.push(assigned_balances_row);
                 }
 
-                Ok(())
+                Ok(assigned_balances)
             },
         )
     }
 }
 
-impl<const N_BYTES: usize, const N_USERS: usize, const N_ASSETS: usize> Circuit<Fp>
-    for UnivariateGrandSum<N_BYTES, N_USERS, N_ASSETS>
+impl<const N_BYTES: usize, const N_USERS: usize, const N_CURRENCIES: usize> Circuit<Fp>
+    for UnivariateGrandSum<N_BYTES, N_USERS, N_CURRENCIES>
 where
-    [(); N_ASSETS + 1]:,
+    [(); N_CURRENCIES + 1]:,
 {
-    type Config = UnivariateGrandSumConfig<N_BYTES, N_ASSETS>;
+    type Config = UnivariateGrandSumConfig<N_BYTES, N_CURRENCIES>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -133,7 +156,7 @@ where
 
     /// Configures the circuit
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        UnivariateGrandSumConfig::<N_BYTES, N_ASSETS>::configure(meta)
+        UnivariateGrandSumConfig::<N_BYTES, N_CURRENCIES>::configure(meta)
     }
 
     fn synthesize(
@@ -141,14 +164,18 @@ where
         config: Self::Config,
         mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
-        // Assign entries
-        config.assign_entries(layouter.namespace(|| "assign entries"), &self.entries)?;
+        // Initiate the range check chips
+        let range_check_chips = config
+            .range_check_configs
+            .iter()
+            .map(|config| RangeCheckChip::construct(*config))
+            .collect::<Vec<_>>();
 
         // Load lookup table to perform range check on individual balances -> Each balance should be in the range [0, 2^8 - 1]
-        let range = 1 << (8);
+        let range = 1 << 8;
 
         layouter.assign_region(
-            || format!("load range check table of {} bits", 8),
+            || format!("load range check table of {} bits", 8 * N_BYTES),
             |mut region| {
                 for i in 0..range {
                     region.assign_fixed(
@@ -161,6 +188,23 @@ where
                 Ok(())
             },
         )?;
+
+        // Assign entries
+        let assigned_balances =
+            config.assign_entries(layouter.namespace(|| "assign entries"), &self.entries)?;
+
+        // Perform range check on the assigned balances
+        for i in 0..N_USERS {
+            for j in 0..N_CURRENCIES {
+                layouter.assign_region(
+                    || format!("Perform range check on balance {} of user {}", j, i),
+                    |mut region| {
+                        range_check_chips[j].assign(&mut region, &assigned_balances[i][j])?;
+                        Ok(())
+                    },
+                )?;
+            }
+        }
 
         Ok(())
     }
