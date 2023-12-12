@@ -16,9 +16,7 @@ use crate::chips::range::utils::decompose_fp_to_bytes;
 ///
 /// # Fields
 ///
-/// * `z`: Advice column - contains the element to be checked
-/// * `zs`: Advice columns for the truncated right-shifted values of the element to be checked
-/// * `range`: Fixed column for the lookup table. It contains the values from 0 to 2^8 - 1.
+/// * `zs`: Advice columns - contain the truncated right-shifted values of the element to be checked
 ///
 /// Patterned after [halo2_gadgets](https://github.com/privacy-scaling-explorations/halo2/blob/main/halo2_gadgets/src/utilities/decompose_running_sum.rs)
 #[derive(Debug, Copy, Clone)]
@@ -28,6 +26,7 @@ pub struct RangeCheckConfig<const N_BYTES: usize> {
 
 /// Helper chip that verfiies that the element witnessed in a given cell lies within a given range defined by N_BYTES.
 /// For example, Let's say we want to constraint 0x1f2f3f4f to be within the range N_BYTES=4.
+/// `z` is the advice column that contains the element to be checked.
 ///
 /// `z = 0x1f2f3f4f`
 /// `zs[0] = (0x1f2f3f4f - 0x4f) / 2^8 = 0x1f2f3f`
@@ -46,14 +45,14 @@ pub struct RangeCheckConfig<const N_BYTES: usize> {
 ///
 /// The contraints that are enforced are:
 /// 1.
-/// - z - 2^8⋅zs[0] = kz[0] ∈ lookup_u8
+/// z - 2^8⋅zs[0] = ks[0] ∈ lookup_u8
 ///
 /// 2.
 /// for i = 0..=N_BYTES - 2:
-/// - zs[i] - 2^8⋅zs[i+1] = kz[i]  ∈ lookup_u8
+///     zs[i] - 2^8⋅zs[i+1] = ks[i]  ∈ lookup_u8
 ///
 /// 3.
-/// - zs[N_BYTES - 1] == 0
+/// zs[N_BYTES - 1] == 0
 #[derive(Debug, Clone)]
 pub struct RangeCheckChip<const N_BYTES: usize> {
     config: RangeCheckConfig<N_BYTES>,
@@ -74,7 +73,7 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
         meta.annotate_lookup_any_column(range, || "LOOKUP_MAXBITS_RANGE");
 
         // Constraint that the difference between the element to be checked and the 0-th truncated right-shifted value of the element to be within the range.
-        // z - 2^8⋅zs[0] = kz[0] ∈ lookup_u8
+        // z - 2^8⋅zs[0] = ks[0] ∈ lookup_u8
         meta.lookup_any(
             "range u8 check for difference between the element to be checked and the 0-th truncated right-shifted value of the element",
             |meta| {
@@ -91,7 +90,7 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
         );
 
         // For i = 0..=N_BYTES - 2: Constraint that the difference between the i-th truncated right-shifted value and the (i+1)-th truncated right-shifted value to be within the range.
-        // - zs[i] - 2^8⋅zs[i+1] = kz[i]  ∈ lookup_u8
+        // zs[i] - 2^8⋅zs[i+1] = ks[i]  ∈ lookup_u8
         for i in 0..=N_BYTES - 2 {
             meta.lookup_any(
                 format!("range u8 check for difference between the {}-th truncated right-shifted value and the {}-th truncated right-shifted value", i, i+1).as_str(),
