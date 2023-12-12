@@ -94,15 +94,14 @@ The benchmarking included the following areas:
 
 In order to run the benchmarking, we provide a set of dummy `username, balances` entries formatted in csv files. The csv files can be downloaded as follows
 
-```
-cd benches
-mkdir csv
-cd csv
-wget https://summa-solvency.s3.eu-central-1.amazonaws.com/csv_files.tar.bz2
-tar -xjf csv_files.tar.bz2
+```bash
+mkdir -p benches/csv
+cd benches/csv
+wget https://summa-solvency.s3.eu-central-1.amazonaws.com/1_entry_2_20.zip
+unzip 1_entry_2_20.zip
 ```
 
-The csv folder will contain two subfolder namely `one_asset` and `two_assets`. Each folders will contain files named as `one_asset_entry_2_17.csv` or `two_assets_entry_2_5.csv`. 2^17 or 2^5 is the number of entries in the file that will be used to feed the merkle sum tree and, eventually, the zk prover. These entries represent the number of users of the exchange.
+The file naming convention, such as `1_entry_2_20.csv`, follows the pattern `[number of cryptocurrency]_entry_2_[power of 2]`. In this example, `1_entry` indicates a single currency, and the `2_20` part represents $2^{20}$ entries in the file. These entries, which are intended to populate the Merkle sum tree and feed the zk prover, correspond to the number of users on the exchange.
 
 To run the benches
 
@@ -112,7 +111,7 @@ You can set the following parameters to run the benches:
 
 - `LEVELS` -> the number of entries in the merkle sum tree. By default it is set to 20, which means that the benches will run for 2^20 entries.
 - `SAMPLE_SIZE` -> the number of samples to run for each bench. By default it is set to 10, which is the minimum allowed by criterion.rs
-- `N_CURRENCIES and PATH_NAME` -> the number of currencies to be used in the benchmarking. By default it is set to 1. For now you can only switch it between 1 and 2 as these are the only csv folder available. More will be added soon.
+- `N_CURRENCIES` -> the number of currencies to be used in the benchmarking. By default it is set to 1.
 
 Note that the `k` of the circuit may vary based on the LEVELS
 
@@ -120,21 +119,20 @@ Furthermore the benchmarking function `verify_zk_proof_benchmark` will also prin
 
 ## Current Benches
 
-Run on MacBook Pro 2023, M2 Pro, 32GB RAM, 12 cores
+Run on AWS m7a.8xlarge with 32 vcores and 128GB RAM
 
 2^20 entries (1048576) users, 1 currency
 
 | MST init              |
 | --------              |
-| 73.695 s              |
+| 24.272 s              |
 
 | MST init (sorted)     |
 | --------              |
-| 73.847 s              |
+| 25.480 s              |
 
 For Merkle Sum Tree Proof of Inclusion circuit
 
 | VK Gen             | Pk Gen              | Proof Generation    | Proof Verification  | Proof Size (bytes) |
 | ------------------ | ------------------- | ------------------- | ------------------- | ------------------ |
-| 183.25 ms          | 116.32 ms           | 517.98 ms           | 3.3291 ms           | 1632               |
-
+| 87.78 ms           | 123.86 ms           | 380.86 ms           | 3.7287 ms           | 1632               |
