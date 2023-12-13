@@ -11,6 +11,7 @@ dev-graph = ["halo2_proofs/dev-graph", "plotters"]
 
 [dependencies]
 halo2_proofs = { git = "https://github.com/summa-dev/halo2"}
+halo2_solidity_verifier = {path = "../../halo2-verifier-summa", features = ["evm"]}
 plotters = { version = "0.3.4", optional = true }
 rand = "0.8"
 ark-std = { version = "0.3.0", features = ["print-trace"] }
