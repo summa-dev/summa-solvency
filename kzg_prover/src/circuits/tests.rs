@@ -139,7 +139,7 @@ mod test {
         }
 
         let column_range = 0..N_CURRENCIES + 1;
-        // The Verifier verifies the inclusion of the 4th user balances
+        // The Verifier verifies the inclusion of the 4th user entry
         const N_POINTS: usize = N_CURRENCIES + 1;
         let (inclusion_verified, id_and_balance_values) = verify_user_inclusion::<N_POINTS>(
             &params,
