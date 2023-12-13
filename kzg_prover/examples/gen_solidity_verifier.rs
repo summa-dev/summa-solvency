@@ -31,12 +31,15 @@ fn main() {
 
     parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos).unwrap();
     println!("CSV parsed");
+
     println!("Instantiating the circuit...");
     let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
     let vk = keygen_vk(&params, &circuit).unwrap();
-    let generator = SolidityGenerator::new(&params, &vk, Bdfg21, 0);
-    let (verifier_solidity, _) = generator.render_separately().unwrap();
+    let pk = keygen_pk(&params, vk, &circuit).unwrap();
+
+    let generator = SolidityGenerator::new(&params, pk.get_vk(), Bdfg21, circuit.num_instances());
+    let verifier_solidity = generator.render().unwrap();
     save_solidity("Halo2Verifier.sol", &verifier_solidity);
 
     let verifier_creation_code = compile_solidity(&verifier_solidity);
@@ -46,26 +49,14 @@ fn main() {
     let mut evm = Evm::default();
     let verifier_address = evm.create(verifier_creation_code);
 
-    let deployed_verifier_solidity = verifier_solidity;
-
-    let vk = keygen_vk(&params, &circuit.clone()).unwrap();
-    let pk = keygen_pk(&params, vk, &circuit).unwrap();
-    let generator = SolidityGenerator::new(&params, pk.get_vk(), Bdfg21, 0);
-    let (verifier_solidity, vk_solidity) = generator.render_separately().unwrap();
-    save_solidity(format!("Halo2VerifyingKey-{K}.sol"), &vk_solidity);
-
-    assert_eq!(deployed_verifier_solidity, verifier_solidity);
-
-    let vk_creation_code = compile_solidity(&vk_solidity);
-    let vk_address = evm.create(vk_creation_code);
-
     println!("Encoding calldata...");
     let calldata = {
         let instances = [];
         let proof = create_proof_checked(&params, &pk, circuit, &instances, &mut rng);
-        encode_calldata(Some(vk_address.into()), &proof, &instances)
+        encode_calldata(None, &proof, &instances)
     };
     println!("Calldata encoded");
+
     let (gas_cost, output) = evm.call(verifier_address, calldata);
     assert_eq!(output, [vec![0; 31], vec![1]].concat());
     println!("Gas cost of verifying Summa with 2^{K} rows: {gas_cost}");

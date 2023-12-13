@@ -24,6 +24,10 @@ impl<const N_BYTES: usize, const N_USERS: usize, const N_ASSETS: usize>
             entries: user_entries,
         }
     }
+
+    pub fn num_instances(&self) -> usize {
+        0
+    }
 }
 
 /// Configuration for the Mst Inclusion circuit
