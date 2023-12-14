@@ -93,6 +93,7 @@ pub async fn initialize_test_env(
 
     time::sleep(Duration::from_secs(3)).await;
 
+
     (anvil, cex_addr_1, cex_addr_2, client, summa_contract)
 }
 
