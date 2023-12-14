@@ -121,6 +121,8 @@ pub fn full_prover<C: Circuit<Fp>>(
 /// Creates the univariate polynomial grand sum openings.
 /// The polynomials are evaluated at X = 0 to obtain their constant term.
 ///
+/// * `N_CURRENCIES` - the number of cryptocurrency balances
+///
 /// # Arguments
 ///
 /// * `advice_polys` - the advice polynomials
@@ -150,11 +152,12 @@ pub fn open_grand_sums<const N_CURRENCIES: usize>(
         advice_blinds,
         challenge,
     )
-    .to_vec()
 }
 
 /// Creates a KZG batch proof for the `advice_polys` polynomial openings
 /// at a point corresponding to the `user_index`
+///
+/// * `N_CURRENCIES` - the number of cryptocurrency balances
 ///
 /// # Arguments
 ///
@@ -189,11 +192,12 @@ pub fn open_user_points<const N_CURRENCIES: usize>(
         advice_blinds,
         omega_raised,
     )
-    .to_vec()
 }
 
 /// Verifies the univariate polynomial grand sum openings
 /// and calculates the grand sums
+///
+/// * `N_CURRENCIES` - the number of cryptocurrency balances
 ///
 /// # Arguments
 ///
@@ -253,6 +257,8 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
 /// Verifies the KZG batch proof of the polynomial openings being the evaluations
 /// of the advice polynomials at the point corresponding to the user index
 ///
+/// * `N_POINTS` - the size of the user entry being verified (e.g., 1 ID value + 4 balance values = 5)
+///
 /// # Arguments
 /// * `params` - the KZG parameters
 /// * `zk_snark_proof` - the ZK-SNARK proof of the circuit whose advice columns contain the user entry polynomials
@@ -260,7 +266,6 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
 /// * `column_range` - the range of the advice columns that represent user entry
 /// * `omega` - $\omega$, the generator of the $2^k$ order multiplicative subgroup used to interpolate the polynomials.
 /// * `user_index` - the index of the user whose entry is being proven
-/// * `N_POINTS` - the size of the user entry being verified (e.g., 1 ID value + 4 balance values = 5)
 ///
 /// # Returns
 /// * `bool` - whether the user entry openings are verified correctly

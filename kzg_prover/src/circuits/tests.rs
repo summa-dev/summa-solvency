@@ -24,7 +24,7 @@ mod test {
 
     #[test]
     fn test_valid_univariate_grand_sum_prover() {
-        let path = "src/csv/entry_16.csv";
+        let path = "../csv/entry_16.csv";
 
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
@@ -55,7 +55,7 @@ mod test {
         let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
-        let path = "src/csv/entry_16.csv";
+        let path = "../csv/entry_16.csv";
 
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
@@ -183,7 +183,7 @@ mod test {
         let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
-        let path = "src/csv/entry_16.csv";
+        let path = "../csv/entry_16.csv";
 
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
@@ -257,7 +257,7 @@ mod test {
     fn print_univariate_grand_sum_circuit() {
         use plotters::prelude::*;
 
-        let path = "src/csv/entry_16.csv";
+        let path = "../csv/entry_16.csv";
 
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
