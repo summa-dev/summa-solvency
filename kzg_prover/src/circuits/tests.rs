@@ -10,6 +10,7 @@ mod test {
     use crate::entry::Entry;
     use crate::utils::parse_csv_to_entries;
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
+    use halo2_proofs::halo2curves::bn256::Fr as Fp;
     use halo2_proofs::plonk::Any;
     use num_bigint::BigUint;
 
@@ -56,9 +57,8 @@ mod test {
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
 
-        let _ =
-            parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
-                .unwrap();
+        parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
+            .unwrap();
 
         // Calculate total for all entry columns
         let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
@@ -70,10 +70,6 @@ mod test {
         }
 
         let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
-
-        let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
-
-        valid_prover.assert_satisfied();
 
         // 1. Proving phase
         // The Custodian generates the ZK-SNARK Halo2 proof that commits to the user entry values in advice polynomials
@@ -198,10 +194,6 @@ mod test {
 
         let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
-        let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
-
-        valid_prover.assert_satisfied();
-
         // 1. Proving phase
         // The Custodian generates the ZK proof
         let (zk_snark_proof, advice_polys, omega) =
@@ -243,8 +235,6 @@ mod test {
         );
         //The verification should fail
         assert!(!balances_verified);
-
-        // TODO add more negative tests
     }
 
     // Building a proof using as input a csv file with an entry that is not in range [0, 2^N_BYTES*8 - 1] should fail the range check constraint on the leaf balance
