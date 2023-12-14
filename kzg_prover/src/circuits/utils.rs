@@ -118,71 +118,110 @@ pub fn full_prover<C: Circuit<Fp>>(
     (proof, advice_polys, omega)
 }
 
-/// Creates the univariate polynomial grand sum openings
-/// The challenge is set to zero to obtain the constant term of the polynomials
+/// Creates the univariate polynomial grand sum openings.
+/// The polynomials are evaluated at X = 0 to obtain their constant term.
+///
+/// * `N_CURRENCIES` - the number of cryptocurrency balances
+///
+/// # Arguments
+///
+/// * `advice_polys` - the advice polynomials
+/// * `advice_blinds` - the advice polynomials blinds
+/// * `params` - the KZG parameters
+/// * `balance_column_range` - the range of the balance columns used to calculate the grand sums
+///
+/// # Returns
+///
+/// * `Vec<u8>` - the KZG batch proof containing the quotient polynomial commitments
+/// and the evaluations of the polynomials at X = 0
 pub fn open_grand_sums<const N_CURRENCIES: usize>(
-    advice_poly: &[Polynomial<Fp, Coeff>],
-    advice_blind: &[Blind<Fp>],
+    advice_polys: &[Polynomial<Fp, Coeff>],
+    advice_blinds: &[Blind<Fp>],
     params: &ParamsKZG<Bn256>,
     balance_column_range: Range<usize>,
-) -> Vec<Vec<u8>> {
+) -> Vec<u8> {
     let challenge = Fp::zero();
-    let mut challenge_opening_proofs = Vec::new();
-    balance_column_range.for_each(|i| {
-        challenge_opening_proofs.push(
-            create_opening_proof_at_challenge::<
-                KZGCommitmentScheme<Bn256>,
-                ProverSHPLONK<'_, Bn256>,
-                Challenge255<G1Affine>,
-                Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
-            >(params, advice_poly[i].clone(), advice_blind[i], challenge)
-            .to_vec(),
-        )
-    });
-    challenge_opening_proofs
+    create_opening_proof_at_challenge::<
+        KZGCommitmentScheme<Bn256>,
+        ProverSHPLONK<'_, Bn256>,
+        Challenge255<G1Affine>,
+        Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
+    >(
+        params,
+        &advice_polys[balance_column_range],
+        advice_blinds,
+        challenge,
+    )
 }
 
-pub fn open_user_balances<const N_CURRENCIES: usize>(
-    advice_poly: &[Polynomial<Fp, Coeff>],
-    advice_blind: &[Blind<Fp>],
+/// Creates a KZG batch proof for the `advice_polys` polynomial openings
+/// at a point corresponding to the `user_index`
+///
+/// * `N_CURRENCIES` - the number of cryptocurrency balances
+///
+/// # Arguments
+///
+/// * `advice_polys` - the advice polynomials
+/// * `advice_blinds` - the advice polynomials blinds
+/// * `params` - the KZG parameters
+/// * `column_range` - the advice column range to be used for the proof
+/// * `omega` - $\omega$, the generator of the $2^k$ order multiplicative subgroup used to interpolate the polynomials.
+/// * `user_index` - the index of the user whose entry is being proven
+///
+/// # Returns
+///
+/// * `Vec<u8>` - the KZG batch proof containing the quotient polynomial commitments
+/// and the evaluations of the polynomials at the point corresponding to the `user_index`
+pub fn open_user_points<const N_CURRENCIES: usize>(
+    advice_polys: &[Polynomial<Fp, Coeff>],
+    advice_blinds: &[Blind<Fp>],
     params: &ParamsKZG<Bn256>,
-    balance_column_range: Range<usize>,
+    column_range: Range<usize>,
     omega: Fp,
     user_index: u16,
-) -> Vec<Vec<u8>> {
+) -> Vec<u8> {
     let omega_raised = omega.pow_vartime([user_index as u64]);
-    let mut balance_opening_proofs = Vec::new();
-    balance_column_range.for_each(|i| {
-        balance_opening_proofs.push(
-            create_opening_proof_at_challenge::<
-                KZGCommitmentScheme<Bn256>,
-                ProverSHPLONK<'_, Bn256>,
-                Challenge255<G1Affine>,
-                Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
-            >(
-                params,
-                advice_poly[i].clone(),
-                advice_blind[i],
-                omega_raised,
-            )
-            .to_vec(),
-        )
-    });
-    balance_opening_proofs
+    create_opening_proof_at_challenge::<
+        KZGCommitmentScheme<Bn256>,
+        ProverSHPLONK<'_, Bn256>,
+        Challenge255<G1Affine>,
+        Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
+    >(
+        params,
+        &advice_polys[column_range],
+        advice_blinds,
+        omega_raised,
+    )
 }
 
 /// Verifies the univariate polynomial grand sum openings
+/// and calculates the grand sums
+///
+/// * `N_CURRENCIES` - the number of cryptocurrency balances
+///
+/// # Arguments
+///
+/// * `params` - the KZG parameters
+/// * `zk_snark_proof` - the ZK-SNARK proof of the circuit whose advice columns contain the user balance polynomials
+/// * `grand_sum_opening_batch_proof` - the KZG batch proof of the grand sum polynomials
+/// * `polynomial_degree` - the degree of the polynomials
+/// * `balance_column_range` - the range of the advice columns that represent user balances
+///
+/// # Returns
+///
+/// * `bool` - whether the grand sum openings are verified correctly
+/// * `Vec<BigUint>` - the grand sums
 pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
     params: &ParamsKZG<Bn256>,
     zk_snark_proof: &[u8],
-    challenge_opening_proofs: Vec<Vec<u8>>,
+    grand_sum_opening_batch_proof: Vec<u8>,
     polynomial_degree: u64,
     balance_column_range: Range<usize>,
-) -> (Vec<bool>, Vec<BigUint>) {
+) -> (bool, Vec<BigUint>) {
     let mut transcript: Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>> =
         Blake2bRead::<_, _, Challenge255<_>>::init(zk_snark_proof);
 
-    //Read the commitment points for all the  advice polynomials from the proof transcript and put them into a vector
+    //Read the commitment points for all the advice polynomials from the proof transcript and put them into a vector
     let mut advice_commitments = Vec::new();
     for i in 0..N_CURRENCIES + balance_column_range.start {
         let point = transcript.read_point().unwrap();
@@ -192,82 +231,105 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
         }
     }
 
-    let mut verification_results = Vec::<bool>::new();
-    let mut constant_terms = Vec::<BigUint>::new();
+    let (verified, constant_terms) = verify_opening::<
+        KZGCommitmentScheme<Bn256>,
+        VerifierSHPLONK<'_, Bn256>,
+        Challenge255<G1Affine>,
+        Blake2bRead<_, _, Challenge255<_>>,
+        AccumulatorStrategy<_>,
+        N_CURRENCIES,
+    >(
+        params,
+        &grand_sum_opening_batch_proof,
+        Fp::zero(),
+        &advice_commitments,
+    );
 
-    for (i, advice_commitment) in advice_commitments.iter().enumerate() {
-        let (verified, constant_term) = verify_opening::<
-            KZGCommitmentScheme<Bn256>,
-            VerifierSHPLONK<'_, Bn256>,
-            Challenge255<G1Affine>,
-            Blake2bRead<_, _, Challenge255<_>>,
-            AccumulatorStrategy<_>,
-        >(
-            params,
-            &challenge_opening_proofs[i],
-            Fp::zero(),
-            *advice_commitment,
-        );
-        verification_results.push(verified);
-
-        if verified {
-            constant_terms.push(fp_to_big_uint(constant_term * Fp::from(polynomial_degree)));
-        } else {
-            constant_terms.push(BigUint::from(0u8));
-        }
-    }
-    (verification_results, constant_terms)
+    (
+        verified,
+        constant_terms
+            .iter()
+            .map(|eval| fp_to_big_uint(eval * Fp::from(polynomial_degree)))
+            .collect(),
+    )
 }
 
-pub fn verify_user_inclusion<const N_CURRENCIES: usize>(
+/// Verifies the KZG batch proof of the polynomial openings being the evaluations
+/// of the advice polynomials at the point corresponding to the user index
+///
+/// * `N_POINTS` - the size of the user entry being verified (e.g., 1 ID value + 4 balance values = 5)
+///
+/// # Arguments
+/// * `params` - the KZG parameters
+/// * `zk_snark_proof` - the ZK-SNARK proof of the circuit whose advice columns contain the user entry polynomials
+/// * `balance_opening_batch_proof` - the KZG batch proof of the user entry polynomials
+/// * `column_range` - the range of the advice columns that represent user entry
+/// * `omega` - $\omega$, the generator of the $2^k$ order multiplicative subgroup used to interpolate the polynomials.
+/// * `user_index` - the index of the user whose entry is being proven
+///
+/// # Returns
+/// * `bool` - whether the user entry openings are verified correctly
+/// * `Vec<BigUint>` - the evaluations of the advice polynomials at the point corresponding to the user index
+pub fn verify_user_inclusion<const N_POINTS: usize>(
     params: &ParamsKZG<Bn256>,
     zk_snark_proof: &[u8],
-    balance_opening_proofs: Vec<Vec<u8>>,
-    balance_column_range: Range<usize>,
+    balance_opening_batch_proof: &[u8],
+    column_range: Range<usize>,
     omega: Fp,
     user_index: u16,
-) -> (Vec<bool>, Vec<BigUint>) {
+) -> (bool, Vec<BigUint>) {
     let mut transcript: Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>> =
         Blake2bRead::<_, _, Challenge255<_>>::init(zk_snark_proof);
 
     //Read the commitment points for all the  advice polynomials from the proof transcript and put them into a vector
     let mut advice_commitments = Vec::new();
-    for i in 0..N_CURRENCIES + balance_column_range.start {
+    for i in 0..column_range.end {
         let point = transcript.read_point().unwrap();
-        // Skip the balances column commitment
-        if i != 0 {
+        //Skip advice polynomial commitments before the desired range
+        if i >= column_range.start {
             advice_commitments.push(point);
         }
     }
 
     let mut verification_results = Vec::<bool>::new();
-    let mut balances = Vec::<BigUint>::new();
 
-    for (i, advice_commitment) in advice_commitments.iter().enumerate() {
-        let (verified, eval_at_challenge) = verify_opening::<
-            KZGCommitmentScheme<Bn256>,
-            VerifierSHPLONK<'_, Bn256>,
-            Challenge255<G1Affine>,
-            Blake2bRead<_, _, Challenge255<_>>,
-            AccumulatorStrategy<_>,
-        >(
-            params,
-            &balance_opening_proofs[i],
-            omega.pow_vartime([user_index as u64]),
-            *advice_commitment,
-        );
-        verification_results.push(verified);
+    let (verified, evaluations_at_challenge) = verify_opening::<
+        KZGCommitmentScheme<Bn256>,
+        VerifierSHPLONK<'_, Bn256>,
+        Challenge255<G1Affine>,
+        Blake2bRead<_, _, Challenge255<_>>,
+        AccumulatorStrategy<_>,
+        N_POINTS,
+    >(
+        params,
+        balance_opening_batch_proof,
+        omega.pow_vartime([user_index as u64]),
+        &advice_commitments,
+    );
+    verification_results.push(verified);
 
-        if verified {
-            balances.push(fp_to_big_uint(eval_at_challenge));
-        } else {
-            balances.push(BigUint::from(0u8));
-        }
-    }
-    (verification_results, balances)
+    (
+        verified,
+        evaluations_at_challenge
+            .iter()
+            .map(|eval| fp_to_big_uint(*eval))
+            .collect(),
+    )
 }
 
-/// Creates a KZG proof for a polynomial evaluation at a challenge
+/// Creates a KZG batch proof for the polynomial evaluations at a challenge
+///
+/// # Arguments
+///
+/// * `params` - the KZG parameters
+/// * `polynomials` - the polynomials to be opened
+/// * `blinds` - the polynomials blinds
+/// * `challenge` - the challenge at which the polynomials are evaluated
+///
+/// # Returns
+///
+/// * `Vec<u8>` containing the quotient polynomial commitments
+/// and the evaluations of the polynomials at the challenge
 fn create_opening_proof_at_challenge<
     'params,
     Scheme: CommitmentScheme<Curve = halo2_proofs::halo2curves::bn256::G1Affine, Scalar = Fp>,
@@ -276,8 +338,8 @@ fn create_opening_proof_at_challenge<
     T: TranscriptWriterBuffer<Vec<u8>, Scheme::Curve, E>,
 >(
     params: &'params Scheme::ParamsProver,
-    poly: Polynomial<<Scheme as CommitmentScheme>::Scalar, Coeff>,
-    blind: Blind<Fp>,
+    polynomials: &[Polynomial<<Scheme as CommitmentScheme>::Scalar, Coeff>],
+    blinds: &[Blind<Fp>],
     challenge: Fp,
 ) -> Vec<u8>
 where
@@ -285,14 +347,23 @@ where
 {
     let mut transcript = T::init(vec![]);
 
-    // Evaluate polynomial at the challenge
-    let eval_at_challenge = eval_polynomial(&poly, challenge);
+    // Evaluate the polynomials at the challenge
+    let polynomial_evaluations = polynomials
+        .iter()
+        .map(|poly| eval_polynomial(poly, challenge))
+        .collect::<Vec<_>>();
 
-    // Write evaluation to transcript
-    transcript.write_scalar(eval_at_challenge).unwrap();
+    // Write evaluations to the transcript
+    polynomial_evaluations
+        .iter()
+        .for_each(|eval| transcript.write_scalar(*eval).unwrap());
 
-    // Prepare prover query for the polynomial
-    let queries = [ProverQuery::new(challenge, &poly, blind)].to_vec();
+    // Prepare prover queries for the polynomial
+    let queries = polynomials
+        .iter()
+        .enumerate()
+        .map(|(i, polynomial)| ProverQuery::new(challenge, polynomial, blinds[i]))
+        .collect::<Vec<_>>();
 
     // Create proof
     let prover = P::new(params);
@@ -304,8 +375,22 @@ where
     transcript.finalize()
 }
 
-/// Verifies a KZG proof for a polynomial evaluation at a challenge
-pub fn verify_opening<
+/// Verifies a KZG batch proof for a polynomial evaluation at a challenge
+/// and returns the evaluations of the polynomials at the challenge
+/// as well as the verification result
+///
+/// # Arguments
+///
+/// * `params` - the KZG parameters
+/// * `proof` - the KZG batch proof
+/// * `challenge` - the challenge at which the polynomials are evaluated
+/// * `commitment_points` - the commitment points of the polynomials
+///
+/// # Returns
+///
+/// * `bool` - whether the proof is verified correctly
+/// * `Vec<Fp>` - the evaluations of the polynomials at the challenge
+fn verify_opening<
     'a,
     'params,
     Scheme: CommitmentScheme<Curve = halo2_proofs::halo2curves::bn256::G1Affine, Scalar = Fp>,
@@ -313,26 +398,27 @@ pub fn verify_opening<
     E: EncodedChallenge<Scheme::Curve>,
     T: TranscriptReadBuffer<&'a [u8], Scheme::Curve, E>,
     Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
+    const N_POINTS: usize,
 >(
     params: &'params Scheme::ParamsVerifier,
     proof: &'a [u8],
     challenge: Fp,
-    commitment_point: G1Affine,
-) -> (bool, Fp)
+    commitment_points: &[G1Affine],
+) -> (bool, Vec<Fp>)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3>,
 {
     let mut transcript = T::init(proof);
 
-    // Read the polynomial evaluation from the transcript
-    let eval_at_challenge = transcript.read_scalar().unwrap();
+    // Read the polynomial evaluations from the transcript
+    let evaluations = (0..N_POINTS)
+        .map(|_| transcript.read_scalar().unwrap())
+        .collect::<Vec<_>>();
 
-    // Prepare verifier query for the commitment
-    let queries = [VerifierQuery::new_commitment(
-        &commitment_point,
-        challenge,
-        eval_at_challenge,
-    )];
+    // Prepare verifier queries for the commitment
+    let queries = (0..N_POINTS)
+        .map(|i| VerifierQuery::new_commitment(&commitment_points[i], challenge, evaluations[i]))
+        .collect::<Vec<_>>();
 
     // Initialize the verifier
     let verifier = V::new(params);
@@ -348,7 +434,7 @@ where
         .unwrap();
 
     // Return the result of the verification
-    (strategy.finalize(), eval_at_challenge)
+    (strategy.finalize(), evaluations)
 }
 
 /// Verifies a proof given the public setup, the verification key, the proof and the public inputs of the circuit.
