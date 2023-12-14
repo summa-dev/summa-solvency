@@ -7,7 +7,7 @@ pub mod utils;
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
 /// A struct representing a Merkle Proof.
-/// 
+///
 /// Fields:
 /// * `entry`: The entry for which the proof is generated
 /// * `root`: The root of the Merkle Sum Tree
@@ -17,7 +17,7 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 pub struct MerkleProof<const N_CURRENCIES: usize, const N_BYTES: usize>
 where
     [usize; N_CURRENCIES + 1]: Sized,
-    [usize; N_CURRENCIES + 2]: Sized, 
+    [usize; N_CURRENCIES + 2]: Sized,
 {
     pub entry: Entry<N_CURRENCIES>,
     pub root: Node<N_CURRENCIES>,

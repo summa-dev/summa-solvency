@@ -938,7 +938,8 @@ pub(crate) const MDS: [[Fp; 2]; 2] = [
             0x7782_e150_9b1d_0fdb,
             0x2b9d_4b41_10c9_ae99,
         ]),
-    ],    [
+    ],
+    [
         Fp::from_raw([
             0xf573_f431_221f_8ff9,
             0xb6c0_9d55_7013_fff1,
@@ -968,7 +969,8 @@ pub(crate) const MDS_INV: [[Fp; 2]; 2] = [
             0x4c98_62a1_d97d_1510,
             0x1eb9_e1dc_19a3_3a62,
         ]),
-    ],    [
+    ],
+    [
         Fp::from_raw([
             0x763f_7875_036b_cb02,
             0x8ce5_1690_30a2_ad69,

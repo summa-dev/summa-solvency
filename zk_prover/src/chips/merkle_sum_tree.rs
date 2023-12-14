@@ -238,14 +238,14 @@ impl<const N_CURRENCIES: usize> MerkleSumTreeChip<N_CURRENCIES> {
                 });
 
                 // Perform the assignment according to the swap at offset 1
-                let left_currency_balance = region.assign_advice(
+                let _left_currency_balance = region.assign_advice(
                     || "assign left balance after swap",
                     self.config.advice[0],
                     1,
                     || l1_val,
                 )?;
 
-                let right_currency_balance = region.assign_advice(
+                let _right_currency_balance = region.assign_advice(
                     || "assign right balance after swap",
                     self.config.advice[1],
                     1,

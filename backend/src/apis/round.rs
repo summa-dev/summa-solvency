@@ -133,7 +133,8 @@ where
         mst: Box<dyn Tree<N_CURRENCIES, N_BYTES>>,
         params_path: &str,
     ) -> Result<Snapshot<LEVELS, N_CURRENCIES, N_BYTES>, Box<dyn std::error::Error>> {
-        let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init_empty();
+        let mst_inclusion_circuit =
+            MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init_empty();
 
         // get k from ptau file name
         let parts: Vec<&str> = params_path.split("-").collect();

@@ -34,8 +34,7 @@ fn run_test(circuit_filepath: String, witness_gen_filepath: String) {
     let liabilities_state_2 =
         build_liabilities_state_cur(liabilities_state_1, merkle_proof_2.root.hash);
 
-    let merkle_proof_3 =
-        build_merkle_proof("../csv/states/entry_16_3.csv".to_string(), 0).unwrap();
+    let merkle_proof_3 = build_merkle_proof("../csv/states/entry_16_3.csv".to_string(), 0).unwrap();
     let liabilities_state_3 =
         build_liabilities_state_cur(liabilities_state_2, merkle_proof_3.root.hash);
 
