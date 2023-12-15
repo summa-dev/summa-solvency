@@ -1,4 +1,4 @@
-use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
+use crate::chips::range::range_check::{RangeCheckU64Chip, RangeCheckU64Config};
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value},
     halo2curves::bn256::Fr as Fp,
@@ -85,23 +85,23 @@ impl AddChip {
 }
 
 #[derive(Debug, Clone)]
-pub struct TestConfig<const N_BYTES: usize> {
+pub struct TestConfig {
     pub addchip_config: AddConfig,
-    pub range_check_config: RangeCheckConfig<N_BYTES>,
+    pub range_check_config: RangeCheckU64Config,
     pub range: Column<Fixed>,
 }
 
 // The test circuit takes two inputs a and b.
 // It adds them together by using the add chip to produce c = a + b.
-// Performs a range check on c that should lie in N_BYTES.
+// Performs a range check on c that should lie in [0, 2^64 - 1] range.
 #[derive(Default, Clone, Debug)]
-struct TestCircuit<const N_BYTES: usize> {
+struct TestCircuit {
     pub a: Fp,
     pub b: Fp,
 }
 
-impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
-    type Config = TestConfig<N_BYTES>;
+impl Circuit<Fp> for TestCircuit {
+    type Config = TestConfig;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -122,7 +122,7 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
         let constants = meta.fixed_column();
         meta.enable_constant(constants);
 
-        let zs = [(); N_BYTES].map(|_| meta.advice_column());
+        let zs = [(); 4].map(|_| meta.advice_column());
 
         for column in zs.iter() {
             meta.enable_equality(*column);
@@ -130,7 +130,7 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
 
         let add_selector = meta.selector();
 
-        let range_check_config = RangeCheckChip::<N_BYTES>::configure(meta, c, zs, range);
+        let range_check_config = RangeCheckU64Chip::configure(meta, c, zs, range);
 
         let addchip_config = AddChip::configure(meta, a, b, c, add_selector);
 
@@ -149,13 +149,13 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
         mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
         // Initiate the range check chip
-        let range_chip = RangeCheckChip::construct(config.range_check_config);
+        let range_chip = RangeCheckU64Chip::construct(config.range_check_config);
 
         // Load the lookup table
-        let range = 1 << 8;
+        let range = 1 << 16;
 
         layouter.assign_region(
-            || format!("load range check table of {} bits", 8 * N_BYTES),
+            || format!("load range check table of 64 bits"),
             |mut region| {
                 for i in 0..range {
                     region.assign_fixed(
@@ -189,77 +189,49 @@ impl<const N_BYTES: usize> Circuit<Fp> for TestCircuit<N_BYTES> {
 
 #[cfg(test)]
 mod testing {
+    use crate::utils::big_uint_to_fp;
+
     use super::TestCircuit;
     use halo2_proofs::{
         dev::{FailureLocation, MockProver, VerifyFailure},
         halo2curves::bn256::Fr as Fp,
         plonk::Any,
     };
+    use num_bigint::BigUint;
 
-    // a = (1 << 16) - 2 = 0xfffe
+    // a = (1 << 64) - 2
     // b = 1
-    // c = a + b = 0xffff
-    // All the values are within 2 bytes range.
+    // c = a + b
+    // c is within 8 bytes range.
     #[test]
-    fn test_none_overflow_16bits() {
-        let k = 9;
+    fn test_none_overflow_64bits() {
+        let k = 17;
 
-        // a: new value
-        let a = Fp::from((1 << 16) - 2);
+        let a = BigUint::from(1_u64) << 64;
+        let a = a - 2_u64;
+        let a = big_uint_to_fp(&a);
         let b = Fp::from(1);
 
-        let circuit = TestCircuit::<2> { a, b };
+        let circuit = TestCircuit { a, b };
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         prover.assert_satisfied();
     }
 
-    // a = (1 << 16) - 2 = 0xfffe
+    // a = (1 << 64) - 2
     // b = 2
-    // c = a + b = 0x10000
-    // a and b are within 2 bytes range.
-    // c overflows 2 bytes so the circuit should fail.
+    // c = a + b
+    // c overflows 8 bytes range.
     #[test]
-    fn test_overflow_16bits() {
-        let k = 9;
+    fn test_overflow_64bits() {
+        let k = 17;
 
-        let a = Fp::from((1 << 16) - 2);
+        let a = BigUint::from(1_u64) << 64;
+        let a = a - 2_u64;
+        let a = big_uint_to_fp(&a);
         let b = Fp::from(2);
 
-        let circuit = TestCircuit::<2> { a, b };
+        let circuit = TestCircuit { a, b };
         let invalid_prover = MockProver::run(k, &circuit, vec![]).unwrap();
-        assert_eq!(
-            invalid_prover.verify(),
-            Err(vec![
-                VerifyFailure::Permutation {
-                    column: (Any::Fixed, 1).into(),
-                    location: FailureLocation::OutsideRegion { row: 0 }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::advice(), 4).into(),
-                    location: FailureLocation::InRegion {
-                        region: (2, "Perform range check on c").into(),
-                        offset: 0
-                    }
-                },
-            ])
-        );
-    }
-
-    // a is the max value within the range (32 bits / 4 bytes)
-    // a = 0x-ff-ff-ff-ff
-    // b = 1
-    // a and b are within 4 bytes range.
-    // c overflows 4 bytes so the circuit should fail.
-    #[test]
-    fn test_overflow_32bits() {
-        let k = 9;
-
-        let a = Fp::from(0xffffffff);
-        let b = Fp::from(1);
-
-        let circuit = TestCircuit::<4> { a, b };
-        let invalid_prover = MockProver::run(k, &circuit, vec![]).unwrap();
-
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
@@ -290,7 +262,7 @@ mod testing {
             .titled("Range Check Layout", ("sans-serif", 60))
             .unwrap();
 
-        let circuit = TestCircuit::<4> {
+        let circuit = TestCircuit {
             a: Fp::from(0x1f2f3f4f),
             b: Fp::from(1),
         };

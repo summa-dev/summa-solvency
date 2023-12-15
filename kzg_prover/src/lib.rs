@@ -6,7 +6,7 @@
 /// Zk circuit subcomponents aka chips.
 pub mod chips;
 /// Zk circuits with a full prover and verifier. A circuit can be viewed as an assembly of chips.
-pub mod circuits;
+// pub mod circuits;
 pub mod cryptocurrency;
 pub mod entry;
 /// Utilities to build the merkle sum tree data structure. No zk proof in here.
