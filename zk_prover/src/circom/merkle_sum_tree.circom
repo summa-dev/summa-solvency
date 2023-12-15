@@ -7,12 +7,12 @@ include "./node_modules/circomlib/circuits/mux1.circom";
 /*
 Inputs:
 ---------
-- left_balances[N_ASSETS] : Balances of the left node
-- right_balances[N_ASSETS] : Balances of the right node
+- left_balances[N_CURRENCIES] : Balances of the left node
+- right_balances[N_CURRENCIES] : Balances of the right node
 
 Outputs:
 ---------
-- out_balances[N_ASSETS] : Each element of `out_balances` is the sum of the corresponding elements in left_balances and right_balances. 
+- out_balances[N_CURRENCIES] : Each element of `out_balances` is the sum of the corresponding elements in left_balances and right_balances. 
 Ex. out_balances[0] = left_balances[0] + right_balances[0]
 
 Functionality:
@@ -27,15 +27,15 @@ When the output will be used as an input to another summation. When the next lev
 
 */  
 
-template Summer(N_ASSETS, N_BYTES) {
-    signal input left_balances[N_ASSETS];
-    signal input right_balances[N_ASSETS];
-    signal output out_balances[N_ASSETS];
+template Summer(N_CURRENCIES, N_BYTES) {
+    signal input left_balances[N_CURRENCIES];
+    signal input right_balances[N_CURRENCIES];
+    signal output out_balances[N_CURRENCIES];
 
-    component left_in_range[N_ASSETS];
-    component right_in_range[N_ASSETS];
+    component left_in_range[N_CURRENCIES];
+    component right_in_range[N_CURRENCIES];
 
-    for (var i = 0; i < N_ASSETS; i++) {
+    for (var i = 0; i < N_CURRENCIES; i++) {
         left_in_range[i] = Num2Bits(8*N_BYTES);
         right_in_range[i] = Num2Bits(8*N_BYTES);
 
@@ -50,21 +50,21 @@ template Summer(N_ASSETS, N_BYTES) {
 Inputs:
 ---------
 - left_hash: Hash of the left node
-- left_balances[N_ASSETS] : Balances of the left node
+- left_balances[N_CURRENCIES] : Balances of the left node
 - right_hash: Hash of the right node
-- right_balances[N_ASSETS] : Balances of the right node
+- right_balances[N_CURRENCIES] : Balances of the right node
 - s: binary selector
 
 Outputs:
 ---------
 - swapped_left_hash: left_hash if s = 0, right_hash if s = 1
-- swapped_left_balances[N_ASSETS]: left_balances if s = 0, right_balances if s = 1
+- swapped_left_balances[N_CURRENCIES]: left_balances if s = 0, right_balances if s = 1
 - swapped_right_hash: right_hash if s = 0, left_hash if s = 1
-- swapped_right_balances[N_ASSETS]: right_balances if s = 0, left_balances if s = 1
+- swapped_right_balances[N_CURRENCIES]: right_balances if s = 0, left_balances if s = 1
 
 Parameters:
 ------------
-- N_ASSETS: number of assets for each user
+- N_CURRENCIES: number of currencies for each user
 
 Functionality:
 --------------
@@ -72,57 +72,57 @@ Functionality:
 2. Constraint that s is either 0 or 1
 */
 
-template Swapper(N_ASSETS) {
+template Swapper(N_CURRENCIES) {
     signal input left_hash;
-    signal input left_balances[N_ASSETS];
+    signal input left_balances[N_CURRENCIES];
     signal input right_hash;
-    signal input right_balances[N_ASSETS];
+    signal input right_balances[N_CURRENCIES];
     signal input s;
     signal output swapped_left_hash;
-    signal output swapped_left_balances[N_ASSETS];
+    signal output swapped_left_balances[N_CURRENCIES];
     signal output swapped_right_hash;
-    signal output swapped_right_balances[N_ASSETS];
+    signal output swapped_right_balances[N_CURRENCIES];
 
     s * (1 - s) === 0;
 
-    component mux = MultiMux1(2 + 2*N_ASSETS);
+    component mux = MultiMux1(2 + 2*N_CURRENCIES);
     
     mux.c[0][0] <== left_hash;
 
-    for (var i = 0; i < N_ASSETS; i++) {
+    for (var i = 0; i < N_CURRENCIES; i++) {
         mux.c[1 + i][0] <== left_balances[i];
     }
 
-    mux.c[1 + N_ASSETS][0] <== right_hash;
+    mux.c[1 + N_CURRENCIES][0] <== right_hash;
 
-    for (var i = 0; i < N_ASSETS; i++) {
-        mux.c[2 + N_ASSETS + i][0] <== right_balances[i];
+    for (var i = 0; i < N_CURRENCIES; i++) {
+        mux.c[2 + N_CURRENCIES + i][0] <== right_balances[i];
     }
 
     mux.c[0][1] <== right_hash;
 
-    for (var i = 0; i < N_ASSETS; i++) {
+    for (var i = 0; i < N_CURRENCIES; i++) {
         mux.c[1 + i][1] <== right_balances[i];
     }
 
-    mux.c[1 + N_ASSETS][1] <== left_hash;
+    mux.c[1 + N_CURRENCIES][1] <== left_hash;
 
-    for (var i = 0; i < N_ASSETS; i++) {
-        mux.c[2 + N_ASSETS + i][1] <== left_balances[i];
+    for (var i = 0; i < N_CURRENCIES; i++) {
+        mux.c[2 + N_CURRENCIES + i][1] <== left_balances[i];
     }
 
     mux.s <== s;
 
     swapped_left_hash <== mux.out[0];
 
-    for (var i = 0; i < N_ASSETS; i++) {
+    for (var i = 0; i < N_CURRENCIES; i++) {
         swapped_left_balances[i] <== mux.out[1 + i];
     }
 
-    swapped_right_hash <== mux.out[1 + N_ASSETS];
+    swapped_right_hash <== mux.out[1 + N_CURRENCIES];
 
-    for (var i = 0; i < N_ASSETS; i++) {
-        swapped_right_balances[i] <== mux.out[2 + N_ASSETS + i];
+    for (var i = 0; i < N_CURRENCIES; i++) {
+        swapped_right_balances[i] <== mux.out[2 + N_CURRENCIES + i];
     }
 }
 
@@ -130,43 +130,43 @@ template Swapper(N_ASSETS) {
 Inputs:
 ---------
 - left_hash: Hash of the left node
-- left_balances[N_ASSETS] : Balances of the left node
+- left_balances[N_CURRENCIES] : Balances of the left node
 - right_hash: Hash of the right node
-- right_balances[N_ASSETS] : Balances of the right node
+- right_balances[N_CURRENCIES] : Balances of the right node
 
 Outputs:
 ---------
-- hash: poseidon hash of (left_hash, left_balances[0], ..., left_balances[N_ASSETS - 1], right_hash, right_balances[0], ..., right_balances[N_ASSETS - 1])
+- hash: poseidon hash of (left_hash, left_balances[0], ..., left_balances[N_CURRENCIES - 1], right_hash, right_balances[0], ..., right_balances[N_CURRENCIES - 1])
 
 Parameters:
 ------------
-- N_ASSETS: number of assets for each user
+- N_CURRENCIES: number of currencies for each user
 
 Functionality:
 --------------
 1. Perform the hashing of two nodes belonging to a level of the merkle sum tree
 */
 
-template Hasher(N_ASSETS) {
+template Hasher(N_CURRENCIES) {
     signal input left_hash;
-    signal input left_balances[N_ASSETS];
+    signal input left_balances[N_CURRENCIES];
     signal input right_hash;
-    signal input right_balances[N_ASSETS];
+    signal input right_balances[N_CURRENCIES];
     signal output hash;
 
     // 1.
-    component hasher = Poseidon(2 + 2*N_ASSETS);
+    component hasher = Poseidon(2 + 2*N_CURRENCIES);
 
     hasher.inputs[0] <== left_hash;
 
-    for (var i = 0; i < N_ASSETS; i++) {
+    for (var i = 0; i < N_CURRENCIES; i++) {
         hasher.inputs[1 + i] <== left_balances[i];
     }
 
-    hasher.inputs[1 + N_ASSETS] <== right_hash;
+    hasher.inputs[1 + N_CURRENCIES] <== right_hash;
 
-    for (var i = 0; i < N_ASSETS; i++) {
-        hasher.inputs[2 + N_ASSETS + i] <== right_balances[i];
+    for (var i = 0; i < N_CURRENCIES; i++) {
+        hasher.inputs[2 + N_CURRENCIES + i] <== right_balances[i];
     }
 
     hash <== hasher.out;
@@ -177,9 +177,9 @@ template Hasher(N_ASSETS) {
 Inputs:
 ---------
 - leaf_hash: hash of the leaf node that we want to prove inclusion for
-- leaf_balances[N_ASSETS]: balances of the leaf node that we want to prove inclusion for
+- leaf_balances[N_CURRENCIES]: balances of the leaf node that we want to prove inclusion for
 - path_element_hashes[LEVELS]: hashes of elements of the merkle path
-- path_element_balances[LEVELS][N_ASSETS]: balances of the elements of the merkle path
+- path_element_balances[LEVELS][N_CURRENCIES]: balances of the elements of the merkle path
 - path_indices[LEVELS]: binary selector that indicates whether given path_element is on the left or right side of merkle path
 
 Outputs:
@@ -189,7 +189,7 @@ Outputs:
 Parameters:
 ------------
 - LEVELS: number of levels in the merkle sum tree
-- N_ASSETS: number of assets for each user
+- N_CURRENCIES: number of currencies for each user
 - N_BYTES: range of the balances of the users
 
 Functionality:
@@ -203,11 +203,11 @@ Notes:
 ------
 - The summer is performed before the swapper because the swap doesn't influence the summation.
 */
-template MerkleSumTreeInclusion(LEVELS, N_ASSETS, N_BYTES) {
+template MerkleSumTreeInclusion(LEVELS, N_CURRENCIES, N_BYTES) {
     signal input leaf_hash;
-    signal input leaf_balances[N_ASSETS];
+    signal input leaf_balances[N_CURRENCIES];
     signal input path_element_hashes[LEVELS];
-    signal input path_element_balances[LEVELS][N_ASSETS];
+    signal input path_element_balances[LEVELS][N_CURRENCIES];
     signal input path_indices[LEVELS];
 
     signal output root_hash;
@@ -218,13 +218,13 @@ template MerkleSumTreeInclusion(LEVELS, N_ASSETS, N_BYTES) {
 
     for (var i = 0; i < LEVELS; i++) {
         // 1.
-        summers[i] = Summer(N_ASSETS, N_BYTES);
+        summers[i] = Summer(N_CURRENCIES, N_BYTES);
 
         summers[i].left_balances <== i == 0 ? leaf_balances : summers[i - 1].out_balances;
         summers[i].right_balances <== path_element_balances[i];
 
         // 2.
-        swappers[i] = Swapper(N_ASSETS);
+        swappers[i] = Swapper(N_CURRENCIES);
 
         swappers[i].left_hash <== i == 0 ? leaf_hash : hashers[i - 1].hash;
         swappers[i].left_balances <== i == 0 ? leaf_balances : summers[i - 1].out_balances;
@@ -233,7 +233,7 @@ template MerkleSumTreeInclusion(LEVELS, N_ASSETS, N_BYTES) {
         swappers[i].s <== path_indices[i];
 
         // 3.
-        hashers[i] = Hasher(N_ASSETS);
+        hashers[i] = Hasher(N_CURRENCIES);
 
         hashers[i].left_hash <== swappers[i].swapped_left_hash;
         hashers[i].left_balances <== swappers[i].swapped_left_balances;
@@ -243,9 +243,9 @@ template MerkleSumTreeInclusion(LEVELS, N_ASSETS, N_BYTES) {
     }
 
     // 4. 
-    component root_balance_in_range[N_ASSETS];
+    component root_balance_in_range[N_CURRENCIES];
 
-    for (var i = 0; i < N_ASSETS; i++) {
+    for (var i = 0; i < N_CURRENCIES; i++) {
         root_balance_in_range[i] = Num2Bits(8*N_BYTES);
         root_balance_in_range[i].in <== summers[LEVELS - 1].out_balances[i];
     }

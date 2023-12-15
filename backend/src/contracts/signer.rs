@@ -2,13 +2,13 @@ use ethers::{
     prelude::SignerMiddleware,
     providers::{Http, Middleware, Provider},
     signers::{LocalWallet, Signer},
-    types::Address,
+    types::{Address, U256},
 };
 use serde_json::Value;
 use std::{error::Error, fs::File, io::BufReader, path::Path, str::FromStr, sync::Arc};
 use tokio::sync::Mutex;
 
-use super::generated::summa_contract::{AddressOwnershipProof, Asset};
+use super::generated::summa_contract::{AddressOwnershipProof, Cryptocurrency};
 use crate::contracts::generated::summa_contract::Summa;
 
 pub enum AddressInput {
@@ -104,21 +104,24 @@ impl SummaSigner {
         Ok(())
     }
 
-    pub async fn submit_proof_of_solvency(
+    pub async fn submit_commitment(
         &self,
-        mst_root: ethers::types::U256,
-        assets: Vec<Asset>,
-        proof: ethers::types::Bytes,
-        timestamp: ethers::types::U256,
+        mst_root: U256,
+        root_sums: Vec<U256>,
+        cryptocurrencies: Vec<Cryptocurrency>,
+        timestamp: U256,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let lock_guard = self.nonce_lock.lock().await;
 
-        let submit_proof_of_solvency_call = &self
-            .summa_contract
-            .submit_proof_of_solvency(mst_root, assets, proof, timestamp);
+        let submit_liability_commitment = &self.summa_contract.submit_commitment(
+            mst_root,
+            root_sums,
+            cryptocurrencies,
+            timestamp,
+        );
 
         // To prevent nonce collision, we lock the nonce before sending the transaction
-        let tx = submit_proof_of_solvency_call.send().await?;
+        let tx = submit_liability_commitment.send().await?;
 
         // Wait for the pending transaction to be mined
         tx.await?;

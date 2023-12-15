@@ -9,11 +9,6 @@ fn main() {
             "Summa",
         ),
         (
-            "src/contracts/generated/solvency_verifier.rs",
-            "SolvencyVerifier",
-            "SolvencyVerifier",
-        ),
-        (
             "src/contracts/generated/inclusion_verifier.rs",
             "InclusionVerifier",
             "InclusionVerifier",

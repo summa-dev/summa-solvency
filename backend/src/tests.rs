@@ -1,7 +1,8 @@
 use std::{sync::Arc, time::Duration};
 
 use ethers::{
-    prelude::{ContractFactory, SignerMiddleware},
+    abi::Token,
+    prelude::SignerMiddleware,
     providers::{Http, Middleware, Provider},
     signers::{LocalWallet, Signer},
     types::{H160, U256},
@@ -9,11 +10,7 @@ use ethers::{
 };
 use tokio::time;
 
-use crate::contracts::generated::{
-    inclusion_verifier::InclusionVerifier, solvency_verifier::SolvencyVerifier,
-    summa_contract::Summa,
-};
-use crate::contracts::mock::mock_erc20::{MockERC20, MOCKERC20_ABI, MOCKERC20_BYTECODE};
+use crate::contracts::generated::{inclusion_verifier::InclusionVerifier, summa_contract::Summa};
 
 // Setup test environment on the anvil instance
 pub async fn initialize_test_env(
@@ -53,7 +50,6 @@ pub async fn initialize_test_env(
     ));
 
     // Send RPC requests with `anvil_setBalance` method via provider to set ETH balance of `cex_addr_1` and `cex_addr_2`
-    // This is for meeting `proof_of_solvency` test conditions
     for addr in [cex_addr_1, cex_addr_2].iter().copied() {
         let _res = client
             .provider()
@@ -61,65 +57,42 @@ pub async fn initialize_test_env(
             .await;
     }
 
-    // Mock ERC20 contract deployment
-    // Creating a factory to deploy a mock ERC20 contract
-    let factory = ContractFactory::new(
-        MOCKERC20_ABI.to_owned(),
-        MOCKERC20_BYTECODE.to_owned(),
-        Arc::clone(&client),
-    );
-
-    // Deploy Mock ERC20 contract
-    let mock_erc20_deployment = factory.deploy(()).unwrap().send().await.unwrap();
-
-    // Creating an interface for the deployed mock ERC20 contract
-    let mock_erc20 = MockERC20::new(mock_erc20_deployment.address(), Arc::clone(&client));
-
-    // Mint some token to `cex_addr_2`
-    let mint_call = mock_erc20.mint(cex_addr_2, U256::from(556863));
-    assert!(mint_call.send().await.is_ok());
-
-    time::sleep(Duration::from_millis(500)).await;
-
-    if block_time != None {
+    if block_time.is_some() {
         time::sleep(Duration::from_secs(block_time.unwrap())).await;
     };
 
-    // Deploy verifier contracts before deploy Summa contract
-    let solvency_verifer_contract = SolvencyVerifier::deploy(Arc::clone(&client), ())
+    let inclusion_verifier_contract = InclusionVerifier::deploy(Arc::clone(&client), ())
         .unwrap()
         .send()
         .await
         .unwrap();
 
-    if block_time != None {
+    if block_time.is_some() {
         time::sleep(Duration::from_secs(block_time.unwrap())).await;
     };
 
-    let inclusion_verifer_contract = InclusionVerifier::deploy(Arc::clone(&client), ())
-        .unwrap()
-        .send()
-        .await
-        .unwrap();
+    // The number of levels of the Merkle sum tree
+    let mst_levels = 4;
+    //The number of cryptocurrencies supported by the Merkle sum tree
+    let currencies_count = 2;
+    // The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
+    let balance_byte_range = 14;
 
-    if block_time != None {
-        time::sleep(Duration::from_secs(block_time.unwrap())).await;
-    };
-
+    let args: &[Token] = &[
+        Token::Address(inclusion_verifier_contract.address()),
+        Token::Uint(mst_levels.into()),
+        Token::Uint(currencies_count.into()),
+        Token::Uint(balance_byte_range.into()),
+    ];
     // Deploy Summa contract
-    let summa_contract = Summa::deploy(
-        Arc::clone(&client),
-        (
-            solvency_verifer_contract.address(),
-            inclusion_verifer_contract.address(),
-        ),
-    )
-    .unwrap()
-    .send()
-    .await
-    .unwrap();
+    let summa_contract = Summa::deploy(Arc::clone(&client), args)
+        .unwrap()
+        .send()
+        .await
+        .unwrap();
 
     time::sleep(Duration::from_secs(3)).await;
+
 
     (anvil, cex_addr_1, cex_addr_2, client, summa_contract)
 }
@@ -133,6 +106,7 @@ mod test {
         utils::to_checksum,
     };
     use std::{convert::TryFrom, error::Error};
+    use summa_solvency::merkle_sum_tree::MerkleSumTree;
     use tokio::{
         join,
         time::{sleep, Duration},
@@ -141,8 +115,8 @@ mod test {
     use crate::apis::{address_ownership::AddressOwnership, round::Round};
     use crate::contracts::{
         generated::summa_contract::{
-            AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Asset,
-            SolvencyProofSubmittedFilter,
+            AddressOwnershipProof, AddressOwnershipProofSubmittedFilter, Cryptocurrency,
+            LiabilitiesCommitmentSubmittedFilter,
         },
         signer::{AddressInput, SummaSigner},
     };
@@ -170,7 +144,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_concurrent_proof_submissions() -> Result<(), Box<dyn Error>> {
+    async fn test_concurrent_sumbit_commitments() -> Result<(), Box<dyn Error>> {
         let (anvil, _, _, _, summa_contract) = initialize_test_env(Some(1)).await;
 
         // This test ensures that two proofs, when dispatched concurrently, do not result in nonce collisions.
@@ -183,32 +157,22 @@ mod test {
         )
         .await?;
 
-        // At least one address ownership proof should be submitted before submitting solvency proof
-        let mut address_ownership_client =
-            AddressOwnership::new(&signer, "src/apis/csv/signatures.csv").unwrap();
-
-        address_ownership_client
-            .dispatch_proof_of_address_ownership()
-            .await?;
-
-        // Do sumbit solvency proofs simultaneously
-        let asset_csv = "src/apis/csv/assets.csv";
-        let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
         let params_path = "ptau/hermez-raw-11";
+        let entry_csv = "../csv/entry_16.csv";
+        let mst = MerkleSumTree::from_csv(entry_csv).unwrap();
 
         let mut round_one =
-            Round::<4, 2, 14>::new(&signer, entry_csv, asset_csv, params_path, 1).unwrap();
-        let mut round_two =
-            Round::<4, 2, 14>::new(&signer, entry_csv, asset_csv, params_path, 2).unwrap();
+            Round::<4, 2, 14>::new(&signer, Box::new(mst.clone()), params_path, 1).unwrap();
+        let mut round_two = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, 2).unwrap();
 
-        // Checking block number before sending transaction of proof of solvency
+        // Checking block number before sending transaction of liability commitment
         let outer_provider: Provider<Http> = Provider::try_from(anvil.endpoint().as_str())?;
         let start_block_number = outer_provider.get_block_number().await?;
 
-        // Send two solvency proofs simultaneously
+        // Send two commitments simultaneously
         let (round_one_result, round_two_result) = join!(
-            round_one.dispatch_solvency_proof(),
-            round_two.dispatch_solvency_proof()
+            round_one.dispatch_commitment(),
+            round_two.dispatch_commitment()
         );
 
         // Check two blocks has been mined
@@ -239,7 +203,7 @@ mod test {
         .await?;
 
         let mut address_ownership_client =
-            AddressOwnership::new(&signer, "src/apis/csv/signatures.csv").unwrap();
+            AddressOwnership::new(&signer, "../csv/signatures.csv").unwrap();
 
         address_ownership_client
             .dispatch_proof_of_address_ownership()
@@ -272,53 +236,47 @@ mod test {
     );
 
         // Initialize round
-        let asset_csv = "src/apis/csv/assets.csv";
-        let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
         let params_path = "ptau/hermez-raw-11";
+        let entry_csv = "../csv/entry_16.csv";
 
-        let mut round =
-            Round::<4, 2, 14>::new(&signer, entry_csv, asset_csv, params_path, 1).unwrap();
+        let mst = MerkleSumTree::from_csv(entry_csv).unwrap();
+        let mut round = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, 1).unwrap();
 
-        // Verify solvency proof
-        let mut solvency_proof_logs = summa_contract
-            .solvency_proof_submitted_filter()
+        let mut liability_commitment_logs = summa_contract
+            .liabilities_commitment_submitted_filter()
             .query()
             .await?;
 
-        assert_eq!(solvency_proof_logs.len(), 0);
+        assert_eq!(liability_commitment_logs.len(), 0);
 
-        // Dispatch solvency proof
-        let assets = [
-            Asset {
-                asset_name: "ETH".to_string(),
-                chain: "ETH".to_string(),
-                amount: U256::from(556863),
-            },
-            Asset {
-                asset_name: "USDT".to_string(),
-                chain: "ETH".to_string(),
-                amount: U256::from(556863),
-            },
-        ];
+        // Send liability commitment transaction
+        round.dispatch_commitment().await?;
 
-        // Send sovlecy proof to contract
-        round.dispatch_solvency_proof().await?;
-
-        // After sending transaction of proof of solvency, logs should be updated
-        solvency_proof_logs = summa_contract
-            .solvency_proof_submitted_filter()
+        // After sending transaction of liability commitment, logs should be updated
+        liability_commitment_logs = summa_contract
+            .liabilities_commitment_submitted_filter()
             .query()
             .await?;
 
-        assert_eq!(solvency_proof_logs.len(), 1);
+        assert_eq!(liability_commitment_logs.len(), 1);
         assert_eq!(
-            solvency_proof_logs[0],
-            SolvencyProofSubmittedFilter {
+            liability_commitment_logs[0],
+            LiabilitiesCommitmentSubmittedFilter {
                 timestamp: U256::from(1),
-                mst_root: "0x2E021D9BF99C5BD7267488B6A7A5CF5F7D00222A41B6A9B971899C44089E0C5"
+                mst_root: "0x18d6ab953235a811edffa4cead74ea045e7cd2085771a2269d59dca054c955b1"
                     .parse()
                     .unwrap(),
-                assets: assets.to_vec()
+                root_balances: vec![U256::from(556862), U256::from(556862)],
+                cryptocurrencies: vec![
+                    Cryptocurrency {
+                        name: "ETH".to_string(),
+                        chain: "ETH".to_string(),
+                    },
+                    Cryptocurrency {
+                        name: "USDT".to_string(),
+                        chain: "ETH".to_string(),
+                    },
+                ],
             }
         );
 

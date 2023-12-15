@@ -3766,6 +3766,7 @@ dependencies = [
  "futures",
  "halo2_proofs",
  "num-bigint 0.4.3",
+ "num-traits",
  "reqwest",
  "serde",
  "serde_json",

@@ -7,14 +7,15 @@ use serde_json::{from_reader, to_string_pretty};
 use summa_backend::{
     apis::{
         address_ownership::AddressOwnership,
+        leaf_hash_from_inputs,
         round::{MstInclusionProof, Round},
     },
     contracts::signer::{AddressInput, SummaSigner},
     tests::initialize_test_env,
 };
-use summa_solvency::merkle_sum_tree::utils::generate_leaf_hash;
+use summa_solvency::merkle_sum_tree::MerkleSumTree;
 
-const N_ASSETS: usize = 2;
+const N_CURRENCIES: usize = 2;
 const USER_INDEX: usize = 0;
 
 #[tokio::main]
@@ -24,14 +25,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // 1. Submit ownership proof
     //
-    // Each CEX prepares its own `signature` CSV file.
-    let signature_csv_path = "src/apis/csv/signatures.csv";
-
     // The signer instance would be shared with `address_ownership` and `round` instances
     //
-    // Using AddressInput::Address to directly provide the summa_contract's address.
-    // For deployed contracts, if the address is stored in a config file,
-    // you can alternatively use AddressInput::Path to specify the file's path.
+    // Using `AddressInput::Address`` to directly provide the summa_contract's address.
+    //
+    // If the address of a deployed contract is stored in a configuration file,
+    // you can use `AddressInput::Path` to provide the path to that file.
+    //
+    // For example, if the contract address is in "backend/src/contracts/deployments.json" located
+    // you would use `AddressInput::Path` as follows:`AddressInput::Path("backend/src/contracts/deployments.json".to_string())`.
+    //
     let signer = SummaSigner::new(
         "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
         anvil.endpoint().as_str(),
@@ -39,6 +42,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .await?;
 
+    // Each CEX prepares its own `signature` CSV file.
+    let signature_csv_path = "../csv/signatures.csv";
     let mut address_ownership_client = AddressOwnership::new(&signer, signature_csv_path).unwrap();
 
     // Dispatch the proof of address ownership.
@@ -49,22 +54,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     println!("1. Ownership proofs are submitted successfully!");
 
-    // 2. Submit solvency proof
+    // 2. Submit Commitment
     //
-    // Initialize the `Round` instance to submit the proof of solvency.
-    let asset_csv = "src/apis/csv/assets.csv";
-    let entry_csv = "../zk_prover/src/merkle_sum_tree/csv/entry_16.csv";
+    // Initialize the `Round` instance to submit the liability commitment.
     let params_path = "ptau/hermez-raw-11";
+    let entry_csv = "../csv/entry_16.csv";
+    let mst = MerkleSumTree::from_csv(entry_csv).unwrap();
 
-    // Using the `round` instance, the solvency proof is dispatched to the Summa contract with the `dispatch_solvency_proof` method.
+    // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
-    let mut round =
-        Round::<4, 2, 14>::new(&signer, entry_csv, asset_csv, params_path, timestamp).unwrap();
+    let mut round = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, timestamp).unwrap();
 
-    // Sends the solvency proof, which should ideally complete without errors.
-    round.dispatch_solvency_proof().await?;
+    // Sends the commitment, which should ideally complete without errors.
+    round.dispatch_commitment().await?;
 
-    println!("2. Solvency proof is submitted successfully!");
+    println!("2. Commitment is submitted successfully!");
 
     // 3. Generate Inclusion Proof
     //
@@ -100,19 +104,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // It's assumed that both `user_name` and `balances` are provided by the CEX.
     // The `balances` represent the user's balances on the CEX at `snapshot_time`.
     let user_name = "dxGaEAii".to_string();
-    let balances = vec![11888, 41163];
+    let balances = vec!["11888".to_string(), "41163".to_string()];
 
     let leaf_hash = public_inputs[0];
     assert_eq!(
         leaf_hash,
-        generate_leaf_hash::<N_ASSETS>(user_name.clone(), balances.clone())
+        leaf_hash_from_inputs::<N_CURRENCIES>(user_name.clone(), balances.clone())
     );
 
     // Get `mst_root` from contract. the `mst_root` is disptached by CEX with specific time `snapshot_time`.
-    let mst_root = summa_contract.mst_roots(snapshot_time).call().await?;
+    let commitment = summa_contract.commitments(snapshot_time).call().await?;
 
     // Match the `mst_root` with the `root_hash` derived from the proof.
-    assert_eq!(mst_root, public_inputs[1]);
+    assert_eq!(commitment, public_inputs[1]);
 
     // Validate the inclusion proof using the contract verifier.
     let proof = inclusion_proof.get_proof();

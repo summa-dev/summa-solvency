@@ -6,13 +6,14 @@ This directory contains the backend implementation for the Summa Proof of Solven
 
 ### Round
 
-The `Round` component represents a specific period or cycle in the Summa Proof of Solvency protocol. It encapsulates the state of the system at a given time, including the snapshot of assets and liabilities, as well as the associated proofs. 
- The `Round` struct integrates with the `Snapshot` and `SummaSigner` to facilitate the generation and submission of proofs to the contract.
+The `Round` component represents a specific period or cycle in the Summa Proof of Solvency protocol. It encapsulates the state of the system at a given time, including the snapshot of assets and liabilities, as well as the associated proofs.
+The `Round` struct integrates with the `Snapshot` and `SummaSigner` to facilitate the generation and submission of proofs to the contract.
 
 Key Features:
+
 - Initialization of a new round with specific parameters.
 - Building a snapshot of the current state.
-- Dispatching solvency proofs to the contract.
+- Submitting commitment to the contract.
 - Retrieving proofs of inclusion for specific users.
 
 ### AddressOwnership
@@ -20,6 +21,7 @@ Key Features:
 The `AddressOwnership` component is responsible for managing and verifying the ownership of addresses. It ensures that addresses used in the protocol owned by the respective participants. This component interacts with the `SummaSigner` to submit proofs of address ownership to on-chain.
 
 Key Features:
+
 - Initialization with specific signer details.
 - Dispatching proofs of address ownership to the contract.
 
@@ -41,26 +43,26 @@ To build the binary executable and test it
 
 ```
 cargo build
-SIGNATURE_VERIFICATION_MESSAGE="Summa proof of solvency for CryptoExchange" cargo test --release -- --nocapture
+cargo test --release -- --nocapture
 ```
 
 ## Important Notices
 
-### Generating and updating verifier contracts for Backend
+### Generating and updating verifier contract for Backend
 
-The verifier contracts in the backend were generated using a predefined set of parameters: `N_ASSETS = 2` and `N_BYTES=14`, as indicated [here](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_solvency_verifier.rs#L21-L22).
-If you intend to work with different parameters, you'll need to adjust these hard-coded values and then generate new verifier contracts. 
- 
-The process described below assists in both generating the verifiers and updating the Summa contract, which integrates the new verifiers as constructors.
+The verifier contract in the backend were generated using a predefined set of parameters: `N_CURRENCIES = 2` and `N_BYTES=14`, as indicated [here](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_inclusion_verifier.rs#L21-L22).
+If you intend to work with different parameters, you'll need to adjust these hard-coded values and then generate new verifier contract.
+
+The process described below assists in both generating the verifier and updating the Summa contract, which integrates the new verifier as constructors.
 
 #### Using the Bash Script
 
-We have provided a bash script to automate the process of updating the verifier contracts and the Summa contract. To use the script:
+We have provided a bash script to automate the process of updating the verifier contract and the Summa contract. To use the script:
 
 Ensure you have the necessary permissions to execute the script.
 
 ```
-backend $ chmod +x scripts/update_verifier_contracts.sh
+backend $ scripts/update_verifier_contract.sh
 ```
 
 ## Summa solvency flow example
@@ -91,26 +93,19 @@ If executed successfully, you'll see:
 1. Ownership proofs are submitted successfully!
 ```
 
+### 2. Submit Commitment
 
-### 2. Submit Proof of Solvency
+The CEX must submit a commitment to the Summa contract for each round. This commitment consists of a `timestamp`, the root hash of the Merkle Sum Tree (`mst_root`), and `balances`.
 
-This step is also crucial for two primary reasons: 
- 
- first, to validate the root hash of the Merkle Sum Tree (`mst_root`); and second, to ensure that the assets held by the CEX exceed their liabilities, as confirmed through the proof verification on the Summa contract.
-The CEX must submit this proof of solvency to the Summa contract. 
+Without publishing the commitment, users cannot verify their inclusion proof on the Summa contract. This is because the inclusion verifier function internally requires the `mst_root`, but users only know the `timestamp` associated with the round and the verifier functions does not requre `mst_root` directly.
 
- Currently, it's a mandatory requirement to provide this proof before generating the inclusion proof for each user in the current round.
-
-Without this verification, It seems the user may not trust to the inclusion proof for the round. becuase the `mst_root` is not published on contract. More specifically, it means that the `mst_root` is not correctly verified on the Summa contract.
-
-In here, we'll introduce you through the process of submitting a solvency proof using the `Round` to the Summa contract.
+In here, we'll introduce you through the process of submitting a commitment using the `Round` to the Summa contract.
 The Round serves as the core of the backend in Summa, and we have briefly described it in the Components section.
 
-To initialize the `Round` instance, you'll need paths to specific CSV files (`assets.csv` and `entry_16.csv`) and the `ptau/hermez-raw-11` file. Here's what each file does:
+To initialize the `Round` instance, you'll need paths to the liabilities CSV file (`entry_16.csv`) and the `ptau/hermez-raw-11` file. The files serve the following purpose:
 
-- `assets.csv`: Calculates the total balance of assets for the solvency proof. Only the CEX can generate this file.
-- `entry_16.csv`: Used to build the Merkle sum tree, with each leaf element derived from sixteen entries in the CSV.
-- `ptau/hermez-raw-11`: Contains parameters for constructing the zk circuits.
+- `entry_16.csv`: contains the username and liabilities entries for each CEX user (necessary to build the commitment). Liabilities column names have the following format: `balance_<CRYPTOCURRENCY>_<CHAIN>`, where <CRYPTOCURRENCY> and <CHAIN> are the names of the cryptocurrencies and their corresponding blockchains. <CHAIN> values are the same as in the Address Ownership Proof step;
+- `ptau/hermez-raw-11`: contains parameters for constructing the zk circuits.
 
 Using the `Round` instance, the solvency proof is dispatched to the Summa contract with the `dispatch_solvency_proof` method.
 
@@ -138,26 +133,19 @@ This is the final step in the Summa process and the only part that occurs on the
 
 Users receive the proof for a specific round and use methods available on the deployed Summa contract. Importantly, the Summa contract verifier function is a view function, meaning it doesn't consume gas or change the blockchain's state.
 
-In this step, you'll see:
+In this step, the user has to:
 
-- Retrieve the `mst_root` from the Summa contract and match it with the `root_hash` in the proof.
-- Ensure the `leaf_hash` aligns with the hash based on the `username` and `balances` provided by the CEX.
-- Use the `verify_inclusion_proof` method on the Summa contract to validate the proof.
+- Ensure the `leaf_hash` (public input of the proof) aligns with the Poseidon hash of the `username` and `balances` provided by the CEX.
+- Submit the proof to the `verify_inclusion_proof` method on the Summa contract Which will:
+  - Retrieve the `mstRoot` from the Summa contract and match it with the `root_hash` in the proof.
+  - Retrieve the `rootBalances` from the Summa contract and match it with the `root_balances` in the proof
+  - Verify the zk Proof
 
 The result will display as:
+
 ```
 4. Verifying the proof on contract verifier for User #0: true
 ```
-
-### 4. Verify Proof of Inclusion
-
-This is the final step in the Summa process and the only part that occurs on the user side. Users receive the proof for a specific round and use methods available on the deployed Summa contract. Importantly, the Summa contract verifier function is a view function, meaning it doesn't consume gas or change the blockchain's state.
-
-In this step, you'll see:
-- Retrieve the `mst_root` from the Summa contract and match it with the `root_hash` in the proof.
-- Ensure the `leaf_hash` aligns with the hash based on the `username` and `balances` provided by the CEX.
-- Use the `verify_inclusion_proof` method on the Summa contract to validate the proof.
-The result will display as:
 
 **Note:** In a production environment, users can independently verify their proof using public interfaces, such as Etherscan, as shown below:
 ![Summa contract interface on Etherscan](summa_verifier_interface.png)

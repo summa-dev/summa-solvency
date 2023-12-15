@@ -6,15 +6,42 @@ on:
   pull_request:
     branches: ["*"]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  wakeup:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::490752553772:role/summa-solvency-ec2-slc
+          role-duration-seconds: 900
+          aws-region: us-west-2
+
+      - name: Wakeup runner
+        run: .github/scripts/wakeup.sh 
+
+  build:
+    runs-on: [summa-solvency-runner]
+    needs: [wakeup]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set Environment
+        run: echo "PATH=/home/ubuntu/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> "$GITHUB_ENV"
 
       - name: Install solc
         run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
@@ -24,22 +51,23 @@ jobs:
           cd zk_prover
           cargo test --release --features dev-graph -- --nocapture
 
-      - name: Test Nova Prover
+      - name: Test Zk Prover examples
         run: |
           cd zk_prover
+          cargo run --release --example gen_inclusion_verifier
+          cargo run --release --example gen_commitment
+          cargo run --release --example gen_inclusion_proof
           cargo run --release --example nova_incremental_verifier
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Test backend
-        env:
-          SIGNATURE_VERIFICATION_MESSAGE: "Summa proof of solvency for CryptoExchange"
         run: |
           cd backend
           cargo test --release -- --nocapture
 
-      - name: Test example
+      - name: Test backend example
         run: |
           cd backend
           cargo run --release --example summa_solvency_flow

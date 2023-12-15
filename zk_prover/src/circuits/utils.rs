@@ -225,7 +225,7 @@ fn fix_verifier_sol(yul_code_path: PathBuf) -> Result<String, Box<dyn std::error
         if let Some(m) = m {
             let mstore = m.get(1).unwrap().as_str();
             let addr = m.get(2).unwrap().as_str();
-            let addr_as_num = u32::from_str_radix(addr, 10)?;
+            let addr_as_num = addr.parse::<u32>()?;
             let transcript_addr = format!("{:#x}", addr_as_num);
             transcript_addrs.push(addr_as_num);
             line = line.replace(
@@ -238,7 +238,7 @@ fn fix_verifier_sol(yul_code_path: PathBuf) -> Result<String, Box<dyn std::error
         if let Some(m) = m {
             let mstore = m.get(1).unwrap().as_str();
             let addr = m.get(2).unwrap().as_str();
-            let addr_as_num = u32::from_str_radix(addr, 10)?;
+            let addr_as_num = addr.parse::<u32>()?;
             let transcript_addr = format!("{:#x}", addr_as_num);
             transcript_addrs.push(addr_as_num);
             line = line.replace(
@@ -433,14 +433,19 @@ pub fn gen_proof_solidity_calldata<C: Circuit<Fp> + CircuitExt<Fp>>(
     let flattened_instances = instances.into_iter().flatten();
 
     for val in flattened_instances {
-        let bytes = val.to_repr();
-        let u = U256::from_little_endian(bytes.as_slice());
-        public_inputs.push(u);
+        public_inputs.push(field_element_to_solidity_calldata(val));
     }
 
     let solidity_proof_calldata = Bytes::from(proof_calldata);
 
     (solidity_proof_calldata, public_inputs)
+}
+
+/// Converts a field element to a Solidity calldata
+pub fn field_element_to_solidity_calldata(field_element: Fp) -> U256 {
+    let bytes = field_element.to_repr();
+    let u = U256::from_little_endian(bytes.as_slice());
+    u
 }
 
 /// Generates the solidity code for the verification contract starting from the yul code (yul_code_path) and writes it to sol_code_path

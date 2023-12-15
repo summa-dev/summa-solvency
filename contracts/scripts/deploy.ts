@@ -10,19 +10,22 @@ type Deployments = {
 };
 
 async function main() {
-  const solvencyVerifier = await ethers.deployContract(
-    "src/SolvencyVerifier.sol:Verifier"
-  );
-  await solvencyVerifier.deployed();
-
   const inclusionVerifier = await ethers.deployContract(
     "src/InclusionVerifier.sol:Verifier"
   );
   await inclusionVerifier.deployed();
 
+  // The number of levels of the Merkle sum tree
+  const mstLevels = 4;
+  //The number of cryptocurrencies supported by the Merkle sum tree
+  const currenciesCount = 2;
+  // The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
+  const balanceByteRange = 14;
   const summa = await ethers.deployContract("Summa", [
-    solvencyVerifier.address,
     inclusionVerifier.address,
+    mstLevels,
+    currenciesCount,
+    balanceByteRange,
   ]);
 
   await summa.deployed();
@@ -61,7 +64,6 @@ async function main() {
 
   //Copy the ABIs from `artifacts/src/*` to `backend/src/contracts/*`
   copyAbi(fs, "Summa", "Summa");
-  copyAbi(fs, "SolvencyVerifier", "Verifier");
   copyAbi(fs, "InclusionVerifier", "Verifier");
 }
 
