@@ -35,7 +35,7 @@ impl<const N_USERS: usize, const N_CURRENCIES: usize> UnivariateGrandSum<N_USERS
 /// * `username`: Advice column used to store the usernames of the users
 /// * `balances`: Advice columns used to store the balances of the users
 /// * `range_check_configs`: Configurations for the range check chip
-/// * `range`: Fixed column used to store the lookup table for the range check chip
+/// * `range_u16`: Fixed column used to store the lookup table [0, 2^16 - 1] for the range check chip
 #[derive(Debug, Clone)]
 pub struct UnivariateGrandSumConfig<const N_CURRENCIES: usize>
 where
@@ -44,7 +44,7 @@ where
     username: Column<Advice>,
     balances: [Column<Advice>; N_CURRENCIES],
     range_check_configs: [RangeCheckU64Config; N_CURRENCIES],
-    range: Column<Fixed>,
+    range_u16: Column<Fixed>,
 }
 
 impl<const N_CURRENCIES: usize> UnivariateGrandSumConfig<N_CURRENCIES>
@@ -56,25 +56,25 @@ where
 
         let balances = [(); N_CURRENCIES].map(|_| meta.unblinded_advice_column());
 
-        let range = meta.fixed_column();
+        let range_u16 = meta.fixed_column();
 
-        meta.enable_constant(range);
+        meta.enable_constant(range_u16);
 
-        meta.annotate_lookup_any_column(range, || "LOOKUP_MAXBITS_RANGE");
+        meta.annotate_lookup_any_column(range_u16, || "LOOKUP_MAXBITS_RANGE");
 
         // Create an empty array of range check configs
         let mut range_check_configs = Vec::with_capacity(N_CURRENCIES);
 
         for i in 0..N_CURRENCIES {
             let z = balances[i];
-            // Create N_BYTES advice columns for each range check chip
+            // Create 4 advice columns for each range check chip
             let zs = [(); 4].map(|_| meta.advice_column());
 
             for column in zs.iter() {
                 meta.enable_equality(*column);
             }
 
-            let range_check_config = RangeCheckU64Chip::configure(meta, z, zs, range);
+            let range_check_config = RangeCheckU64Chip::configure(meta, z, zs, range_u16);
 
             range_check_configs.push(range_check_config);
         }
@@ -86,7 +86,7 @@ where
             username,
             balances,
             range_check_configs: range_check_configs.try_into().unwrap(),
-            range,
+            range_u16,
         }
     }
     /// Assigns the entries to the circuit
@@ -162,7 +162,7 @@ where
             .map(|config| RangeCheckU64Chip::construct(*config))
             .collect::<Vec<_>>();
 
-        // Load lookup table for range check u64
+        // Load lookup table for range check u64 chip
         let range = 1 << 16;
 
         layouter.assign_region(
@@ -171,7 +171,7 @@ where
                 for i in 0..range {
                     region.assign_fixed(
                         || "assign cell in fixed column",
-                        config.range,
+                        config.range_u16,
                         i,
                         || Value::known(Fp::from(i as u64)),
                     )?;

@@ -88,7 +88,7 @@ impl AddChip {
 pub struct TestConfig {
     pub addchip_config: AddConfig,
     pub range_check_config: RangeCheckU64Config,
-    pub range: Column<Fixed>,
+    pub range_u16: Column<Fixed>,
 }
 
 // The test circuit takes two inputs a and b.
@@ -109,7 +109,7 @@ impl Circuit<Fp> for TestCircuit {
     }
 
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        let range = meta.fixed_column();
+        let range_u16 = meta.fixed_column();
 
         let a = meta.advice_column();
         let b = meta.advice_column();
@@ -130,7 +130,7 @@ impl Circuit<Fp> for TestCircuit {
 
         let add_selector = meta.selector();
 
-        let range_check_config = RangeCheckU64Chip::configure(meta, c, zs, range);
+        let range_check_config = RangeCheckU64Chip::configure(meta, c, zs, range_u16);
 
         let addchip_config = AddChip::configure(meta, a, b, c, add_selector);
 
@@ -138,7 +138,7 @@ impl Circuit<Fp> for TestCircuit {
             TestConfig {
                 addchip_config,
                 range_check_config,
-                range,
+                range_u16,
             }
         }
     }
@@ -160,7 +160,7 @@ impl Circuit<Fp> for TestCircuit {
                 for i in 0..range {
                     region.assign_fixed(
                         || "assign cell in fixed column",
-                        config.range,
+                        config.range_u16,
                         i,
                         || Value::known(Fp::from(i as u64)),
                     )?;

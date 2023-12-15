@@ -243,7 +243,7 @@ mod test {
         // TODO add more negative tests
     }
 
-    // Building a proof using as input a csv file with an entry that is not in range [0, 2^N_BYTES*8 - 1] should fail the range check constraint on the leaf balance
+    // Building a proof using as input a csv file with an entry that is not in range [0, 2^64 - 1] should fail the range check constraint on the leaf balance
     #[test]
     fn test_balance_not_in_range() {
         let path = "../csv/entry_16_overflow.csv";

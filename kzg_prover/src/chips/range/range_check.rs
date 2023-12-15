@@ -79,11 +79,11 @@ impl RangeCheckU64Chip {
 
                 let zero_truncation = meta.query_advice(zs[0], Rotation::cur());
 
-                let u16_range = meta.query_fixed(range_u16, Rotation::cur());
+                let range_u16 = meta.query_fixed(range_u16, Rotation::cur());
 
                 let diff = element - zero_truncation * Expression::Constant(Fp::from(1 << 16));
 
-                vec![(diff, u16_range)]
+                vec![(diff, range_u16)]
             },
         );
 
@@ -96,11 +96,11 @@ impl RangeCheckU64Chip {
                     let i_truncation = meta.query_advice(zs[i], Rotation::cur());
                     let i_plus_one_truncation = meta.query_advice(zs[i + 1], Rotation::cur());
 
-                    let u8_range = meta.query_fixed(range_u16, Rotation::cur());
+                    let range_u16 = meta.query_fixed(range_u16, Rotation::cur());
 
                     let diff = i_truncation - i_plus_one_truncation * Expression::Constant(Fp::from(1 << 16));
 
-                    vec![(diff, u8_range)]
+                    vec![(diff, range_u16)]
                 },
             );
         }
