@@ -64,6 +64,7 @@ impl RangeCheckU64Chip {
     }
 
     /// Configures the Range Chip
+    /// Note: the lookup table should be loaded with values from `0` to `2^16 - 1` otherwise the range check will fail.
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
         z: Column<Advice>,
