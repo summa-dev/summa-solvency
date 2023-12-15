@@ -1,4 +1,4 @@
-use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
+use crate::chips::range::range_check::{RangeCheckU64Chip, RangeCheckU64Config};
 use crate::entry::Entry;
 use crate::utils::big_uint_to_fp;
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value};
@@ -6,14 +6,11 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed};
 
 #[derive(Clone)]
-pub struct UnivariateGrandSum<const N_BYTES: usize, const N_USERS: usize, const N_CURRENCIES: usize>
-{
+pub struct UnivariateGrandSum<const N_USERS: usize, const N_CURRENCIES: usize> {
     pub entries: Vec<Entry<N_CURRENCIES>>,
 }
 
-impl<const N_BYTES: usize, const N_USERS: usize, const N_CURRENCIES: usize>
-    UnivariateGrandSum<N_BYTES, N_USERS, N_CURRENCIES>
-{
+impl<const N_USERS: usize, const N_CURRENCIES: usize> UnivariateGrandSum<N_USERS, N_CURRENCIES> {
     pub fn init_empty() -> Self {
         Self {
             entries: vec![Entry::init_empty(); N_USERS],
@@ -31,7 +28,6 @@ impl<const N_BYTES: usize, const N_USERS: usize, const N_CURRENCIES: usize>
 /// Configuration for the Mst Inclusion circuit
 /// # Type Parameters
 ///
-/// * `N_BYTES`: The number of bytes in which the balances should lie
 /// * `N_CURRENCIES`: The number of currencies for which the solvency is verified.
 ///
 /// # Fields
@@ -41,18 +37,17 @@ impl<const N_BYTES: usize, const N_USERS: usize, const N_CURRENCIES: usize>
 /// * `range_check_configs`: Configurations for the range check chip
 /// * `range`: Fixed column used to store the lookup table for the range check chip
 #[derive(Debug, Clone)]
-pub struct UnivariateGrandSumConfig<const N_BYTES: usize, const N_CURRENCIES: usize>
+pub struct UnivariateGrandSumConfig<const N_CURRENCIES: usize>
 where
     [(); N_CURRENCIES + 1]:,
 {
     username: Column<Advice>,
     balances: [Column<Advice>; N_CURRENCIES],
-    range_check_configs: [RangeCheckConfig<N_BYTES>; N_CURRENCIES],
+    range_check_configs: [RangeCheckU64Config; N_CURRENCIES],
     range: Column<Fixed>,
 }
 
-impl<const N_BYTES: usize, const N_CURRENCIES: usize>
-    UnivariateGrandSumConfig<N_BYTES, N_CURRENCIES>
+impl<const N_CURRENCIES: usize> UnivariateGrandSumConfig<N_CURRENCIES>
 where
     [(); N_CURRENCIES + 1]:,
 {
@@ -73,13 +68,13 @@ where
         for i in 0..N_CURRENCIES {
             let z = balances[i];
             // Create N_BYTES advice columns for each range check chip
-            let zs = [(); N_BYTES].map(|_| meta.advice_column());
+            let zs = [(); 4].map(|_| meta.advice_column());
 
             for column in zs.iter() {
                 meta.enable_equality(*column);
             }
 
-            let range_check_config = RangeCheckChip::<N_BYTES>::configure(meta, z, zs, range);
+            let range_check_config = RangeCheckU64Chip::configure(meta, z, zs, range);
 
             range_check_configs.push(range_check_config);
         }
@@ -138,12 +133,12 @@ where
     }
 }
 
-impl<const N_BYTES: usize, const N_USERS: usize, const N_CURRENCIES: usize> Circuit<Fp>
-    for UnivariateGrandSum<N_BYTES, N_USERS, N_CURRENCIES>
+impl<const N_USERS: usize, const N_CURRENCIES: usize> Circuit<Fp>
+    for UnivariateGrandSum<N_USERS, N_CURRENCIES>
 where
     [(); N_CURRENCIES + 1]:,
 {
-    type Config = UnivariateGrandSumConfig<N_BYTES, N_CURRENCIES>;
+    type Config = UnivariateGrandSumConfig<N_CURRENCIES>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -152,7 +147,7 @@ where
 
     /// Configures the circuit
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        UnivariateGrandSumConfig::<N_BYTES, N_CURRENCIES>::configure(meta)
+        UnivariateGrandSumConfig::<N_CURRENCIES>::configure(meta)
     }
 
     fn synthesize(
@@ -164,14 +159,14 @@ where
         let range_check_chips = config
             .range_check_configs
             .iter()
-            .map(|config| RangeCheckChip::construct(*config))
+            .map(|config| RangeCheckU64Chip::construct(*config))
             .collect::<Vec<_>>();
 
-        // Load lookup table to perform range check on individual balances -> Each balance should be in the range [0, 2^8 - 1]
-        let range = 1 << 8;
+        // Load lookup table for range check u64
+        let range = 1 << 16;
 
         layouter.assign_region(
-            || format!("load range check table of {} bits", 8 * N_BYTES),
+            || format!("load range check table of 16 bits"),
             |mut region| {
                 for i in 0..range {
                     region.assign_fixed(

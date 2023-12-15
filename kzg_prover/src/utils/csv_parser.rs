@@ -7,7 +7,7 @@ use std::path::Path;
 use crate::cryptocurrency::Cryptocurrency;
 use crate::entry::Entry;
 
-pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize, const N_BYTES: usize>(
+pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
     path: P,
     entries: &mut [Entry<N_ASSETS>],
     cryptocurrencies: &mut [Cryptocurrency],
