@@ -10,6 +10,7 @@ mod test {
     use crate::entry::Entry;
     use crate::utils::parse_csv_to_entries;
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
+    use halo2_proofs::halo2curves::bn256::Fr as Fp;
     use halo2_proofs::plonk::Any;
     use num_bigint::BigUint;
 

@@ -91,6 +91,7 @@ pub fn full_prover<C: Circuit<Fp>>(
     AdviceSingle<halo2_proofs::halo2curves::bn256::G1Affine, Coeff>,
     Fp,
 ) {
+    #[cfg(feature = "profiling")]
     let pf_time = start_timer!(|| "Creating proof");
 
     let instance: Vec<&[Fp]> = public_inputs.iter().map(|input| &input[..]).collect();
@@ -110,6 +111,7 @@ pub fn full_prover<C: Circuit<Fp>>(
     let advice_polys = result_unwrapped.1.clone();
     let proof = transcript.finalize();
 
+    #[cfg(feature = "profiling")]
     end_timer!(pf_time);
     let advice_polys = advice_polys[0].clone();
 
