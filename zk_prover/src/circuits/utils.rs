@@ -153,7 +153,7 @@ pub fn gen_proof_solidity_calldata<C: Circuit<Fp> + WithInstances>(
 
     // Decode the function input
     let decoded: VerifyProofInput = base_contract
-        .decode_input(&calldata)
+        .decode_input(calldata)
         .expect("Failed to decode data");
 
     (decoded.0, decoded.1)
