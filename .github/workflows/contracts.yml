@@ -20,4 +20,4 @@ jobs:
       - name: Run Tests
         run: |
           cd contracts
-          npx hardhat node & npx hardhat coverage
+          npx hardhat node & npx hardhat test
