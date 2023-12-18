@@ -29,14 +29,14 @@ pub struct RangeCheckU64Config {
 /// `z` is the advice column that contains the element to be checked.
 ///
 /// `z = 0x1f2f3f4f5f6f7f8f`
-/// `zs[0] = (0x1f2f3f4f5f6f7f8f - 0x7f8f) / 2^16 = 0x1f2f3f4f5f6`
-/// `zs[1] = (0x1f2f3f4f5f6 - 0xf5f6) / 2^16 = 0x1f2f3f4`
-/// `zs[2] = (0x1f2f3f4 - 0x3f4f) / 2^16 = 0x1f2f`
+/// `zs[0] = (0x1f2f3f4f5f6f7f8f - 0x7f8f) / 2^16 = 0x1f2f3f4f5f6f`
+/// `zs[1] = (0x1f2f3f4f5f6f - 0xf5f6f) / 2^16 = 0x1f2f3f4f`
+/// `zs[2] = (0x1f2f3f4f - 0x3f4f) / 2^16 = 0x1f2f`
 /// `zs[3] = (0x1f2f - 0x1f2f) / 2^16 = 0x00`
 ///
-///  z                  | zs[0]           | zs[1]         | zs[2]        | zs[3]      |
-///  ---------          | ----------      | ----------    | ----------   | ---------- |
-///  0x1f2f3f4f5f6f7f8f | 0x1f2f3f4f5f6   | 0x1f2f3f4     | 0x1f2f       | 0x00       |
+///  z                  | zs[0]            | zs[1]         | zs[2]        | zs[3]      |
+///  ---------          | ----------       | ----------    | ----------   | ---------- |
+///  0x1f2f3f4f5f6f7f8f | 0x1f2f3f4f5f6f   | 0x1f2f3f4f     | 0x1f2f       | 0x00       |
 ///
 /// Column zs[0], at offset 0, contains the truncated right-shifted value z - ks[0] / 2^16 (shift right by 16 bits) where ks[0] is the 0-th decomposition big-endian of the element to be checked
 /// Column zs[1], at offset 0, contains the truncated right-shifted value zs[0] - ks[1] / 2^16 (shift right by 16 bits) where ks[1] is the 1-th decomposition big-endian of the element to be checked
