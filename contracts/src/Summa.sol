@@ -205,6 +205,6 @@ contract Summa is Ownable {
                 "Invalid root balance"
             );
         }
-        return inclusionVerifier.verify(publicInputs, proof);
+        return inclusionVerifier.verifyProof(proof, publicInputs);
     }
 }

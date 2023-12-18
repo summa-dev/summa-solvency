@@ -1,16 +1,16 @@
 #![feature(generic_const_exprs)]
 
+use ethers::abi::parse_abi;
+use ethers::abi::Token::{Array, Bytes, Uint};
+use halo2_solidity_verifier::{compile_solidity, BatchOpenScheme::Bdfg21, Evm, SolidityGenerator};
 use serde_json::to_string_pretty;
-use snark_verifier_sdk::{
-    evm::{evm_verify, gen_evm_proof_shplonk, gen_evm_verifier_shplonk},
-    CircuitExt,
-};
-use std::{fs::File, io::Write, path::Path};
+use std::{fs::File, io::Write};
 use summa_solvency::{
     circuits::{
         merkle_sum_tree::MstInclusionCircuit,
         types::ProofSolidityCallData,
         utils::{gen_proof_solidity_calldata, generate_setup_artifacts},
+        WithInstances,
     },
     merkle_sum_tree::{MerkleSumTree, Tree},
 };
@@ -37,25 +37,21 @@ fn main() {
         generate_setup_artifacts(11, Some("../backend/ptau/hermez-raw-11"), circuit.clone())
             .unwrap();
 
-    let instances = circuit.instances();
+    let num_instances = circuit.num_instances()[0];
 
-    let num_instances = circuit.num_instance();
-
-    let yul_output_path = "../contracts/src/InclusionVerifier.yul";
-
-    let deployment_code =
-        gen_evm_verifier_shplonk::<MstInclusionCircuit<LEVELS, N_CURRENCIES, N_BYTES>>(
-            &params,
-            pk.get_vk(),
-            num_instances,
-            Some(Path::new(yul_output_path)),
-        );
-
-    let proof = gen_evm_proof_shplonk(&params, &pk, circuit.clone(), instances.clone());
+    let generator: SolidityGenerator<'_> =
+        SolidityGenerator::new(&params, pk.get_vk(), Bdfg21, num_instances);
+    let verifier_solidity = generator
+        .render()
+        .unwrap()
+        .replace("Halo2Verifier", "Verifier");
+    let deployment_code = compile_solidity(&verifier_solidity);
 
     let proof_solidity_calldata = gen_proof_solidity_calldata(&params, &pk, circuit.clone());
 
     let proof_hex_string = format!("0x{}", hex::encode(&proof_solidity_calldata.clone().0 .0));
+
+    let calldata_instances = proof_solidity_calldata.1.clone();
 
     let data = ProofSolidityCallData {
         proof: proof_hex_string,
@@ -71,7 +67,27 @@ fn main() {
     file.write_all(serialized_data.as_bytes())
         .expect("Unable to write data to file");
 
-    let gas_cost = evm_verify(deployment_code, instances, proof);
+    let abi = parse_abi(&[
+        "function verifyProof(bytes calldata proof, uint256[] calldata instances) public returns (bool)",
+    ]).expect("Invalid ABI");
 
+    let selector = abi.function("verifyProof").unwrap();
+    let calldata_encoded = selector
+        .encode_input(&[
+            Bytes(proof_solidity_calldata.0.to_vec()),
+            Array(vec![
+                Uint(calldata_instances[0]),
+                Uint(calldata_instances[1]),
+                Uint(calldata_instances[2]),
+                Uint(calldata_instances[3]),
+            ]),
+        ])
+        .unwrap();
+
+    let mut evm = Evm::default();
+    let verifier_address = evm.create(deployment_code);
+
+    let (gas_cost, output) = evm.call(verifier_address, calldata_encoded);
+    assert_eq!(output, [vec![0; 31], vec![1]].concat());
     print!("gas_cost: {:?}", gas_cost);
 }

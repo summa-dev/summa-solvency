@@ -7,12 +7,12 @@ pragma solidity ^0.8.18;
 interface IVerifier {
     /**
      * @dev Verify a proof
-     * @param pubInputs The public inputs to the proof
      * @param proof The proof
+     * @param instances The public inputs to the proof
      * @return true if the proof is valid, false otherwise
      */
-    function verify(
-        uint256[] calldata pubInputs,
-        bytes calldata proof
+    function verifyProof(
+        bytes calldata proof,
+        uint256[] calldata instances
     ) external view returns (bool);
 }

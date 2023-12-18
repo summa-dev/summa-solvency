@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod test {
 
+    use crate::circuits::WithInstances;
     use crate::merkle_sum_tree::{MerkleSumTree, Tree};
     use crate::{
         circuits::{
@@ -15,7 +16,6 @@ mod test {
         plonk::Any,
     };
     use num_bigint::ToBigUint;
-    use snark_verifier_sdk::CircuitExt;
 
     const N_CURRENCIES: usize = 2;
     const LEVELS: usize = 4;
@@ -35,7 +35,7 @@ mod test {
 
             let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
-            assert_eq!(circuit.instances()[0].len(), circuit.num_instance()[0]);
+            assert_eq!(circuit.instances()[0].len(), circuit.num_instances()[0]);
             assert_eq!(circuit.instances()[0].len(), 2 + N_CURRENCIES);
 
             valid_prover.assert_satisfied();
