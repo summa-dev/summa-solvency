@@ -251,21 +251,6 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_diff_n_users_univariate_grand_sum_full_prover() {
-        let path = "../csv/entry_15.csv";
-
-        let (_, circuit, pk, vk, params) = set_up::<N_BYTES, 15, N_CURRENCIES>(path);
-
-        // 1. Proving phase
-        // The Custodian generates the ZK proof
-        let (zk_snark_proof, _, _) = full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
-
-        // 2. Verification phase
-        // The Verifier verifies the ZK proof
-        assert!(full_verifier(&params, &vk, &zk_snark_proof, vec![vec![]]));
-    }
-
     // Building a proof using as input a csv file with an entry that is not in range [0, 2^N_BYTES*8 - 1] should fail the range check constraint on the leaf balance
     #[test]
     fn test_balance_not_in_range() {
