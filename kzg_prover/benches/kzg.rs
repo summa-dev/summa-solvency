@@ -16,13 +16,7 @@ use summa_solvency::{
     utils::parse_csv_to_entries,
 };
 
-fn bench_kzg<
-    const K: u32,
-    const N_BYTES: usize,
-    const N_USERS: usize,
-    const N_CURRENCIES: usize,
-    const N_POINTS: usize,
->(
+fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, const N_POINTS: usize>(
     name: &str,
     csv_path: &str,
 ) where
@@ -31,7 +25,7 @@ fn bench_kzg<
     let mut c = Criterion::default().sample_size(10);
 
     // Initialize an empty circuit
-    let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init_empty();
+    let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
     let (params, pk, vk) = generate_setup_artifacts(K, None, circuit.clone()).unwrap();
 
     let range_check_bench_name = format!("<{}> range check", name);
@@ -43,8 +37,7 @@ fn bench_kzg<
     let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
     let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
     let _ =
-        parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(csv_path, &mut entries, &mut cryptos)
-            .unwrap();
+        parse_csv_to_entries::<&str, N_CURRENCIES>(csv_path, &mut entries, &mut cryptos).unwrap();
 
     // Calculate total for all entry columns
     let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
@@ -167,16 +160,16 @@ fn bench_kzg<
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    bench_kzg::<9, 8, 16, 2, 3>(
-        "K = 9, N_BYTES = 8, N_USER = 16, N_CURRENCIES = 2",
+    bench_kzg::<17, 16, 2, 3>(
+        "K = 10, N_USER = 16, N_CURRENCIES = 2",
         "../csv/entry_16.csv",
     );
-    bench_kzg::<9, 8, 64, 2, 3>(
-        "K = 9, N_BYTES = 8, N_USER = 64, N_CURRENCIES = 2",
+    bench_kzg::<17, 64, 2, 3>(
+        "K = 11, N_USER = 64, N_CURRENCIES = 2",
         "../csv/entry_64.csv",
     );
-    bench_kzg::<10, 8, 64, 2, 3>(
-        "K = 10, N_BYTES = 8, N_USER = 64, N_CURRENCIES = 2",
+    bench_kzg::<17, 64, 2, 3>(
+        "K = 12, N_USER = 64, N_CURRENCIES = 2",
         "../csv/entry_64.csv",
     );
 }
