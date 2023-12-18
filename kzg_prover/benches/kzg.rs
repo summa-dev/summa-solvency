@@ -25,10 +25,11 @@ fn bench_kzg<
 >(
     name: &str,
     csv_path: &str,
-    c: &mut Criterion,
 ) where
     [(); N_CURRENCIES + 1]:,
 {
+    let mut c = Criterion::default().sample_size(10);
+
     // Initialize an empty circuit
     let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init_empty();
     let (params, pk, vk) = generate_setup_artifacts(K, None, circuit.clone()).unwrap();
@@ -169,17 +170,14 @@ fn criterion_benchmark(c: &mut Criterion) {
     bench_kzg::<9, 8, 16, 2, 3>(
         "K = 9, N_BYTES = 8, N_USER = 16, N_CURRENCIES = 2",
         "../csv/entry_16.csv",
-        c,
     );
     bench_kzg::<9, 8, 64, 2, 3>(
         "K = 9, N_BYTES = 8, N_USER = 64, N_CURRENCIES = 2",
         "../csv/entry_64.csv",
-        c,
     );
     bench_kzg::<10, 8, 64, 2, 3>(
         "K = 10, N_BYTES = 8, N_USER = 64, N_CURRENCIES = 2",
         "../csv/entry_64.csv",
-        c,
     );
 }
 
