@@ -15,9 +15,7 @@ mod test {
     use halo2_proofs::poly::kzg::commitment::ParamsKZG;
     use num_bigint::BigUint;
 
-    const K: u32 = 9;
-
-    const N_BYTES: usize = 8;
+    const K: u32 = 17;
     const N_CURRENCIES: usize = 2;
     const N_USERS: usize = 16;
 
@@ -27,10 +25,9 @@ mod test {
 
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
-        parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
-            .unwrap();
+        parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
 
-        let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
+        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
         let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
 
@@ -251,17 +248,16 @@ mod test {
         }
     }
 
-    // Building a proof using as input a csv file with an entry that is not in range [0, 2^N_BYTES*8 - 1] should fail the range check constraint on the leaf balance
+    // Building a proof using as input a csv file with an entry that is not in range [0, 2^64 - 1] should fail the range check constraint on the leaf balance
     #[test]
     fn test_balance_not_in_range() {
         let path = "../csv/entry_16_overflow.csv";
 
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
-        parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
-            .unwrap();
+        parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
 
-        let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
+        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
         let invalid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
 
@@ -270,21 +266,21 @@ mod test {
             Err(vec![
                 VerifyFailure::Permutation {
                     column: (Any::Fixed, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 256 }
+                    location: FailureLocation::OutsideRegion { row: 65536 }
                 },
                 VerifyFailure::Permutation {
                     column: (Any::Fixed, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 259 }
+                    location: FailureLocation::OutsideRegion { row: 65539 }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 10).into(),
+                    column: (Any::advice(), 6).into(),
                     location: FailureLocation::InRegion {
                         region: (2, "Perform range check on balance 0 of user 0").into(),
                         offset: 0
                     }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 18).into(),
+                    column: (Any::advice(), 10).into(),
                     location: FailureLocation::InRegion {
                         region: (5, "Perform range check on balance 1 of user 1").into(),
                         offset: 0
@@ -304,10 +300,9 @@ mod test {
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
         let _ =
-            parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
-                .unwrap();
+            parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
 
-        let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries);
+        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries);
 
         let root = BitMapBackend::new("prints/univariate-grand-sum-layout.png", (2048, 32768))
             .into_drawing_area();
