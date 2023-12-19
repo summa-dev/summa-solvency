@@ -1,9 +1,9 @@
-use super::WithInstances;
 use crate::chips::merkle_sum_tree::{MerkleSumTreeChip, MerkleSumTreeConfig};
 use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
 use crate::circuits::traits::CircuitBase;
+use crate::circuits::WithInstances;
 use crate::merkle_sum_tree::utils::big_uint_to_fp;
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};

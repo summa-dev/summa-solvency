@@ -27,7 +27,7 @@ use halo2_proofs::{
 use halo2_solidity_verifier::{encode_calldata, Keccak256Transcript};
 use rand::{rngs::OsRng, RngCore};
 
-use super::WithInstances;
+use crate::circuits::WithInstances;
 
 /// Generate setup artifacts for a circuit of size `k`, where 2^k represents the number of rows in the circuit.
 ///
