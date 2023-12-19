@@ -75,12 +75,12 @@ fn main() {
     let calldata_encoded = function
         .encode_input(&[
             Bytes(proof_solidity_calldata.0.to_vec()),
-            Array(vec![
-                Uint(calldata_instances[0]),
-                Uint(calldata_instances[1]),
-                Uint(calldata_instances[2]),
-                Uint(calldata_instances[3]),
-            ]),
+            Array(
+                calldata_instances
+                    .iter()
+                    .map(|&instance| Uint(instance))
+                    .collect(),
+            ),
         ])
         .unwrap();
 
