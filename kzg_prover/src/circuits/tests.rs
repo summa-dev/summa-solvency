@@ -38,7 +38,7 @@ mod test {
     fn test_valid_univariate_grand_sum_full_prover() {
         let path = "../csv/entry_16.csv";
 
-        let (entries, circuit, pk, vk, params) = set_up::<N_BYTES, N_USERS, N_CURRENCIES>(path);
+        let (entries, circuit, pk, vk, params) = set_up::<N_USERS, N_CURRENCIES>(path);
 
         // Calculate total for all entry columns
         let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
@@ -142,7 +142,7 @@ mod test {
     fn test_invalid_omega_univariate_grand_sum_proof() {
         let path = "../csv/entry_16.csv";
 
-        let (_, circuit, pk, vk, params) = set_up::<N_BYTES, N_USERS, N_CURRENCIES>(path);
+        let (_, circuit, pk, vk, params) = set_up::<N_USERS, N_CURRENCIES>(path);
 
         // 1. Proving phase
         // The Custodian generates the ZK proof
@@ -192,7 +192,7 @@ mod test {
     fn test_invalid_poly_degree_univariate_grand_sum_full_prover() {
         let path = "../csv/entry_16.csv";
 
-        let (entries, circuit, pk, vk, params) = set_up::<N_BYTES, N_USERS, N_CURRENCIES>(path);
+        let (entries, circuit, pk, vk, params) = set_up::<N_USERS, N_CURRENCIES>(path);
 
         // Calculate total for all entry columns
         let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
@@ -206,7 +206,7 @@ mod test {
         // 1. Proving phase
         // The Custodian generates the ZK-SNARK Halo2 proof that commits to the user entry values in advice polynomials
         // and also range-checks the user balance values
-        let (zk_snark_proof, advice_polys, omega) =
+        let (zk_snark_proof, advice_polys, _) =
             full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
 
         // Both the Custodian and the Verifier know what column range are the balance columns
@@ -316,11 +316,11 @@ mod test {
             .unwrap();
     }
 
-    fn set_up<const N_BYTES: usize, const N_USERS: usize, const N_CURRENCIES: usize>(
+    fn set_up<const N_USERS: usize, const N_CURRENCIES: usize>(
         path: &str,
     ) -> (
         Vec<Entry<N_CURRENCIES>>,
-        UnivariateGrandSum<N_BYTES, N_USERS, N_CURRENCIES>,
+        UnivariateGrandSum<N_USERS, N_CURRENCIES>,
         ProvingKey<G1Affine>,
         VerifyingKey<G1Affine>,
         ParamsKZG<Bn256>,
@@ -329,7 +329,7 @@ mod test {
         [(); N_CURRENCIES + 1]:,
     {
         // Initialize an empty circuit
-        let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init_empty();
+        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
 
         // Generate a universal trusted setup for testing purposes.
         //
@@ -343,10 +343,9 @@ mod test {
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
 
-        parse_csv_to_entries::<&str, N_CURRENCIES, N_BYTES>(path, &mut entries, &mut cryptos)
-            .unwrap();
+        parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
 
-        let circuit = UnivariateGrandSum::<N_BYTES, N_USERS, N_CURRENCIES>::init(entries.to_vec());
+        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
         (entries, circuit, pk, vk, params)
     }
