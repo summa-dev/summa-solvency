@@ -1,0 +1,51 @@
+name: Benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_benchmark:
+        description: 'Run benchmark tests (yes/no)'
+        required: true
+        default: 'no'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  wakeup:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_benchmark == 'yes' }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::490752553772:role/summa-solvency-ec2-slc
+          role-duration-seconds: 900
+          aws-region: us-west-2
+
+      - name: Wakeup runner
+        run: .github/scripts/wakeup.sh 
+
+  benchmark:
+    runs-on: [summa-solvency-runner]
+    needs: [wakeup]
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.run_benchmark == 'yes' }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Benchmark
+        run: |
+          cd zk_prover
+          cargo bench
+
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@v2
+        with:
+          name: benchmark-results
+          path: zk_prover/target/criterion
