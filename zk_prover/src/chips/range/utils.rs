@@ -2,7 +2,7 @@ use crate::merkle_sum_tree::utils::{big_uint_to_fp, fp_to_big_uint};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use num_bigint::BigUint;
 
-/// Converts value Fp to n bytes of bytes in little endian order.
+/// Converts value Fp to array of n bytes in little endian order.
 /// If value is decomposed in #bytes which are less than n, then the returned bytes are padded with 0s at the most significant bytes.
 /// Example:
 /// decompose_fp_to_bytes(0x1f2f3f, 4) -> [0x3f, 0x2f, 0x1f, 0x00]
