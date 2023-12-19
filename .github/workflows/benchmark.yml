@@ -1,4 +1,4 @@
-name: benchmark 
+name: Benchmark
 
 on:
   workflow_dispatch:
@@ -8,13 +8,6 @@ on:
         required: true
         default: 'no'
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   wakeup:
     runs-on: ubuntu-latest
@@ -22,7 +15,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-
     steps:
       - uses: actions/checkout@v3
 
@@ -34,8 +26,8 @@ jobs:
           aws-region: us-west-2
 
       - name: Wakeup runner
-        run: .github/scripts/wakeup.sh
-   
+        run: .github/scripts/wakeup.sh 
+
   benchmark:
     runs-on: [summa-solvency-runner]
     needs: [wakeup]
@@ -47,3 +39,9 @@ jobs:
         run: |
           cd kzg_prover
           cargo bench
+
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@v2
+        with:
+          name: benchmark-results
+          path: kzg_prover/target/criterion
