@@ -71,8 +71,8 @@ fn main() {
         "function verifyProof(bytes calldata proof, uint256[] calldata instances) public returns (bool)",
     ]).expect("Invalid ABI");
 
-    let selector = abi.function("verifyProof").unwrap();
-    let calldata_encoded = selector
+    let function = abi.function("verifyProof").unwrap();
+    let calldata_encoded = function
         .encode_input(&[
             Bytes(proof_solidity_calldata.0.to_vec()),
             Array(vec![
