@@ -505,7 +505,7 @@ describe("Summa Contract", () => {
           balance1,
           balance2
         )
-      ).to.be.revertedWithoutReason();
+      ).to.be.revertedWith("Invalid inclusion proof");
     });
 
     it("should not verify with invalid proof", async () => {
@@ -522,7 +522,7 @@ describe("Summa Contract", () => {
           balance1,
           balance2
         )
-      ).to.be.revertedWithoutReason();
+      ).to.be.revertedWith("Invalid inclusion proof");
     });
   });
 });

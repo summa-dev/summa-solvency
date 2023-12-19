@@ -35,7 +35,7 @@ mod test {
 
             let valid_prover = MockProver::run(K, &circuit, circuit.instances()).unwrap();
 
-            assert_eq!(circuit.instances()[0].len(), circuit.num_instances()[0]);
+            assert_eq!(circuit.instances()[0].len(), circuit.num_instances());
             assert_eq!(circuit.instances()[0].len(), 2 + N_CURRENCIES);
 
             valid_prover.assert_satisfied();

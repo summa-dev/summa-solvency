@@ -67,7 +67,7 @@ contract Verifier {
     function verifyProof(
         bytes calldata proof,
         uint256[] calldata instances
-    ) public returns (bool) {
+    ) public view returns (bool) {
         assembly {
             // Read EC point (x, y) at (proof_cptr, proof_cptr + 0x20),
             // and check if the point is on affine plane,

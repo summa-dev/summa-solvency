@@ -37,7 +37,7 @@ fn main() {
         generate_setup_artifacts(11, Some("../backend/ptau/hermez-raw-11"), circuit.clone())
             .unwrap();
 
-    let num_instances = circuit.num_instances()[0];
+    let num_instances = circuit.num_instances();
 
     let generator: SolidityGenerator<'_> =
         SolidityGenerator::new(&params, pk.get_vk(), Bdfg21, num_instances);
@@ -89,5 +89,5 @@ fn main() {
 
     let (gas_cost, output) = evm.call(verifier_address, calldata_encoded);
     assert_eq!(output, [vec![0; 31], vec![1]].concat());
-    print!("gas_cost: {:?}", gas_cost);
+    println!("gas_cost: {:?}", gas_cost);
 }

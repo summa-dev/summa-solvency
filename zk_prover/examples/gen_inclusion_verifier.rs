@@ -25,14 +25,15 @@ fn main() {
         generate_setup_artifacts(11, Some("../backend/ptau/hermez-raw-11"), circuit.clone())
             .unwrap();
 
-    let num_instances = circuit.num_instances()[0];
+    let num_instances = circuit.num_instances();
 
     let generator: SolidityGenerator<'_> =
         SolidityGenerator::new(&params, pk.get_vk(), Bdfg21, num_instances);
     let verifier_solidity = generator
         .render()
         .unwrap()
-        .replace("Halo2Verifier", "Verifier");
+        .replace("Halo2Verifier", "Verifier")
+        .replace(") public returns (bool)", ") public view returns (bool)");
     save_solidity("InclusionVerifier.sol", &verifier_solidity);
     let deployment_code = compile_solidity(&verifier_solidity);
     let verifier_creation_code_size = deployment_code.len();

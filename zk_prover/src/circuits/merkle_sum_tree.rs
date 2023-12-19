@@ -47,8 +47,8 @@ where
     [usize; N_CURRENCIES + 2]: Sized,
 {
     /// Returns the number of public inputs of the circuit. It is {2 + N_CURRENCIES}, namely the leaf hash to be verified inclusion of, the root hash of the merkle sum tree and the root balances of the merkle sum tree.
-    fn num_instances(&self) -> Vec<usize> {
-        vec![{ 2 + N_CURRENCIES }]
+    fn num_instances(&self) -> usize {
+        2 + N_CURRENCIES
     }
     /// Returns the values of the public inputs of the circuit. Namely the leaf hash to be verified inclusion of and the root hash of the merkle sum tree.
     fn instances(&self) -> Vec<Vec<Fp>> {
