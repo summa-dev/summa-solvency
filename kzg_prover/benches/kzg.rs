@@ -161,15 +161,11 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
 
 fn criterion_benchmark(c: &mut Criterion) {
     bench_kzg::<17, 16, 2, 3>(
-        "K = 10, N_USER = 16, N_CURRENCIES = 2",
+        "K = 17, N_USER = 16, N_CURRENCIES = 2",
         "../csv/entry_16.csv",
     );
     bench_kzg::<17, 64, 2, 3>(
-        "K = 11, N_USER = 64, N_CURRENCIES = 2",
-        "../csv/entry_64.csv",
-    );
-    bench_kzg::<17, 64, 2, 3>(
-        "K = 12, N_USER = 64, N_CURRENCIES = 2",
+        "K = 17, N_USER = 64, N_CURRENCIES = 2",
         "../csv/entry_64.csv",
     );
 }
