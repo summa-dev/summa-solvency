@@ -29,6 +29,7 @@ impl<const N_USERS: usize, const N_CURRENCIES: usize> UnivariateGrandSum<N_USERS
 /// # Type Parameters
 ///
 /// * `N_CURRENCIES`: The number of currencies for which the solvency is verified.
+/// * `N_USERS`: The number of users for which the solvency is verified.
 ///
 /// # Fields
 ///
@@ -37,7 +38,7 @@ impl<const N_USERS: usize, const N_CURRENCIES: usize> UnivariateGrandSum<N_USERS
 /// * `range_check_configs`: Configurations for the range check chip
 /// * `range_u16`: Fixed column used to store the lookup table [0, 2^16 - 1] for the range check chip
 #[derive(Debug, Clone)]
-pub struct UnivariateGrandSumConfig<const N_CURRENCIES: usize>
+pub struct UnivariateGrandSumConfig<const N_CURRENCIES: usize, const N_USERS: usize>
 where
     [(); N_CURRENCIES + 1]:,
 {
@@ -47,7 +48,8 @@ where
     range_u16: Column<Fixed>,
 }
 
-impl<const N_CURRENCIES: usize> UnivariateGrandSumConfig<N_CURRENCIES>
+impl<const N_CURRENCIES: usize, const N_USERS: usize>
+    UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>
 where
     [(); N_CURRENCIES + 1]:,
 {
@@ -103,17 +105,17 @@ where
                 // create a bidimensional vector to store the assigned balances. The first dimension is N_USERS, the second dimension is N_CURRENCIES
                 let mut assigned_balances = vec![];
 
-                for (i, entry) in entries.iter().enumerate() {
+                for i in 0..N_USERS {
                     region.assign_advice(
                         || "username",
                         self.username,
                         i,
-                        || Value::known(big_uint_to_fp(entry.username_as_big_uint())),
+                        || Value::known(big_uint_to_fp(entries[i].username_as_big_uint())),
                     )?;
 
                     let mut assigned_balances_row = vec![];
 
-                    for (j, balance) in entry.balances().iter().enumerate() {
+                    for (j, balance) in entries[i].balances().iter().enumerate() {
                         let assigned_balance = region.assign_advice(
                             || format!("balance {}", j),
                             self.balances[j],
@@ -138,16 +140,15 @@ impl<const N_USERS: usize, const N_CURRENCIES: usize> Circuit<Fp>
 where
     [(); N_CURRENCIES + 1]:,
 {
-    type Config = UnivariateGrandSumConfig<N_CURRENCIES>;
+    type Config = UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
         Self::init_empty()
     }
 
-    /// Configures the circuit
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        UnivariateGrandSumConfig::<N_CURRENCIES>::configure(meta)
+        UnivariateGrandSumConfig::<N_CURRENCIES, N_USERS>::configure(meta)
     }
 
     fn synthesize(

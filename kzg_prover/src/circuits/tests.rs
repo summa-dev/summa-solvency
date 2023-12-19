@@ -10,8 +10,9 @@ mod test {
     use crate::entry::Entry;
     use crate::utils::parse_csv_to_entries;
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
-    use halo2_proofs::halo2curves::bn256::Fr as Fp;
-    use halo2_proofs::plonk::Any;
+    use halo2_proofs::halo2curves::bn256::{Bn256, Fr as Fp, G1Affine};
+    use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
+    use halo2_proofs::poly::kzg::commitment::ParamsKZG;
     use num_bigint::BigUint;
 
     const K: u32 = 17;
@@ -35,27 +36,9 @@ mod test {
 
     #[test]
     fn test_valid_univariate_grand_sum_full_prover() {
-        const N_USERS: usize = 16;
-
-        // Initialize an empty circuit
-        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
-
-        // Generate a universal trusted setup for testing purposes.
-        //
-        // The verification key (vk) and the proving key (pk) are then generated.
-        // An empty circuit is used here to emphasize that the circuit inputs are not relevant when generating the keys.
-        // Important: The dimensions of the circuit used to generate the keys must match those of the circuit used to generate the proof.
-        // In this case, the dimensions are represented by the number fo users.
-        let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
-
-        // Only now we can instantiate the circuit with the actual inputs
         let path = "../csv/entry_16.csv";
 
-        let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
-        let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
-
-        let _ =
-            parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
+        let (entries, circuit, pk, vk, params) = set_up::<N_USERS, N_CURRENCIES>(path);
 
         // Calculate total for all entry columns
         let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
@@ -65,12 +48,6 @@ mod test {
                 csv_total[i] += balance;
             }
         }
-
-        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
-
-        let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
-
-        valid_prover.assert_satisfied();
 
         // 1. Proving phase
         // The Custodian generates the ZK-SNARK Halo2 proof that commits to the user entry values in advice polynomials
@@ -160,43 +137,12 @@ mod test {
         }
     }
 
+    // The prover communicates an invalid omega to the verifier, therefore the opening proof of user inclusion should fail
     #[test]
-    fn test_invalid_univariate_grand_sum_proof() {
-        const N_USERS: usize = 16;
-
-        // Initialize an empty circuit
-        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
-
-        // Generate a universal trusted setup for testing purposes.
-        //
-        // The verification key (vk) and the proving key (pk) are then generated.
-        // An empty circuit is used here to emphasize that the circuit inputs are not relevant when generating the keys.
-        // Important: The dimensions of the circuit used to generate the keys must match those of the circuit used to generate the proof.
-        // In this case, the dimensions are represented by the number fo users.
-        let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
-
-        // Only now we can instantiate the circuit with the actual inputs
+    fn test_invalid_omega_univariate_grand_sum_proof() {
         let path = "../csv/entry_16.csv";
 
-        let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
-        let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
-
-        parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
-
-        // Calculate total for all entry columns
-        let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
-
-        for entry in &entries {
-            for (i, balance) in entry.balances().iter().enumerate() {
-                csv_total[i] += balance;
-            }
-        }
-
-        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
-
-        let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
-
-        valid_prover.assert_satisfied();
+        let (_, circuit, pk, vk, params) = set_up::<N_USERS, N_CURRENCIES>(path);
 
         // 1. Proving phase
         // The Custodian generates the ZK proof
@@ -239,8 +185,67 @@ mod test {
         );
         //The verification should fail
         assert!(!balances_verified);
+    }
 
-        // TODO add more negative tests
+    // The prover communicates an invalid polynomial degree to the verifier (smaller than the actual degree). This will result in an understated grand sum
+    #[test]
+    fn test_invalid_poly_degree_univariate_grand_sum_full_prover() {
+        let path = "../csv/entry_16.csv";
+
+        let (entries, circuit, pk, vk, params) = set_up::<N_USERS, N_CURRENCIES>(path);
+
+        // Calculate total for all entry columns
+        let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
+
+        for entry in &entries {
+            for (i, balance) in entry.balances().iter().enumerate() {
+                csv_total[i] += balance;
+            }
+        }
+
+        // 1. Proving phase
+        // The Custodian generates the ZK-SNARK Halo2 proof that commits to the user entry values in advice polynomials
+        // and also range-checks the user balance values
+        let (zk_snark_proof, advice_polys, _) =
+            full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
+
+        // Both the Custodian and the Verifier know what column range are the balance columns
+        // (The first column is the user IDs)
+        let balance_column_range = 1..N_CURRENCIES + 1;
+
+        // The Custodian makes a batch opening proof of all user balance polynomials at x = 0 for the Verifier
+        let grand_sums_batch_proof = open_grand_sums::<N_CURRENCIES>(
+            &advice_polys.advice_polys,
+            &advice_polys.advice_blinds,
+            &params,
+            balance_column_range,
+        );
+
+        // 2. Verification phase
+        // The Verifier verifies the ZK proof
+        assert!(full_verifier(&params, &vk, &zk_snark_proof, vec![vec![]]));
+
+        // The Custodian communicates the (invalid) polynomial degree to the Verifier
+        let invalid_poly_degree = u64::try_from(advice_polys.advice_polys[0].len()).unwrap() - 1;
+
+        // Both the Custodian and the Verifier know what column range are the balance columns
+        let balance_column_range = 1..N_CURRENCIES + 1;
+
+        // The Custodian communicates the KZG batch opening transcript to the Verifier
+        // The Verifier verifies the KZG batch opening and calculates the grand sums
+        let (verified, grand_sum) = verify_grand_sum_openings::<N_CURRENCIES>(
+            &params,
+            &zk_snark_proof,
+            grand_sums_batch_proof,
+            invalid_poly_degree,
+            balance_column_range,
+        );
+
+        // The opened grand sum is smaller than the actual sum of balances extracted from the csv file
+        assert!(verified);
+        for i in 0..N_CURRENCIES {
+            assert_ne!(csv_total[i], grand_sum[i]);
+        }
     }
 
     // Building a proof using as input a csv file with an entry that is not in range [0, 2^64 - 1] should fail the range check constraint on the leaf balance
@@ -309,5 +314,39 @@ mod test {
         halo2_proofs::dev::CircuitLayout::default()
             .render(K, &circuit, &root)
             .unwrap();
+    }
+
+    fn set_up<const N_USERS: usize, const N_CURRENCIES: usize>(
+        path: &str,
+    ) -> (
+        Vec<Entry<N_CURRENCIES>>,
+        UnivariateGrandSum<N_USERS, N_CURRENCIES>,
+        ProvingKey<G1Affine>,
+        VerifyingKey<G1Affine>,
+        ParamsKZG<Bn256>,
+    )
+    where
+        [(); N_CURRENCIES + 1]:,
+    {
+        // Initialize an empty circuit
+        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
+
+        // Generate a universal trusted setup for testing purposes.
+        //
+        // The verification key (vk) and the proving key (pk) are then generated.
+        // An empty circuit is used here to emphasize that the circuit inputs are not relevant when generating the keys.
+        // Important: The dimensions of the circuit used to generate the keys must match those of the circuit used to generate the proof.
+        // In this case, the dimensions are represented by the number fo users.
+        let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
+
+        // Only now we can instantiate the circuit with the actual inputs
+        let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
+        let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
+
+        parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
+
+        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+
+        (entries, circuit, pk, vk, params)
     }
 }
