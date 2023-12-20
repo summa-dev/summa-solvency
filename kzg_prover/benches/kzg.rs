@@ -1,6 +1,5 @@
 #![feature(generic_const_exprs)]
 use criterion::{criterion_group, criterion_main, Criterion};
-use num_bigint::BigUint;
 use rand::{rngs::OsRng, Rng};
 
 use summa_solvency::{
@@ -39,14 +38,6 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
     let _ =
         parse_csv_to_entries::<&str, N_CURRENCIES>(csv_path, &mut entries, &mut cryptos).unwrap();
 
-    // Calculate total for all entry columns
-    let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
-    for entry in &entries {
-        for (i, balance) in entry.balances().iter().enumerate() {
-            csv_total[i] += balance;
-        }
-    }
-
     c.bench_function(&range_check_bench_name, |b| {
         b.iter_batched(
             || circuit.clone(), // Setup function: clone the circuit for each iteration
@@ -76,7 +67,7 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
 
     // Generate a random user index
     let get_random_user_index = || {
-        let user_range: std::ops::Range<usize> = 3..N_USERS;
+        let user_range: std::ops::Range<usize> = 0..N_USERS;
         OsRng.gen_range(user_range) as u16
     };
 
@@ -159,7 +150,7 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
     });
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
+fn criterion_benchmark(_c: &mut Criterion) {
     bench_kzg::<17, 16, 2, 3>(
         "K = 17, N_USER = 16, N_CURRENCIES = 2",
         "../csv/entry_16.csv",
