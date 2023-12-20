@@ -8,13 +8,23 @@ use summa_backend::{
     apis::{
         address_ownership::AddressOwnership,
         leaf_hash_from_inputs,
-        round::{MstInclusionProof, Round},
+        round::{KZGInclusionProof, Round},
     },
     contracts::signer::{AddressInput, SummaSigner},
     tests::initialize_test_env,
 };
-use summa_solvency::merkle_sum_tree::MerkleSumTree;
+use summa_solvency::{
+    circuits::{
+        univariate_grand_sum::UnivariateGrandSum,
+        utils::{full_prover, generate_setup_artifacts},
+    },
+    cryptocurrency::Cryptocurrency,
+    entry::Entry,
+    utils::parse_csv_to_entries,
+};
 
+const K: u32 = 17;
+const N_USERS: usize = 16;
 const N_CURRENCIES: usize = 2;
 const USER_INDEX: usize = 0;
 
@@ -57,16 +67,25 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // 2. Submit Commitment
     //
     // Initialize the `Round` instance to submit the liability commitment.
-    let params_path = "ptau/hermez-raw-11";
-    let entry_csv = "../csv/entry_16.csv";
-    let mst = MerkleSumTree::new(entry_csv).unwrap();
+    let params_path = format!("ptau/hermez-raw-{K}");
+    let entry_csv: &str = "../csv/entry_16.csv";
+
+    // Declared `entries` and `cryptos` to store the entries and cryptos from the CSV file.
+    let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
+    let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
+    parse_csv_to_entries::<&str, N_CURRENCIES>(entry_csv, &mut entries, &mut cryptos).unwrap();
+
+    let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+    let (params, pk, _) = generate_setup_artifacts(K, Some(&params_path), circuit.clone()).unwrap();
+
+    let (zk_snark_proof, advice_polys, omega) = full_prover(&params, &pk, circuit, vec![vec![]]);
 
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
-    let mut round = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, timestamp).unwrap();
+    let mut round = Round::<2, 14>::new(&signer, advice_polys, &params_path, timestamp).unwrap();
 
     // Sends the commitment, which should ideally complete without errors.
-    round.dispatch_commitment().await?;
+    // round.dispatch_commitment().await?; // TODO: applied with upcoming V2 contract
 
     println!("2. Commitment is submitted successfully!");
 
@@ -96,7 +115,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Assume that the `proof` file has been downloaded from the CEX.
     let proof_file = File::open(format!("user_{}_proof.json", USER_INDEX))?;
     let reader = BufReader::new(proof_file);
-    let downloaded_inclusion_proof: MstInclusionProof = from_reader(reader)?;
+    let downloaded_inclusion_proof: KZGInclusionProof = from_reader(reader)?;
 
     let public_inputs = downloaded_inclusion_proof.get_public_inputs();
 

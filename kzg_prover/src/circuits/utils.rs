@@ -31,6 +31,12 @@ use rand::rngs::OsRng;
 
 use crate::utils::fp_to_big_uint;
 
+pub type SetupArtifacts = (
+    ParamsKZG<Bn256>,
+    ProvingKey<G1Affine>,
+    VerifyingKey<G1Affine>,
+);
+
 /// Generate setup artifacts for a circuit of size `k`, where 2^k represents the number of rows in the circuit.
 ///
 /// If the trusted setup parameters are not found, the function performs an unsafe trusted setup to generate the necessary parameters
@@ -40,35 +46,39 @@ pub fn generate_setup_artifacts<C: Circuit<Fp>>(
     k: u32,
     params_path: Option<&str>,
     circuit: C,
-) -> Result<
-    (
-        ParamsKZG<Bn256>,
-        ProvingKey<G1Affine>,
-        VerifyingKey<G1Affine>,
-    ),
-    &'static str,
-> {
+) -> Result<SetupArtifacts, Box<dyn std::error::Error>> {
     let mut params: ParamsKZG<Bn256>;
 
     match params_path {
         Some(path) => {
-            let timer = start_timer!(|| "Creating params");
+            let timer = start_timer!(|| "Loading and creating parameters from given file");
             let mut params_fs = File::open(path).expect("couldn't load params");
             params = ParamsKZG::<Bn256>::read(&mut params_fs).expect("Failed to read params");
             end_timer!(timer);
 
+            if k < 17 {
+                return Err(
+                    "Parameter 'k' must be greater than or equal to 17. Verify the ptau file path."
+                        .into(),
+                );
+            }
+
             if params.k() < k {
-                return Err("k is too large for the given params");
+                return Err(
+                    "The parameter 'k' exceeds the size limit of the provided parameters.".into(),
+                );
             }
 
             if params.k() > k {
-                let timer = start_timer!(|| "Downsizing params");
+                let timer =
+                    start_timer!(|| format!("Downsizing params from {} to {}", params.k(), k));
                 params.downsize(k);
                 end_timer!(timer);
             }
         }
         None => {
-            let timer = start_timer!(|| "None Creating params");
+            let timer =
+                start_timer!(|| "No ptau path specified, generating parameters from randomness");
             params = ParamsKZG::<Bn256>::setup(k, OsRng);
             end_timer!(timer);
         }
@@ -178,7 +188,7 @@ pub fn open_user_points<const N_CURRENCIES: usize>(
     params: &ParamsKZG<Bn256>,
     column_range: Range<usize>,
     omega: Fp,
-    user_index: u16,
+    user_index: usize,
 ) -> Vec<u8> {
     let omega_raised = omega.pow_vartime([user_index as u64]);
     create_opening_proof_at_challenge::<

@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-summa-solvency = { path = "../zk_prover" }
-halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2023_04_20"}
+summa-solvency = { path = "../kzg_prover" } # TODO: how to checkout v1 and v2 ??
+halo2_proofs = { git = "https://github.com/summa-dev/halo2"}
 csv = "1.2.2"
 futures = "0.3.28"
 num-bigint = "0.4.3"
