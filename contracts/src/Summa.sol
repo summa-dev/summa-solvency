@@ -205,6 +205,16 @@ contract Summa is Ownable {
                 "Invalid root balance"
             );
         }
-        return inclusionVerifier.verify(publicInputs, proof);
+
+        // "require" won't catch the exception thrown by the verifier, so we need to catch it manually
+        try inclusionVerifier.verifyProof(proof, publicInputs) returns (
+            bool result
+        ) {
+            return result;
+        } catch (bytes memory /*lowLevelData*/) {
+            // force revert to return the error message
+            require(false, "Invalid inclusion proof");
+            return false;
+        }
     }
 }

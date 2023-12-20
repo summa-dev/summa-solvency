@@ -496,8 +496,8 @@ describe("Summa Contract", () => {
 
       await summa.submitProofOfAddressOwnership(ownedAddresses);
       await submitCommitment(summa, commitmentMstRoot, rootBalances);
-      expect(
-        await verifyInclusionProof(
+      await expect(
+        verifyInclusionProof(
           summa,
           inclusionProof,
           leafHash,
@@ -505,7 +505,7 @@ describe("Summa Contract", () => {
           balance1,
           balance2
         )
-      ).to.be.equal(false);
+      ).to.be.revertedWith("Invalid inclusion proof");
     });
 
     it("should not verify with invalid proof", async () => {
@@ -513,8 +513,8 @@ describe("Summa Contract", () => {
 
       await summa.submitProofOfAddressOwnership(ownedAddresses);
       await submitCommitment(summa, commitmentMstRoot, rootBalances);
-      expect(
-        await verifyInclusionProof(
+      await expect(
+        verifyInclusionProof(
           summa,
           inclusionProof,
           leafHash,
@@ -522,7 +522,7 @@ describe("Summa Contract", () => {
           balance1,
           balance2
         )
-      ).to.be.equal(false);
+      ).to.be.revertedWith("Invalid inclusion proof");
     });
   });
 });

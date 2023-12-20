@@ -3,6 +3,7 @@ use crate::chips::poseidon::hash::{PoseidonChip, PoseidonConfig};
 use crate::chips::poseidon::poseidon_spec::PoseidonSpec;
 use crate::chips::range::range_check::{RangeCheckChip, RangeCheckConfig};
 use crate::circuits::traits::CircuitBase;
+use crate::circuits::WithInstances;
 use crate::merkle_sum_tree::utils::big_uint_to_fp;
 use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner};
@@ -10,7 +11,6 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{
     Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Instance, Selector,
 };
-use snark_verifier_sdk::CircuitExt;
 
 /// Circuit for verifying inclusion of an entry (username, balances) inside a merkle sum tree with a given root.
 ///
@@ -40,15 +40,15 @@ where
     pub root: Node<N_CURRENCIES>,
 }
 
-impl<const LEVELS: usize, const N_CURRENCIES: usize, const N_BYTES: usize> CircuitExt<Fp>
+impl<const LEVELS: usize, const N_CURRENCIES: usize, const N_BYTES: usize> WithInstances
     for MstInclusionCircuit<LEVELS, N_CURRENCIES, N_BYTES>
 where
     [usize; N_CURRENCIES + 1]: Sized,
     [usize; N_CURRENCIES + 2]: Sized,
 {
     /// Returns the number of public inputs of the circuit. It is {2 + N_CURRENCIES}, namely the leaf hash to be verified inclusion of, the root hash of the merkle sum tree and the root balances of the merkle sum tree.
-    fn num_instance(&self) -> Vec<usize> {
-        vec![{ 2 + N_CURRENCIES }]
+    fn num_instances(&self) -> usize {
+        2 + N_CURRENCIES
     }
     /// Returns the values of the public inputs of the circuit. Namely the leaf hash to be verified inclusion of and the root hash of the merkle sum tree.
     fn instances(&self) -> Vec<Vec<Fp>> {
@@ -422,7 +422,9 @@ where
                 )?;
 
                 // For other levels, only perform range on the sibling node balances. Any risk of overflow of the `current_balances` will be checked during verification
-                for currency in 0..N_CURRENCIES {
+                for (currency, sibling_balance) in
+                    sibling_balances.iter().enumerate().take(N_CURRENCIES)
+                {
                     // Each balance cell is constrained to be within the range defined by N_BYTES
                     range_check_chip.assign(
                         layouter.namespace(|| {
@@ -431,7 +433,7 @@ where
                                 namespace_prefix, currency
                             )
                         }),
-                        &sibling_balances[currency],
+                        sibling_balance,
                     )?;
                 }
 

@@ -1,11 +1,1412 @@
 // SPDX-License-Identifier: MIT
-    pragma solidity ^0.8.17;
 
-    contract Verifier {
-        function verify(
-            uint256[] memory pubInputs,
-            bytes memory proof
-        ) public view returns (bool) {
-            bool success = true;
-            bytes32[916] memory transcript;
-            assembly {                    let f_p := 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47                    let f_q := 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001                    function validate_ec_point(x, y) -> valid {                        {                            let x_lt_p := lt(x, 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47)                            let y_lt_p := lt(y, 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47)                            valid := and(x_lt_p, y_lt_p)                        }                        {                            let y_square := mulmod(y, y, 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47)                            let x_square := mulmod(x, x, 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47)                            let x_cube := mulmod(x_square, x, 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47)                            let x_cube_plus_3 := addmod(x_cube, 3, 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47)                            let is_affine := eq(x_cube_plus_3, y_square)                            valid := and(valid, is_affine)                        }                    }                    mstore(add(transcript, 0x20), mod(mload(add(pubInputs, 0x20)), f_q))mstore(add(transcript, 0x40), mod(mload(add(pubInputs, 0x40)), f_q))mstore(add(transcript, 0x60), mod(mload(add(pubInputs, 0x60)), f_q))mstore(add(transcript, 0x80), mod(mload(add(pubInputs, 0x80)), f_q))mstore(add(transcript, 0x0), 7290356956133308795219632317546298177560913853825373832110764139479796737523)        {            let x := mload(add(proof, 0x20))            mstore(add(transcript, 0xa0), x)            let y := mload(add(proof, 0x40))            mstore(add(transcript, 0xc0), y)            success := and(validate_ec_point(x, y), success)        }        {            let x := mload(add(proof, 0x60))            mstore(add(transcript, 0xe0), x)            let y := mload(add(proof, 0x80))            mstore(add(transcript, 0x100), y)            success := and(validate_ec_point(x, y), success)        }        {            let x := mload(add(proof, 0xa0))            mstore(add(transcript, 0x120), x)            let y := mload(add(proof, 0xc0))            mstore(add(transcript, 0x140), y)            success := and(validate_ec_point(x, y), success)        }mstore(add(transcript, 0x160), keccak256(add(transcript, 0x0), 352)){            let hash := mload(add(transcript, 0x160))            mstore(add(transcript, 0x180), mod(hash, f_q))            mstore(add(transcript, 0x1a0), hash)        }        {            let x := mload(add(proof, 0xe0))            mstore(add(transcript, 0x1c0), x)            let y := mload(add(proof, 0x100))            mstore(add(transcript, 0x1e0), y)            success := and(validate_ec_point(x, y), success)        }        {            let x := mload(add(proof, 0x120))            mstore(add(transcript, 0x200), x)            let y := mload(add(proof, 0x140))            mstore(add(transcript, 0x220), y)            success := and(validate_ec_point(x, y), success)        }mstore(add(transcript, 0x240), keccak256(add(transcript, 0x1a0), 160)){            let hash := mload(add(transcript, 0x240))            mstore(add(transcript, 0x260), mod(hash, f_q))            mstore(add(transcript, 0x280), hash)        }mstore8(add(transcript, 0x2a0), 1)mstore(add(transcript, 0x2a0), keccak256(add(transcript, 0x280), 33)){            let hash := mload(add(transcript, 0x2a0))            mstore(add(transcript, 0x2c0), mod(hash, f_q))            mstore(add(transcript, 0x2e0), hash)        }        {            let x := mload(add(proof, 0x160))            mstore(add(transcript, 0x300), x)            let y := mload(add(proof, 0x180))            mstore(add(transcript, 0x320), y)            success := and(validate_ec_point(x, y), success)        }        {            let x := mload(add(proof, 0x1a0))            mstore(add(transcript, 0x340), x)            let y := mload(add(proof, 0x1c0))            mstore(add(transcript, 0x360), y)            success := and(validate_ec_point(x, y), success)        }        {            let x := mload(add(proof, 0x1e0))            mstore(add(transcript, 0x380), x)            let y := mload(add(proof, 0x200))            mstore(add(transcript, 0x3a0), y)            success := and(validate_ec_point(x, y), success)        }        {            let x := mload(add(proof, 0x220))            mstore(add(transcript, 0x3c0), x)            let y := mload(add(proof, 0x240))            mstore(add(transcript, 0x3e0), y)            success := and(validate_ec_point(x, y), success)        }mstore(add(transcript, 0x400), keccak256(add(transcript, 0x2e0), 288)){            let hash := mload(add(transcript, 0x400))            mstore(add(transcript, 0x420), mod(hash, f_q))            mstore(add(transcript, 0x440), hash)        }        {            let x := mload(add(proof, 0x260))            mstore(add(transcript, 0x460), x)            let y := mload(add(proof, 0x280))            mstore(add(transcript, 0x480), y)            success := and(validate_ec_point(x, y), success)        }        {            let x := mload(add(proof, 0x2a0))            mstore(add(transcript, 0x4a0), x)            let y := mload(add(proof, 0x2c0))            mstore(add(transcript, 0x4c0), y)            success := and(validate_ec_point(x, y), success)        }        {            let x := mload(add(proof, 0x2e0))            mstore(add(transcript, 0x4e0), x)            let y := mload(add(proof, 0x300))            mstore(add(transcript, 0x500), y)            success := and(validate_ec_point(x, y), success)        }        {            let x := mload(add(proof, 0x320))            mstore(add(transcript, 0x520), x)            let y := mload(add(proof, 0x340))            mstore(add(transcript, 0x540), y)            success := and(validate_ec_point(x, y), success)        }        {            let x := mload(add(proof, 0x360))            mstore(add(transcript, 0x560), x)            let y := mload(add(proof, 0x380))            mstore(add(transcript, 0x580), y)            success := and(validate_ec_point(x, y), success)        }mstore(add(transcript, 0x5a0), keccak256(add(transcript, 0x440), 352)){            let hash := mload(add(transcript, 0x5a0))            mstore(add(transcript, 0x5c0), mod(hash, f_q))            mstore(add(transcript, 0x5e0), hash)        }mstore(add(transcript, 0x600), mod(mload(add(proof, 0x3a0)), f_q))mstore(add(transcript, 0x620), mod(mload(add(proof, 0x3c0)), f_q))mstore(add(transcript, 0x640), mod(mload(add(proof, 0x3e0)), f_q))mstore(add(transcript, 0x660), mod(mload(add(proof, 0x400)), f_q))mstore(add(transcript, 0x680), mod(mload(add(proof, 0x420)), f_q))mstore(add(transcript, 0x6a0), mod(mload(add(proof, 0x440)), f_q))mstore(add(transcript, 0x6c0), mod(mload(add(proof, 0x460)), f_q))mstore(add(transcript, 0x6e0), mod(mload(add(proof, 0x480)), f_q))mstore(add(transcript, 0x700), mod(mload(add(proof, 0x4a0)), f_q))mstore(add(transcript, 0x720), mod(mload(add(proof, 0x4c0)), f_q))mstore(add(transcript, 0x740), mod(mload(add(proof, 0x4e0)), f_q))mstore(add(transcript, 0x760), mod(mload(add(proof, 0x500)), f_q))mstore(add(transcript, 0x780), mod(mload(add(proof, 0x520)), f_q))mstore(add(transcript, 0x7a0), mod(mload(add(proof, 0x540)), f_q))mstore(add(transcript, 0x7c0), mod(mload(add(proof, 0x560)), f_q))mstore(add(transcript, 0x7e0), mod(mload(add(proof, 0x580)), f_q))mstore(add(transcript, 0x800), mod(mload(add(proof, 0x5a0)), f_q))mstore(add(transcript, 0x820), mod(mload(add(proof, 0x5c0)), f_q))mstore(add(transcript, 0x840), mod(mload(add(proof, 0x5e0)), f_q))mstore(add(transcript, 0x860), mod(mload(add(proof, 0x600)), f_q))mstore(add(transcript, 0x880), mod(mload(add(proof, 0x620)), f_q))mstore(add(transcript, 0x8a0), mod(mload(add(proof, 0x640)), f_q))mstore(add(transcript, 0x8c0), mod(mload(add(proof, 0x660)), f_q))mstore(add(transcript, 0x8e0), mod(mload(add(proof, 0x680)), f_q))mstore(add(transcript, 0x900), mod(mload(add(proof, 0x6a0)), f_q))mstore(add(transcript, 0x920), mod(mload(add(proof, 0x6c0)), f_q))mstore(add(transcript, 0x940), mod(mload(add(proof, 0x6e0)), f_q))mstore(add(transcript, 0x960), mod(mload(add(proof, 0x700)), f_q))mstore(add(transcript, 0x980), mod(mload(add(proof, 0x720)), f_q))mstore(add(transcript, 0x9a0), mod(mload(add(proof, 0x740)), f_q))mstore(add(transcript, 0x9c0), mod(mload(add(proof, 0x760)), f_q))mstore(add(transcript, 0x9e0), mod(mload(add(proof, 0x780)), f_q))mstore(add(transcript, 0xa00), mod(mload(add(proof, 0x7a0)), f_q))mstore(add(transcript, 0xa20), mod(mload(add(proof, 0x7c0)), f_q))mstore(add(transcript, 0xa40), mod(mload(add(proof, 0x7e0)), f_q))mstore(add(transcript, 0xa60), keccak256(add(transcript, 0x5e0), 1152)){            let hash := mload(add(transcript, 0xa60))            mstore(add(transcript, 0xa80), mod(hash, f_q))            mstore(add(transcript, 0xaa0), hash)        }mstore8(add(transcript, 0xac0), 1)mstore(add(transcript, 0xac0), keccak256(add(transcript, 0xaa0), 33)){            let hash := mload(add(transcript, 0xac0))            mstore(add(transcript, 0xae0), mod(hash, f_q))            mstore(add(transcript, 0xb00), hash)        }        {            let x := mload(add(proof, 0x800))            mstore(add(transcript, 0xb20), x)            let y := mload(add(proof, 0x820))            mstore(add(transcript, 0xb40), y)            success := and(validate_ec_point(x, y), success)        }mstore(add(transcript, 0xb60), keccak256(add(transcript, 0xb00), 96)){            let hash := mload(add(transcript, 0xb60))            mstore(add(transcript, 0xb80), mod(hash, f_q))            mstore(add(transcript, 0xba0), hash)        }        {            let x := mload(add(proof, 0x840))            mstore(add(transcript, 0xbc0), x)            let y := mload(add(proof, 0x860))            mstore(add(transcript, 0xbe0), y)            success := and(validate_ec_point(x, y), success)        }mstore(add(transcript, 0xc00), mulmod(mload(add(transcript, 0x5c0)), mload(add(transcript, 0x5c0)), f_q))mstore(add(transcript, 0xc20), mulmod(mload(add(transcript, 0xc00)), mload(add(transcript, 0xc00)), f_q))mstore(add(transcript, 0xc40), mulmod(mload(add(transcript, 0xc20)), mload(add(transcript, 0xc20)), f_q))mstore(add(transcript, 0xc60), mulmod(mload(add(transcript, 0xc40)), mload(add(transcript, 0xc40)), f_q))mstore(add(transcript, 0xc80), mulmod(mload(add(transcript, 0xc60)), mload(add(transcript, 0xc60)), f_q))mstore(add(transcript, 0xca0), mulmod(mload(add(transcript, 0xc80)), mload(add(transcript, 0xc80)), f_q))mstore(add(transcript, 0xcc0), mulmod(mload(add(transcript, 0xca0)), mload(add(transcript, 0xca0)), f_q))mstore(add(transcript, 0xce0), mulmod(mload(add(transcript, 0xcc0)), mload(add(transcript, 0xcc0)), f_q))mstore(add(transcript, 0xd00), mulmod(mload(add(transcript, 0xce0)), mload(add(transcript, 0xce0)), f_q))mstore(add(transcript, 0xd20), mulmod(mload(add(transcript, 0xd00)), mload(add(transcript, 0xd00)), f_q))mstore(add(transcript, 0xd40), mulmod(mload(add(transcript, 0xd20)), mload(add(transcript, 0xd20)), f_q))mstore(add(transcript, 0xd60), addmod(mload(add(transcript, 0xd40)), 21888242871839275222246405745257275088548364400416034343698204186575808495616, f_q))mstore(add(transcript, 0xd80), mulmod(mload(add(transcript, 0xd60)), 21877555253249509951141793242451973684696534144361143701928820297812832026625, f_q))mstore(add(transcript, 0xda0), mulmod(mload(add(transcript, 0xd80)), 15699029810934084314820646074566828280617789951162923449200398535581206172418, f_q))mstore(add(transcript, 0xdc0), addmod(mload(add(transcript, 0x5c0)), 6189213060905190907425759670690446807930574449253110894497805650994602323199, f_q))mstore(add(transcript, 0xde0), mulmod(mload(add(transcript, 0xd80)), 16553167948716468074998850291160946772606011499093267774599468837293218566225, f_q))mstore(add(transcript, 0xe00), addmod(mload(add(transcript, 0x5c0)), 5335074923122807147247555454096328315942352901322766569098735349282589929392, f_q))mstore(add(transcript, 0xe20), mulmod(mload(add(transcript, 0xd80)), 4260969412351770314333984243767775737437927068151180798236715529158398853173, f_q))mstore(add(transcript, 0xe40), addmod(mload(add(transcript, 0x5c0)), 17627273459487504907912421501489499351110437332264853545461488657417409642444, f_q))mstore(add(transcript, 0xe60), mulmod(mload(add(transcript, 0xd80)), 18302882236472339419631414285403968768409802182737928837767912484847322191909, f_q))mstore(add(transcript, 0xe80), addmod(mload(add(transcript, 0x5c0)), 3585360635366935802614991459853306320138562217678105505930291701728486303708, f_q))mstore(add(transcript, 0xea0), mulmod(mload(add(transcript, 0xd80)), 4925592601992654644734291590386747644864797672605745962807370354577123815907, f_q))mstore(add(transcript, 0xec0), addmod(mload(add(transcript, 0x5c0)), 16962650269846620577512114154870527443683566727810288380890833831998684679710, f_q))mstore(add(transcript, 0xee0), mulmod(mload(add(transcript, 0xd80)), 19444693496467964793333684482470811869395409953158764080291550423779334624794, f_q))mstore(add(transcript, 0xf00), addmod(mload(add(transcript, 0x5c0)), 2443549375371310428912721262786463219152954447257270263406653762796473870823, f_q))mstore(add(transcript, 0xf20), mulmod(mload(add(transcript, 0xd80)), 1, f_q))mstore(add(transcript, 0xf40), addmod(mload(add(transcript, 0x5c0)), 21888242871839275222246405745257275088548364400416034343698204186575808495616, f_q))mstore(add(transcript, 0xf60), mulmod(mload(add(transcript, 0xd80)), 9396103202274256930945606623206526900461945684265495839012435492634193195103, f_q))mstore(add(transcript, 0xf80), addmod(mload(add(transcript, 0x5c0)), 12492139669565018291300799122050748188086418716150538504685768693941615300514, f_q))mstore(add(transcript, 0xfa0), mulmod(mload(add(transcript, 0xd80)), 19380560087801265747114831706136320509424814679569278834391540198888293317501, f_q))mstore(add(transcript, 0xfc0), addmod(mload(add(transcript, 0x5c0)), 2507682784038009475131574039120954579123549720846755509306663987687515178116, f_q))mstore(add(transcript, 0xfe0), mulmod(mload(add(transcript, 0xd80)), 11322573621548282883955256084347882816245615123967859588024989498742209856615, f_q))mstore(add(transcript, 0x1000), addmod(mload(add(transcript, 0x5c0)), 10565669250290992338291149660909392272302749276448174755673214687833598639002, f_q)){            let prod := mload(add(transcript, 0xdc0))                prod := mulmod(mload(add(transcript, 0xe00)), prod, f_q)                mstore(add(transcript, 0x1020), prod)                            prod := mulmod(mload(add(transcript, 0xe40)), prod, f_q)                mstore(add(transcript, 0x1040), prod)                            prod := mulmod(mload(add(transcript, 0xe80)), prod, f_q)                mstore(add(transcript, 0x1060), prod)                            prod := mulmod(mload(add(transcript, 0xec0)), prod, f_q)                mstore(add(transcript, 0x1080), prod)                            prod := mulmod(mload(add(transcript, 0xf00)), prod, f_q)                mstore(add(transcript, 0x10a0), prod)                            prod := mulmod(mload(add(transcript, 0xf40)), prod, f_q)                mstore(add(transcript, 0x10c0), prod)                            prod := mulmod(mload(add(transcript, 0xf80)), prod, f_q)                mstore(add(transcript, 0x10e0), prod)                            prod := mulmod(mload(add(transcript, 0xfc0)), prod, f_q)                mstore(add(transcript, 0x1100), prod)                            prod := mulmod(mload(add(transcript, 0x1000)), prod, f_q)                mstore(add(transcript, 0x1120), prod)                            prod := mulmod(mload(add(transcript, 0xd60)), prod, f_q)                mstore(add(transcript, 0x1140), prod)                    }mstore(add(transcript, 0x1180), 32)mstore(add(transcript, 0x11a0), 32)mstore(add(transcript, 0x11c0), 32)mstore(add(transcript, 0x11e0), mload(add(transcript, 0x1140)))mstore(add(transcript, 0x1200), 21888242871839275222246405745257275088548364400416034343698204186575808495615)mstore(add(transcript, 0x1220), 21888242871839275222246405745257275088548364400416034343698204186575808495617)success := and(eq(staticcall(gas(), 0x5, add(transcript, 0x1180), 0xc0, add(transcript, 0x1160), 0x20), 1), success){                        let inv := mload(add(transcript, 0x1160))            let v                            v := mload(add(transcript, 0xd60))                    mstore(add(transcript, 0xd60), mulmod(mload(add(transcript, 0x1120)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x1000))                    mstore(add(transcript, 0x1000), mulmod(mload(add(transcript, 0x1100)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0xfc0))                    mstore(add(transcript, 0xfc0), mulmod(mload(add(transcript, 0x10e0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0xf80))                    mstore(add(transcript, 0xf80), mulmod(mload(add(transcript, 0x10c0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0xf40))                    mstore(add(transcript, 0xf40), mulmod(mload(add(transcript, 0x10a0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0xf00))                    mstore(add(transcript, 0xf00), mulmod(mload(add(transcript, 0x1080)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0xec0))                    mstore(add(transcript, 0xec0), mulmod(mload(add(transcript, 0x1060)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0xe80))                    mstore(add(transcript, 0xe80), mulmod(mload(add(transcript, 0x1040)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0xe40))                    mstore(add(transcript, 0xe40), mulmod(mload(add(transcript, 0x1020)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0xe00))                    mstore(add(transcript, 0xe00), mulmod(mload(add(transcript, 0xdc0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                mstore(add(transcript, 0xdc0), inv)        }mstore(add(transcript, 0x1240), mulmod(mload(add(transcript, 0xda0)), mload(add(transcript, 0xdc0)), f_q))mstore(add(transcript, 0x1260), mulmod(mload(add(transcript, 0xde0)), mload(add(transcript, 0xe00)), f_q))mstore(add(transcript, 0x1280), mulmod(mload(add(transcript, 0xe20)), mload(add(transcript, 0xe40)), f_q))mstore(add(transcript, 0x12a0), mulmod(mload(add(transcript, 0xe60)), mload(add(transcript, 0xe80)), f_q))mstore(add(transcript, 0x12c0), mulmod(mload(add(transcript, 0xea0)), mload(add(transcript, 0xec0)), f_q))mstore(add(transcript, 0x12e0), mulmod(mload(add(transcript, 0xee0)), mload(add(transcript, 0xf00)), f_q))mstore(add(transcript, 0x1300), mulmod(mload(add(transcript, 0xf20)), mload(add(transcript, 0xf40)), f_q))mstore(add(transcript, 0x1320), mulmod(mload(add(transcript, 0xf60)), mload(add(transcript, 0xf80)), f_q))mstore(add(transcript, 0x1340), mulmod(mload(add(transcript, 0xfa0)), mload(add(transcript, 0xfc0)), f_q))mstore(add(transcript, 0x1360), mulmod(mload(add(transcript, 0xfe0)), mload(add(transcript, 0x1000)), f_q)){            let result := mulmod(mload(add(transcript, 0x1300)), mload(add(transcript, 0x20)), f_q)result := addmod(mulmod(mload(add(transcript, 0x1320)), mload(add(transcript, 0x40)), f_q), result, f_q)result := addmod(mulmod(mload(add(transcript, 0x1340)), mload(add(transcript, 0x60)), f_q), result, f_q)result := addmod(mulmod(mload(add(transcript, 0x1360)), mload(add(transcript, 0x80)), f_q), result, f_q)mstore(add(transcript, 0x1380), result)        }mstore(add(transcript, 0x13a0), addmod(mload(add(transcript, 0x600)), mload(add(transcript, 0x720)), f_q))mstore(add(transcript, 0x13c0), mulmod(mload(add(transcript, 0x13a0)), mload(add(transcript, 0x13a0)), f_q))mstore(add(transcript, 0x13e0), mulmod(mload(add(transcript, 0x13c0)), mload(add(transcript, 0x13c0)), f_q))mstore(add(transcript, 0x1400), mulmod(mload(add(transcript, 0x13a0)), mload(add(transcript, 0x13e0)), f_q))mstore(add(transcript, 0x1420), mulmod(mload(add(transcript, 0x1400)), 2910766817845651019878574839501801340070030115151021261302834310722729507541, f_q))mstore(add(transcript, 0x1440), addmod(mload(add(transcript, 0x620)), mload(add(transcript, 0x740)), f_q))mstore(add(transcript, 0x1460), mulmod(mload(add(transcript, 0x1440)), mload(add(transcript, 0x1440)), f_q))mstore(add(transcript, 0x1480), mulmod(mload(add(transcript, 0x1460)), mload(add(transcript, 0x1460)), f_q))mstore(add(transcript, 0x14a0), mulmod(mload(add(transcript, 0x1440)), mload(add(transcript, 0x1480)), f_q))mstore(add(transcript, 0x14c0), mulmod(mload(add(transcript, 0x14a0)), 19727366863391167538122140361473584127147630672623100827934084310230022599144, f_q))mstore(add(transcript, 0x14e0), addmod(mload(add(transcript, 0x1420)), mload(add(transcript, 0x14c0)), f_q))mstore(add(transcript, 0x1500), addmod(mload(add(transcript, 0x14e0)), sub(f_q, mload(add(transcript, 0x640))), f_q))mstore(add(transcript, 0x1520), mulmod(mload(add(transcript, 0x1500)), mload(add(transcript, 0x7c0)), f_q))mstore(add(transcript, 0x1540), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1520)), f_q))mstore(add(transcript, 0x1560), mulmod(mload(add(transcript, 0x1400)), 5776684794125549462448597414050232243778680302179439492664047328281728356345, f_q))mstore(add(transcript, 0x1580), mulmod(mload(add(transcript, 0x14a0)), 8348174920934122550483593999453880006756108121341067172388445916328941978568, f_q))mstore(add(transcript, 0x15a0), addmod(mload(add(transcript, 0x1560)), mload(add(transcript, 0x1580)), f_q))mstore(add(transcript, 0x15c0), addmod(mload(add(transcript, 0x15a0)), sub(f_q, mload(add(transcript, 0x660))), f_q))mstore(add(transcript, 0x15e0), mulmod(mload(add(transcript, 0x15c0)), mload(add(transcript, 0x7c0)), f_q))mstore(add(transcript, 0x1600), addmod(mload(add(transcript, 0x1540)), mload(add(transcript, 0x15e0)), f_q))mstore(add(transcript, 0x1620), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1600)), f_q))mstore(add(transcript, 0x1640), addmod(mload(add(transcript, 0x1400)), sub(f_q, mload(add(transcript, 0x680))), f_q))mstore(add(transcript, 0x1660), mulmod(mload(add(transcript, 0x1640)), mload(add(transcript, 0x7e0)), f_q))mstore(add(transcript, 0x1680), addmod(mload(add(transcript, 0x1620)), mload(add(transcript, 0x1660)), f_q))mstore(add(transcript, 0x16a0), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1680)), f_q))mstore(add(transcript, 0x16c0), mulmod(mload(add(transcript, 0x680)), 2910766817845651019878574839501801340070030115151021261302834310722729507541, f_q))mstore(add(transcript, 0x16e0), mulmod(mload(add(transcript, 0x1440)), 19727366863391167538122140361473584127147630672623100827934084310230022599144, f_q))mstore(add(transcript, 0x1700), addmod(mload(add(transcript, 0x16c0)), mload(add(transcript, 0x16e0)), f_q))mstore(add(transcript, 0x1720), addmod(mload(add(transcript, 0x1700)), mload(add(transcript, 0x6e0)), f_q))mstore(add(transcript, 0x1740), mulmod(mload(add(transcript, 0x1720)), mload(add(transcript, 0x1720)), f_q))mstore(add(transcript, 0x1760), mulmod(mload(add(transcript, 0x1740)), mload(add(transcript, 0x1740)), f_q))mstore(add(transcript, 0x1780), mulmod(mload(add(transcript, 0x1720)), mload(add(transcript, 0x1760)), f_q))mstore(add(transcript, 0x17a0), mulmod(mload(add(transcript, 0x640)), 8897705321156975119607866206188469715432233408805434913352778521345836531302, f_q))mstore(add(transcript, 0x17c0), mulmod(mload(add(transcript, 0x660)), 13897810991298242824030978581179475767377101082166056046492926701399149797630, f_q))mstore(add(transcript, 0x17e0), addmod(mload(add(transcript, 0x17a0)), mload(add(transcript, 0x17c0)), f_q))mstore(add(transcript, 0x1800), addmod(mload(add(transcript, 0x1780)), sub(f_q, mload(add(transcript, 0x17e0))), f_q))mstore(add(transcript, 0x1820), mulmod(mload(add(transcript, 0x1800)), mload(add(transcript, 0x7e0)), f_q))mstore(add(transcript, 0x1840), addmod(mload(add(transcript, 0x16a0)), mload(add(transcript, 0x1820)), f_q))mstore(add(transcript, 0x1860), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1840)), f_q))mstore(add(transcript, 0x1880), mulmod(mload(add(transcript, 0x680)), 5776684794125549462448597414050232243778680302179439492664047328281728356345, f_q))mstore(add(transcript, 0x18a0), mulmod(mload(add(transcript, 0x1440)), 8348174920934122550483593999453880006756108121341067172388445916328941978568, f_q))mstore(add(transcript, 0x18c0), addmod(mload(add(transcript, 0x1880)), mload(add(transcript, 0x18a0)), f_q))mstore(add(transcript, 0x18e0), addmod(mload(add(transcript, 0x18c0)), mload(add(transcript, 0x700)), f_q))mstore(add(transcript, 0x1900), mulmod(mload(add(transcript, 0x640)), 7127083008168878795310303301757642617203533252990949589494537404444738046722, f_q))mstore(add(transcript, 0x1920), mulmod(mload(add(transcript, 0x660)), 10251091711782631878897995303436082826711938358699127319815611151510940403902, f_q))mstore(add(transcript, 0x1940), addmod(mload(add(transcript, 0x1900)), mload(add(transcript, 0x1920)), f_q))mstore(add(transcript, 0x1960), addmod(mload(add(transcript, 0x18e0)), sub(f_q, mload(add(transcript, 0x1940))), f_q))mstore(add(transcript, 0x1980), mulmod(mload(add(transcript, 0x1960)), mload(add(transcript, 0x7e0)), f_q))mstore(add(transcript, 0x19a0), addmod(mload(add(transcript, 0x1860)), mload(add(transcript, 0x1980)), f_q))mstore(add(transcript, 0x19c0), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x19a0)), f_q))mstore(add(transcript, 0x19e0), addmod(1, sub(f_q, mload(add(transcript, 0x7a0))), f_q))mstore(add(transcript, 0x1a00), mulmod(mload(add(transcript, 0x19e0)), mload(add(transcript, 0x7a0)), f_q))mstore(add(transcript, 0x1a20), addmod(2, sub(f_q, mload(add(transcript, 0x7a0))), f_q))mstore(add(transcript, 0x1a40), mulmod(mload(add(transcript, 0x1a20)), mload(add(transcript, 0x1a00)), f_q))mstore(add(transcript, 0x1a60), addmod(4, sub(f_q, mload(add(transcript, 0x7a0))), f_q))mstore(add(transcript, 0x1a80), mulmod(mload(add(transcript, 0x1a60)), mload(add(transcript, 0x1a40)), f_q))mstore(add(transcript, 0x1aa0), addmod(mload(add(transcript, 0x6c0)), mload(add(transcript, 0x600)), f_q))mstore(add(transcript, 0x1ac0), addmod(mload(add(transcript, 0x1aa0)), sub(f_q, mload(add(transcript, 0x640))), f_q))mstore(add(transcript, 0x1ae0), mulmod(mload(add(transcript, 0x1ac0)), mload(add(transcript, 0x1a80)), f_q))mstore(add(transcript, 0x1b00), addmod(mload(add(transcript, 0x19c0)), mload(add(transcript, 0x1ae0)), f_q))mstore(add(transcript, 0x1b20), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1b00)), f_q))mstore(add(transcript, 0x1b40), addmod(mload(add(transcript, 0x6a0)), sub(f_q, mload(add(transcript, 0x660))), f_q))mstore(add(transcript, 0x1b60), mulmod(mload(add(transcript, 0x1b40)), mload(add(transcript, 0x1a80)), f_q))mstore(add(transcript, 0x1b80), addmod(mload(add(transcript, 0x1b20)), mload(add(transcript, 0x1b60)), f_q))mstore(add(transcript, 0x1ba0), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1b80)), f_q))mstore(add(transcript, 0x1bc0), mulmod(mload(add(transcript, 0x1500)), mload(add(transcript, 0x800)), f_q))mstore(add(transcript, 0x1be0), addmod(mload(add(transcript, 0x1ba0)), mload(add(transcript, 0x1bc0)), f_q))mstore(add(transcript, 0x1c00), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1be0)), f_q))mstore(add(transcript, 0x1c20), mulmod(mload(add(transcript, 0x15c0)), mload(add(transcript, 0x800)), f_q))mstore(add(transcript, 0x1c40), addmod(mload(add(transcript, 0x1c00)), mload(add(transcript, 0x1c20)), f_q))mstore(add(transcript, 0x1c60), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1c40)), f_q))mstore(add(transcript, 0x1c80), mulmod(mload(add(transcript, 0x1640)), mload(add(transcript, 0x820)), f_q))mstore(add(transcript, 0x1ca0), addmod(mload(add(transcript, 0x1c60)), mload(add(transcript, 0x1c80)), f_q))mstore(add(transcript, 0x1cc0), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1ca0)), f_q))mstore(add(transcript, 0x1ce0), mulmod(mload(add(transcript, 0x1800)), mload(add(transcript, 0x820)), f_q))mstore(add(transcript, 0x1d00), addmod(mload(add(transcript, 0x1cc0)), mload(add(transcript, 0x1ce0)), f_q))mstore(add(transcript, 0x1d20), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1d00)), f_q))mstore(add(transcript, 0x1d40), mulmod(mload(add(transcript, 0x1960)), mload(add(transcript, 0x820)), f_q))mstore(add(transcript, 0x1d60), addmod(mload(add(transcript, 0x1d20)), mload(add(transcript, 0x1d40)), f_q))mstore(add(transcript, 0x1d80), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1d60)), f_q))mstore(add(transcript, 0x1da0), addmod(3, sub(f_q, mload(add(transcript, 0x7a0))), f_q))mstore(add(transcript, 0x1dc0), mulmod(mload(add(transcript, 0x1da0)), mload(add(transcript, 0x1a40)), f_q))mstore(add(transcript, 0x1de0), mulmod(mload(add(transcript, 0x1ac0)), mload(add(transcript, 0x1dc0)), f_q))mstore(add(transcript, 0x1e00), addmod(mload(add(transcript, 0x1d80)), mload(add(transcript, 0x1de0)), f_q))mstore(add(transcript, 0x1e20), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1e00)), f_q))mstore(add(transcript, 0x1e40), mulmod(mload(add(transcript, 0x1b40)), mload(add(transcript, 0x1dc0)), f_q))mstore(add(transcript, 0x1e60), addmod(mload(add(transcript, 0x1e20)), mload(add(transcript, 0x1e40)), f_q))mstore(add(transcript, 0x1e80), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1e60)), f_q))mstore(add(transcript, 0x1ea0), mulmod(mload(add(transcript, 0x1a20)), mload(add(transcript, 0x7a0)), f_q))mstore(add(transcript, 0x1ec0), mulmod(mload(add(transcript, 0x1da0)), mload(add(transcript, 0x1ea0)), f_q))mstore(add(transcript, 0x1ee0), mulmod(mload(add(transcript, 0x1a60)), mload(add(transcript, 0x1ec0)), f_q))mstore(add(transcript, 0x1f00), mulmod(mload(add(transcript, 0x680)), mload(add(transcript, 0x1ee0)), f_q))mstore(add(transcript, 0x1f20), addmod(1, sub(f_q, mload(add(transcript, 0x680))), f_q))mstore(add(transcript, 0x1f40), mulmod(mload(add(transcript, 0x1f20)), mload(add(transcript, 0x1f00)), f_q))mstore(add(transcript, 0x1f60), addmod(mload(add(transcript, 0x1e80)), mload(add(transcript, 0x1f40)), f_q))mstore(add(transcript, 0x1f80), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x1f60)), f_q))mstore(add(transcript, 0x1fa0), addmod(mload(add(transcript, 0x620)), sub(f_q, mload(add(transcript, 0x600))), f_q))mstore(add(transcript, 0x1fc0), mulmod(mload(add(transcript, 0x680)), mload(add(transcript, 0x1fa0)), f_q))mstore(add(transcript, 0x1fe0), addmod(mload(add(transcript, 0x1fc0)), mload(add(transcript, 0x600)), f_q))mstore(add(transcript, 0x2000), addmod(mload(add(transcript, 0x1fe0)), sub(f_q, mload(add(transcript, 0x640))), f_q))mstore(add(transcript, 0x2020), mulmod(mload(add(transcript, 0x2000)), mload(add(transcript, 0x1ee0)), f_q))mstore(add(transcript, 0x2040), addmod(mload(add(transcript, 0x1f80)), mload(add(transcript, 0x2020)), f_q))mstore(add(transcript, 0x2060), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x2040)), f_q))mstore(add(transcript, 0x2080), addmod(mload(add(transcript, 0x600)), sub(f_q, mload(add(transcript, 0x620))), f_q))mstore(add(transcript, 0x20a0), mulmod(mload(add(transcript, 0x680)), mload(add(transcript, 0x2080)), f_q))mstore(add(transcript, 0x20c0), addmod(mload(add(transcript, 0x20a0)), mload(add(transcript, 0x620)), f_q))mstore(add(transcript, 0x20e0), addmod(mload(add(transcript, 0x20c0)), sub(f_q, mload(add(transcript, 0x660))), f_q))mstore(add(transcript, 0x2100), mulmod(mload(add(transcript, 0x20e0)), mload(add(transcript, 0x1ee0)), f_q))mstore(add(transcript, 0x2120), addmod(mload(add(transcript, 0x2060)), mload(add(transcript, 0x2100)), f_q))mstore(add(transcript, 0x2140), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x2120)), f_q))mstore(add(transcript, 0x2160), mulmod(mload(add(transcript, 0x1da0)), mload(add(transcript, 0x1a00)), f_q))mstore(add(transcript, 0x2180), mulmod(mload(add(transcript, 0x1a60)), mload(add(transcript, 0x2160)), f_q))mstore(add(transcript, 0x21a0), addmod(mload(add(transcript, 0x600)), mload(add(transcript, 0x620)), f_q))mstore(add(transcript, 0x21c0), addmod(mload(add(transcript, 0x21a0)), sub(f_q, mload(add(transcript, 0x680))), f_q))mstore(add(transcript, 0x21e0), mulmod(mload(add(transcript, 0x21c0)), mload(add(transcript, 0x2180)), f_q))mstore(add(transcript, 0x2200), addmod(mload(add(transcript, 0x2140)), mload(add(transcript, 0x21e0)), f_q))mstore(add(transcript, 0x2220), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x2200)), f_q))mstore(add(transcript, 0x2240), addmod(mload(add(transcript, 0x2220)), mload(add(transcript, 0x21e0)), f_q))mstore(add(transcript, 0x2260), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x2240)), f_q))mstore(add(transcript, 0x2280), addmod(1, sub(f_q, mload(add(transcript, 0x920))), f_q))mstore(add(transcript, 0x22a0), mulmod(mload(add(transcript, 0x2280)), mload(add(transcript, 0x1300)), f_q))mstore(add(transcript, 0x22c0), addmod(mload(add(transcript, 0x2260)), mload(add(transcript, 0x22a0)), f_q))mstore(add(transcript, 0x22e0), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x22c0)), f_q))mstore(add(transcript, 0x2300), mulmod(mload(add(transcript, 0x980)), mload(add(transcript, 0x980)), f_q))mstore(add(transcript, 0x2320), addmod(mload(add(transcript, 0x2300)), sub(f_q, mload(add(transcript, 0x980))), f_q))mstore(add(transcript, 0x2340), mulmod(mload(add(transcript, 0x2320)), mload(add(transcript, 0x1240)), f_q))mstore(add(transcript, 0x2360), addmod(mload(add(transcript, 0x22e0)), mload(add(transcript, 0x2340)), f_q))mstore(add(transcript, 0x2380), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x2360)), f_q))mstore(add(transcript, 0x23a0), addmod(mload(add(transcript, 0x980)), sub(f_q, mload(add(transcript, 0x960))), f_q))mstore(add(transcript, 0x23c0), mulmod(mload(add(transcript, 0x23a0)), mload(add(transcript, 0x1300)), f_q))mstore(add(transcript, 0x23e0), addmod(mload(add(transcript, 0x2380)), mload(add(transcript, 0x23c0)), f_q))mstore(add(transcript, 0x2400), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x23e0)), f_q))mstore(add(transcript, 0x2420), addmod(1, sub(f_q, mload(add(transcript, 0x1240))), f_q))mstore(add(transcript, 0x2440), addmod(mload(add(transcript, 0x1260)), mload(add(transcript, 0x1280)), f_q))mstore(add(transcript, 0x2460), addmod(mload(add(transcript, 0x2440)), mload(add(transcript, 0x12a0)), f_q))mstore(add(transcript, 0x2480), addmod(mload(add(transcript, 0x2460)), mload(add(transcript, 0x12c0)), f_q))mstore(add(transcript, 0x24a0), addmod(mload(add(transcript, 0x2480)), mload(add(transcript, 0x12e0)), f_q))mstore(add(transcript, 0x24c0), addmod(mload(add(transcript, 0x2420)), sub(f_q, mload(add(transcript, 0x24a0))), f_q))mstore(add(transcript, 0x24e0), mulmod(mload(add(transcript, 0x860)), mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2500), addmod(mload(add(transcript, 0x6e0)), mload(add(transcript, 0x24e0)), f_q))mstore(add(transcript, 0x2520), addmod(mload(add(transcript, 0x2500)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x2540), mulmod(mload(add(transcript, 0x880)), mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2560), addmod(mload(add(transcript, 0x600)), mload(add(transcript, 0x2540)), f_q))mstore(add(transcript, 0x2580), addmod(mload(add(transcript, 0x2560)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x25a0), mulmod(mload(add(transcript, 0x2580)), mload(add(transcript, 0x2520)), f_q))mstore(add(transcript, 0x25c0), mulmod(mload(add(transcript, 0x8a0)), mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x25e0), addmod(mload(add(transcript, 0x620)), mload(add(transcript, 0x25c0)), f_q))mstore(add(transcript, 0x2600), addmod(mload(add(transcript, 0x25e0)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x2620), mulmod(mload(add(transcript, 0x2600)), mload(add(transcript, 0x25a0)), f_q))mstore(add(transcript, 0x2640), mulmod(mload(add(transcript, 0x8c0)), mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2660), addmod(mload(add(transcript, 0x700)), mload(add(transcript, 0x2640)), f_q))mstore(add(transcript, 0x2680), addmod(mload(add(transcript, 0x2660)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x26a0), mulmod(mload(add(transcript, 0x2680)), mload(add(transcript, 0x2620)), f_q))mstore(add(transcript, 0x26c0), mulmod(mload(add(transcript, 0x26a0)), mload(add(transcript, 0x940)), f_q))mstore(add(transcript, 0x26e0), mulmod(1, mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2700), mulmod(mload(add(transcript, 0x5c0)), mload(add(transcript, 0x26e0)), f_q))mstore(add(transcript, 0x2720), addmod(mload(add(transcript, 0x6e0)), mload(add(transcript, 0x2700)), f_q))mstore(add(transcript, 0x2740), addmod(mload(add(transcript, 0x2720)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x2760), mulmod(4131629893567559867359510883348571134090853742863529169391034518566172092834, mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2780), mulmod(mload(add(transcript, 0x5c0)), mload(add(transcript, 0x2760)), f_q))mstore(add(transcript, 0x27a0), addmod(mload(add(transcript, 0x600)), mload(add(transcript, 0x2780)), f_q))mstore(add(transcript, 0x27c0), addmod(mload(add(transcript, 0x27a0)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x27e0), mulmod(mload(add(transcript, 0x27c0)), mload(add(transcript, 0x2740)), f_q))mstore(add(transcript, 0x2800), mulmod(8910878055287538404433155982483128285667088683464058436815641868457422632747, mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2820), mulmod(mload(add(transcript, 0x5c0)), mload(add(transcript, 0x2800)), f_q))mstore(add(transcript, 0x2840), addmod(mload(add(transcript, 0x620)), mload(add(transcript, 0x2820)), f_q))mstore(add(transcript, 0x2860), addmod(mload(add(transcript, 0x2840)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x2880), mulmod(mload(add(transcript, 0x2860)), mload(add(transcript, 0x27e0)), f_q))mstore(add(transcript, 0x28a0), mulmod(11166246659983828508719468090013646171463329086121580628794302409516816350802, mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x28c0), mulmod(mload(add(transcript, 0x5c0)), mload(add(transcript, 0x28a0)), f_q))mstore(add(transcript, 0x28e0), addmod(mload(add(transcript, 0x700)), mload(add(transcript, 0x28c0)), f_q))mstore(add(transcript, 0x2900), addmod(mload(add(transcript, 0x28e0)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x2920), mulmod(mload(add(transcript, 0x2900)), mload(add(transcript, 0x2880)), f_q))mstore(add(transcript, 0x2940), mulmod(mload(add(transcript, 0x2920)), mload(add(transcript, 0x920)), f_q))mstore(add(transcript, 0x2960), addmod(mload(add(transcript, 0x26c0)), sub(f_q, mload(add(transcript, 0x2940))), f_q))mstore(add(transcript, 0x2980), mulmod(mload(add(transcript, 0x2960)), mload(add(transcript, 0x24c0)), f_q))mstore(add(transcript, 0x29a0), addmod(mload(add(transcript, 0x2400)), mload(add(transcript, 0x2980)), f_q))mstore(add(transcript, 0x29c0), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x29a0)), f_q))mstore(add(transcript, 0x29e0), mulmod(mload(add(transcript, 0x8e0)), mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2a00), addmod(mload(add(transcript, 0x680)), mload(add(transcript, 0x29e0)), f_q))mstore(add(transcript, 0x2a20), addmod(mload(add(transcript, 0x2a00)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x2a40), mulmod(mload(add(transcript, 0x900)), mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2a60), addmod(mload(add(transcript, 0x1380)), mload(add(transcript, 0x2a40)), f_q))mstore(add(transcript, 0x2a80), addmod(mload(add(transcript, 0x2a60)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x2aa0), mulmod(mload(add(transcript, 0x2a80)), mload(add(transcript, 0x2a20)), f_q))mstore(add(transcript, 0x2ac0), mulmod(mload(add(transcript, 0x2aa0)), mload(add(transcript, 0x9a0)), f_q))mstore(add(transcript, 0x2ae0), mulmod(284840088355319032285349970403338060113257071685626700086398481893096618818, mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2b00), mulmod(mload(add(transcript, 0x5c0)), mload(add(transcript, 0x2ae0)), f_q))mstore(add(transcript, 0x2b20), addmod(mload(add(transcript, 0x680)), mload(add(transcript, 0x2b00)), f_q))mstore(add(transcript, 0x2b40), addmod(mload(add(transcript, 0x2b20)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x2b60), mulmod(21134065618345176623193549882539580312263652408302468683943992798037078993309, mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2b80), mulmod(mload(add(transcript, 0x5c0)), mload(add(transcript, 0x2b60)), f_q))mstore(add(transcript, 0x2ba0), addmod(mload(add(transcript, 0x1380)), mload(add(transcript, 0x2b80)), f_q))mstore(add(transcript, 0x2bc0), addmod(mload(add(transcript, 0x2ba0)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x2be0), mulmod(mload(add(transcript, 0x2bc0)), mload(add(transcript, 0x2b40)), f_q))mstore(add(transcript, 0x2c00), mulmod(mload(add(transcript, 0x2be0)), mload(add(transcript, 0x980)), f_q))mstore(add(transcript, 0x2c20), addmod(mload(add(transcript, 0x2ac0)), sub(f_q, mload(add(transcript, 0x2c00))), f_q))mstore(add(transcript, 0x2c40), mulmod(mload(add(transcript, 0x2c20)), mload(add(transcript, 0x24c0)), f_q))mstore(add(transcript, 0x2c60), addmod(mload(add(transcript, 0x29c0)), mload(add(transcript, 0x2c40)), f_q))mstore(add(transcript, 0x2c80), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x2c60)), f_q))mstore(add(transcript, 0x2ca0), addmod(1, sub(f_q, mload(add(transcript, 0x9c0))), f_q))mstore(add(transcript, 0x2cc0), mulmod(mload(add(transcript, 0x2ca0)), mload(add(transcript, 0x1300)), f_q))mstore(add(transcript, 0x2ce0), addmod(mload(add(transcript, 0x2c80)), mload(add(transcript, 0x2cc0)), f_q))mstore(add(transcript, 0x2d00), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x2ce0)), f_q))mstore(add(transcript, 0x2d20), mulmod(mload(add(transcript, 0x9c0)), mload(add(transcript, 0x9c0)), f_q))mstore(add(transcript, 0x2d40), addmod(mload(add(transcript, 0x2d20)), sub(f_q, mload(add(transcript, 0x9c0))), f_q))mstore(add(transcript, 0x2d60), mulmod(mload(add(transcript, 0x2d40)), mload(add(transcript, 0x1240)), f_q))mstore(add(transcript, 0x2d80), addmod(mload(add(transcript, 0x2d00)), mload(add(transcript, 0x2d60)), f_q))mstore(add(transcript, 0x2da0), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x2d80)), f_q))mstore(add(transcript, 0x2dc0), addmod(mload(add(transcript, 0xa00)), mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2de0), mulmod(mload(add(transcript, 0x2dc0)), mload(add(transcript, 0x9e0)), f_q))mstore(add(transcript, 0x2e00), addmod(mload(add(transcript, 0xa40)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x2e20), mulmod(mload(add(transcript, 0x2e00)), mload(add(transcript, 0x2de0)), f_q))mstore(add(transcript, 0x2e40), mulmod(256, mload(add(transcript, 0x640)), f_q))mstore(add(transcript, 0x2e60), addmod(mload(add(transcript, 0x600)), sub(f_q, mload(add(transcript, 0x2e40))), f_q))mstore(add(transcript, 0x2e80), mulmod(mload(add(transcript, 0x2e60)), mload(add(transcript, 0x780)), f_q))mstore(add(transcript, 0x2ea0), addmod(mload(add(transcript, 0x2e80)), mload(add(transcript, 0x260)), f_q))mstore(add(transcript, 0x2ec0), mulmod(mload(add(transcript, 0x2ea0)), mload(add(transcript, 0x9c0)), f_q))mstore(add(transcript, 0x2ee0), addmod(mload(add(transcript, 0x760)), mload(add(transcript, 0x2c0)), f_q))mstore(add(transcript, 0x2f00), mulmod(mload(add(transcript, 0x2ee0)), mload(add(transcript, 0x2ec0)), f_q))mstore(add(transcript, 0x2f20), addmod(mload(add(transcript, 0x2e20)), sub(f_q, mload(add(transcript, 0x2f00))), f_q))mstore(add(transcript, 0x2f40), mulmod(mload(add(transcript, 0x2f20)), mload(add(transcript, 0x24c0)), f_q))mstore(add(transcript, 0x2f60), addmod(mload(add(transcript, 0x2da0)), mload(add(transcript, 0x2f40)), f_q))mstore(add(transcript, 0x2f80), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x2f60)), f_q))mstore(add(transcript, 0x2fa0), addmod(mload(add(transcript, 0xa00)), sub(f_q, mload(add(transcript, 0xa40))), f_q))mstore(add(transcript, 0x2fc0), mulmod(mload(add(transcript, 0x2fa0)), mload(add(transcript, 0x1300)), f_q))mstore(add(transcript, 0x2fe0), addmod(mload(add(transcript, 0x2f80)), mload(add(transcript, 0x2fc0)), f_q))mstore(add(transcript, 0x3000), mulmod(mload(add(transcript, 0x420)), mload(add(transcript, 0x2fe0)), f_q))mstore(add(transcript, 0x3020), mulmod(mload(add(transcript, 0x2fa0)), mload(add(transcript, 0x24c0)), f_q))mstore(add(transcript, 0x3040), addmod(mload(add(transcript, 0xa00)), sub(f_q, mload(add(transcript, 0xa20))), f_q))mstore(add(transcript, 0x3060), mulmod(mload(add(transcript, 0x3040)), mload(add(transcript, 0x3020)), f_q))mstore(add(transcript, 0x3080), addmod(mload(add(transcript, 0x3000)), mload(add(transcript, 0x3060)), f_q))mstore(add(transcript, 0x30a0), mulmod(mload(add(transcript, 0xd40)), mload(add(transcript, 0xd40)), f_q))mstore(add(transcript, 0x30c0), mulmod(mload(add(transcript, 0x30a0)), mload(add(transcript, 0xd40)), f_q))mstore(add(transcript, 0x30e0), mulmod(mload(add(transcript, 0x30c0)), mload(add(transcript, 0xd40)), f_q))mstore(add(transcript, 0x3100), mulmod(mload(add(transcript, 0x30e0)), mload(add(transcript, 0xd40)), f_q))mstore(add(transcript, 0x3120), mulmod(1, mload(add(transcript, 0xd40)), f_q))mstore(add(transcript, 0x3140), mulmod(1, mload(add(transcript, 0x30a0)), f_q))mstore(add(transcript, 0x3160), mulmod(1, mload(add(transcript, 0x30c0)), f_q))mstore(add(transcript, 0x3180), mulmod(1, mload(add(transcript, 0x30e0)), f_q))mstore(add(transcript, 0x31a0), mulmod(mload(add(transcript, 0x3080)), mload(add(transcript, 0xd60)), f_q))mstore(add(transcript, 0x31c0), mulmod(mload(add(transcript, 0xc00)), mload(add(transcript, 0x5c0)), f_q))mstore(add(transcript, 0x31e0), mulmod(mload(add(transcript, 0x5c0)), 1, f_q))mstore(add(transcript, 0x3200), addmod(mload(add(transcript, 0xb80)), sub(f_q, mload(add(transcript, 0x31e0))), f_q))mstore(add(transcript, 0x3220), mulmod(mload(add(transcript, 0x5c0)), 9396103202274256930945606623206526900461945684265495839012435492634193195103, f_q))mstore(add(transcript, 0x3240), addmod(mload(add(transcript, 0xb80)), sub(f_q, mload(add(transcript, 0x3220))), f_q))mstore(add(transcript, 0x3260), mulmod(mload(add(transcript, 0x5c0)), 15699029810934084314820646074566828280617789951162923449200398535581206172418, f_q))mstore(add(transcript, 0x3280), addmod(mload(add(transcript, 0xb80)), sub(f_q, mload(add(transcript, 0x3260))), f_q))mstore(add(transcript, 0x32a0), mulmod(mload(add(transcript, 0x5c0)), 19444693496467964793333684482470811869395409953158764080291550423779334624794, f_q))mstore(add(transcript, 0x32c0), addmod(mload(add(transcript, 0xb80)), sub(f_q, mload(add(transcript, 0x32a0))), f_q)){            let result := mulmod(mload(add(transcript, 0xb80)), mulmod(mload(add(transcript, 0xc00)), 14935689044936328720213520384837211407239373163407808768092422456738089171339, f_q), f_q)result := addmod(mulmod(mload(add(transcript, 0x5c0)), mulmod(mload(add(transcript, 0xc00)), 6952553826902946502032885360420063681308991237008225575605781729837719324278, f_q), f_q), result, f_q)mstore(add(transcript, 0x32e0), result)        }{            let result := mulmod(mload(add(transcript, 0xb80)), mulmod(mload(add(transcript, 0xc00)), 7540907510155698387256503820143330389809914548046512731972450943457626251574, f_q), f_q)result := addmod(mulmod(mload(add(transcript, 0x5c0)), mulmod(mload(add(transcript, 0xc00)), 17454089668527239794105182244994964593641145239866915085378986192780276655988, f_q), f_q), result, f_q)mstore(add(transcript, 0x3300), result)        }{            let result := mulmod(mload(add(transcript, 0xb80)), mulmod(mload(add(transcript, 0xc00)), 16765245179638222004592619476379737764479697804128512065226459610007790881832, f_q), f_q)result := addmod(mulmod(mload(add(transcript, 0x5c0)), mulmod(mload(add(transcript, 0xc00)), 6067403861988280018436561787453590745850405443026581205331008293509136248791, f_q), f_q), result, f_q)mstore(add(transcript, 0x3320), result)        }mstore(add(transcript, 0x3340), mulmod(1, mload(add(transcript, 0x3200)), f_q))mstore(add(transcript, 0x3360), mulmod(mload(add(transcript, 0x3340)), mload(add(transcript, 0x3240)), f_q))mstore(add(transcript, 0x3380), mulmod(mload(add(transcript, 0x3360)), mload(add(transcript, 0x32c0)), f_q)){            let result := mulmod(mload(add(transcript, 0xb80)), 1, f_q)result := addmod(mulmod(mload(add(transcript, 0x5c0)), 21888242871839275222246405745257275088548364400416034343698204186575808495616, f_q), result, f_q)mstore(add(transcript, 0x33a0), result)        }{            let result := mulmod(mload(add(transcript, 0xb80)), mulmod(mload(add(transcript, 0xc00)), 13346277807347402051479003338644866680074640264080882830084838995653627694322, f_q), f_q)result := addmod(mulmod(mload(add(transcript, 0x5c0)), mulmod(mload(add(transcript, 0xc00)), 8541965064491873170767402406612408408473724136335151513613365190922180801295, f_q), f_q), result, f_q)mstore(add(transcript, 0x33c0), result)        }{            let result := mulmod(mload(add(transcript, 0xb80)), mulmod(mload(add(transcript, 0xc00)), 9130318747744625055991020866335675116974647447373438669980034404542087728591, f_q), f_q)result := addmod(mulmod(mload(add(transcript, 0x5c0)), mulmod(mload(add(transcript, 0xc00)), 17654030801727560324741115319652541746559479525075366613702001578587072243451, f_q), f_q), result, f_q)mstore(add(transcript, 0x33e0), result)        }{            let result := mulmod(mload(add(transcript, 0xb80)), mulmod(mload(add(transcript, 0xc00)), 8968217942074169282201771672973351205073655055696863512223304343263448008755, f_q), f_q)result := addmod(mulmod(mload(add(transcript, 0x5c0)), mulmod(mload(add(transcript, 0xc00)), 15489683287416706862113636648384499783884413315698913841173435408703605255719, f_q), f_q), result, f_q)mstore(add(transcript, 0x3400), result)        }mstore(add(transcript, 0x3420), mulmod(mload(add(transcript, 0x3360)), mload(add(transcript, 0x3280)), f_q)){            let result := mulmod(mload(add(transcript, 0xb80)), mulmod(mload(add(transcript, 0x5c0)), 12492139669565018291300799122050748188086418716150538504685768693941615300515, f_q), f_q)result := addmod(mulmod(mload(add(transcript, 0x5c0)), mulmod(mload(add(transcript, 0x5c0)), 9396103202274256930945606623206526900461945684265495839012435492634193195102, f_q), f_q), result, f_q)mstore(add(transcript, 0x3440), result)        }{            let result := mulmod(mload(add(transcript, 0xb80)), mulmod(mload(add(transcript, 0x5c0)), 9396103202274256930945606623206526900461945684265495839012435492634193195102, f_q), f_q)result := addmod(mulmod(mload(add(transcript, 0x5c0)), mulmod(mload(add(transcript, 0x5c0)), 11903785986312266406077180662327481479585495405112251348319099480321708373219, f_q), f_q), result, f_q)mstore(add(transcript, 0x3460), result)        }{            let result := mulmod(mload(add(transcript, 0xb80)), mulmod(mload(add(transcript, 0x5c0)), 2443549375371310428912721262786463219152954447257270263406653762796473870824, f_q), f_q)result := addmod(mulmod(mload(add(transcript, 0x5c0)), mulmod(mload(add(transcript, 0x5c0)), 19444693496467964793333684482470811869395409953158764080291550423779334624793, f_q), f_q), result, f_q)mstore(add(transcript, 0x3480), result)        }{            let result := mulmod(mload(add(transcript, 0xb80)), mulmod(mload(add(transcript, 0x5c0)), 19444693496467964793333684482470811869395409953158764080291550423779334624793, f_q), f_q)result := addmod(mulmod(mload(add(transcript, 0x5c0)), mulmod(mload(add(transcript, 0x5c0)), 14519100894475310148599392892084064224530612280553018117484180069202210808887, f_q), f_q), result, f_q)mstore(add(transcript, 0x34a0), result)        }mstore(add(transcript, 0x34c0), mulmod(mload(add(transcript, 0x3340)), mload(add(transcript, 0x32c0)), f_q)){            let prod := mload(add(transcript, 0x32e0))                prod := mulmod(mload(add(transcript, 0x3300)), prod, f_q)                mstore(add(transcript, 0x34e0), prod)                            prod := mulmod(mload(add(transcript, 0x3320)), prod, f_q)                mstore(add(transcript, 0x3500), prod)                            prod := mulmod(mload(add(transcript, 0x33a0)), prod, f_q)                mstore(add(transcript, 0x3520), prod)                            prod := mulmod(mload(add(transcript, 0x3340)), prod, f_q)                mstore(add(transcript, 0x3540), prod)                            prod := mulmod(mload(add(transcript, 0x33c0)), prod, f_q)                mstore(add(transcript, 0x3560), prod)                            prod := mulmod(mload(add(transcript, 0x33e0)), prod, f_q)                mstore(add(transcript, 0x3580), prod)                            prod := mulmod(mload(add(transcript, 0x3400)), prod, f_q)                mstore(add(transcript, 0x35a0), prod)                            prod := mulmod(mload(add(transcript, 0x3420)), prod, f_q)                mstore(add(transcript, 0x35c0), prod)                            prod := mulmod(mload(add(transcript, 0x3440)), prod, f_q)                mstore(add(transcript, 0x35e0), prod)                            prod := mulmod(mload(add(transcript, 0x3460)), prod, f_q)                mstore(add(transcript, 0x3600), prod)                            prod := mulmod(mload(add(transcript, 0x3360)), prod, f_q)                mstore(add(transcript, 0x3620), prod)                            prod := mulmod(mload(add(transcript, 0x3480)), prod, f_q)                mstore(add(transcript, 0x3640), prod)                            prod := mulmod(mload(add(transcript, 0x34a0)), prod, f_q)                mstore(add(transcript, 0x3660), prod)                            prod := mulmod(mload(add(transcript, 0x34c0)), prod, f_q)                mstore(add(transcript, 0x3680), prod)                    }mstore(add(transcript, 0x36c0), 32)mstore(add(transcript, 0x36e0), 32)mstore(add(transcript, 0x3700), 32)mstore(add(transcript, 0x3720), mload(add(transcript, 0x3680)))mstore(add(transcript, 0x3740), 21888242871839275222246405745257275088548364400416034343698204186575808495615)mstore(add(transcript, 0x3760), 21888242871839275222246405745257275088548364400416034343698204186575808495617)success := and(eq(staticcall(gas(), 0x5, add(transcript, 0x36c0), 0xc0, add(transcript, 0x36a0), 0x20), 1), success){                        let inv := mload(add(transcript, 0x36a0))            let v                            v := mload(add(transcript, 0x34c0))                    mstore(add(transcript, 0x34c0), mulmod(mload(add(transcript, 0x3660)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x34a0))                    mstore(add(transcript, 0x34a0), mulmod(mload(add(transcript, 0x3640)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x3480))                    mstore(add(transcript, 0x3480), mulmod(mload(add(transcript, 0x3620)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x3360))                    mstore(add(transcript, 0x3360), mulmod(mload(add(transcript, 0x3600)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x3460))                    mstore(add(transcript, 0x3460), mulmod(mload(add(transcript, 0x35e0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x3440))                    mstore(add(transcript, 0x3440), mulmod(mload(add(transcript, 0x35c0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x3420))                    mstore(add(transcript, 0x3420), mulmod(mload(add(transcript, 0x35a0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x3400))                    mstore(add(transcript, 0x3400), mulmod(mload(add(transcript, 0x3580)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x33e0))                    mstore(add(transcript, 0x33e0), mulmod(mload(add(transcript, 0x3560)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x33c0))                    mstore(add(transcript, 0x33c0), mulmod(mload(add(transcript, 0x3540)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x3340))                    mstore(add(transcript, 0x3340), mulmod(mload(add(transcript, 0x3520)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x33a0))                    mstore(add(transcript, 0x33a0), mulmod(mload(add(transcript, 0x3500)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x3320))                    mstore(add(transcript, 0x3320), mulmod(mload(add(transcript, 0x34e0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x3300))                    mstore(add(transcript, 0x3300), mulmod(mload(add(transcript, 0x32e0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                mstore(add(transcript, 0x32e0), inv)        }{            let result := mload(add(transcript, 0x32e0))result := addmod(mload(add(transcript, 0x3300)), result, f_q)result := addmod(mload(add(transcript, 0x3320)), result, f_q)mstore(add(transcript, 0x3780), result)        }mstore(add(transcript, 0x37a0), mulmod(mload(add(transcript, 0x3380)), mload(add(transcript, 0x3340)), f_q)){            let result := mload(add(transcript, 0x33a0))mstore(add(transcript, 0x37c0), result)        }mstore(add(transcript, 0x37e0), mulmod(mload(add(transcript, 0x3380)), mload(add(transcript, 0x3420)), f_q)){            let result := mload(add(transcript, 0x33c0))result := addmod(mload(add(transcript, 0x33e0)), result, f_q)result := addmod(mload(add(transcript, 0x3400)), result, f_q)mstore(add(transcript, 0x3800), result)        }mstore(add(transcript, 0x3820), mulmod(mload(add(transcript, 0x3380)), mload(add(transcript, 0x3360)), f_q)){            let result := mload(add(transcript, 0x3440))result := addmod(mload(add(transcript, 0x3460)), result, f_q)mstore(add(transcript, 0x3840), result)        }mstore(add(transcript, 0x3860), mulmod(mload(add(transcript, 0x3380)), mload(add(transcript, 0x34c0)), f_q)){            let result := mload(add(transcript, 0x3480))result := addmod(mload(add(transcript, 0x34a0)), result, f_q)mstore(add(transcript, 0x3880), result)        }{            let prod := mload(add(transcript, 0x3780))                prod := mulmod(mload(add(transcript, 0x37c0)), prod, f_q)                mstore(add(transcript, 0x38a0), prod)                            prod := mulmod(mload(add(transcript, 0x3800)), prod, f_q)                mstore(add(transcript, 0x38c0), prod)                            prod := mulmod(mload(add(transcript, 0x3840)), prod, f_q)                mstore(add(transcript, 0x38e0), prod)                            prod := mulmod(mload(add(transcript, 0x3880)), prod, f_q)                mstore(add(transcript, 0x3900), prod)                    }mstore(add(transcript, 0x3940), 32)mstore(add(transcript, 0x3960), 32)mstore(add(transcript, 0x3980), 32)mstore(add(transcript, 0x39a0), mload(add(transcript, 0x3900)))mstore(add(transcript, 0x39c0), 21888242871839275222246405745257275088548364400416034343698204186575808495615)mstore(add(transcript, 0x39e0), 21888242871839275222246405745257275088548364400416034343698204186575808495617)success := and(eq(staticcall(gas(), 0x5, add(transcript, 0x3940), 0xc0, add(transcript, 0x3920), 0x20), 1), success){                        let inv := mload(add(transcript, 0x3920))            let v                            v := mload(add(transcript, 0x3880))                    mstore(add(transcript, 0x3880), mulmod(mload(add(transcript, 0x38e0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x3840))                    mstore(add(transcript, 0x3840), mulmod(mload(add(transcript, 0x38c0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x3800))                    mstore(add(transcript, 0x3800), mulmod(mload(add(transcript, 0x38a0)), inv, f_q))                    inv := mulmod(v, inv, f_q)                                    v := mload(add(transcript, 0x37c0))                    mstore(add(transcript, 0x37c0), mulmod(mload(add(transcript, 0x3780)), inv, f_q))                    inv := mulmod(v, inv, f_q)                mstore(add(transcript, 0x3780), inv)        }mstore(add(transcript, 0x3a00), mulmod(mload(add(transcript, 0x37a0)), mload(add(transcript, 0x37c0)), f_q))mstore(add(transcript, 0x3a20), mulmod(mload(add(transcript, 0x37e0)), mload(add(transcript, 0x3800)), f_q))mstore(add(transcript, 0x3a40), mulmod(mload(add(transcript, 0x3820)), mload(add(transcript, 0x3840)), f_q))mstore(add(transcript, 0x3a60), mulmod(mload(add(transcript, 0x3860)), mload(add(transcript, 0x3880)), f_q))mstore(add(transcript, 0x3a80), mulmod(mload(add(transcript, 0xa80)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3aa0), mulmod(mload(add(transcript, 0x3a80)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3ac0), mulmod(mload(add(transcript, 0x3aa0)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3ae0), mulmod(mload(add(transcript, 0x3ac0)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3b00), mulmod(mload(add(transcript, 0x3ae0)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3b20), mulmod(mload(add(transcript, 0x3b00)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3b40), mulmod(mload(add(transcript, 0x3b20)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3b60), mulmod(mload(add(transcript, 0x3b40)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3b80), mulmod(mload(add(transcript, 0x3b60)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3ba0), mulmod(mload(add(transcript, 0x3b80)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3bc0), mulmod(mload(add(transcript, 0x3ba0)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3be0), mulmod(mload(add(transcript, 0x3bc0)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3c00), mulmod(mload(add(transcript, 0x3be0)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3c20), mulmod(mload(add(transcript, 0x3c00)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3c40), mulmod(mload(add(transcript, 0x3c20)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3c60), mulmod(mload(add(transcript, 0x3c40)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3c80), mulmod(mload(add(transcript, 0x3c60)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3ca0), mulmod(mload(add(transcript, 0x3c80)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3cc0), mulmod(mload(add(transcript, 0x3ca0)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3ce0), mulmod(mload(add(transcript, 0x3cc0)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3d00), mulmod(mload(add(transcript, 0xae0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x3d20), mulmod(mload(add(transcript, 0x3d00)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x3d40), mulmod(mload(add(transcript, 0x3d20)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x3d60), mulmod(mload(add(transcript, 0x3d40)), mload(add(transcript, 0xae0)), f_q)){            let result := mulmod(mload(add(transcript, 0x600)), mload(add(transcript, 0x32e0)), f_q)result := addmod(mulmod(mload(add(transcript, 0x640)), mload(add(transcript, 0x3300)), f_q), result, f_q)result := addmod(mulmod(mload(add(transcript, 0x6c0)), mload(add(transcript, 0x3320)), f_q), result, f_q)mstore(add(transcript, 0x3d80), result)        }mstore(add(transcript, 0x3da0), mulmod(mload(add(transcript, 0x3d80)), mload(add(transcript, 0x3780)), f_q))mstore(add(transcript, 0x3dc0), mulmod(sub(f_q, mload(add(transcript, 0x3da0))), 1, f_q)){            let result := mulmod(mload(add(transcript, 0x620)), mload(add(transcript, 0x32e0)), f_q)result := addmod(mulmod(mload(add(transcript, 0x660)), mload(add(transcript, 0x3300)), f_q), result, f_q)result := addmod(mulmod(mload(add(transcript, 0x6a0)), mload(add(transcript, 0x3320)), f_q), result, f_q)mstore(add(transcript, 0x3de0), result)        }mstore(add(transcript, 0x3e00), mulmod(mload(add(transcript, 0x3de0)), mload(add(transcript, 0x3780)), f_q))mstore(add(transcript, 0x3e20), mulmod(sub(f_q, mload(add(transcript, 0x3e00))), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3e40), mulmod(1, mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3e60), addmod(mload(add(transcript, 0x3dc0)), mload(add(transcript, 0x3e20)), f_q))mstore(add(transcript, 0x3e80), mulmod(mload(add(transcript, 0x3e60)), 1, f_q))mstore(add(transcript, 0x3ea0), mulmod(mload(add(transcript, 0x3e40)), 1, f_q))mstore(add(transcript, 0x3ec0), mulmod(1, mload(add(transcript, 0x37a0)), f_q)){            let result := mulmod(mload(add(transcript, 0x680)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x3ee0), result)        }mstore(add(transcript, 0x3f00), mulmod(mload(add(transcript, 0x3ee0)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x3f20), mulmod(sub(f_q, mload(add(transcript, 0x3f00))), 1, f_q))mstore(add(transcript, 0x3f40), mulmod(mload(add(transcript, 0x3ec0)), 1, f_q)){            let result := mulmod(mload(add(transcript, 0xa40)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x3f60), result)        }mstore(add(transcript, 0x3f80), mulmod(mload(add(transcript, 0x3f60)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x3fa0), mulmod(sub(f_q, mload(add(transcript, 0x3f80))), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3fc0), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x3fe0), addmod(mload(add(transcript, 0x3f20)), mload(add(transcript, 0x3fa0)), f_q)){            let result := mulmod(mload(add(transcript, 0x6e0)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4000), result)        }mstore(add(transcript, 0x4020), mulmod(mload(add(transcript, 0x4000)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4040), mulmod(sub(f_q, mload(add(transcript, 0x4020))), mload(add(transcript, 0x3a80)), f_q))mstore(add(transcript, 0x4060), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3a80)), f_q))mstore(add(transcript, 0x4080), addmod(mload(add(transcript, 0x3fe0)), mload(add(transcript, 0x4040)), f_q)){            let result := mulmod(mload(add(transcript, 0x700)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x40a0), result)        }mstore(add(transcript, 0x40c0), mulmod(mload(add(transcript, 0x40a0)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x40e0), mulmod(sub(f_q, mload(add(transcript, 0x40c0))), mload(add(transcript, 0x3aa0)), f_q))mstore(add(transcript, 0x4100), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3aa0)), f_q))mstore(add(transcript, 0x4120), addmod(mload(add(transcript, 0x4080)), mload(add(transcript, 0x40e0)), f_q)){            let result := mulmod(mload(add(transcript, 0x720)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4140), result)        }mstore(add(transcript, 0x4160), mulmod(mload(add(transcript, 0x4140)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4180), mulmod(sub(f_q, mload(add(transcript, 0x4160))), mload(add(transcript, 0x3ac0)), f_q))mstore(add(transcript, 0x41a0), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3ac0)), f_q))mstore(add(transcript, 0x41c0), addmod(mload(add(transcript, 0x4120)), mload(add(transcript, 0x4180)), f_q)){            let result := mulmod(mload(add(transcript, 0x740)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x41e0), result)        }mstore(add(transcript, 0x4200), mulmod(mload(add(transcript, 0x41e0)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4220), mulmod(sub(f_q, mload(add(transcript, 0x4200))), mload(add(transcript, 0x3ae0)), f_q))mstore(add(transcript, 0x4240), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3ae0)), f_q))mstore(add(transcript, 0x4260), addmod(mload(add(transcript, 0x41c0)), mload(add(transcript, 0x4220)), f_q)){            let result := mulmod(mload(add(transcript, 0x760)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4280), result)        }mstore(add(transcript, 0x42a0), mulmod(mload(add(transcript, 0x4280)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x42c0), mulmod(sub(f_q, mload(add(transcript, 0x42a0))), mload(add(transcript, 0x3b00)), f_q))mstore(add(transcript, 0x42e0), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3b00)), f_q))mstore(add(transcript, 0x4300), addmod(mload(add(transcript, 0x4260)), mload(add(transcript, 0x42c0)), f_q)){            let result := mulmod(mload(add(transcript, 0x780)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4320), result)        }mstore(add(transcript, 0x4340), mulmod(mload(add(transcript, 0x4320)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4360), mulmod(sub(f_q, mload(add(transcript, 0x4340))), mload(add(transcript, 0x3b20)), f_q))mstore(add(transcript, 0x4380), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3b20)), f_q))mstore(add(transcript, 0x43a0), addmod(mload(add(transcript, 0x4300)), mload(add(transcript, 0x4360)), f_q)){            let result := mulmod(mload(add(transcript, 0x7a0)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x43c0), result)        }mstore(add(transcript, 0x43e0), mulmod(mload(add(transcript, 0x43c0)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4400), mulmod(sub(f_q, mload(add(transcript, 0x43e0))), mload(add(transcript, 0x3b40)), f_q))mstore(add(transcript, 0x4420), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3b40)), f_q))mstore(add(transcript, 0x4440), addmod(mload(add(transcript, 0x43a0)), mload(add(transcript, 0x4400)), f_q)){            let result := mulmod(mload(add(transcript, 0x7c0)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4460), result)        }mstore(add(transcript, 0x4480), mulmod(mload(add(transcript, 0x4460)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x44a0), mulmod(sub(f_q, mload(add(transcript, 0x4480))), mload(add(transcript, 0x3b60)), f_q))mstore(add(transcript, 0x44c0), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3b60)), f_q))mstore(add(transcript, 0x44e0), addmod(mload(add(transcript, 0x4440)), mload(add(transcript, 0x44a0)), f_q)){            let result := mulmod(mload(add(transcript, 0x7e0)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4500), result)        }mstore(add(transcript, 0x4520), mulmod(mload(add(transcript, 0x4500)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4540), mulmod(sub(f_q, mload(add(transcript, 0x4520))), mload(add(transcript, 0x3b80)), f_q))mstore(add(transcript, 0x4560), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3b80)), f_q))mstore(add(transcript, 0x4580), addmod(mload(add(transcript, 0x44e0)), mload(add(transcript, 0x4540)), f_q)){            let result := mulmod(mload(add(transcript, 0x800)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x45a0), result)        }mstore(add(transcript, 0x45c0), mulmod(mload(add(transcript, 0x45a0)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x45e0), mulmod(sub(f_q, mload(add(transcript, 0x45c0))), mload(add(transcript, 0x3ba0)), f_q))mstore(add(transcript, 0x4600), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3ba0)), f_q))mstore(add(transcript, 0x4620), addmod(mload(add(transcript, 0x4580)), mload(add(transcript, 0x45e0)), f_q)){            let result := mulmod(mload(add(transcript, 0x820)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4640), result)        }mstore(add(transcript, 0x4660), mulmod(mload(add(transcript, 0x4640)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4680), mulmod(sub(f_q, mload(add(transcript, 0x4660))), mload(add(transcript, 0x3bc0)), f_q))mstore(add(transcript, 0x46a0), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3bc0)), f_q))mstore(add(transcript, 0x46c0), addmod(mload(add(transcript, 0x4620)), mload(add(transcript, 0x4680)), f_q)){            let result := mulmod(mload(add(transcript, 0x860)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x46e0), result)        }mstore(add(transcript, 0x4700), mulmod(mload(add(transcript, 0x46e0)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4720), mulmod(sub(f_q, mload(add(transcript, 0x4700))), mload(add(transcript, 0x3be0)), f_q))mstore(add(transcript, 0x4740), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3be0)), f_q))mstore(add(transcript, 0x4760), addmod(mload(add(transcript, 0x46c0)), mload(add(transcript, 0x4720)), f_q)){            let result := mulmod(mload(add(transcript, 0x880)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4780), result)        }mstore(add(transcript, 0x47a0), mulmod(mload(add(transcript, 0x4780)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x47c0), mulmod(sub(f_q, mload(add(transcript, 0x47a0))), mload(add(transcript, 0x3c00)), f_q))mstore(add(transcript, 0x47e0), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3c00)), f_q))mstore(add(transcript, 0x4800), addmod(mload(add(transcript, 0x4760)), mload(add(transcript, 0x47c0)), f_q)){            let result := mulmod(mload(add(transcript, 0x8a0)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4820), result)        }mstore(add(transcript, 0x4840), mulmod(mload(add(transcript, 0x4820)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4860), mulmod(sub(f_q, mload(add(transcript, 0x4840))), mload(add(transcript, 0x3c20)), f_q))mstore(add(transcript, 0x4880), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3c20)), f_q))mstore(add(transcript, 0x48a0), addmod(mload(add(transcript, 0x4800)), mload(add(transcript, 0x4860)), f_q)){            let result := mulmod(mload(add(transcript, 0x8c0)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x48c0), result)        }mstore(add(transcript, 0x48e0), mulmod(mload(add(transcript, 0x48c0)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4900), mulmod(sub(f_q, mload(add(transcript, 0x48e0))), mload(add(transcript, 0x3c40)), f_q))mstore(add(transcript, 0x4920), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3c40)), f_q))mstore(add(transcript, 0x4940), addmod(mload(add(transcript, 0x48a0)), mload(add(transcript, 0x4900)), f_q)){            let result := mulmod(mload(add(transcript, 0x8e0)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4960), result)        }mstore(add(transcript, 0x4980), mulmod(mload(add(transcript, 0x4960)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x49a0), mulmod(sub(f_q, mload(add(transcript, 0x4980))), mload(add(transcript, 0x3c60)), f_q))mstore(add(transcript, 0x49c0), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3c60)), f_q))mstore(add(transcript, 0x49e0), addmod(mload(add(transcript, 0x4940)), mload(add(transcript, 0x49a0)), f_q)){            let result := mulmod(mload(add(transcript, 0x900)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4a00), result)        }mstore(add(transcript, 0x4a20), mulmod(mload(add(transcript, 0x4a00)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4a40), mulmod(sub(f_q, mload(add(transcript, 0x4a20))), mload(add(transcript, 0x3c80)), f_q))mstore(add(transcript, 0x4a60), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3c80)), f_q))mstore(add(transcript, 0x4a80), addmod(mload(add(transcript, 0x49e0)), mload(add(transcript, 0x4a40)), f_q))mstore(add(transcript, 0x4aa0), mulmod(mload(add(transcript, 0x3120)), mload(add(transcript, 0x37a0)), f_q))mstore(add(transcript, 0x4ac0), mulmod(mload(add(transcript, 0x3140)), mload(add(transcript, 0x37a0)), f_q))mstore(add(transcript, 0x4ae0), mulmod(mload(add(transcript, 0x3160)), mload(add(transcript, 0x37a0)), f_q))mstore(add(transcript, 0x4b00), mulmod(mload(add(transcript, 0x3180)), mload(add(transcript, 0x37a0)), f_q)){            let result := mulmod(mload(add(transcript, 0x31a0)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4b20), result)        }mstore(add(transcript, 0x4b40), mulmod(mload(add(transcript, 0x4b20)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4b60), mulmod(sub(f_q, mload(add(transcript, 0x4b40))), mload(add(transcript, 0x3ca0)), f_q))mstore(add(transcript, 0x4b80), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3ca0)), f_q))mstore(add(transcript, 0x4ba0), mulmod(mload(add(transcript, 0x4aa0)), mload(add(transcript, 0x3ca0)), f_q))mstore(add(transcript, 0x4bc0), mulmod(mload(add(transcript, 0x4ac0)), mload(add(transcript, 0x3ca0)), f_q))mstore(add(transcript, 0x4be0), mulmod(mload(add(transcript, 0x4ae0)), mload(add(transcript, 0x3ca0)), f_q))mstore(add(transcript, 0x4c00), mulmod(mload(add(transcript, 0x4b00)), mload(add(transcript, 0x3ca0)), f_q))mstore(add(transcript, 0x4c20), addmod(mload(add(transcript, 0x4a80)), mload(add(transcript, 0x4b60)), f_q)){            let result := mulmod(mload(add(transcript, 0x840)), mload(add(transcript, 0x33a0)), f_q)mstore(add(transcript, 0x4c40), result)        }mstore(add(transcript, 0x4c60), mulmod(mload(add(transcript, 0x4c40)), mload(add(transcript, 0x3a00)), f_q))mstore(add(transcript, 0x4c80), mulmod(sub(f_q, mload(add(transcript, 0x4c60))), mload(add(transcript, 0x3cc0)), f_q))mstore(add(transcript, 0x4ca0), mulmod(mload(add(transcript, 0x3ec0)), mload(add(transcript, 0x3cc0)), f_q))mstore(add(transcript, 0x4cc0), addmod(mload(add(transcript, 0x4c20)), mload(add(transcript, 0x4c80)), f_q))mstore(add(transcript, 0x4ce0), mulmod(mload(add(transcript, 0x4cc0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4d00), mulmod(mload(add(transcript, 0x3f40)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4d20), mulmod(mload(add(transcript, 0x3fc0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4d40), mulmod(mload(add(transcript, 0x4060)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4d60), mulmod(mload(add(transcript, 0x4100)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4d80), mulmod(mload(add(transcript, 0x41a0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4da0), mulmod(mload(add(transcript, 0x4240)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4dc0), mulmod(mload(add(transcript, 0x42e0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4de0), mulmod(mload(add(transcript, 0x4380)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4e00), mulmod(mload(add(transcript, 0x4420)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4e20), mulmod(mload(add(transcript, 0x44c0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4e40), mulmod(mload(add(transcript, 0x4560)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4e60), mulmod(mload(add(transcript, 0x4600)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4e80), mulmod(mload(add(transcript, 0x46a0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4ea0), mulmod(mload(add(transcript, 0x4740)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4ec0), mulmod(mload(add(transcript, 0x47e0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4ee0), mulmod(mload(add(transcript, 0x4880)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4f00), mulmod(mload(add(transcript, 0x4920)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4f20), mulmod(mload(add(transcript, 0x49c0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4f40), mulmod(mload(add(transcript, 0x4a60)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4f60), mulmod(mload(add(transcript, 0x4b80)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4f80), mulmod(mload(add(transcript, 0x4ba0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4fa0), mulmod(mload(add(transcript, 0x4bc0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4fc0), mulmod(mload(add(transcript, 0x4be0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x4fe0), mulmod(mload(add(transcript, 0x4c00)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x5000), mulmod(mload(add(transcript, 0x4ca0)), mload(add(transcript, 0xae0)), f_q))mstore(add(transcript, 0x5020), addmod(mload(add(transcript, 0x3e80)), mload(add(transcript, 0x4ce0)), f_q))mstore(add(transcript, 0x5040), mulmod(1, mload(add(transcript, 0x37e0)), f_q)){            let result := mulmod(mload(add(transcript, 0x920)), mload(add(transcript, 0x33c0)), f_q)result := addmod(mulmod(mload(add(transcript, 0x940)), mload(add(transcript, 0x33e0)), f_q), result, f_q)result := addmod(mulmod(mload(add(transcript, 0x960)), mload(add(transcript, 0x3400)), f_q), result, f_q)mstore(add(transcript, 0x5060), result)        }mstore(add(transcript, 0x5080), mulmod(mload(add(transcript, 0x5060)), mload(add(transcript, 0x3a20)), f_q))mstore(add(transcript, 0x50a0), mulmod(sub(f_q, mload(add(transcript, 0x5080))), 1, f_q))mstore(add(transcript, 0x50c0), mulmod(mload(add(transcript, 0x5040)), 1, f_q))mstore(add(transcript, 0x50e0), mulmod(mload(add(transcript, 0x50a0)), mload(add(transcript, 0x3d00)), f_q))mstore(add(transcript, 0x5100), mulmod(mload(add(transcript, 0x50c0)), mload(add(transcript, 0x3d00)), f_q))mstore(add(transcript, 0x5120), addmod(mload(add(transcript, 0x5020)), mload(add(transcript, 0x50e0)), f_q))mstore(add(transcript, 0x5140), mulmod(1, mload(add(transcript, 0x3820)), f_q)){            let result := mulmod(mload(add(transcript, 0x980)), mload(add(transcript, 0x3440)), f_q)result := addmod(mulmod(mload(add(transcript, 0x9a0)), mload(add(transcript, 0x3460)), f_q), result, f_q)mstore(add(transcript, 0x5160), result)        }mstore(add(transcript, 0x5180), mulmod(mload(add(transcript, 0x5160)), mload(add(transcript, 0x3a40)), f_q))mstore(add(transcript, 0x51a0), mulmod(sub(f_q, mload(add(transcript, 0x5180))), 1, f_q))mstore(add(transcript, 0x51c0), mulmod(mload(add(transcript, 0x5140)), 1, f_q)){            let result := mulmod(mload(add(transcript, 0x9c0)), mload(add(transcript, 0x3440)), f_q)result := addmod(mulmod(mload(add(transcript, 0x9e0)), mload(add(transcript, 0x3460)), f_q), result, f_q)mstore(add(transcript, 0x51e0), result)        }mstore(add(transcript, 0x5200), mulmod(mload(add(transcript, 0x51e0)), mload(add(transcript, 0x3a40)), f_q))mstore(add(transcript, 0x5220), mulmod(sub(f_q, mload(add(transcript, 0x5200))), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x5240), mulmod(mload(add(transcript, 0x5140)), mload(add(transcript, 0xa80)), f_q))mstore(add(transcript, 0x5260), addmod(mload(add(transcript, 0x51a0)), mload(add(transcript, 0x5220)), f_q))mstore(add(transcript, 0x5280), mulmod(mload(add(transcript, 0x5260)), mload(add(transcript, 0x3d20)), f_q))mstore(add(transcript, 0x52a0), mulmod(mload(add(transcript, 0x51c0)), mload(add(transcript, 0x3d20)), f_q))mstore(add(transcript, 0x52c0), mulmod(mload(add(transcript, 0x5240)), mload(add(transcript, 0x3d20)), f_q))mstore(add(transcript, 0x52e0), addmod(mload(add(transcript, 0x5120)), mload(add(transcript, 0x5280)), f_q))mstore(add(transcript, 0x5300), mulmod(1, mload(add(transcript, 0x3860)), f_q)){            let result := mulmod(mload(add(transcript, 0xa00)), mload(add(transcript, 0x3480)), f_q)result := addmod(mulmod(mload(add(transcript, 0xa20)), mload(add(transcript, 0x34a0)), f_q), result, f_q)mstore(add(transcript, 0x5320), result)        }mstore(add(transcript, 0x5340), mulmod(mload(add(transcript, 0x5320)), mload(add(transcript, 0x3a60)), f_q))mstore(add(transcript, 0x5360), mulmod(sub(f_q, mload(add(transcript, 0x5340))), 1, f_q))mstore(add(transcript, 0x5380), mulmod(mload(add(transcript, 0x5300)), 1, f_q))mstore(add(transcript, 0x53a0), mulmod(mload(add(transcript, 0x5360)), mload(add(transcript, 0x3d40)), f_q))mstore(add(transcript, 0x53c0), mulmod(mload(add(transcript, 0x5380)), mload(add(transcript, 0x3d40)), f_q))mstore(add(transcript, 0x53e0), addmod(mload(add(transcript, 0x52e0)), mload(add(transcript, 0x53a0)), f_q))mstore(add(transcript, 0x5400), mulmod(1, mload(add(transcript, 0x3380)), f_q))mstore(add(transcript, 0x5420), mulmod(1, mload(add(transcript, 0xb80)), f_q))mstore(add(transcript, 0x5440), 0x0000000000000000000000000000000000000000000000000000000000000001)                    mstore(add(transcript, 0x5460), 0x0000000000000000000000000000000000000000000000000000000000000002)mstore(add(transcript, 0x5480), mload(add(transcript, 0x53e0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x5440), 0x60, add(transcript, 0x5440), 0x40), 1), success)mstore(add(transcript, 0x54a0), mload(add(transcript, 0x5440)))                    mstore(add(transcript, 0x54c0), mload(add(transcript, 0x5460)))mstore(add(transcript, 0x54e0), mload(add(transcript, 0xa0)))                    mstore(add(transcript, 0x5500), mload(add(transcript, 0xc0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x54a0), 0x80, add(transcript, 0x54a0), 0x40), 1), success)mstore(add(transcript, 0x5520), mload(add(transcript, 0xe0)))                    mstore(add(transcript, 0x5540), mload(add(transcript, 0x100)))mstore(add(transcript, 0x5560), mload(add(transcript, 0x3ea0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x5520), 0x60, add(transcript, 0x5520), 0x40), 1), success)mstore(add(transcript, 0x5580), mload(add(transcript, 0x54a0)))                    mstore(add(transcript, 0x55a0), mload(add(transcript, 0x54c0)))mstore(add(transcript, 0x55c0), mload(add(transcript, 0x5520)))                    mstore(add(transcript, 0x55e0), mload(add(transcript, 0x5540)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x5580), 0x80, add(transcript, 0x5580), 0x40), 1), success)mstore(add(transcript, 0x5600), mload(add(transcript, 0x120)))                    mstore(add(transcript, 0x5620), mload(add(transcript, 0x140)))mstore(add(transcript, 0x5640), mload(add(transcript, 0x4d00)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x5600), 0x60, add(transcript, 0x5600), 0x40), 1), success)mstore(add(transcript, 0x5660), mload(add(transcript, 0x5580)))                    mstore(add(transcript, 0x5680), mload(add(transcript, 0x55a0)))mstore(add(transcript, 0x56a0), mload(add(transcript, 0x5600)))                    mstore(add(transcript, 0x56c0), mload(add(transcript, 0x5620)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x5660), 0x80, add(transcript, 0x5660), 0x40), 1), success)mstore(add(transcript, 0x56e0), mload(add(transcript, 0x200)))                    mstore(add(transcript, 0x5700), mload(add(transcript, 0x220)))mstore(add(transcript, 0x5720), mload(add(transcript, 0x4d20)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x56e0), 0x60, add(transcript, 0x56e0), 0x40), 1), success)mstore(add(transcript, 0x5740), mload(add(transcript, 0x5660)))                    mstore(add(transcript, 0x5760), mload(add(transcript, 0x5680)))mstore(add(transcript, 0x5780), mload(add(transcript, 0x56e0)))                    mstore(add(transcript, 0x57a0), mload(add(transcript, 0x5700)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x5740), 0x80, add(transcript, 0x5740), 0x40), 1), success)mstore(add(transcript, 0x57c0), 0x299b12e65399dcea3f1e0ce046cf5f93ce7ba9f779bfa39e7f0c6d4c19628a90)                    mstore(add(transcript, 0x57e0), 0x21c577122a3d1f4d019b93e724d981b0653ed94f492eafec50945231935f9a95)mstore(add(transcript, 0x5800), mload(add(transcript, 0x4d40)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x57c0), 0x60, add(transcript, 0x57c0), 0x40), 1), success)mstore(add(transcript, 0x5820), mload(add(transcript, 0x5740)))                    mstore(add(transcript, 0x5840), mload(add(transcript, 0x5760)))mstore(add(transcript, 0x5860), mload(add(transcript, 0x57c0)))                    mstore(add(transcript, 0x5880), mload(add(transcript, 0x57e0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x5820), 0x80, add(transcript, 0x5820), 0x40), 1), success)mstore(add(transcript, 0x58a0), 0x19d9220141bef25921d474c6e634d06dfb7d7904e59a4ec486a148b00bfd38a3)                    mstore(add(transcript, 0x58c0), 0x2f38511e53688056b693c84ef69a7ae2b9ab482906dc46ae9d9522fd3ce098b6)mstore(add(transcript, 0x58e0), mload(add(transcript, 0x4d60)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x58a0), 0x60, add(transcript, 0x58a0), 0x40), 1), success)mstore(add(transcript, 0x5900), mload(add(transcript, 0x5820)))                    mstore(add(transcript, 0x5920), mload(add(transcript, 0x5840)))mstore(add(transcript, 0x5940), mload(add(transcript, 0x58a0)))                    mstore(add(transcript, 0x5960), mload(add(transcript, 0x58c0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x5900), 0x80, add(transcript, 0x5900), 0x40), 1), success)mstore(add(transcript, 0x5980), 0x17e7cb6a30c4ce9a3d8de604dbaf517b1f23e440acb9e7345938ff5b245a403e)                    mstore(add(transcript, 0x59a0), 0x1c31a42d7da360cce8262e21fb9a5ef26a23ebbcf6995ccab89aee400c2e994b)mstore(add(transcript, 0x59c0), mload(add(transcript, 0x4d80)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x5980), 0x60, add(transcript, 0x5980), 0x40), 1), success)mstore(add(transcript, 0x59e0), mload(add(transcript, 0x5900)))                    mstore(add(transcript, 0x5a00), mload(add(transcript, 0x5920)))mstore(add(transcript, 0x5a20), mload(add(transcript, 0x5980)))                    mstore(add(transcript, 0x5a40), mload(add(transcript, 0x59a0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x59e0), 0x80, add(transcript, 0x59e0), 0x40), 1), success)mstore(add(transcript, 0x5a60), 0x05591c7faa2c9eaf1c9573a84bddec303219abf496af0899ed438853227dd056)                    mstore(add(transcript, 0x5a80), 0x2cfa24fde576750b4036dffe40105e6b7244f63843ec74d9d0aad48ba413287c)mstore(add(transcript, 0x5aa0), mload(add(transcript, 0x4da0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x5a60), 0x60, add(transcript, 0x5a60), 0x40), 1), success)mstore(add(transcript, 0x5ac0), mload(add(transcript, 0x59e0)))                    mstore(add(transcript, 0x5ae0), mload(add(transcript, 0x5a00)))mstore(add(transcript, 0x5b00), mload(add(transcript, 0x5a60)))                    mstore(add(transcript, 0x5b20), mload(add(transcript, 0x5a80)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x5ac0), 0x80, add(transcript, 0x5ac0), 0x40), 1), success)mstore(add(transcript, 0x5b40), 0x22e1cdbfffcfcf4f18cf4342edf1fb26c3b6e52ace3d5fadcf5cc2614333baa4)                    mstore(add(transcript, 0x5b60), 0x0e28df72dcc69cc6442d72f693661997480a913ac353890efd63a873959727c0)mstore(add(transcript, 0x5b80), mload(add(transcript, 0x4dc0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x5b40), 0x60, add(transcript, 0x5b40), 0x40), 1), success)mstore(add(transcript, 0x5ba0), mload(add(transcript, 0x5ac0)))                    mstore(add(transcript, 0x5bc0), mload(add(transcript, 0x5ae0)))mstore(add(transcript, 0x5be0), mload(add(transcript, 0x5b40)))                    mstore(add(transcript, 0x5c00), mload(add(transcript, 0x5b60)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x5ba0), 0x80, add(transcript, 0x5ba0), 0x40), 1), success)mstore(add(transcript, 0x5c20), 0x19206bebc5cc4a5b692c58bc61e7aec6d3fbb8344e39a133699f74e6f40ec2a8)                    mstore(add(transcript, 0x5c40), 0x0678c7bdd141bd26cbe9336f5dcf1c5a8cf21a5927afd1b2f393152ee02a6a78)mstore(add(transcript, 0x5c60), mload(add(transcript, 0x4de0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x5c20), 0x60, add(transcript, 0x5c20), 0x40), 1), success)mstore(add(transcript, 0x5c80), mload(add(transcript, 0x5ba0)))                    mstore(add(transcript, 0x5ca0), mload(add(transcript, 0x5bc0)))mstore(add(transcript, 0x5cc0), mload(add(transcript, 0x5c20)))                    mstore(add(transcript, 0x5ce0), mload(add(transcript, 0x5c40)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x5c80), 0x80, add(transcript, 0x5c80), 0x40), 1), success)mstore(add(transcript, 0x5d00), 0x1c6e2343333783b4f48ae7d2681afb3cdf6a4dfbc83a500cb06db3265ad3e5d5)                    mstore(add(transcript, 0x5d20), 0x1a3d836d4325ff30144c1e2038a4d4025fd0f01af24cfd8dfd54018e64f3b098)mstore(add(transcript, 0x5d40), mload(add(transcript, 0x4e00)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x5d00), 0x60, add(transcript, 0x5d00), 0x40), 1), success)mstore(add(transcript, 0x5d60), mload(add(transcript, 0x5c80)))                    mstore(add(transcript, 0x5d80), mload(add(transcript, 0x5ca0)))mstore(add(transcript, 0x5da0), mload(add(transcript, 0x5d00)))                    mstore(add(transcript, 0x5dc0), mload(add(transcript, 0x5d20)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x5d60), 0x80, add(transcript, 0x5d60), 0x40), 1), success)mstore(add(transcript, 0x5de0), 0x203b21a648fbfb96459640bbc5b41852dd1efc1209c89b635ba638dcb929da6b)                    mstore(add(transcript, 0x5e00), 0x04e7002f06f2091a44afcd311e93c22f46dd9f3207b5bcc34f0ca7652098f097)mstore(add(transcript, 0x5e20), mload(add(transcript, 0x4e20)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x5de0), 0x60, add(transcript, 0x5de0), 0x40), 1), success)mstore(add(transcript, 0x5e40), mload(add(transcript, 0x5d60)))                    mstore(add(transcript, 0x5e60), mload(add(transcript, 0x5d80)))mstore(add(transcript, 0x5e80), mload(add(transcript, 0x5de0)))                    mstore(add(transcript, 0x5ea0), mload(add(transcript, 0x5e00)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x5e40), 0x80, add(transcript, 0x5e40), 0x40), 1), success)mstore(add(transcript, 0x5ec0), 0x20ab7490b42f3f7b2b0bbe601a09d72ee93f924801d597f48cf2d443751d5f91)                    mstore(add(transcript, 0x5ee0), 0x2bca2f1762946a05fb1632550c6cb12c02d18d9bee5bdd4212ca7342888720fd)mstore(add(transcript, 0x5f00), mload(add(transcript, 0x4e40)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x5ec0), 0x60, add(transcript, 0x5ec0), 0x40), 1), success)mstore(add(transcript, 0x5f20), mload(add(transcript, 0x5e40)))                    mstore(add(transcript, 0x5f40), mload(add(transcript, 0x5e60)))mstore(add(transcript, 0x5f60), mload(add(transcript, 0x5ec0)))                    mstore(add(transcript, 0x5f80), mload(add(transcript, 0x5ee0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x5f20), 0x80, add(transcript, 0x5f20), 0x40), 1), success)mstore(add(transcript, 0x5fa0), 0x09e3303245e3b00aca894e9fba3d5184ff3739c664e363f205d42feee327b6aa)                    mstore(add(transcript, 0x5fc0), 0x13ce92283cc6f648bdda86182d91852aab5c6088ab008d9cdb5522fcbf5c6289)mstore(add(transcript, 0x5fe0), mload(add(transcript, 0x4e60)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x5fa0), 0x60, add(transcript, 0x5fa0), 0x40), 1), success)mstore(add(transcript, 0x6000), mload(add(transcript, 0x5f20)))                    mstore(add(transcript, 0x6020), mload(add(transcript, 0x5f40)))mstore(add(transcript, 0x6040), mload(add(transcript, 0x5fa0)))                    mstore(add(transcript, 0x6060), mload(add(transcript, 0x5fc0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6000), 0x80, add(transcript, 0x6000), 0x40), 1), success)mstore(add(transcript, 0x6080), 0x08a503e7a16684a81991dbfc5ec84c9f4b0f7a506ddf26b67d305ebfc0f81743)                    mstore(add(transcript, 0x60a0), 0x08a2d8e1760ffb16f70147f8b44e781ced65a1e677a786cdd8bc9f947b36131c)mstore(add(transcript, 0x60c0), mload(add(transcript, 0x4e80)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6080), 0x60, add(transcript, 0x6080), 0x40), 1), success)mstore(add(transcript, 0x60e0), mload(add(transcript, 0x6000)))                    mstore(add(transcript, 0x6100), mload(add(transcript, 0x6020)))mstore(add(transcript, 0x6120), mload(add(transcript, 0x6080)))                    mstore(add(transcript, 0x6140), mload(add(transcript, 0x60a0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x60e0), 0x80, add(transcript, 0x60e0), 0x40), 1), success)mstore(add(transcript, 0x6160), 0x25632bc8012c6cbc6ddda661a9729f544c54620700c3840c01ca5b57e61a1ffe)                    mstore(add(transcript, 0x6180), 0x2ba5764c663a4b2892343c303da0f5664e3f620dd6b851a711781704292fd11a)mstore(add(transcript, 0x61a0), mload(add(transcript, 0x4ea0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6160), 0x60, add(transcript, 0x6160), 0x40), 1), success)mstore(add(transcript, 0x61c0), mload(add(transcript, 0x60e0)))                    mstore(add(transcript, 0x61e0), mload(add(transcript, 0x6100)))mstore(add(transcript, 0x6200), mload(add(transcript, 0x6160)))                    mstore(add(transcript, 0x6220), mload(add(transcript, 0x6180)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x61c0), 0x80, add(transcript, 0x61c0), 0x40), 1), success)mstore(add(transcript, 0x6240), 0x07cfe4f3152b1996e8eafd718451356c2044e4c239fcc29eb3a81d392e1b44ad)                    mstore(add(transcript, 0x6260), 0x255673e224a594e53fd5b1b4dcd46329e72a04e16056dea3d5a17e31291a9960)mstore(add(transcript, 0x6280), mload(add(transcript, 0x4ec0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6240), 0x60, add(transcript, 0x6240), 0x40), 1), success)mstore(add(transcript, 0x62a0), mload(add(transcript, 0x61c0)))                    mstore(add(transcript, 0x62c0), mload(add(transcript, 0x61e0)))mstore(add(transcript, 0x62e0), mload(add(transcript, 0x6240)))                    mstore(add(transcript, 0x6300), mload(add(transcript, 0x6260)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x62a0), 0x80, add(transcript, 0x62a0), 0x40), 1), success)mstore(add(transcript, 0x6320), 0x136cb14b351f3b43b5e618c5c49022588edd48550f4e7d69309442e8b83d0d22)                    mstore(add(transcript, 0x6340), 0x0ee9bbdfce93815e79aabfc5ec92a52346c46a45e17bc5bc9ad8155e982c9cac)mstore(add(transcript, 0x6360), mload(add(transcript, 0x4ee0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6320), 0x60, add(transcript, 0x6320), 0x40), 1), success)mstore(add(transcript, 0x6380), mload(add(transcript, 0x62a0)))                    mstore(add(transcript, 0x63a0), mload(add(transcript, 0x62c0)))mstore(add(transcript, 0x63c0), mload(add(transcript, 0x6320)))                    mstore(add(transcript, 0x63e0), mload(add(transcript, 0x6340)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6380), 0x80, add(transcript, 0x6380), 0x40), 1), success)mstore(add(transcript, 0x6400), 0x0743ea40f14084db2673217283aa053f986896ee7c181f52118442e99c452974)                    mstore(add(transcript, 0x6420), 0x0203e3493a2594ece57d22cc75dd081ac68271ec7c758153cfd2152bfb5c19e3)mstore(add(transcript, 0x6440), mload(add(transcript, 0x4f00)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6400), 0x60, add(transcript, 0x6400), 0x40), 1), success)mstore(add(transcript, 0x6460), mload(add(transcript, 0x6380)))                    mstore(add(transcript, 0x6480), mload(add(transcript, 0x63a0)))mstore(add(transcript, 0x64a0), mload(add(transcript, 0x6400)))                    mstore(add(transcript, 0x64c0), mload(add(transcript, 0x6420)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6460), 0x80, add(transcript, 0x6460), 0x40), 1), success)mstore(add(transcript, 0x64e0), 0x1f5d69f8adc7def353cac5301331f66a6aa12c3bdc46ba8509d81c1922944c1e)                    mstore(add(transcript, 0x6500), 0x050a358c8ee74901afd6bebdda35a25be99ba631232abec0bb7df23428e219eb)mstore(add(transcript, 0x6520), mload(add(transcript, 0x4f20)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x64e0), 0x60, add(transcript, 0x64e0), 0x40), 1), success)mstore(add(transcript, 0x6540), mload(add(transcript, 0x6460)))                    mstore(add(transcript, 0x6560), mload(add(transcript, 0x6480)))mstore(add(transcript, 0x6580), mload(add(transcript, 0x64e0)))                    mstore(add(transcript, 0x65a0), mload(add(transcript, 0x6500)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6540), 0x80, add(transcript, 0x6540), 0x40), 1), success)mstore(add(transcript, 0x65c0), 0x1ddbf91ceeed88a8c66e9bf8d089b3098dc083f15790870796a7267f25cf9bf0)                    mstore(add(transcript, 0x65e0), 0x0ab4e80b0091cd40070294f754e54b127e2000572c0344c2838aeeaf251eb391)mstore(add(transcript, 0x6600), mload(add(transcript, 0x4f40)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x65c0), 0x60, add(transcript, 0x65c0), 0x40), 1), success)mstore(add(transcript, 0x6620), mload(add(transcript, 0x6540)))                    mstore(add(transcript, 0x6640), mload(add(transcript, 0x6560)))mstore(add(transcript, 0x6660), mload(add(transcript, 0x65c0)))                    mstore(add(transcript, 0x6680), mload(add(transcript, 0x65e0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6620), 0x80, add(transcript, 0x6620), 0x40), 1), success)mstore(add(transcript, 0x66a0), mload(add(transcript, 0x460)))                    mstore(add(transcript, 0x66c0), mload(add(transcript, 0x480)))mstore(add(transcript, 0x66e0), mload(add(transcript, 0x4f60)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x66a0), 0x60, add(transcript, 0x66a0), 0x40), 1), success)mstore(add(transcript, 0x6700), mload(add(transcript, 0x6620)))                    mstore(add(transcript, 0x6720), mload(add(transcript, 0x6640)))mstore(add(transcript, 0x6740), mload(add(transcript, 0x66a0)))                    mstore(add(transcript, 0x6760), mload(add(transcript, 0x66c0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6700), 0x80, add(transcript, 0x6700), 0x40), 1), success)mstore(add(transcript, 0x6780), mload(add(transcript, 0x4a0)))                    mstore(add(transcript, 0x67a0), mload(add(transcript, 0x4c0)))mstore(add(transcript, 0x67c0), mload(add(transcript, 0x4f80)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6780), 0x60, add(transcript, 0x6780), 0x40), 1), success)mstore(add(transcript, 0x67e0), mload(add(transcript, 0x6700)))                    mstore(add(transcript, 0x6800), mload(add(transcript, 0x6720)))mstore(add(transcript, 0x6820), mload(add(transcript, 0x6780)))                    mstore(add(transcript, 0x6840), mload(add(transcript, 0x67a0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x67e0), 0x80, add(transcript, 0x67e0), 0x40), 1), success)mstore(add(transcript, 0x6860), mload(add(transcript, 0x4e0)))                    mstore(add(transcript, 0x6880), mload(add(transcript, 0x500)))mstore(add(transcript, 0x68a0), mload(add(transcript, 0x4fa0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6860), 0x60, add(transcript, 0x6860), 0x40), 1), success)mstore(add(transcript, 0x68c0), mload(add(transcript, 0x67e0)))                    mstore(add(transcript, 0x68e0), mload(add(transcript, 0x6800)))mstore(add(transcript, 0x6900), mload(add(transcript, 0x6860)))                    mstore(add(transcript, 0x6920), mload(add(transcript, 0x6880)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x68c0), 0x80, add(transcript, 0x68c0), 0x40), 1), success)mstore(add(transcript, 0x6940), mload(add(transcript, 0x520)))                    mstore(add(transcript, 0x6960), mload(add(transcript, 0x540)))mstore(add(transcript, 0x6980), mload(add(transcript, 0x4fc0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6940), 0x60, add(transcript, 0x6940), 0x40), 1), success)mstore(add(transcript, 0x69a0), mload(add(transcript, 0x68c0)))                    mstore(add(transcript, 0x69c0), mload(add(transcript, 0x68e0)))mstore(add(transcript, 0x69e0), mload(add(transcript, 0x6940)))                    mstore(add(transcript, 0x6a00), mload(add(transcript, 0x6960)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x69a0), 0x80, add(transcript, 0x69a0), 0x40), 1), success)mstore(add(transcript, 0x6a20), mload(add(transcript, 0x560)))                    mstore(add(transcript, 0x6a40), mload(add(transcript, 0x580)))mstore(add(transcript, 0x6a60), mload(add(transcript, 0x4fe0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6a20), 0x60, add(transcript, 0x6a20), 0x40), 1), success)mstore(add(transcript, 0x6a80), mload(add(transcript, 0x69a0)))                    mstore(add(transcript, 0x6aa0), mload(add(transcript, 0x69c0)))mstore(add(transcript, 0x6ac0), mload(add(transcript, 0x6a20)))                    mstore(add(transcript, 0x6ae0), mload(add(transcript, 0x6a40)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6a80), 0x80, add(transcript, 0x6a80), 0x40), 1), success)mstore(add(transcript, 0x6b00), mload(add(transcript, 0x3c0)))                    mstore(add(transcript, 0x6b20), mload(add(transcript, 0x3e0)))mstore(add(transcript, 0x6b40), mload(add(transcript, 0x5000)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6b00), 0x60, add(transcript, 0x6b00), 0x40), 1), success)mstore(add(transcript, 0x6b60), mload(add(transcript, 0x6a80)))                    mstore(add(transcript, 0x6b80), mload(add(transcript, 0x6aa0)))mstore(add(transcript, 0x6ba0), mload(add(transcript, 0x6b00)))                    mstore(add(transcript, 0x6bc0), mload(add(transcript, 0x6b20)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6b60), 0x80, add(transcript, 0x6b60), 0x40), 1), success)mstore(add(transcript, 0x6be0), mload(add(transcript, 0x300)))                    mstore(add(transcript, 0x6c00), mload(add(transcript, 0x320)))mstore(add(transcript, 0x6c20), mload(add(transcript, 0x5100)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6be0), 0x60, add(transcript, 0x6be0), 0x40), 1), success)mstore(add(transcript, 0x6c40), mload(add(transcript, 0x6b60)))                    mstore(add(transcript, 0x6c60), mload(add(transcript, 0x6b80)))mstore(add(transcript, 0x6c80), mload(add(transcript, 0x6be0)))                    mstore(add(transcript, 0x6ca0), mload(add(transcript, 0x6c00)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6c40), 0x80, add(transcript, 0x6c40), 0x40), 1), success)mstore(add(transcript, 0x6cc0), mload(add(transcript, 0x340)))                    mstore(add(transcript, 0x6ce0), mload(add(transcript, 0x360)))mstore(add(transcript, 0x6d00), mload(add(transcript, 0x52a0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6cc0), 0x60, add(transcript, 0x6cc0), 0x40), 1), success)mstore(add(transcript, 0x6d20), mload(add(transcript, 0x6c40)))                    mstore(add(transcript, 0x6d40), mload(add(transcript, 0x6c60)))mstore(add(transcript, 0x6d60), mload(add(transcript, 0x6cc0)))                    mstore(add(transcript, 0x6d80), mload(add(transcript, 0x6ce0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6d20), 0x80, add(transcript, 0x6d20), 0x40), 1), success)mstore(add(transcript, 0x6da0), mload(add(transcript, 0x380)))                    mstore(add(transcript, 0x6dc0), mload(add(transcript, 0x3a0)))mstore(add(transcript, 0x6de0), mload(add(transcript, 0x52c0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6da0), 0x60, add(transcript, 0x6da0), 0x40), 1), success)mstore(add(transcript, 0x6e00), mload(add(transcript, 0x6d20)))                    mstore(add(transcript, 0x6e20), mload(add(transcript, 0x6d40)))mstore(add(transcript, 0x6e40), mload(add(transcript, 0x6da0)))                    mstore(add(transcript, 0x6e60), mload(add(transcript, 0x6dc0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6e00), 0x80, add(transcript, 0x6e00), 0x40), 1), success)mstore(add(transcript, 0x6e80), mload(add(transcript, 0x1c0)))                    mstore(add(transcript, 0x6ea0), mload(add(transcript, 0x1e0)))mstore(add(transcript, 0x6ec0), mload(add(transcript, 0x53c0)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6e80), 0x60, add(transcript, 0x6e80), 0x40), 1), success)mstore(add(transcript, 0x6ee0), mload(add(transcript, 0x6e00)))                    mstore(add(transcript, 0x6f00), mload(add(transcript, 0x6e20)))mstore(add(transcript, 0x6f20), mload(add(transcript, 0x6e80)))                    mstore(add(transcript, 0x6f40), mload(add(transcript, 0x6ea0)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6ee0), 0x80, add(transcript, 0x6ee0), 0x40), 1), success)mstore(add(transcript, 0x6f60), mload(add(transcript, 0xb20)))                    mstore(add(transcript, 0x6f80), mload(add(transcript, 0xb40)))mstore(add(transcript, 0x6fa0), sub(f_q, mload(add(transcript, 0x5400))))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x6f60), 0x60, add(transcript, 0x6f60), 0x40), 1), success)mstore(add(transcript, 0x6fc0), mload(add(transcript, 0x6ee0)))                    mstore(add(transcript, 0x6fe0), mload(add(transcript, 0x6f00)))mstore(add(transcript, 0x7000), mload(add(transcript, 0x6f60)))                    mstore(add(transcript, 0x7020), mload(add(transcript, 0x6f80)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x6fc0), 0x80, add(transcript, 0x6fc0), 0x40), 1), success)mstore(add(transcript, 0x7040), mload(add(transcript, 0xbc0)))                    mstore(add(transcript, 0x7060), mload(add(transcript, 0xbe0)))mstore(add(transcript, 0x7080), mload(add(transcript, 0x5420)))success := and(eq(staticcall(gas(), 0x7, add(transcript, 0x7040), 0x60, add(transcript, 0x7040), 0x40), 1), success)mstore(add(transcript, 0x70a0), mload(add(transcript, 0x6fc0)))                    mstore(add(transcript, 0x70c0), mload(add(transcript, 0x6fe0)))mstore(add(transcript, 0x70e0), mload(add(transcript, 0x7040)))                    mstore(add(transcript, 0x7100), mload(add(transcript, 0x7060)))success := and(eq(staticcall(gas(), 0x6, add(transcript, 0x70a0), 0x80, add(transcript, 0x70a0), 0x40), 1), success)mstore(add(transcript, 0x7120), mload(add(transcript, 0x70a0)))                    mstore(add(transcript, 0x7140), mload(add(transcript, 0x70c0)))mstore(add(transcript, 0x7160), 0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2)            mstore(add(transcript, 0x7180), 0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed)            mstore(add(transcript, 0x71a0), 0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b)            mstore(add(transcript, 0x71c0), 0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa)mstore(add(transcript, 0x71e0), mload(add(transcript, 0xbc0)))                    mstore(add(transcript, 0x7200), mload(add(transcript, 0xbe0)))mstore(add(transcript, 0x7220), 0x26186a2d65ee4d2f9c9a5b91f86597d35f192cd120caf7e935d8443d1938e23d)            mstore(add(transcript, 0x7240), 0x30441fd1b5d3370482c42152a8899027716989a6996c2535bc9f7fee8aaef79e)            mstore(add(transcript, 0x7260), 0x16f363f103c80d7bbc8ad3c6867e0822bbc6000be91a4689755c7df40221c145)            mstore(add(transcript, 0x7280), 0x2b1cbb3e521edf5a622d82762a44a5e63f1e50b332d71154a4a7958d6011deff)success := and(eq(staticcall(gas(), 0x8, add(transcript, 0x7120), 0x180, add(transcript, 0x7120), 0x20), 1), success)success := and(eq(mload(add(transcript, 0x7120)), 1), success)} return success; } }
+pragma solidity ^0.8.0;
+
+contract Verifier {
+    uint256 internal constant    PROOF_LEN_CPTR = 0x44;
+    uint256 internal constant        PROOF_CPTR = 0x64;
+    uint256 internal constant NUM_INSTANCE_CPTR = 0x08c4;
+    uint256 internal constant     INSTANCE_CPTR = 0x08e4;
+
+    uint256 internal constant FIRST_QUOTIENT_X_CPTR = 0x02a4;
+    uint256 internal constant  LAST_QUOTIENT_X_CPTR = 0x03a4;
+
+    uint256 internal constant                VK_MPTR = 0x06c0;
+    uint256 internal constant         VK_DIGEST_MPTR = 0x06c0;
+    uint256 internal constant                 K_MPTR = 0x06e0;
+    uint256 internal constant             N_INV_MPTR = 0x0700;
+    uint256 internal constant             OMEGA_MPTR = 0x0720;
+    uint256 internal constant         OMEGA_INV_MPTR = 0x0740;
+    uint256 internal constant    OMEGA_INV_TO_L_MPTR = 0x0760;
+    uint256 internal constant     NUM_INSTANCES_MPTR = 0x0780;
+    uint256 internal constant   HAS_ACCUMULATOR_MPTR = 0x07a0;
+    uint256 internal constant        ACC_OFFSET_MPTR = 0x07c0;
+    uint256 internal constant     NUM_ACC_LIMBS_MPTR = 0x07e0;
+    uint256 internal constant NUM_ACC_LIMB_BITS_MPTR = 0x0800;
+    uint256 internal constant              G1_X_MPTR = 0x0820;
+    uint256 internal constant              G1_Y_MPTR = 0x0840;
+    uint256 internal constant            G2_X_1_MPTR = 0x0860;
+    uint256 internal constant            G2_X_2_MPTR = 0x0880;
+    uint256 internal constant            G2_Y_1_MPTR = 0x08a0;
+    uint256 internal constant            G2_Y_2_MPTR = 0x08c0;
+    uint256 internal constant      NEG_S_G2_X_1_MPTR = 0x08e0;
+    uint256 internal constant      NEG_S_G2_X_2_MPTR = 0x0900;
+    uint256 internal constant      NEG_S_G2_Y_1_MPTR = 0x0920;
+    uint256 internal constant      NEG_S_G2_Y_2_MPTR = 0x0940;
+
+    uint256 internal constant CHALLENGE_MPTR = 0x0da0;
+
+    uint256 internal constant THETA_MPTR = 0x0da0;
+    uint256 internal constant  BETA_MPTR = 0x0dc0;
+    uint256 internal constant GAMMA_MPTR = 0x0de0;
+    uint256 internal constant     Y_MPTR = 0x0e00;
+    uint256 internal constant     X_MPTR = 0x0e20;
+    uint256 internal constant  ZETA_MPTR = 0x0e40;
+    uint256 internal constant    NU_MPTR = 0x0e60;
+    uint256 internal constant    MU_MPTR = 0x0e80;
+
+    uint256 internal constant       ACC_LHS_X_MPTR = 0x0ea0;
+    uint256 internal constant       ACC_LHS_Y_MPTR = 0x0ec0;
+    uint256 internal constant       ACC_RHS_X_MPTR = 0x0ee0;
+    uint256 internal constant       ACC_RHS_Y_MPTR = 0x0f00;
+    uint256 internal constant             X_N_MPTR = 0x0f20;
+    uint256 internal constant X_N_MINUS_1_INV_MPTR = 0x0f40;
+    uint256 internal constant          L_LAST_MPTR = 0x0f60;
+    uint256 internal constant         L_BLIND_MPTR = 0x0f80;
+    uint256 internal constant             L_0_MPTR = 0x0fa0;
+    uint256 internal constant   INSTANCE_EVAL_MPTR = 0x0fc0;
+    uint256 internal constant   QUOTIENT_EVAL_MPTR = 0x0fe0;
+    uint256 internal constant      QUOTIENT_X_MPTR = 0x1000;
+    uint256 internal constant      QUOTIENT_Y_MPTR = 0x1020;
+    uint256 internal constant          R_EVAL_MPTR = 0x1040;
+    uint256 internal constant   PAIRING_LHS_X_MPTR = 0x1060;
+    uint256 internal constant   PAIRING_LHS_Y_MPTR = 0x1080;
+    uint256 internal constant   PAIRING_RHS_X_MPTR = 0x10a0;
+    uint256 internal constant   PAIRING_RHS_Y_MPTR = 0x10c0;
+
+    function verifyProof(
+        bytes calldata proof,
+        uint256[] calldata instances
+    ) public view returns (bool) {
+        assembly {
+            // Read EC point (x, y) at (proof_cptr, proof_cptr + 0x20),
+            // and check if the point is on affine plane,
+            // and store them in (hash_mptr, hash_mptr + 0x20).
+            // Return updated (success, proof_cptr, hash_mptr).
+            function read_ec_point(success, proof_cptr, hash_mptr, q) -> ret0, ret1, ret2 {
+                let x := calldataload(proof_cptr)
+                let y := calldataload(add(proof_cptr, 0x20))
+                ret0 := and(success, lt(x, q))
+                ret0 := and(ret0, lt(y, q))
+                ret0 := and(ret0, eq(mulmod(y, y, q), addmod(mulmod(x, mulmod(x, x, q), q), 3, q)))
+                mstore(hash_mptr, x)
+                mstore(add(hash_mptr, 0x20), y)
+                ret1 := add(proof_cptr, 0x40)
+                ret2 := add(hash_mptr, 0x40)
+            }
+
+            // Squeeze challenge by keccak256(memory[0..hash_mptr]),
+            // and store hash mod r as challenge in challenge_mptr,
+            // and push back hash in 0x00 as the first input for next squeeze.
+            // Return updated (challenge_mptr, hash_mptr).
+            function squeeze_challenge(challenge_mptr, hash_mptr, r) -> ret0, ret1 {
+                let hash := keccak256(0x00, hash_mptr)
+                mstore(challenge_mptr, mod(hash, r))
+                mstore(0x00, hash)
+                ret0 := add(challenge_mptr, 0x20)
+                ret1 := 0x20
+            }
+
+            // Squeeze challenge without absorbing new input from calldata,
+            // by putting an extra 0x01 in memory[0x20] and squeeze by keccak256(memory[0..21]),
+            // and store hash mod r as challenge in challenge_mptr,
+            // and push back hash in 0x00 as the first input for next squeeze.
+            // Return updated (challenge_mptr).
+            function squeeze_challenge_cont(challenge_mptr, r) -> ret {
+                mstore8(0x20, 0x01)
+                let hash := keccak256(0x00, 0x21)
+                mstore(challenge_mptr, mod(hash, r))
+                mstore(0x00, hash)
+                ret := add(challenge_mptr, 0x20)
+            }
+
+            // Batch invert values in memory[mptr_start..mptr_end] in place.
+            // Return updated (success).
+            function batch_invert(success, mptr_start, mptr_end, r) -> ret {
+                let gp_mptr := mptr_end
+                let gp := mload(mptr_start)
+                let mptr := add(mptr_start, 0x20)
+                for
+                    {}
+                    lt(mptr, sub(mptr_end, 0x20))
+                    {}
+                {
+                    gp := mulmod(gp, mload(mptr), r)
+                    mstore(gp_mptr, gp)
+                    mptr := add(mptr, 0x20)
+                    gp_mptr := add(gp_mptr, 0x20)
+                }
+                gp := mulmod(gp, mload(mptr), r)
+
+                mstore(gp_mptr, 0x20)
+                mstore(add(gp_mptr, 0x20), 0x20)
+                mstore(add(gp_mptr, 0x40), 0x20)
+                mstore(add(gp_mptr, 0x60), gp)
+                mstore(add(gp_mptr, 0x80), sub(r, 2))
+                mstore(add(gp_mptr, 0xa0), r)
+                ret := and(success, staticcall(gas(), 0x05, gp_mptr, 0xc0, gp_mptr, 0x20))
+                let all_inv := mload(gp_mptr)
+
+                let first_mptr := mptr_start
+                let second_mptr := add(first_mptr, 0x20)
+                gp_mptr := sub(gp_mptr, 0x20)
+                for
+                    {}
+                    lt(second_mptr, mptr)
+                    {}
+                {
+                    let inv := mulmod(all_inv, mload(gp_mptr), r)
+                    all_inv := mulmod(all_inv, mload(mptr), r)
+                    mstore(mptr, inv)
+                    mptr := sub(mptr, 0x20)
+                    gp_mptr := sub(gp_mptr, 0x20)
+                }
+                let inv_first := mulmod(all_inv, mload(second_mptr), r)
+                let inv_second := mulmod(all_inv, mload(first_mptr), r)
+                mstore(first_mptr, inv_first)
+                mstore(second_mptr, inv_second)
+            }
+
+            // Add (x, y) into point at (0x00, 0x20).
+            // Return updated (success).
+            function ec_add_acc(success, x, y) -> ret {
+                mstore(0x40, x)
+                mstore(0x60, y)
+                ret := and(success, staticcall(gas(), 0x06, 0x00, 0x80, 0x00, 0x40))
+            }
+
+            // Scale point at (0x00, 0x20) by scalar.
+            function ec_mul_acc(success, scalar) -> ret {
+                mstore(0x40, scalar)
+                ret := and(success, staticcall(gas(), 0x07, 0x00, 0x60, 0x00, 0x40))
+            }
+
+            // Add (x, y) into point at (0x80, 0xa0).
+            // Return updated (success).
+            function ec_add_tmp(success, x, y) -> ret {
+                mstore(0xc0, x)
+                mstore(0xe0, y)
+                ret := and(success, staticcall(gas(), 0x06, 0x80, 0x80, 0x80, 0x40))
+            }
+
+            // Scale point at (0x80, 0xa0) by scalar.
+            // Return updated (success).
+            function ec_mul_tmp(success, scalar) -> ret {
+                mstore(0xc0, scalar)
+                ret := and(success, staticcall(gas(), 0x07, 0x80, 0x60, 0x80, 0x40))
+            }
+
+            // Perform pairing check.
+            // Return updated (success).
+            function ec_pairing(success, lhs_x, lhs_y, rhs_x, rhs_y) -> ret {
+                mstore(0x00, lhs_x)
+                mstore(0x20, lhs_y)
+                mstore(0x40, mload(G2_X_1_MPTR))
+                mstore(0x60, mload(G2_X_2_MPTR))
+                mstore(0x80, mload(G2_Y_1_MPTR))
+                mstore(0xa0, mload(G2_Y_2_MPTR))
+                mstore(0xc0, rhs_x)
+                mstore(0xe0, rhs_y)
+                mstore(0x100, mload(NEG_S_G2_X_1_MPTR))
+                mstore(0x120, mload(NEG_S_G2_X_2_MPTR))
+                mstore(0x140, mload(NEG_S_G2_Y_1_MPTR))
+                mstore(0x160, mload(NEG_S_G2_Y_2_MPTR))
+                ret := and(success, staticcall(gas(), 0x08, 0x00, 0x180, 0x00, 0x20))
+                ret := and(ret, mload(0x00))
+            }
+
+            // Modulus
+            let q := 21888242871839275222246405745257275088696311157297823662689037894645226208583 // BN254 base field
+            let r := 21888242871839275222246405745257275088548364400416034343698204186575808495617 // BN254 scalar field
+
+            // Initialize success as true
+            let success := true
+
+            {
+                // Load vk into memory
+                mstore(0x06c0, 0x101e32209fbc2afdda2eab08eed3e3e9323ecd92e5c6b9508204b948de1ae5f3) // vk_digest
+                mstore(0x06e0, 0x000000000000000000000000000000000000000000000000000000000000000b) // k
+                mstore(0x0700, 0x305e41e912d579f5b3193badcab128321c8ee1cb70aa396331b979553d820001) // n_inv
+                mstore(0x0720, 0x14c60185e75885d674db4b3f7d4a5694fa6c01aa0f53557b060bc04a4172705f) // omega
+                mstore(0x0740, 0x2afd4e77273f1cb3434a4a667929058c156b21573c3f1efc882e708597d7161a) // omega_inv
+                mstore(0x0760, 0x22b55603586d5fc42c6c14c2fc27a028c207da8b2c71cb33d549fa4a2be5d302) // omega_inv_to_l
+                mstore(0x0780, 0x0000000000000000000000000000000000000000000000000000000000000004) // num_instances
+                mstore(0x07a0, 0x0000000000000000000000000000000000000000000000000000000000000000) // has_accumulator
+                mstore(0x07c0, 0x0000000000000000000000000000000000000000000000000000000000000000) // acc_offset
+                mstore(0x07e0, 0x0000000000000000000000000000000000000000000000000000000000000000) // num_acc_limbs
+                mstore(0x0800, 0x0000000000000000000000000000000000000000000000000000000000000000) // num_acc_limb_bits
+                mstore(0x0820, 0x0000000000000000000000000000000000000000000000000000000000000001) // g1_x
+                mstore(0x0840, 0x0000000000000000000000000000000000000000000000000000000000000002) // g1_y
+                mstore(0x0860, 0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2) // g2_x_1
+                mstore(0x0880, 0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed) // g2_x_2
+                mstore(0x08a0, 0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b) // g2_y_1
+                mstore(0x08c0, 0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa) // g2_y_2
+                mstore(0x08e0, 0x26186a2d65ee4d2f9c9a5b91f86597d35f192cd120caf7e935d8443d1938e23d) // neg_s_g2_x_1
+                mstore(0x0900, 0x30441fd1b5d3370482c42152a8899027716989a6996c2535bc9f7fee8aaef79e) // neg_s_g2_x_2
+                mstore(0x0920, 0x16f363f103c80d7bbc8ad3c6867e0822bbc6000be91a4689755c7df40221c145) // neg_s_g2_y_1
+                mstore(0x0940, 0x2b1cbb3e521edf5a622d82762a44a5e63f1e50b332d71154a4a7958d6011deff) // neg_s_g2_y_2
+                mstore(0x0960, 0x17e7cb6a30c4ce9a3d8de604dbaf517b1f23e440acb9e7345938ff5b245a403e) // fixed_comms[0].x
+                mstore(0x0980, 0x1c31a42d7da360cce8262e21fb9a5ef26a23ebbcf6995ccab89aee400c2e994b) // fixed_comms[0].y
+                mstore(0x09a0, 0x05591c7faa2c9eaf1c9573a84bddec303219abf496af0899ed438853227dd056) // fixed_comms[1].x
+                mstore(0x09c0, 0x2cfa24fde576750b4036dffe40105e6b7244f63843ec74d9d0aad48ba413287c) // fixed_comms[1].y
+                mstore(0x09e0, 0x299b12e65399dcea3f1e0ce046cf5f93ce7ba9f779bfa39e7f0c6d4c19628a90) // fixed_comms[2].x
+                mstore(0x0a00, 0x21c577122a3d1f4d019b93e724d981b0653ed94f492eafec50945231935f9a95) // fixed_comms[2].y
+                mstore(0x0a20, 0x19d9220141bef25921d474c6e634d06dfb7d7904e59a4ec486a148b00bfd38a3) // fixed_comms[3].x
+                mstore(0x0a40, 0x2f38511e53688056b693c84ef69a7ae2b9ab482906dc46ae9d9522fd3ce098b6) // fixed_comms[3].y
+                mstore(0x0a60, 0x22e1cdbfffcfcf4f18cf4342edf1fb26c3b6e52ace3d5fadcf5cc2614333baa4) // fixed_comms[4].x
+                mstore(0x0a80, 0x0e28df72dcc69cc6442d72f693661997480a913ac353890efd63a873959727c0) // fixed_comms[4].y
+                mstore(0x0aa0, 0x19206bebc5cc4a5b692c58bc61e7aec6d3fbb8344e39a133699f74e6f40ec2a8) // fixed_comms[5].x
+                mstore(0x0ac0, 0x0678c7bdd141bd26cbe9336f5dcf1c5a8cf21a5927afd1b2f393152ee02a6a78) // fixed_comms[5].y
+                mstore(0x0ae0, 0x1c6e2343333783b4f48ae7d2681afb3cdf6a4dfbc83a500cb06db3265ad3e5d5) // fixed_comms[6].x
+                mstore(0x0b00, 0x1a3d836d4325ff30144c1e2038a4d4025fd0f01af24cfd8dfd54018e64f3b098) // fixed_comms[6].y
+                mstore(0x0b20, 0x203b21a648fbfb96459640bbc5b41852dd1efc1209c89b635ba638dcb929da6b) // fixed_comms[7].x
+                mstore(0x0b40, 0x04e7002f06f2091a44afcd311e93c22f46dd9f3207b5bcc34f0ca7652098f097) // fixed_comms[7].y
+                mstore(0x0b60, 0x20ab7490b42f3f7b2b0bbe601a09d72ee93f924801d597f48cf2d443751d5f91) // fixed_comms[8].x
+                mstore(0x0b80, 0x2bca2f1762946a05fb1632550c6cb12c02d18d9bee5bdd4212ca7342888720fd) // fixed_comms[8].y
+                mstore(0x0ba0, 0x09e3303245e3b00aca894e9fba3d5184ff3739c664e363f205d42feee327b6aa) // fixed_comms[9].x
+                mstore(0x0bc0, 0x13ce92283cc6f648bdda86182d91852aab5c6088ab008d9cdb5522fcbf5c6289) // fixed_comms[9].y
+                mstore(0x0be0, 0x08a503e7a16684a81991dbfc5ec84c9f4b0f7a506ddf26b67d305ebfc0f81743) // fixed_comms[10].x
+                mstore(0x0c00, 0x08a2d8e1760ffb16f70147f8b44e781ced65a1e677a786cdd8bc9f947b36131c) // fixed_comms[10].y
+                mstore(0x0c20, 0x25632bc8012c6cbc6ddda661a9729f544c54620700c3840c01ca5b57e61a1ffe) // permutation_comms[0].x
+                mstore(0x0c40, 0x2ba5764c663a4b2892343c303da0f5664e3f620dd6b851a711781704292fd11a) // permutation_comms[0].y
+                mstore(0x0c60, 0x07cfe4f3152b1996e8eafd718451356c2044e4c239fcc29eb3a81d392e1b44ad) // permutation_comms[1].x
+                mstore(0x0c80, 0x255673e224a594e53fd5b1b4dcd46329e72a04e16056dea3d5a17e31291a9960) // permutation_comms[1].y
+                mstore(0x0ca0, 0x136cb14b351f3b43b5e618c5c49022588edd48550f4e7d69309442e8b83d0d22) // permutation_comms[2].x
+                mstore(0x0cc0, 0x0ee9bbdfce93815e79aabfc5ec92a52346c46a45e17bc5bc9ad8155e982c9cac) // permutation_comms[2].y
+                mstore(0x0ce0, 0x0743ea40f14084db2673217283aa053f986896ee7c181f52118442e99c452974) // permutation_comms[3].x
+                mstore(0x0d00, 0x0203e3493a2594ece57d22cc75dd081ac68271ec7c758153cfd2152bfb5c19e3) // permutation_comms[3].y
+                mstore(0x0d20, 0x1f5d69f8adc7def353cac5301331f66a6aa12c3bdc46ba8509d81c1922944c1e) // permutation_comms[4].x
+                mstore(0x0d40, 0x050a358c8ee74901afd6bebdda35a25be99ba631232abec0bb7df23428e219eb) // permutation_comms[4].y
+                mstore(0x0d60, 0x1ddbf91ceeed88a8c66e9bf8d089b3098dc083f15790870796a7267f25cf9bf0) // permutation_comms[5].x
+                mstore(0x0d80, 0x0ab4e80b0091cd40070294f754e54b127e2000572c0344c2838aeeaf251eb391) // permutation_comms[5].y
+
+                // Check valid length of proof
+                success := and(success, eq(0x0860, calldataload(PROOF_LEN_CPTR)))
+
+                // Check valid length of instances
+                let num_instances := mload(NUM_INSTANCES_MPTR)
+                success := and(success, eq(num_instances, calldataload(NUM_INSTANCE_CPTR)))
+
+                // Absorb vk diegst
+                mstore(0x00, mload(VK_DIGEST_MPTR))
+
+                // Read instances and witness commitments and generate challenges
+                let hash_mptr := 0x20
+                let instance_cptr := INSTANCE_CPTR
+                for
+                    { let instance_cptr_end := add(instance_cptr, mul(0x20, num_instances)) }
+                    lt(instance_cptr, instance_cptr_end)
+                    {}
+                {
+                    let instance := calldataload(instance_cptr)
+                    success := and(success, lt(instance, r))
+                    mstore(hash_mptr, instance)
+                    instance_cptr := add(instance_cptr, 0x20)
+                    hash_mptr := add(hash_mptr, 0x20)
+                }
+
+                let proof_cptr := PROOF_CPTR
+                let challenge_mptr := CHALLENGE_MPTR
+
+                // Phase 1
+                for
+                    { let proof_cptr_end := add(proof_cptr, 0xc0) }
+                    lt(proof_cptr, proof_cptr_end)
+                    {}
+                {
+                    success, proof_cptr, hash_mptr := read_ec_point(success, proof_cptr, hash_mptr, q)
+                }
+
+                challenge_mptr, hash_mptr := squeeze_challenge(challenge_mptr, hash_mptr, r)
+
+                // Phase 2
+                for
+                    { let proof_cptr_end := add(proof_cptr, 0x80) }
+                    lt(proof_cptr, proof_cptr_end)
+                    {}
+                {
+                    success, proof_cptr, hash_mptr := read_ec_point(success, proof_cptr, hash_mptr, q)
+                }
+
+                challenge_mptr, hash_mptr := squeeze_challenge(challenge_mptr, hash_mptr, r)
+                challenge_mptr := squeeze_challenge_cont(challenge_mptr, r)
+
+                // Phase 3
+                for
+                    { let proof_cptr_end := add(proof_cptr, 0x0100) }
+                    lt(proof_cptr, proof_cptr_end)
+                    {}
+                {
+                    success, proof_cptr, hash_mptr := read_ec_point(success, proof_cptr, hash_mptr, q)
+                }
+
+                challenge_mptr, hash_mptr := squeeze_challenge(challenge_mptr, hash_mptr, r)
+
+                // Phase 4
+                for
+                    { let proof_cptr_end := add(proof_cptr, 0x0140) }
+                    lt(proof_cptr, proof_cptr_end)
+                    {}
+                {
+                    success, proof_cptr, hash_mptr := read_ec_point(success, proof_cptr, hash_mptr, q)
+                }
+
+                challenge_mptr, hash_mptr := squeeze_challenge(challenge_mptr, hash_mptr, r)
+
+                // Read evaluations
+                for
+                    { let proof_cptr_end := add(proof_cptr, 0x0460) }
+                    lt(proof_cptr, proof_cptr_end)
+                    {}
+                {
+                    let eval := calldataload(proof_cptr)
+                    success := and(success, lt(eval, r))
+                    mstore(hash_mptr, eval)
+                    proof_cptr := add(proof_cptr, 0x20)
+                    hash_mptr := add(hash_mptr, 0x20)
+                }
+
+                // Read batch opening proof and generate challenges
+                challenge_mptr, hash_mptr := squeeze_challenge(challenge_mptr, hash_mptr, r)       // zeta
+                challenge_mptr := squeeze_challenge_cont(challenge_mptr, r)                        // nu
+
+                success, proof_cptr, hash_mptr := read_ec_point(success, proof_cptr, hash_mptr, q) // W
+
+                challenge_mptr, hash_mptr := squeeze_challenge(challenge_mptr, hash_mptr, r)       // mu
+
+                success, proof_cptr, hash_mptr := read_ec_point(success, proof_cptr, hash_mptr, q) // W'
+
+                // Read accumulator from instances
+                if mload(HAS_ACCUMULATOR_MPTR) {
+                    let num_limbs := mload(NUM_ACC_LIMBS_MPTR)
+                    let num_limb_bits := mload(NUM_ACC_LIMB_BITS_MPTR)
+
+                    let cptr := add(INSTANCE_CPTR, mul(mload(ACC_OFFSET_MPTR), 0x20))
+                    let lhs_y_off := mul(num_limbs, 0x20)
+                    let rhs_x_off := mul(lhs_y_off, 2)
+                    let rhs_y_off := mul(lhs_y_off, 3)
+                    let lhs_x := calldataload(cptr)
+                    let lhs_y := calldataload(add(cptr, lhs_y_off))
+                    let rhs_x := calldataload(add(cptr, rhs_x_off))
+                    let rhs_y := calldataload(add(cptr, rhs_y_off))
+                    for
+                        {
+                            let cptr_end := add(cptr, mul(0x20, num_limbs))
+                            let shift := num_limb_bits
+                        }
+                        lt(cptr, cptr_end)
+                        {}
+                    {
+                        cptr := add(cptr, 0x20)
+                        lhs_x := add(lhs_x, shl(shift, calldataload(cptr)))
+                        lhs_y := add(lhs_y, shl(shift, calldataload(add(cptr, lhs_y_off))))
+                        rhs_x := add(rhs_x, shl(shift, calldataload(add(cptr, rhs_x_off))))
+                        rhs_y := add(rhs_y, shl(shift, calldataload(add(cptr, rhs_y_off))))
+                        shift := add(shift, num_limb_bits)
+                    }
+
+                    success := and(success, eq(mulmod(lhs_y, lhs_y, q), addmod(mulmod(lhs_x, mulmod(lhs_x, lhs_x, q), q), 3, q)))
+                    success := and(success, eq(mulmod(rhs_y, rhs_y, q), addmod(mulmod(rhs_x, mulmod(rhs_x, rhs_x, q), q), 3, q)))
+
+                    mstore(ACC_LHS_X_MPTR, lhs_x)
+                    mstore(ACC_LHS_Y_MPTR, lhs_y)
+                    mstore(ACC_RHS_X_MPTR, rhs_x)
+                    mstore(ACC_RHS_Y_MPTR, rhs_y)
+                }
+
+                pop(q)
+            }
+
+            // Revert earlier if anything from calldata is invalid
+            if iszero(success) {
+                revert(0, 0)
+            }
+
+            // Compute lagrange evaluations and instance evaluation
+            {
+                let k := mload(K_MPTR)
+                let x := mload(X_MPTR)
+                let x_n := x
+                for
+                    { let idx := 0 }
+                    lt(idx, k)
+                    { idx := add(idx, 1) }
+                {
+                    x_n := mulmod(x_n, x_n, r)
+                }
+
+                let omega := mload(OMEGA_MPTR)
+
+                let mptr := X_N_MPTR
+                let mptr_end := add(mptr, mul(0x20, add(mload(NUM_INSTANCES_MPTR), 6)))
+                if iszero(mload(NUM_INSTANCES_MPTR)) {
+                    mptr_end := add(mptr_end, 0x20)
+                }
+                for
+                    { let pow_of_omega := mload(OMEGA_INV_TO_L_MPTR) }
+                    lt(mptr, mptr_end)
+                    { mptr := add(mptr, 0x20) }
+                {
+                    mstore(mptr, addmod(x, sub(r, pow_of_omega), r))
+                    pow_of_omega := mulmod(pow_of_omega, omega, r)
+                }
+                let x_n_minus_1 := addmod(x_n, sub(r, 1), r)
+                mstore(mptr_end, x_n_minus_1)
+                success := batch_invert(success, X_N_MPTR, add(mptr_end, 0x20), r)
+
+                mptr := X_N_MPTR
+                let l_i_common := mulmod(x_n_minus_1, mload(N_INV_MPTR), r)
+                for
+                    { let pow_of_omega := mload(OMEGA_INV_TO_L_MPTR) }
+                    lt(mptr, mptr_end)
+                    { mptr := add(mptr, 0x20) }
+                {
+                    mstore(mptr, mulmod(l_i_common, mulmod(mload(mptr), pow_of_omega, r), r))
+                    pow_of_omega := mulmod(pow_of_omega, omega, r)
+                }
+
+                let l_blind := mload(add(X_N_MPTR, 0x20))
+                let l_i_cptr := add(X_N_MPTR, 0x40)
+                for
+                    { let l_i_cptr_end := add(X_N_MPTR, 0xc0) }
+                    lt(l_i_cptr, l_i_cptr_end)
+                    { l_i_cptr := add(l_i_cptr, 0x20) }
+                {
+                    l_blind := addmod(l_blind, mload(l_i_cptr), r)
+                }
+
+                let instance_eval := 0
+                for
+                    {
+                        let instance_cptr := INSTANCE_CPTR
+                        let instance_cptr_end := add(instance_cptr, mul(0x20, mload(NUM_INSTANCES_MPTR)))
+                    }
+                    lt(instance_cptr, instance_cptr_end)
+                    {
+                        instance_cptr := add(instance_cptr, 0x20)
+                        l_i_cptr := add(l_i_cptr, 0x20)
+                    }
+                {
+                    instance_eval := addmod(instance_eval, mulmod(mload(l_i_cptr), calldataload(instance_cptr), r), r)
+                }
+
+                let x_n_minus_1_inv := mload(mptr_end)
+                let l_last := mload(X_N_MPTR)
+                let l_0 := mload(add(X_N_MPTR, 0xc0))
+
+                mstore(X_N_MPTR, x_n)
+                mstore(X_N_MINUS_1_INV_MPTR, x_n_minus_1_inv)
+                mstore(L_LAST_MPTR, l_last)
+                mstore(L_BLIND_MPTR, l_blind)
+                mstore(L_0_MPTR, l_0)
+                mstore(INSTANCE_EVAL_MPTR, instance_eval)
+            }
+
+            // Compute quotient evavluation
+            {
+                let quotient_eval_numer
+                let delta := 4131629893567559867359510883348571134090853742863529169391034518566172092834
+                let y := mload(Y_MPTR)
+                {
+                    let f_7 := calldataload(0x05a4)
+                    let a_0 := calldataload(0x03e4)
+                    let f_0 := calldataload(0x0504)
+                    let var0 := addmod(a_0, f_0, r)
+                    let var1 := mulmod(var0, var0, r)
+                    let var2 := mulmod(var1, var1, r)
+                    let var3 := mulmod(var2, var0, r)
+                    let var4 := mulmod(var3, 0x066f6f85d6f68a85ec10345351a23a3aaf07f38af8c952a7bceca70bd2af7ad5, r)
+                    let a_1 := calldataload(0x0404)
+                    let f_1 := calldataload(0x0524)
+                    let var5 := addmod(a_1, f_1, r)
+                    let var6 := mulmod(var5, var5, r)
+                    let var7 := mulmod(var6, var6, r)
+                    let var8 := mulmod(var7, var5, r)
+                    let var9 := mulmod(var8, 0x2b9d4b4110c9ae997782e1509b1d0fdb20a7c02bbd8bea7305462b9f8125b1e8, r)
+                    let var10 := addmod(var4, var9, r)
+                    let a_0_next_1 := calldataload(0x0424)
+                    let var11 := sub(r, a_0_next_1)
+                    let var12 := addmod(var10, var11, r)
+                    let var13 := mulmod(f_7, var12, r)
+                    quotient_eval_numer := var13
+                }
+                {
+                    let f_7 := calldataload(0x05a4)
+                    let a_0 := calldataload(0x03e4)
+                    let f_0 := calldataload(0x0504)
+                    let var0 := addmod(a_0, f_0, r)
+                    let var1 := mulmod(var0, var0, r)
+                    let var2 := mulmod(var1, var1, r)
+                    let var3 := mulmod(var2, var0, r)
+                    let var4 := mulmod(var3, 0x0cc57cdbb08507d62bf67a4493cc262fb6c09d557013fff1f573f431221f8ff9, r)
+                    let a_1 := calldataload(0x0404)
+                    let f_1 := calldataload(0x0524)
+                    let var5 := addmod(a_1, f_1, r)
+                    let var6 := mulmod(var5, var5, r)
+                    let var7 := mulmod(var6, var6, r)
+                    let var8 := mulmod(var7, var5, r)
+                    let var9 := mulmod(var8, 0x1274e649a32ed355a31a6ed69724e1adade857e86eb5c3a121bcd147943203c8, r)
+                    let var10 := addmod(var4, var9, r)
+                    let a_1_next_1 := calldataload(0x0444)
+                    let var11 := sub(r, a_1_next_1)
+                    let var12 := addmod(var10, var11, r)
+                    let var13 := mulmod(f_7, var12, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var13, r)
+                }
+                {
+                    let f_8 := calldataload(0x05c4)
+                    let a_0 := calldataload(0x03e4)
+                    let f_0 := calldataload(0x0504)
+                    let var0 := addmod(a_0, f_0, r)
+                    let var1 := mulmod(var0, var0, r)
+                    let var2 := mulmod(var1, var1, r)
+                    let var3 := mulmod(var2, var0, r)
+                    let a_2 := calldataload(0x0464)
+                    let var4 := sub(r, a_2)
+                    let var5 := addmod(var3, var4, r)
+                    let var6 := mulmod(f_8, var5, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var6, r)
+                }
+                {
+                    let f_8 := calldataload(0x05c4)
+                    let a_2 := calldataload(0x0464)
+                    let var0 := mulmod(a_2, 0x066f6f85d6f68a85ec10345351a23a3aaf07f38af8c952a7bceca70bd2af7ad5, r)
+                    let a_1 := calldataload(0x0404)
+                    let f_1 := calldataload(0x0524)
+                    let var1 := addmod(a_1, f_1, r)
+                    let var2 := mulmod(var1, 0x2b9d4b4110c9ae997782e1509b1d0fdb20a7c02bbd8bea7305462b9f8125b1e8, r)
+                    let var3 := addmod(var0, var2, r)
+                    let f_2 := calldataload(0x04c4)
+                    let var4 := addmod(var3, f_2, r)
+                    let var5 := mulmod(var4, var4, r)
+                    let var6 := mulmod(var5, var5, r)
+                    let var7 := mulmod(var6, var4, r)
+                    let a_0_next_1 := calldataload(0x0424)
+                    let var8 := mulmod(a_0_next_1, 0x13abec390ada7f4370819ab1c7846f210554569d9b29d1ea8dbebd0fa8c53e66, r)
+                    let a_1_next_1 := calldataload(0x0444)
+                    let var9 := mulmod(a_1_next_1, 0x1eb9e1dc19a33a624c9862a1d97d1510bd521ead5dfe0345aaf6185b1a1e60fe, r)
+                    let var10 := addmod(var8, var9, r)
+                    let var11 := sub(r, var10)
+                    let var12 := addmod(var7, var11, r)
+                    let var13 := mulmod(f_8, var12, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var13, r)
+                }
+                {
+                    let f_8 := calldataload(0x05c4)
+                    let a_2 := calldataload(0x0464)
+                    let var0 := mulmod(a_2, 0x0cc57cdbb08507d62bf67a4493cc262fb6c09d557013fff1f573f431221f8ff9, r)
+                    let a_1 := calldataload(0x0404)
+                    let f_1 := calldataload(0x0524)
+                    let var1 := addmod(a_1, f_1, r)
+                    let var2 := mulmod(var1, 0x1274e649a32ed355a31a6ed69724e1adade857e86eb5c3a121bcd147943203c8, r)
+                    let var3 := addmod(var0, var2, r)
+                    let f_3 := calldataload(0x04e4)
+                    let var4 := addmod(var3, f_3, r)
+                    let a_0_next_1 := calldataload(0x0424)
+                    let var5 := mulmod(a_0_next_1, 0x0fc1c9394db89bb2601abc49fdad4f038ce5169030a2ad69763f7875036bcb02, r)
+                    let a_1_next_1 := calldataload(0x0444)
+                    let var6 := mulmod(a_1_next_1, 0x16a9e98c493a902b9502054edc03e7b22b7eac34345961bc8abced6bd147c8be, r)
+                    let var7 := addmod(var5, var6, r)
+                    let var8 := sub(r, var7)
+                    let var9 := addmod(var4, var8, r)
+                    let var10 := mulmod(f_8, var9, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var10, r)
+                }
+                {
+                    let f_6 := calldataload(0x0584)
+                    let var0 := 0x1
+                    let var1 := sub(r, f_6)
+                    let var2 := addmod(var0, var1, r)
+                    let var3 := mulmod(f_6, var2, r)
+                    let var4 := 0x2
+                    let var5 := addmod(var4, var1, r)
+                    let var6 := mulmod(var3, var5, r)
+                    let var7 := 0x4
+                    let var8 := addmod(var7, var1, r)
+                    let var9 := mulmod(var6, var8, r)
+                    let a_0_prev_1 := calldataload(0x04a4)
+                    let a_0 := calldataload(0x03e4)
+                    let var10 := addmod(a_0_prev_1, a_0, r)
+                    let a_0_next_1 := calldataload(0x0424)
+                    let var11 := sub(r, a_0_next_1)
+                    let var12 := addmod(var10, var11, r)
+                    let var13 := mulmod(var9, var12, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var13, r)
+                }
+                {
+                    let f_6 := calldataload(0x0584)
+                    let var0 := 0x1
+                    let var1 := sub(r, f_6)
+                    let var2 := addmod(var0, var1, r)
+                    let var3 := mulmod(f_6, var2, r)
+                    let var4 := 0x2
+                    let var5 := addmod(var4, var1, r)
+                    let var6 := mulmod(var3, var5, r)
+                    let var7 := 0x4
+                    let var8 := addmod(var7, var1, r)
+                    let var9 := mulmod(var6, var8, r)
+                    let a_1_prev_1 := calldataload(0x0484)
+                    let a_1_next_1 := calldataload(0x0444)
+                    let var10 := sub(r, a_1_next_1)
+                    let var11 := addmod(a_1_prev_1, var10, r)
+                    let var12 := mulmod(var9, var11, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var12, r)
+                }
+                {
+                    let f_9 := calldataload(0x05e4)
+                    let a_0 := calldataload(0x03e4)
+                    let f_0 := calldataload(0x0504)
+                    let var0 := addmod(a_0, f_0, r)
+                    let var1 := mulmod(var0, var0, r)
+                    let var2 := mulmod(var1, var1, r)
+                    let var3 := mulmod(var2, var0, r)
+                    let var4 := mulmod(var3, 0x066f6f85d6f68a85ec10345351a23a3aaf07f38af8c952a7bceca70bd2af7ad5, r)
+                    let a_1 := calldataload(0x0404)
+                    let f_1 := calldataload(0x0524)
+                    let var5 := addmod(a_1, f_1, r)
+                    let var6 := mulmod(var5, var5, r)
+                    let var7 := mulmod(var6, var6, r)
+                    let var8 := mulmod(var7, var5, r)
+                    let var9 := mulmod(var8, 0x2b9d4b4110c9ae997782e1509b1d0fdb20a7c02bbd8bea7305462b9f8125b1e8, r)
+                    let var10 := addmod(var4, var9, r)
+                    let a_0_next_1 := calldataload(0x0424)
+                    let var11 := sub(r, a_0_next_1)
+                    let var12 := addmod(var10, var11, r)
+                    let var13 := mulmod(f_9, var12, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var13, r)
+                }
+                {
+                    let f_9 := calldataload(0x05e4)
+                    let a_0 := calldataload(0x03e4)
+                    let f_0 := calldataload(0x0504)
+                    let var0 := addmod(a_0, f_0, r)
+                    let var1 := mulmod(var0, var0, r)
+                    let var2 := mulmod(var1, var1, r)
+                    let var3 := mulmod(var2, var0, r)
+                    let var4 := mulmod(var3, 0x0cc57cdbb08507d62bf67a4493cc262fb6c09d557013fff1f573f431221f8ff9, r)
+                    let a_1 := calldataload(0x0404)
+                    let f_1 := calldataload(0x0524)
+                    let var5 := addmod(a_1, f_1, r)
+                    let var6 := mulmod(var5, var5, r)
+                    let var7 := mulmod(var6, var6, r)
+                    let var8 := mulmod(var7, var5, r)
+                    let var9 := mulmod(var8, 0x1274e649a32ed355a31a6ed69724e1adade857e86eb5c3a121bcd147943203c8, r)
+                    let var10 := addmod(var4, var9, r)
+                    let a_1_next_1 := calldataload(0x0444)
+                    let var11 := sub(r, a_1_next_1)
+                    let var12 := addmod(var10, var11, r)
+                    let var13 := mulmod(f_9, var12, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var13, r)
+                }
+                {
+                    let f_10 := calldataload(0x0604)
+                    let a_0 := calldataload(0x03e4)
+                    let f_0 := calldataload(0x0504)
+                    let var0 := addmod(a_0, f_0, r)
+                    let var1 := mulmod(var0, var0, r)
+                    let var2 := mulmod(var1, var1, r)
+                    let var3 := mulmod(var2, var0, r)
+                    let a_2 := calldataload(0x0464)
+                    let var4 := sub(r, a_2)
+                    let var5 := addmod(var3, var4, r)
+                    let var6 := mulmod(f_10, var5, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var6, r)
+                }
+                {
+                    let f_10 := calldataload(0x0604)
+                    let a_2 := calldataload(0x0464)
+                    let var0 := mulmod(a_2, 0x066f6f85d6f68a85ec10345351a23a3aaf07f38af8c952a7bceca70bd2af7ad5, r)
+                    let a_1 := calldataload(0x0404)
+                    let f_1 := calldataload(0x0524)
+                    let var1 := addmod(a_1, f_1, r)
+                    let var2 := mulmod(var1, 0x2b9d4b4110c9ae997782e1509b1d0fdb20a7c02bbd8bea7305462b9f8125b1e8, r)
+                    let var3 := addmod(var0, var2, r)
+                    let f_2 := calldataload(0x04c4)
+                    let var4 := addmod(var3, f_2, r)
+                    let var5 := mulmod(var4, var4, r)
+                    let var6 := mulmod(var5, var5, r)
+                    let var7 := mulmod(var6, var4, r)
+                    let a_0_next_1 := calldataload(0x0424)
+                    let var8 := mulmod(a_0_next_1, 0x13abec390ada7f4370819ab1c7846f210554569d9b29d1ea8dbebd0fa8c53e66, r)
+                    let a_1_next_1 := calldataload(0x0444)
+                    let var9 := mulmod(a_1_next_1, 0x1eb9e1dc19a33a624c9862a1d97d1510bd521ead5dfe0345aaf6185b1a1e60fe, r)
+                    let var10 := addmod(var8, var9, r)
+                    let var11 := sub(r, var10)
+                    let var12 := addmod(var7, var11, r)
+                    let var13 := mulmod(f_10, var12, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var13, r)
+                }
+                {
+                    let f_10 := calldataload(0x0604)
+                    let a_2 := calldataload(0x0464)
+                    let var0 := mulmod(a_2, 0x0cc57cdbb08507d62bf67a4493cc262fb6c09d557013fff1f573f431221f8ff9, r)
+                    let a_1 := calldataload(0x0404)
+                    let f_1 := calldataload(0x0524)
+                    let var1 := addmod(a_1, f_1, r)
+                    let var2 := mulmod(var1, 0x1274e649a32ed355a31a6ed69724e1adade857e86eb5c3a121bcd147943203c8, r)
+                    let var3 := addmod(var0, var2, r)
+                    let f_3 := calldataload(0x04e4)
+                    let var4 := addmod(var3, f_3, r)
+                    let a_0_next_1 := calldataload(0x0424)
+                    let var5 := mulmod(a_0_next_1, 0x0fc1c9394db89bb2601abc49fdad4f038ce5169030a2ad69763f7875036bcb02, r)
+                    let a_1_next_1 := calldataload(0x0444)
+                    let var6 := mulmod(a_1_next_1, 0x16a9e98c493a902b9502054edc03e7b22b7eac34345961bc8abced6bd147c8be, r)
+                    let var7 := addmod(var5, var6, r)
+                    let var8 := sub(r, var7)
+                    let var9 := addmod(var4, var8, r)
+                    let var10 := mulmod(f_10, var9, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var10, r)
+                }
+                {
+                    let f_6 := calldataload(0x0584)
+                    let var0 := 0x1
+                    let var1 := sub(r, f_6)
+                    let var2 := addmod(var0, var1, r)
+                    let var3 := mulmod(f_6, var2, r)
+                    let var4 := 0x2
+                    let var5 := addmod(var4, var1, r)
+                    let var6 := mulmod(var3, var5, r)
+                    let var7 := 0x3
+                    let var8 := addmod(var7, var1, r)
+                    let var9 := mulmod(var6, var8, r)
+                    let a_0_prev_1 := calldataload(0x04a4)
+                    let a_0 := calldataload(0x03e4)
+                    let var10 := addmod(a_0_prev_1, a_0, r)
+                    let a_0_next_1 := calldataload(0x0424)
+                    let var11 := sub(r, a_0_next_1)
+                    let var12 := addmod(var10, var11, r)
+                    let var13 := mulmod(var9, var12, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var13, r)
+                }
+                {
+                    let f_6 := calldataload(0x0584)
+                    let var0 := 0x1
+                    let var1 := sub(r, f_6)
+                    let var2 := addmod(var0, var1, r)
+                    let var3 := mulmod(f_6, var2, r)
+                    let var4 := 0x2
+                    let var5 := addmod(var4, var1, r)
+                    let var6 := mulmod(var3, var5, r)
+                    let var7 := 0x3
+                    let var8 := addmod(var7, var1, r)
+                    let var9 := mulmod(var6, var8, r)
+                    let a_1_prev_1 := calldataload(0x0484)
+                    let a_1_next_1 := calldataload(0x0444)
+                    let var10 := sub(r, a_1_next_1)
+                    let var11 := addmod(a_1_prev_1, var10, r)
+                    let var12 := mulmod(var9, var11, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var12, r)
+                }
+                {
+                    let f_6 := calldataload(0x0584)
+                    let var0 := 0x2
+                    let var1 := sub(r, f_6)
+                    let var2 := addmod(var0, var1, r)
+                    let var3 := mulmod(f_6, var2, r)
+                    let var4 := 0x3
+                    let var5 := addmod(var4, var1, r)
+                    let var6 := mulmod(var3, var5, r)
+                    let var7 := 0x4
+                    let var8 := addmod(var7, var1, r)
+                    let var9 := mulmod(var6, var8, r)
+                    let a_2 := calldataload(0x0464)
+                    let var10 := mulmod(var9, a_2, r)
+                    let var11 := 0x1
+                    let var12 := sub(r, a_2)
+                    let var13 := addmod(var11, var12, r)
+                    let var14 := mulmod(var10, var13, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var14, r)
+                }
+                {
+                    let f_6 := calldataload(0x0584)
+                    let var0 := 0x2
+                    let var1 := sub(r, f_6)
+                    let var2 := addmod(var0, var1, r)
+                    let var3 := mulmod(f_6, var2, r)
+                    let var4 := 0x3
+                    let var5 := addmod(var4, var1, r)
+                    let var6 := mulmod(var3, var5, r)
+                    let var7 := 0x4
+                    let var8 := addmod(var7, var1, r)
+                    let var9 := mulmod(var6, var8, r)
+                    let a_1 := calldataload(0x0404)
+                    let a_0 := calldataload(0x03e4)
+                    let var10 := sub(r, a_0)
+                    let var11 := addmod(a_1, var10, r)
+                    let a_2 := calldataload(0x0464)
+                    let var12 := mulmod(var11, a_2, r)
+                    let var13 := addmod(var12, a_0, r)
+                    let a_0_next_1 := calldataload(0x0424)
+                    let var14 := sub(r, a_0_next_1)
+                    let var15 := addmod(var13, var14, r)
+                    let var16 := mulmod(var9, var15, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var16, r)
+                }
+                {
+                    let f_6 := calldataload(0x0584)
+                    let var0 := 0x2
+                    let var1 := sub(r, f_6)
+                    let var2 := addmod(var0, var1, r)
+                    let var3 := mulmod(f_6, var2, r)
+                    let var4 := 0x3
+                    let var5 := addmod(var4, var1, r)
+                    let var6 := mulmod(var3, var5, r)
+                    let var7 := 0x4
+                    let var8 := addmod(var7, var1, r)
+                    let var9 := mulmod(var6, var8, r)
+                    let a_0 := calldataload(0x03e4)
+                    let a_1 := calldataload(0x0404)
+                    let var10 := sub(r, a_1)
+                    let var11 := addmod(a_0, var10, r)
+                    let a_2 := calldataload(0x0464)
+                    let var12 := mulmod(var11, a_2, r)
+                    let var13 := addmod(var12, a_1, r)
+                    let a_1_next_1 := calldataload(0x0444)
+                    let var14 := sub(r, a_1_next_1)
+                    let var15 := addmod(var13, var14, r)
+                    let var16 := mulmod(var9, var15, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var16, r)
+                }
+                {
+                    let f_6 := calldataload(0x0584)
+                    let var0 := 0x1
+                    let var1 := sub(r, f_6)
+                    let var2 := addmod(var0, var1, r)
+                    let var3 := mulmod(f_6, var2, r)
+                    let var4 := 0x3
+                    let var5 := addmod(var4, var1, r)
+                    let var6 := mulmod(var3, var5, r)
+                    let var7 := 0x4
+                    let var8 := addmod(var7, var1, r)
+                    let var9 := mulmod(var6, var8, r)
+                    let a_0 := calldataload(0x03e4)
+                    let a_1 := calldataload(0x0404)
+                    let var10 := addmod(a_0, a_1, r)
+                    let a_2 := calldataload(0x0464)
+                    let var11 := sub(r, a_2)
+                    let var12 := addmod(var10, var11, r)
+                    let var13 := mulmod(var9, var12, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var13, r)
+                }
+                {
+                    let f_6 := calldataload(0x0584)
+                    let var0 := 0x1
+                    let var1 := sub(r, f_6)
+                    let var2 := addmod(var0, var1, r)
+                    let var3 := mulmod(f_6, var2, r)
+                    let var4 := 0x3
+                    let var5 := addmod(var4, var1, r)
+                    let var6 := mulmod(var3, var5, r)
+                    let var7 := 0x4
+                    let var8 := addmod(var7, var1, r)
+                    let var9 := mulmod(var6, var8, r)
+                    let a_0 := calldataload(0x03e4)
+                    let a_1 := calldataload(0x0404)
+                    let var10 := addmod(a_0, a_1, r)
+                    let a_2 := calldataload(0x0464)
+                    let var11 := sub(r, a_2)
+                    let var12 := addmod(var10, var11, r)
+                    let var13 := mulmod(var9, var12, r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), var13, r)
+                }
+                {
+                    let l_0 := mload(L_0_MPTR)
+                    let eval := addmod(l_0, sub(r, mulmod(l_0, calldataload(0x0704), r)), r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), eval, r)
+                }
+                {
+                    let perm_z_last := calldataload(0x0764)
+                    let eval := mulmod(mload(L_LAST_MPTR), addmod(mulmod(perm_z_last, perm_z_last, r), sub(r, perm_z_last), r), r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), eval, r)
+                }
+                {
+                    let eval := mulmod(mload(L_0_MPTR), addmod(calldataload(0x0764), sub(r, calldataload(0x0744)), r), r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), eval, r)
+                }
+                {
+                    let gamma := mload(GAMMA_MPTR)
+                    let beta := mload(BETA_MPTR)
+                    let lhs := calldataload(0x0724)
+                    let rhs := calldataload(0x0704)
+                    lhs := mulmod(lhs, addmod(addmod(calldataload(0x04c4), mulmod(beta, calldataload(0x0644), r), r), gamma, r), r)
+                    lhs := mulmod(lhs, addmod(addmod(calldataload(0x03e4), mulmod(beta, calldataload(0x0664), r), r), gamma, r), r)
+                    lhs := mulmod(lhs, addmod(addmod(calldataload(0x0404), mulmod(beta, calldataload(0x0684), r), r), gamma, r), r)
+                    lhs := mulmod(lhs, addmod(addmod(calldataload(0x04e4), mulmod(beta, calldataload(0x06a4), r), r), gamma, r), r)
+                    mstore(0x00, mulmod(beta, mload(X_MPTR), r))
+                    rhs := mulmod(rhs, addmod(addmod(calldataload(0x04c4), mload(0x00), r), gamma, r), r)
+                    mstore(0x00, mulmod(mload(0x00), delta, r))
+                    rhs := mulmod(rhs, addmod(addmod(calldataload(0x03e4), mload(0x00), r), gamma, r), r)
+                    mstore(0x00, mulmod(mload(0x00), delta, r))
+                    rhs := mulmod(rhs, addmod(addmod(calldataload(0x0404), mload(0x00), r), gamma, r), r)
+                    mstore(0x00, mulmod(mload(0x00), delta, r))
+                    rhs := mulmod(rhs, addmod(addmod(calldataload(0x04e4), mload(0x00), r), gamma, r), r)
+                    mstore(0x00, mulmod(mload(0x00), delta, r))
+                    let left_sub_right := addmod(lhs, sub(r, rhs), r)
+                    let eval := addmod(left_sub_right, sub(r, mulmod(left_sub_right, addmod(mload(L_LAST_MPTR), mload(L_BLIND_MPTR), r), r)), r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), eval, r)
+                }
+                {
+                    let gamma := mload(GAMMA_MPTR)
+                    let beta := mload(BETA_MPTR)
+                    let lhs := calldataload(0x0784)
+                    let rhs := calldataload(0x0764)
+                    lhs := mulmod(lhs, addmod(addmod(calldataload(0x0464), mulmod(beta, calldataload(0x06c4), r), r), gamma, r), r)
+                    lhs := mulmod(lhs, addmod(addmod(mload(INSTANCE_EVAL_MPTR), mulmod(beta, calldataload(0x06e4), r), r), gamma, r), r)
+                    rhs := mulmod(rhs, addmod(addmod(calldataload(0x0464), mload(0x00), r), gamma, r), r)
+                    mstore(0x00, mulmod(mload(0x00), delta, r))
+                    rhs := mulmod(rhs, addmod(addmod(mload(INSTANCE_EVAL_MPTR), mload(0x00), r), gamma, r), r)
+                    let left_sub_right := addmod(lhs, sub(r, rhs), r)
+                    let eval := addmod(left_sub_right, sub(r, mulmod(left_sub_right, addmod(mload(L_LAST_MPTR), mload(L_BLIND_MPTR), r), r)), r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), eval, r)
+                }
+                {
+                    let l_0 := mload(L_0_MPTR)
+                    let eval := addmod(l_0, mulmod(l_0, sub(r, calldataload(0x07a4)), r), r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), eval, r)
+                }
+                {
+                    let l_last := mload(L_LAST_MPTR)
+                    let eval := mulmod(l_last, addmod(mulmod(calldataload(0x07a4), calldataload(0x07a4), r), sub(r, calldataload(0x07a4)), r), r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), eval, r)
+                }
+                {
+                    let theta := mload(THETA_MPTR)
+                    let input
+                    {
+                        let f_5 := calldataload(0x0564)
+                        let a_0 := calldataload(0x03e4)
+                        let a_0_next_1 := calldataload(0x0424)
+                        let var0 := 0x100
+                        let var1 := mulmod(a_0_next_1, var0, r)
+                        let var2 := sub(r, var1)
+                        let var3 := addmod(a_0, var2, r)
+                        let var4 := mulmod(f_5, var3, r)
+                        input := var4
+                    }
+                    let table
+                    {
+                        let f_4 := calldataload(0x0544)
+                        table := f_4
+                    }
+                    let beta := mload(BETA_MPTR)
+                    let gamma := mload(GAMMA_MPTR)
+                    let lhs := mulmod(calldataload(0x07c4), mulmod(addmod(calldataload(0x07e4), beta, r), addmod(calldataload(0x0824), gamma, r), r), r)
+                    let rhs := mulmod(calldataload(0x07a4), mulmod(addmod(input, beta, r), addmod(table, gamma, r), r), r)
+                    let eval := mulmod(addmod(1, sub(r, addmod(mload(L_BLIND_MPTR), mload(L_LAST_MPTR), r)), r), addmod(lhs, sub(r, rhs), r), r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), eval, r)
+                }
+                {
+                    let eval := mulmod(mload(L_0_MPTR), addmod(calldataload(0x07e4), sub(r, calldataload(0x0824)), r), r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), eval, r)
+                }
+                {
+                    let eval := mulmod(addmod(1, sub(r, addmod(mload(L_BLIND_MPTR), mload(L_LAST_MPTR), r)), r), mulmod(addmod(calldataload(0x07e4), sub(r, calldataload(0x0824)), r), addmod(calldataload(0x07e4), sub(r, calldataload(0x0804)), r), r), r)
+                    quotient_eval_numer := addmod(mulmod(quotient_eval_numer, y, r), eval, r)
+                }
+
+                pop(y)
+                pop(delta)
+
+                let quotient_eval := mulmod(quotient_eval_numer, mload(X_N_MINUS_1_INV_MPTR), r)
+                mstore(QUOTIENT_EVAL_MPTR, quotient_eval)
+            }
+
+            // Compute quotient commitment
+            {
+                mstore(0x00, calldataload(LAST_QUOTIENT_X_CPTR))
+                mstore(0x20, calldataload(add(LAST_QUOTIENT_X_CPTR, 0x20)))
+                let x_n := mload(X_N_MPTR)
+                for
+                    {
+                        let cptr := sub(LAST_QUOTIENT_X_CPTR, 0x40)
+                        let cptr_end := sub(FIRST_QUOTIENT_X_CPTR, 0x40)
+                    }
+                    lt(cptr_end, cptr)
+                    {}
+                {
+                    success := ec_mul_acc(success, x_n)
+                    success := ec_add_acc(success, calldataload(cptr), calldataload(add(cptr, 0x20)))
+                    cptr := sub(cptr, 0x40)
+                }
+                mstore(QUOTIENT_X_MPTR, mload(0x00))
+                mstore(QUOTIENT_Y_MPTR, mload(0x20))
+            }
+
+            // Compute pairing lhs and rhs
+            {
+                {
+                    let x := mload(X_MPTR)
+                    let omega := mload(OMEGA_MPTR)
+                    let omega_inv := mload(OMEGA_INV_MPTR)
+                    let x_pow_of_omega := mulmod(x, omega, r)
+                    mstore(0x0420, x_pow_of_omega)
+                    mstore(0x0400, x)
+                    x_pow_of_omega := mulmod(x, omega_inv, r)
+                    mstore(0x03e0, x_pow_of_omega)
+                    x_pow_of_omega := mulmod(x_pow_of_omega, omega_inv, r)
+                    x_pow_of_omega := mulmod(x_pow_of_omega, omega_inv, r)
+                    x_pow_of_omega := mulmod(x_pow_of_omega, omega_inv, r)
+                    x_pow_of_omega := mulmod(x_pow_of_omega, omega_inv, r)
+                    x_pow_of_omega := mulmod(x_pow_of_omega, omega_inv, r)
+                    mstore(0x03c0, x_pow_of_omega)
+                }
+                {
+                    let mu := mload(MU_MPTR)
+                    for
+                        {
+                            let mptr := 0x0440
+                            let mptr_end := 0x04c0
+                            let point_mptr := 0x03c0
+                        }
+                        lt(mptr, mptr_end)
+                        {
+                            mptr := add(mptr, 0x20)
+                            point_mptr := add(point_mptr, 0x20)
+                        }
+                    {
+                        mstore(mptr, addmod(mu, sub(r, mload(point_mptr)), r))
+                    }
+                    let s
+                    s := mload(0x0460)
+                    s := mulmod(s, mload(0x0480), r)
+                    s := mulmod(s, mload(0x04a0), r)
+                    mstore(0x04c0, s)
+                    let diff
+                    diff := mload(0x0440)
+                    mstore(0x04e0, diff)
+                    mstore(0x00, diff)
+                    diff := mload(0x0440)
+                    diff := mulmod(diff, mload(0x0460), r)
+                    diff := mulmod(diff, mload(0x04a0), r)
+                    mstore(0x0500, diff)
+                    diff := mload(0x0460)
+                    mstore(0x0520, diff)
+                    diff := mload(0x0440)
+                    diff := mulmod(diff, mload(0x0460), r)
+                    mstore(0x0540, diff)
+                    diff := mload(0x0440)
+                    diff := mulmod(diff, mload(0x04a0), r)
+                    mstore(0x0560, diff)
+                }
+                {
+                    let point_1 := mload(0x03e0)
+                    let point_2 := mload(0x0400)
+                    let point_3 := mload(0x0420)
+                    let coeff
+                    coeff := addmod(point_1, sub(r, point_2), r)
+                    coeff := mulmod(coeff, addmod(point_1, sub(r, point_3), r), r)
+                    coeff := mulmod(coeff, mload(0x0460), r)
+                    mstore(0x20, coeff)
+                    coeff := addmod(point_2, sub(r, point_1), r)
+                    coeff := mulmod(coeff, addmod(point_2, sub(r, point_3), r), r)
+                    coeff := mulmod(coeff, mload(0x0480), r)
+                    mstore(0x40, coeff)
+                    coeff := addmod(point_3, sub(r, point_1), r)
+                    coeff := mulmod(coeff, addmod(point_3, sub(r, point_2), r), r)
+                    coeff := mulmod(coeff, mload(0x04a0), r)
+                    mstore(0x60, coeff)
+                }
+                {
+                    let point_2 := mload(0x0400)
+                    let coeff
+                    coeff := 1
+                    coeff := mulmod(coeff, mload(0x0480), r)
+                    mstore(0x80, coeff)
+                }
+                {
+                    let point_0 := mload(0x03c0)
+                    let point_2 := mload(0x0400)
+                    let point_3 := mload(0x0420)
+                    let coeff
+                    coeff := addmod(point_0, sub(r, point_2), r)
+                    coeff := mulmod(coeff, addmod(point_0, sub(r, point_3), r), r)
+                    coeff := mulmod(coeff, mload(0x0440), r)
+                    mstore(0xa0, coeff)
+                    coeff := addmod(point_2, sub(r, point_0), r)
+                    coeff := mulmod(coeff, addmod(point_2, sub(r, point_3), r), r)
+                    coeff := mulmod(coeff, mload(0x0480), r)
+                    mstore(0xc0, coeff)
+                    coeff := addmod(point_3, sub(r, point_0), r)
+                    coeff := mulmod(coeff, addmod(point_3, sub(r, point_2), r), r)
+                    coeff := mulmod(coeff, mload(0x04a0), r)
+                    mstore(0xe0, coeff)
+                }
+                {
+                    let point_2 := mload(0x0400)
+                    let point_3 := mload(0x0420)
+                    let coeff
+                    coeff := addmod(point_2, sub(r, point_3), r)
+                    coeff := mulmod(coeff, mload(0x0480), r)
+                    mstore(0x0100, coeff)
+                    coeff := addmod(point_3, sub(r, point_2), r)
+                    coeff := mulmod(coeff, mload(0x04a0), r)
+                    mstore(0x0120, coeff)
+                }
+                {
+                    let point_1 := mload(0x03e0)
+                    let point_2 := mload(0x0400)
+                    let coeff
+                    coeff := addmod(point_1, sub(r, point_2), r)
+                    coeff := mulmod(coeff, mload(0x0460), r)
+                    mstore(0x0140, coeff)
+                    coeff := addmod(point_2, sub(r, point_1), r)
+                    coeff := mulmod(coeff, mload(0x0480), r)
+                    mstore(0x0160, coeff)
+                }
+                {
+                    success := batch_invert(success, 0, 0x0180, r)
+                    let diff_0_inv := mload(0x00)
+                    mstore(0x04e0, diff_0_inv)
+                    for
+                        {
+                            let mptr := 0x0500
+                            let mptr_end := 0x0580
+                        }
+                        lt(mptr, mptr_end)
+                        { mptr := add(mptr, 0x20) }
+                    {
+                        mstore(mptr, mulmod(mload(mptr), diff_0_inv, r))
+                    }
+                }
+                {
+                    let zeta := mload(ZETA_MPTR)
+                    let r_eval := 0
+                    r_eval := addmod(r_eval, mulmod(mload(0x20), calldataload(0x0484), r), r)
+                    r_eval := addmod(r_eval, mulmod(mload(0x40), calldataload(0x0404), r), r)
+                    r_eval := addmod(r_eval, mulmod(mload(0x60), calldataload(0x0444), r), r)
+                    r_eval := mulmod(r_eval, zeta, r)
+                    r_eval := addmod(r_eval, mulmod(mload(0x20), calldataload(0x04a4), r), r)
+                    r_eval := addmod(r_eval, mulmod(mload(0x40), calldataload(0x03e4), r), r)
+                    r_eval := addmod(r_eval, mulmod(mload(0x60), calldataload(0x0424), r), r)
+                    mstore(0x0580, r_eval)
+                }
+                {
+                    let coeff := mload(0x80)
+                    let zeta := mload(ZETA_MPTR)
+                    let r_eval := 0
+                    r_eval := addmod(r_eval, mulmod(coeff, calldataload(0x0624), r), r)
+                    r_eval := mulmod(r_eval, zeta, r)
+                    r_eval := addmod(r_eval, mulmod(coeff, mload(QUOTIENT_EVAL_MPTR), r), r)
+                    for
+                        {
+                            let mptr := 0x06e4
+                            let mptr_end := 0x0624
+                        }
+                        lt(mptr_end, mptr)
+                        { mptr := sub(mptr, 0x20) }
+                    {
+                        r_eval := addmod(mulmod(r_eval, zeta, r), mulmod(coeff, calldataload(mptr), r), r)
+                    }
+                    for
+                        {
+                            let mptr := 0x0604
+                            let mptr_end := 0x04a4
+                        }
+                        lt(mptr_end, mptr)
+                        { mptr := sub(mptr, 0x20) }
+                    {
+                        r_eval := addmod(mulmod(r_eval, zeta, r), mulmod(coeff, calldataload(mptr), r), r)
+                    }
+                    r_eval := mulmod(r_eval, zeta, r)
+                    r_eval := addmod(r_eval, mulmod(coeff, calldataload(0x0824), r), r)
+                    r_eval := mulmod(r_eval, zeta, r)
+                    r_eval := addmod(r_eval, mulmod(coeff, calldataload(0x0464), r), r)
+                    r_eval := mulmod(r_eval, mload(0x0500), r)
+                    mstore(0x05a0, r_eval)
+                }
+                {
+                    let zeta := mload(ZETA_MPTR)
+                    let r_eval := 0
+                    r_eval := addmod(r_eval, mulmod(mload(0xa0), calldataload(0x0744), r), r)
+                    r_eval := addmod(r_eval, mulmod(mload(0xc0), calldataload(0x0704), r), r)
+                    r_eval := addmod(r_eval, mulmod(mload(0xe0), calldataload(0x0724), r), r)
+                    r_eval := mulmod(r_eval, mload(0x0520), r)
+                    mstore(0x05c0, r_eval)
+                }
+                {
+                    let zeta := mload(ZETA_MPTR)
+                    let r_eval := 0
+                    r_eval := addmod(r_eval, mulmod(mload(0x0100), calldataload(0x07a4), r), r)
+                    r_eval := addmod(r_eval, mulmod(mload(0x0120), calldataload(0x07c4), r), r)
+                    r_eval := mulmod(r_eval, zeta, r)
+                    r_eval := addmod(r_eval, mulmod(mload(0x0100), calldataload(0x0764), r), r)
+                    r_eval := addmod(r_eval, mulmod(mload(0x0120), calldataload(0x0784), r), r)
+                    r_eval := mulmod(r_eval, mload(0x0540), r)
+                    mstore(0x05e0, r_eval)
+                }
+                {
+                    let zeta := mload(ZETA_MPTR)
+                    let r_eval := 0
+                    r_eval := addmod(r_eval, mulmod(mload(0x0140), calldataload(0x0804), r), r)
+                    r_eval := addmod(r_eval, mulmod(mload(0x0160), calldataload(0x07e4), r), r)
+                    r_eval := mulmod(r_eval, mload(0x0560), r)
+                    mstore(0x0600, r_eval)
+                }
+                {
+                    let sum := mload(0x20)
+                    sum := addmod(sum, mload(0x40), r)
+                    sum := addmod(sum, mload(0x60), r)
+                    mstore(0x0620, sum)
+                }
+                {
+                    let sum := mload(0x80)
+                    mstore(0x0640, sum)
+                }
+                {
+                    let sum := mload(0xa0)
+                    sum := addmod(sum, mload(0xc0), r)
+                    sum := addmod(sum, mload(0xe0), r)
+                    mstore(0x0660, sum)
+                }
+                {
+                    let sum := mload(0x0100)
+                    sum := addmod(sum, mload(0x0120), r)
+                    mstore(0x0680, sum)
+                }
+                {
+                    let sum := mload(0x0140)
+                    sum := addmod(sum, mload(0x0160), r)
+                    mstore(0x06a0, sum)
+                }
+                {
+                    for
+                        {
+                            let mptr := 0x00
+                            let mptr_end := 0xa0
+                            let sum_mptr := 0x0620
+                        }
+                        lt(mptr, mptr_end)
+                        {
+                            mptr := add(mptr, 0x20)
+                            sum_mptr := add(sum_mptr, 0x20)
+                        }
+                    {
+                        mstore(mptr, mload(sum_mptr))
+                    }
+                    success := batch_invert(success, 0, 0xa0, r)
+                    let r_eval := mulmod(mload(0x80), mload(0x0600), r)
+                    for
+                        {
+                            let sum_inv_mptr := 0x60
+                            let sum_inv_mptr_end := 0xa0
+                            let r_eval_mptr := 0x05e0
+                        }
+                        lt(sum_inv_mptr, sum_inv_mptr_end)
+                        {
+                            sum_inv_mptr := sub(sum_inv_mptr, 0x20)
+                            r_eval_mptr := sub(r_eval_mptr, 0x20)
+                        }
+                    {
+                        r_eval := mulmod(r_eval, mload(NU_MPTR), r)
+                        r_eval := addmod(r_eval, mulmod(mload(sum_inv_mptr), mload(r_eval_mptr), r), r)
+                    }
+                    mstore(R_EVAL_MPTR, r_eval)
+                }
+                {
+                    let nu := mload(NU_MPTR)
+                    mstore(0x00, calldataload(0xa4))
+                    mstore(0x20, calldataload(0xc4))
+                    success := ec_mul_acc(success, mload(ZETA_MPTR))
+                    success := ec_add_acc(success, calldataload(0x64), calldataload(0x84))
+                    mstore(0x80, calldataload(0x0264))
+                    mstore(0xa0, calldataload(0x0284))
+                    success := ec_mul_tmp(success, mload(ZETA_MPTR))
+                    success := ec_add_tmp(success, mload(QUOTIENT_X_MPTR), mload(QUOTIENT_Y_MPTR))
+                    for
+                        {
+                            let mptr := 0x0d60
+                            let mptr_end := 0x0a20
+                        }
+                        lt(mptr_end, mptr)
+                        { mptr := sub(mptr, 0x40) }
+                    {
+                        success := ec_mul_tmp(success, mload(ZETA_MPTR))
+                        success := ec_add_tmp(success, mload(mptr), mload(add(mptr, 0x20)))
+                    }
+                    success := ec_mul_tmp(success, mload(ZETA_MPTR))
+                    success := ec_add_tmp(success, mload(0x09a0), mload(0x09c0))
+                    success := ec_mul_tmp(success, mload(ZETA_MPTR))
+                    success := ec_add_tmp(success, mload(0x0960), mload(0x0980))
+                    success := ec_mul_tmp(success, mload(ZETA_MPTR))
+                    success := ec_add_tmp(success, mload(0x0a20), mload(0x0a40))
+                    success := ec_mul_tmp(success, mload(ZETA_MPTR))
+                    success := ec_add_tmp(success, mload(0x09e0), mload(0x0a00))
+                    success := ec_mul_tmp(success, mload(ZETA_MPTR))
+                    success := ec_add_tmp(success, calldataload(0x0164), calldataload(0x0184))
+                    success := ec_mul_tmp(success, mload(ZETA_MPTR))
+                    success := ec_add_tmp(success, calldataload(0xe4), calldataload(0x0104))
+                    success := ec_mul_tmp(success, mulmod(nu, mload(0x0500), r))
+                    success := ec_add_acc(success, mload(0x80), mload(0xa0))
+                    nu := mulmod(nu, mload(NU_MPTR), r)
+                    mstore(0x80, calldataload(0x01a4))
+                    mstore(0xa0, calldataload(0x01c4))
+                    success := ec_mul_tmp(success, mulmod(nu, mload(0x0520), r))
+                    success := ec_add_acc(success, mload(0x80), mload(0xa0))
+                    nu := mulmod(nu, mload(NU_MPTR), r)
+                    mstore(0x80, calldataload(0x0224))
+                    mstore(0xa0, calldataload(0x0244))
+                    success := ec_mul_tmp(success, mload(ZETA_MPTR))
+                    success := ec_add_tmp(success, calldataload(0x01e4), calldataload(0x0204))
+                    success := ec_mul_tmp(success, mulmod(nu, mload(0x0540), r))
+                    success := ec_add_acc(success, mload(0x80), mload(0xa0))
+                    nu := mulmod(nu, mload(NU_MPTR), r)
+                    mstore(0x80, calldataload(0x0124))
+                    mstore(0xa0, calldataload(0x0144))
+                    success := ec_mul_tmp(success, mulmod(nu, mload(0x0560), r))
+                    success := ec_add_acc(success, mload(0x80), mload(0xa0))
+                    mstore(0x80, mload(G1_X_MPTR))
+                    mstore(0xa0, mload(G1_Y_MPTR))
+                    success := ec_mul_tmp(success, sub(r, mload(R_EVAL_MPTR)))
+                    success := ec_add_acc(success, mload(0x80), mload(0xa0))
+                    mstore(0x80, calldataload(0x0844))
+                    mstore(0xa0, calldataload(0x0864))
+                    success := ec_mul_tmp(success, sub(r, mload(0x04c0)))
+                    success := ec_add_acc(success, mload(0x80), mload(0xa0))
+                    mstore(0x80, calldataload(0x0884))
+                    mstore(0xa0, calldataload(0x08a4))
+                    success := ec_mul_tmp(success, mload(MU_MPTR))
+                    success := ec_add_acc(success, mload(0x80), mload(0xa0))
+                    mstore(PAIRING_LHS_X_MPTR, mload(0x00))
+                    mstore(PAIRING_LHS_Y_MPTR, mload(0x20))
+                    mstore(PAIRING_RHS_X_MPTR, calldataload(0x0884))
+                    mstore(PAIRING_RHS_Y_MPTR, calldataload(0x08a4))
+                }
+            }
+
+            // Random linear combine with accumulator
+            if mload(HAS_ACCUMULATOR_MPTR) {
+                mstore(0x00, mload(ACC_LHS_X_MPTR))
+                mstore(0x20, mload(ACC_LHS_Y_MPTR))
+                mstore(0x40, mload(ACC_RHS_X_MPTR))
+                mstore(0x60, mload(ACC_RHS_Y_MPTR))
+                mstore(0x80, mload(PAIRING_LHS_X_MPTR))
+                mstore(0xa0, mload(PAIRING_LHS_Y_MPTR))
+                mstore(0xc0, mload(PAIRING_RHS_X_MPTR))
+                mstore(0xe0, mload(PAIRING_RHS_Y_MPTR))
+                let challenge := mod(keccak256(0x00, 0x100), r)
+
+                // [pairing_lhs] += challenge * [acc_lhs]
+                success := ec_mul_acc(success, challenge)
+                success := ec_add_acc(success, mload(PAIRING_LHS_X_MPTR), mload(PAIRING_LHS_Y_MPTR))
+                mstore(PAIRING_LHS_X_MPTR, mload(0x00))
+                mstore(PAIRING_LHS_Y_MPTR, mload(0x20))
+
+                // [pairing_rhs] += challenge * [acc_rhs]
+                mstore(0x00, mload(ACC_RHS_X_MPTR))
+                mstore(0x20, mload(ACC_RHS_Y_MPTR))
+                success := ec_mul_acc(success, challenge)
+                success := ec_add_acc(success, mload(PAIRING_RHS_X_MPTR), mload(PAIRING_RHS_Y_MPTR))
+                mstore(PAIRING_RHS_X_MPTR, mload(0x00))
+                mstore(PAIRING_RHS_Y_MPTR, mload(0x20))
+            }
+
+            // Perform pairing
+            success := ec_pairing(
+                success,
+                mload(PAIRING_LHS_X_MPTR),
+                mload(PAIRING_LHS_Y_MPTR),
+                mload(PAIRING_RHS_X_MPTR),
+                mload(PAIRING_RHS_Y_MPTR)
+            )
+
+            // Revert if anything fails
+            if iszero(success) {
+                revert(0x00, 0x00)
+            }
+
+            // Return 1 as result if everything succeeds
+            mstore(0x00, 1)
+            return(0x00, 0x20)
+        }
+    }
+}

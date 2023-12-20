@@ -3,12 +3,11 @@
 use halo2_proofs::halo2curves::{bn256::Fr as Fp, ff::PrimeField};
 use num_bigint::BigInt;
 use num_traits::Num;
-use snark_verifier_sdk::{evm::gen_evm_verifier_shplonk, CircuitExt};
-use std::path::Path;
-use summa_solvency::circuits::{
-    merkle_sum_tree::MstInclusionCircuit,
-    utils::{generate_setup_artifacts, write_verifier_sol_from_yul},
-};
+use prelude::*;
+
+use halo2_solidity_verifier::{compile_solidity, BatchOpenScheme::Bdfg21, SolidityGenerator};
+use summa_solvency::circuits::utils::generate_setup_artifacts;
+use summa_solvency::circuits::{merkle_sum_tree::MstInclusionCircuit, WithInstances};
 
 const LEVELS: usize = 4;
 const N_CURRENCIES: usize = 2;
@@ -26,19 +25,31 @@ fn main() {
         generate_setup_artifacts(11, Some("../backend/ptau/hermez-raw-11"), circuit.clone())
             .unwrap();
 
-    let num_instances = circuit.num_instance();
+    let num_instances = circuit.num_instances();
 
-    let yul_output_path = "../contracts/src/InclusionVerifier.yul";
-    let sol_output_path = "../contracts/src/InclusionVerifier.sol";
+    let generator: SolidityGenerator<'_> =
+        SolidityGenerator::new(&params, pk.get_vk(), Bdfg21, num_instances);
+    let verifier_solidity = generator
+        .render()
+        .unwrap()
+        .replace("Halo2Verifier", "Verifier")
+        .replace(") public returns (bool)", ") public view returns (bool)");
+    save_solidity("InclusionVerifier.sol", &verifier_solidity);
+    let deployment_code = compile_solidity(&verifier_solidity);
+    let verifier_creation_code_size = deployment_code.len();
+    println!("Verifier creation code size: {verifier_creation_code_size}");
+}
 
-    gen_evm_verifier_shplonk::<MstInclusionCircuit<LEVELS, N_CURRENCIES, N_BYTES>>(
-        &params,
-        pk.get_vk(),
-        num_instances,
-        Some(Path::new(yul_output_path)),
-    );
+fn save_solidity(name: impl AsRef<str>, solidity: &str) {
+    const DIR_GENERATED: &str = "../contracts/src";
 
-    write_verifier_sol_from_yul(yul_output_path, sol_output_path).unwrap();
+    create_dir_all(DIR_GENERATED).unwrap();
+    let path = format!("{DIR_GENERATED}/{}", name.as_ref());
+    File::create(&path)
+        .unwrap()
+        .write_all(solidity.as_bytes())
+        .unwrap();
+    println!("Saved {path}");
 }
 
 // Calculate the maximum value that the Merkle Root can have, given N_BYTES and LEVELS
@@ -58,4 +69,26 @@ fn is_there_risk_of_overflow(n_bytes: usize, n_levels: usize) -> bool {
 
     // Check if the max balance value is greater than the prime
     max_root_balance > modulus
+}
+
+mod prelude {
+    pub use halo2_proofs::{
+        circuit::{Layouter, SimpleFloorPlanner, Value},
+        halo2curves::{
+            bn256::{Bn256, Fr, G1Affine},
+            ff::PrimeField,
+        },
+        plonk::*,
+        poly::{commitment::Params, kzg::commitment::ParamsKZG, Rotation},
+    };
+    pub use rand::{
+        rngs::{OsRng, StdRng},
+        RngCore, SeedableRng,
+    };
+    pub use std::{
+        collections::HashMap,
+        fs::{create_dir_all, File},
+        io::Write,
+        ops::Range,
+    };
 }

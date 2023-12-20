@@ -1,10 +1,12 @@
 #![feature(generic_const_exprs)]
 use criterion::{criterion_group, criterion_main, Criterion};
 use halo2_proofs::plonk::{keygen_pk, keygen_vk};
-use snark_verifier_sdk::CircuitExt;
 use summa_solvency::{
     circuits::merkle_sum_tree::MstInclusionCircuit,
-    circuits::utils::{full_prover, full_verifier, generate_setup_artifacts},
+    circuits::{
+        utils::{full_prover, full_verifier, generate_setup_artifacts},
+        WithInstances,
+    },
     merkle_sum_tree::{MerkleSumTree, Tree},
 };
 
