@@ -87,8 +87,8 @@ mod test {
         // The Verifier is able to independently extract the omega from the verification key
         let omega = pk.get_vk().get_domain().get_omega();
 
-        // The Custodian communicates the polynomial degree to the Verifier
-        let poly_degree = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
+        // The Custodian communicates the polynomial length to the Verifier
+        let poly_length = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
 
         // Both the Custodian and the Verifier know what column range are the balance columns
         let balance_column_range = 1..N_CURRENCIES + 1;
@@ -99,7 +99,7 @@ mod test {
             &params,
             &zk_snark_proof,
             grand_sums_batch_proof,
-            poly_degree,
+            poly_length,
             balance_column_range,
         );
 
@@ -187,7 +187,7 @@ mod test {
         assert!(!balances_verified);
     }
 
-    // The prover communicates an invalid polynomial degree to the verifier (smaller than the actual degree). This will result in an understated grand sum
+    // The prover communicates an invalid polynomial length to the verifier (smaller than the actual length). This will result in a different grand sum
     #[test]
     fn test_invalid_poly_degree_univariate_grand_sum_full_prover() {
         let path = "../csv/entry_16.csv";
@@ -225,8 +225,8 @@ mod test {
         // The Verifier verifies the ZK proof
         assert!(full_verifier(&params, &vk, &zk_snark_proof, vec![vec![]]));
 
-        // The Custodian communicates the (invalid) polynomial degree to the Verifier
-        let invalid_poly_degree = u64::try_from(advice_polys.advice_polys[0].len()).unwrap() - 1;
+        // The Custodian communicates the (invalid) polynomial length to the Verifier
+        let invalid_poly_length = u64::try_from(advice_polys.advice_polys[0].len()).unwrap() - 1;
 
         // Both the Custodian and the Verifier know what column range are the balance columns
         let balance_column_range = 1..N_CURRENCIES + 1;
@@ -237,11 +237,11 @@ mod test {
             &params,
             &zk_snark_proof,
             grand_sums_batch_proof,
-            invalid_poly_degree,
+            invalid_poly_length,
             balance_column_range,
         );
 
-        // The opened grand sum is smaller than the actual sum of balances extracted from the csv file
+        // The opened grand sum is not equal to the actual sum of balances extracted from the csv file
         assert!(verified);
         for i in 0..N_CURRENCIES {
             assert_ne!(csv_total[i], grand_sum[i]);

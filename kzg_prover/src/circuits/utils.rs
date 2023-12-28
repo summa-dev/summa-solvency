@@ -206,7 +206,7 @@ pub fn open_user_points<const N_CURRENCIES: usize>(
 /// * `params` - the KZG parameters
 /// * `zk_snark_proof` - the ZK-SNARK proof of the circuit whose advice columns contain the user balance polynomials
 /// * `grand_sum_opening_batch_proof` - the KZG batch proof of the grand sum polynomials
-/// * `polynomial_degree` - the degree of the polynomials
+/// * `polynomial_length` - the length of the polynomials
 /// * `balance_column_range` - the range of the advice columns that represent user balances
 ///
 /// # Returns
@@ -217,7 +217,7 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
     params: &ParamsKZG<Bn256>,
     zk_snark_proof: &[u8],
     grand_sum_opening_batch_proof: Vec<u8>,
-    polynomial_degree: u64,
+    polynomial_length: u64,
     balance_column_range: Range<usize>,
 ) -> (bool, Vec<BigUint>) {
     let mut transcript: Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>> =
@@ -251,7 +251,7 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
         verified,
         constant_terms
             .iter()
-            .map(|eval| fp_to_big_uint(eval * Fp::from(polynomial_degree)))
+            .map(|eval| fp_to_big_uint(eval * Fp::from(polynomial_length)))
             .collect(),
     )
 }
