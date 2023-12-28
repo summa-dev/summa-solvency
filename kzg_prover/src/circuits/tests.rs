@@ -53,7 +53,7 @@ mod test {
         // The Custodian generates the ZK-SNARK Halo2 proof that commits to the user entry values in advice polynomials
         // and also range-checks the user balance values
         let (zk_snark_proof, advice_polys, omega) =
-            full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
+            full_prover(&params, &pk, circuit.clone(), &[vec![]]);
 
         // Both the Custodian and the Verifier know what column range are the balance columns
         // (The first column is the user IDs)
@@ -82,7 +82,7 @@ mod test {
 
         // 2. Verification phase
         // The Verifier verifies the ZK proof
-        assert!(full_verifier(&params, &vk, &zk_snark_proof, vec![vec![]]));
+        assert!(full_verifier(&params, &vk, &zk_snark_proof, &[vec![]]));
 
         // The Verifier is able to independently extract the omega from the verification key
         let omega = pk.get_vk().get_domain().get_omega();
@@ -98,7 +98,7 @@ mod test {
         let (verified, grand_sum) = verify_grand_sum_openings::<N_CURRENCIES>(
             &params,
             &zk_snark_proof,
-            grand_sums_batch_proof,
+            &grand_sums_batch_proof,
             poly_length,
             balance_column_range,
         );
@@ -147,7 +147,7 @@ mod test {
         // 1. Proving phase
         // The Custodian generates the ZK proof
         let (zk_snark_proof, advice_polys, omega) =
-            full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
+            full_prover(&params, &pk, circuit.clone(), &[vec![]]);
 
         // The Custodian creates a KZG batch proof of the 4th user ID & balances inclusion
         let user_index = 3_u16;
@@ -164,7 +164,7 @@ mod test {
 
         // 2. Verification phase
         // The Verifier verifies the ZK proof
-        assert!(full_verifier(&params, &vk, &zk_snark_proof, vec![vec![]]));
+        assert!(full_verifier(&params, &vk, &zk_snark_proof, &[vec![]]));
 
         // The Verifier is able to independently extract the omega from the verification key
         let omega = pk.get_vk().get_domain().get_omega();
@@ -207,7 +207,7 @@ mod test {
         // The Custodian generates the ZK-SNARK Halo2 proof that commits to the user entry values in advice polynomials
         // and also range-checks the user balance values
         let (zk_snark_proof, advice_polys, _) =
-            full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
+            full_prover(&params, &pk, circuit.clone(), &[vec![]]);
 
         // Both the Custodian and the Verifier know what column range are the balance columns
         // (The first column is the user IDs)
@@ -223,7 +223,7 @@ mod test {
 
         // 2. Verification phase
         // The Verifier verifies the ZK proof
-        assert!(full_verifier(&params, &vk, &zk_snark_proof, vec![vec![]]));
+        assert!(full_verifier(&params, &vk, &zk_snark_proof, &[vec![]]));
 
         // The Custodian communicates the (invalid) polynomial length to the Verifier
         let invalid_poly_length = u64::try_from(advice_polys.advice_polys[0].len()).unwrap() - 1;
@@ -236,7 +236,7 @@ mod test {
         let (verified, grand_sum) = verify_grand_sum_openings::<N_CURRENCIES>(
             &params,
             &zk_snark_proof,
-            grand_sums_batch_proof,
+            &grand_sums_batch_proof,
             invalid_poly_length,
             balance_column_range,
         );
@@ -337,7 +337,7 @@ mod test {
         // An empty circuit is used here to emphasize that the circuit inputs are not relevant when generating the keys.
         // Important: The dimensions of the circuit used to generate the keys must match those of the circuit used to generate the proof.
         // In this case, the dimensions are represented by the number fo users.
-        let (params, pk, vk) = generate_setup_artifacts(K, None, circuit).unwrap();
+        let (params, pk, vk) = generate_setup_artifacts(K, None, &circuit).unwrap();
 
         // Only now we can instantiate the circuit with the actual inputs
         let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];

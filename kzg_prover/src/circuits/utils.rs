@@ -39,7 +39,7 @@ use crate::utils::fp_to_big_uint;
 pub fn generate_setup_artifacts<C: Circuit<Fp>>(
     k: u32,
     params_path: Option<&str>,
-    circuit: C,
+    circuit: &C,
 ) -> Result<
     (
         ParamsKZG<Bn256>,
@@ -74,8 +74,8 @@ pub fn generate_setup_artifacts<C: Circuit<Fp>>(
         }
     }
 
-    let vk = keygen_vk(&params, &circuit).expect("vk generation should not fail");
-    let pk = keygen_pk(&params, vk.clone(), &circuit).expect("pk generation should not fail");
+    let vk = keygen_vk(&params, circuit).expect("vk generation should not fail");
+    let pk = keygen_pk(&params, vk.clone(), circuit).expect("pk generation should not fail");
 
     Ok((params, pk, vk))
 }
@@ -85,7 +85,7 @@ pub fn full_prover<C: Circuit<Fp>>(
     params: &ParamsKZG<Bn256>,
     pk: &ProvingKey<G1Affine>,
     circuit: C,
-    public_inputs: Vec<Vec<Fp>>,
+    public_inputs: &[Vec<Fp>],
 ) -> (
     Vec<u8>,
     AdviceSingle<halo2_proofs::halo2curves::bn256::G1Affine, Coeff>,
@@ -182,7 +182,7 @@ pub fn open_user_points<const N_CURRENCIES: usize>(
     omega: Fp,
     user_index: u16,
 ) -> Vec<u8> {
-    let omega_raised = omega.pow_vartime([user_index as u64]);
+    let omega_raised = omega.pow_vartime([u64::from(user_index)]);
     create_opening_proof_at_challenge::<
         KZGCommitmentScheme<Bn256>,
         ProverSHPLONK<'_, Bn256>,
@@ -216,7 +216,7 @@ pub fn open_user_points<const N_CURRENCIES: usize>(
 pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
     params: &ParamsKZG<Bn256>,
     zk_snark_proof: &[u8],
-    grand_sum_opening_batch_proof: Vec<u8>,
+    grand_sum_opening_batch_proof: &[u8],
     polynomial_length: u64,
     balance_column_range: Range<usize>,
 ) -> (bool, Vec<BigUint>) {
@@ -242,7 +242,7 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
         N_CURRENCIES,
     >(
         params,
-        &grand_sum_opening_batch_proof,
+        grand_sum_opening_batch_proof,
         Fp::zero(),
         &advice_commitments,
     );
@@ -444,7 +444,7 @@ pub fn full_verifier(
     params: &ParamsKZG<Bn256>,
     vk: &VerifyingKey<G1Affine>,
     proof: &[u8],
-    public_inputs: Vec<Vec<Fp>>,
+    public_inputs: &[Vec<Fp>],
 ) -> bool {
     let verifier_params = params.verifier_params();
     let strategy = SingleStrategy::new(params);

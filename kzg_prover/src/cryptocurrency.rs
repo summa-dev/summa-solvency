@@ -7,8 +7,8 @@ pub struct Cryptocurrency {
 impl Cryptocurrency {
     pub fn init_empty() -> Self {
         Cryptocurrency {
-            name: "".to_string(),
-            chain: "".to_string(),
+            name: String::new(),
+            chain: String::new(),
         }
     }
 }

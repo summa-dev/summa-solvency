@@ -25,7 +25,7 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
 
     // Initialize an empty circuit
     let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
-    let (params, pk, vk) = generate_setup_artifacts(K, None, circuit.clone()).unwrap();
+    let (params, pk, vk) = generate_setup_artifacts(K, None, &circuit).unwrap();
 
     let range_check_bench_name = format!("<{}> range check", name);
     let opening_grand_sum_bench_name = format!("<{}> opening grand sum", name);
@@ -35,20 +35,19 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
 
     let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
     let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
-    let _ =
-        parse_csv_to_entries::<&str, N_CURRENCIES>(csv_path, &mut entries, &mut cryptos).unwrap();
+    parse_csv_to_entries::<&str, N_CURRENCIES>(csv_path, &mut entries, &mut cryptos).unwrap();
 
     c.bench_function(&range_check_bench_name, |b| {
         b.iter_batched(
             || circuit.clone(), // Setup function: clone the circuit for each iteration
             |circuit| {
-                full_prover(&params, &pk, circuit, vec![vec![]]);
+                full_prover(&params, &pk, circuit, &[vec![]]);
             },
             criterion::BatchSize::SmallInput, // Choose an appropriate batch size
         );
     });
 
-    let (zk_snark_proof, advice_polys, omega) = full_prover(&params, &pk, circuit, vec![vec![]]);
+    let (zk_snark_proof, advice_polys, omega) = full_prover(&params, &pk, circuit, &[vec![]]);
 
     c.bench_function(&opening_grand_sum_bench_name, |b| {
         b.iter_batched(
@@ -110,7 +109,7 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
                 verify_grand_sum_openings::<N_CURRENCIES>(
                     &params,
                     &zk_snark_proof,
-                    grand_sums_batch_proof,
+                    &grand_sums_batch_proof,
                     poly_degree,
                     balance_column_range,
                 )
@@ -128,13 +127,13 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
         &advice_polys.advice_blinds,
         &params,
         column_range.clone(),
-        omega.clone(),
-        user_index.clone(),
+        omega,
+        user_index,
     );
 
     c.bench_function(&verifying_user_bench_name, |b| {
         b.iter_batched(
-            || (column_range.clone(), omega.clone(), user_index.clone()),
+            || (column_range.clone(), omega, user_index),
             |(column_range, omega, user_index)| {
                 verify_user_inclusion::<N_POINTS>(
                     &params,
