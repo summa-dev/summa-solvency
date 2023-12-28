@@ -11,6 +11,7 @@ mod test {
     use crate::utils::parse_csv_to_entries;
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
     use halo2_proofs::halo2curves::bn256::{Bn256, Fr as Fp, G1Affine};
+    use halo2_proofs::halo2curves::ff::PrimeField;
     use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
     use halo2_proofs::poly::kzg::commitment::ParamsKZG;
     use num_bigint::BigUint;
@@ -107,6 +108,108 @@ mod test {
         for i in 0..N_CURRENCIES {
             assert_eq!(csv_total[i], grand_sum[i]);
         }
+
+        let column_range = 0..N_CURRENCIES + 1;
+        // The Verifier verifies the inclusion of the 4th user entry
+        const N_POINTS: usize = N_CURRENCIES + 1;
+        let (inclusion_verified, id_and_balance_values) = verify_user_inclusion::<N_POINTS>(
+            &params,
+            &zk_snark_proof,
+            &openings_batch_proof,
+            column_range,
+            omega,
+            user_index,
+        );
+
+        assert!(inclusion_verified);
+        let fourth_user_csv_entry = entries.get(user_index as usize).unwrap();
+        for i in 0..N_CURRENCIES + 1 {
+            if i == 0 {
+                assert_eq!(
+                    *fourth_user_csv_entry.username_as_big_uint(),
+                    id_and_balance_values[i]
+                );
+            } else {
+                assert_eq!(
+                    *fourth_user_csv_entry.balances().get(i - 1).unwrap(),
+                    id_and_balance_values[i]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_invalid_univariate_grand_sum_full_prover_with_overflow() {
+        let path = "../csv/entry_16_prime_overflow.csv";
+
+        let (entries, circuit, pk, vk, params) = set_up::<N_USERS, N_CURRENCIES>(path);
+
+        // Calculate total for all entry columns
+        let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
+
+        for entry in &entries {
+            for (i, balance) in entry.balances().iter().enumerate() {
+                csv_total[i] += balance;
+            }
+        }
+
+        // 1. Proving phase
+        // The Custodian generates the ZK-SNARK Halo2 proof that commits to the user entry values in advice polynomials
+        let (zk_snark_proof, advice_polys, omega) =
+            full_prover(&params, &pk, circuit.clone(), vec![vec![]]);
+
+        // Both the Custodian and the Verifier know what column range are the balance columns
+        // (The first column is the user IDs)
+        let balance_column_range = 1..N_CURRENCIES + 1;
+
+        // The Custodian makes a batch opening proof of all user balance polynomials at x = 0 for the Verifier
+        let grand_sums_batch_proof = open_grand_sums::<N_CURRENCIES>(
+            &advice_polys.advice_polys,
+            &advice_polys.advice_blinds,
+            &params,
+            balance_column_range,
+        );
+
+        // The Custodian creates a KZG batch proof of the 4th user ID & balances inclusion
+        let user_index = 3_u16;
+
+        let column_range = 0..N_CURRENCIES + 1;
+        let openings_batch_proof = open_user_points::<N_CURRENCIES>(
+            &advice_polys.advice_polys,
+            &advice_polys.advice_blinds,
+            &params,
+            column_range,
+            omega,
+            user_index,
+        );
+
+        // 2. Verification phase
+        // The Verifier verifies the ZK proof
+        assert!(full_verifier(&params, &vk, &zk_snark_proof, vec![vec![]]));
+
+        // The Verifier is able to independently extract the omega from the verification key
+        let omega = pk.get_vk().get_domain().get_omega();
+
+        // The Custodian communicates the polynomial degree to the Verifier
+        let poly_degree = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
+
+        // Both the Custodian and the Verifier know what column range are the balance columns
+        let balance_column_range = 1..N_CURRENCIES + 1;
+
+        // The Custodian communicates the KZG batch opening transcript to the Verifier
+        // The Verifier verifies the KZG batch opening and calculates the grand sums
+        let (verified, grand_sum) = verify_grand_sum_openings::<N_CURRENCIES>(
+            &params,
+            &zk_snark_proof,
+            grand_sums_batch_proof,
+            poly_degree,
+            balance_column_range,
+        );
+
+        assert!(verified);
+        assert_ne!(csv_total[0], grand_sum[0]);
+        assert_eq!(grand_sum[0], BigUint::from(0u32));
+        assert_eq!(csv_total[1], grand_sum[1]);
 
         let column_range = 0..N_CURRENCIES + 1;
         // The Verifier verifies the inclusion of the 4th user entry
