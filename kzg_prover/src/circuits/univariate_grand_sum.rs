@@ -67,12 +67,12 @@ where
         // Create an empty array of range check configs
         let mut range_check_configs = Vec::with_capacity(N_CURRENCIES);
 
-        for i in 0..N_CURRENCIES {
-            let z = balances[i];
+        for item in balances.iter().take(N_CURRENCIES) {
+            let z = *item;
             // Create 4 advice columns for each range check chip
             let zs = [(); 4].map(|_| meta.advice_column());
 
-            for column in zs.iter() {
+            for column in &zs {
                 meta.enable_equality(*column);
             }
 

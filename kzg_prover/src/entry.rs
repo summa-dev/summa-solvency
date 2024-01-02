@@ -26,7 +26,7 @@ impl<const N_ASSETS: usize> Entry<N_ASSETS> {
         Entry {
             username_as_big_uint: BigUint::from(0u32),
             balances: empty_balances,
-            username: "".to_string(),
+            username: String::new(),
         }
     }
 

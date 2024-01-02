@@ -124,7 +124,7 @@ impl Circuit<Fp> for TestCircuit {
 
         let zs = [(); 4].map(|_| meta.advice_column());
 
-        for column in zs.iter() {
+        for column in &zs {
             meta.enable_equality(*column);
         }
 
