@@ -46,7 +46,7 @@ pub fn decompose_fp_to_byte_pairs(value: Fp, n: usize) -> Vec<u16> {
     // Iterate over the bytes two at a time.
     for chunk in bytes.chunks(2) {
         // Combine two adjacent bytes into a u16 (2 bytes).
-        let pair = (chunk[0] as u16) | ((chunk[1] as u16) << 8);
+        let pair = (u16::from(chunk[0])) | ((u16::from(chunk[1])) << 8);
         byte_pairs.push(pair);
     }
 

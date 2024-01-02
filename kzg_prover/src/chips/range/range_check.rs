@@ -132,7 +132,7 @@ impl RangeCheckU64Chip {
         // Perform the assignment of the truncated right-shifted values to zs columns.
         for (i, k) in ks.iter().enumerate() {
             let zs_next = {
-                let k = k.map(|byte| Fp::from(byte as u64));
+                let k = k.map(|byte| Fp::from(u64::from(byte)));
                 let zs_next_val = (z.value().copied() - k) * two_pow_sixteen_inv;
                 region.assign_advice(
                     || format!("zs_{:?}", i),
