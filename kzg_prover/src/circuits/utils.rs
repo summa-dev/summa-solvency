@@ -129,7 +129,7 @@ pub fn full_prover<C: Circuit<Fp>>(
 /// * `advice_blinds` - the advice polynomials blinds
 /// * `params` - the KZG parameters
 /// * `balance_column_range` - the range of the balance columns used to calculate the grand sums
-/// * `constant_term` - the evaluations of the polynomials at X = 0
+/// * `constant_terms` - the evaluations of the polynomials at X = 0
 ///
 /// # Returns
 ///
