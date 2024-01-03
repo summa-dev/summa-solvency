@@ -3,7 +3,7 @@ use std::{fs::File, ops::Range};
 use ark_std::{end_timer, start_timer};
 use ethers::types::U256;
 use halo2_proofs::{
-    arithmetic::{eval_polynomial, Field},
+    arithmetic::Field,
     halo2curves::{
         bn256::{Bn256, Fr as Fp, G1Affine},
         ff::{PrimeField, WithSmallOrderMulGroup},
@@ -141,6 +141,7 @@ pub fn open_grand_sums<const N_CURRENCIES: usize>(
     advice_blinds: &[Blind<Fp>],
     params: &ParamsKZG<Bn256>,
     balance_column_range: Range<usize>,
+    polynomial_evaluations: &[Fp],
 ) -> Vec<u8> {
     let challenge = Fp::zero();
     create_opening_proof_at_challenge::<
@@ -153,6 +154,7 @@ pub fn open_grand_sums<const N_CURRENCIES: usize>(
         &advice_polys[balance_column_range],
         advice_blinds,
         challenge,
+        polynomial_evaluations,
     )
 }
 
@@ -181,6 +183,7 @@ pub fn open_user_points<const N_CURRENCIES: usize>(
     column_range: Range<usize>,
     omega: Fp,
     user_index: u16,
+    polynomial_evaluations: &[Fp],
 ) -> Vec<u8> {
     let omega_raised = omega.pow_vartime([u64::from(user_index)]);
     create_opening_proof_at_challenge::<
@@ -193,6 +196,7 @@ pub fn open_user_points<const N_CURRENCIES: usize>(
         &advice_polys[column_range],
         advice_blinds,
         omega_raised,
+        polynomial_evaluations,
     )
 }
 
@@ -343,17 +347,12 @@ fn create_opening_proof_at_challenge<
     polynomials: &[Polynomial<<Scheme as CommitmentScheme>::Scalar, Coeff>],
     blinds: &[Blind<Fp>],
     challenge: Fp,
+    polynomial_evaluations: &[Fp],
 ) -> Vec<u8>
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3>,
 {
     let mut transcript = T::init(vec![]);
-
-    // Evaluate the polynomials at the challenge
-    let polynomial_evaluations = polynomials
-        .iter()
-        .map(|poly| eval_polynomial(poly, challenge))
-        .collect::<Vec<_>>();
 
     // Write evaluations to the transcript
     polynomial_evaluations
