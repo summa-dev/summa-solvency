@@ -54,7 +54,7 @@ where
     [(); N_CURRENCIES + 1]:,
 {
     pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
-        let username = meta.advice_column();
+        let username = meta.unblinded_advice_column();
 
         let balances = [(); N_CURRENCIES].map(|_| meta.unblinded_advice_column());
 
