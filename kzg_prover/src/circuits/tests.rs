@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod test {
 
-    use std::ops::Div;
-
     use crate::circuits::univariate_grand_sum::UnivariateGrandSum;
     use crate::circuits::utils::{
         full_prover, full_verifier, generate_setup_artifacts, open_grand_sums, open_user_points,
@@ -62,18 +60,18 @@ mod test {
         // (The first column is the user IDs)
         let balance_column_range = 1..N_CURRENCIES + 1;
 
-        // The Custodian communicates the polynomial degree to the Verifier
-        let poly_degree = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
+        // The Custodian communicates the polynomial length to the Verifier
+        let poly_length = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
 
         // The Custodian makes a batch opening proof of all user balance polynomials at x = 0 for the Verifier
-        let grand_sums_batch_proof = open_grand_sums::<N_CURRENCIES>(
+        let grand_sums_batch_proof = open_grand_sums(
             &advice_polys.advice_polys,
             &advice_polys.advice_blinds,
             &params,
             balance_column_range,
             csv_total
                 .iter()
-                .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_degree).invert().unwrap())
+                .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
                 .collect::<Vec<Fp>>()
                 .as_slice(),
         );
@@ -82,7 +80,7 @@ mod test {
         let user_index = 3_u16;
 
         let column_range = 0..N_CURRENCIES + 1;
-        let openings_batch_proof = open_user_points::<N_CURRENCIES>(
+        let openings_batch_proof = open_user_points(
             &advice_polys.advice_polys,
             &advice_polys.advice_blinds,
             &params,
@@ -172,7 +170,7 @@ mod test {
         let user_index = 3_u16;
 
         let column_range = 0..N_CURRENCIES + 1;
-        let openings_batch_proof = open_user_points::<N_CURRENCIES>(
+        let openings_batch_proof = open_user_points(
             &advice_polys.advice_polys,
             &advice_polys.advice_blinds,
             &params,
@@ -216,7 +214,7 @@ mod test {
 
     // The prover communicates an invalid polynomial length to the verifier (smaller than the actual length). This will result in a different grand sum
     #[test]
-    fn test_invalid_poly_degree_univariate_grand_sum_full_prover() {
+    fn test_invalid_poly_length_univariate_grand_sum_full_prover() {
         let path = "../csv/entry_16.csv";
 
         let (entries, circuit, pk, vk, params) = set_up::<N_USERS, N_CURRENCIES>(path);
@@ -240,18 +238,18 @@ mod test {
         // (The first column is the user IDs)
         let balance_column_range = 1..N_CURRENCIES + 1;
 
-        // The Custodian communicates the polynomial degree to the Verifier
-        let poly_degree = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
+        // The Custodian communicates the polynomial length to the Verifier
+        let poly_length = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
 
         // The Custodian makes a batch opening proof of all user balance polynomials at x = 0 for the Verifier
-        let grand_sums_batch_proof = open_grand_sums::<N_CURRENCIES>(
+        let grand_sums_batch_proof = open_grand_sums(
             &advice_polys.advice_polys,
             &advice_polys.advice_blinds,
             &params,
             balance_column_range,
             csv_total
                 .iter()
-                .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_degree).invert().unwrap())
+                .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
                 .collect::<Vec<Fp>>()
                 .as_slice(),
         );

@@ -66,7 +66,7 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
         b.iter_batched(
             || 1..N_CURRENCIES + 1,
             |balance_column_range| {
-                open_grand_sums::<N_CURRENCIES>(
+                open_grand_sums(
                     &advice_polys.advice_polys,
                     &advice_polys.advice_blinds,
                     &params,
@@ -92,7 +92,7 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
         b.iter_batched(
             || (get_random_user_index(), 0..N_CURRENCIES + 1),
             |(user_index, column_range)| {
-                open_user_points::<N_CURRENCIES>(
+                open_user_points(
                     &advice_polys.advice_polys,
                     &advice_polys.advice_blinds,
                     &params,
@@ -115,14 +115,14 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
 
     // Open grand sum for benchmark verifying grand sum
     let balance_column_range = 1..N_CURRENCIES + 1;
-    let grand_sums_batch_proof = open_grand_sums::<N_CURRENCIES>(
+    let grand_sums_batch_proof = open_grand_sums(
         &advice_polys.advice_polys,
         &advice_polys.advice_blinds,
         &params,
         balance_column_range.clone(),
         csv_total
             .iter()
-            .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_degree).invert().unwrap())
+            .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
             .collect::<Vec<Fp>>()
             .as_slice(),
     );
@@ -136,12 +136,12 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
                     balance_column_range.clone(),
                 )
             },
-            |(grand_sums_batch_proof, poly_degree, balance_column_range)| {
+            |(grand_sums_batch_proof, poly_length, balance_column_range)| {
                 verify_grand_sum_openings::<N_CURRENCIES>(
                     &params,
                     &zk_snark_proof,
                     &grand_sums_batch_proof,
-                    poly_degree,
+                    poly_length,
                     balance_column_range,
                 )
             },
@@ -153,13 +153,13 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
     let column_range = 0..N_CURRENCIES + 1;
     let omega = vk.get_domain().get_omega();
     let user_index = get_random_user_index();
-    let openings_batch_proof = open_user_points::<N_CURRENCIES>(
+    let openings_batch_proof = open_user_points(
         &advice_polys.advice_polys,
         &advice_polys.advice_blinds,
         &params,
         column_range.clone(),
-        omega.clone(),
-        user_index.clone(),
+        omega,
+        user_index,
         &entries
             .get(user_index as usize)
             .map(|entry| {

@@ -123,25 +123,24 @@ pub fn full_prover<C: Circuit<Fp>>(
 /// Creates the univariate polynomial grand sum openings.
 /// The polynomials are evaluated at X = 0 to obtain their constant term.
 ///
-/// * `N_CURRENCIES` - the number of cryptocurrency balances
-///
 /// # Arguments
 ///
 /// * `advice_polys` - the advice polynomials
 /// * `advice_blinds` - the advice polynomials blinds
 /// * `params` - the KZG parameters
 /// * `balance_column_range` - the range of the balance columns used to calculate the grand sums
+/// * `constant_term` - the evaluations of the polynomials at X = 0
 ///
 /// # Returns
 ///
 /// * `Vec<u8>` - the KZG batch proof containing the quotient polynomial commitments
 /// and the evaluations of the polynomials at X = 0
-pub fn open_grand_sums<const N_CURRENCIES: usize>(
+pub fn open_grand_sums(
     advice_polys: &[Polynomial<Fp, Coeff>],
     advice_blinds: &[Blind<Fp>],
     params: &ParamsKZG<Bn256>,
     balance_column_range: Range<usize>,
-    polynomial_evaluations: &[Fp],
+    constant_terms: &[Fp],
 ) -> Vec<u8> {
     let challenge = Fp::zero();
     create_opening_proof_at_challenge::<
@@ -154,14 +153,12 @@ pub fn open_grand_sums<const N_CURRENCIES: usize>(
         &advice_polys[balance_column_range],
         advice_blinds,
         challenge,
-        polynomial_evaluations,
+        constant_terms,
     )
 }
 
 /// Creates a KZG batch proof for the `advice_polys` polynomial openings
 /// at a point corresponding to the `user_index`
-///
-/// * `N_CURRENCIES` - the number of cryptocurrency balances
 ///
 /// # Arguments
 ///
@@ -171,19 +168,20 @@ pub fn open_grand_sums<const N_CURRENCIES: usize>(
 /// * `column_range` - the advice column range to be used for the proof
 /// * `omega` - $\omega$, the generator of the $2^k$ order multiplicative subgroup used to interpolate the polynomials.
 /// * `user_index` - the index of the user whose entry is being proven
+/// * `user_balances` - the evaluations of the polynomials at the point corresponding to the `user_index`
 ///
 /// # Returns
 ///
 /// * `Vec<u8>` - the KZG batch proof containing the quotient polynomial commitments
 /// and the evaluations of the polynomials at the point corresponding to the `user_index`
-pub fn open_user_points<const N_CURRENCIES: usize>(
+pub fn open_user_points(
     advice_polys: &[Polynomial<Fp, Coeff>],
     advice_blinds: &[Blind<Fp>],
     params: &ParamsKZG<Bn256>,
     column_range: Range<usize>,
     omega: Fp,
     user_index: u16,
-    polynomial_evaluations: &[Fp],
+    user_balances: &[Fp],
 ) -> Vec<u8> {
     let omega_raised = omega.pow_vartime([u64::from(user_index)]);
     create_opening_proof_at_challenge::<
@@ -196,7 +194,7 @@ pub fn open_user_points<const N_CURRENCIES: usize>(
         &advice_polys[column_range],
         advice_blinds,
         omega_raised,
-        polynomial_evaluations,
+        user_balances,
     )
 }
 
@@ -331,6 +329,7 @@ pub fn verify_user_inclusion<const N_POINTS: usize>(
 /// * `polynomials` - the polynomials to be opened
 /// * `blinds` - the polynomials blinds
 /// * `challenge` - the challenge at which the polynomials are evaluated
+/// * `polynomial_evaluations` - the evaluations of the polynomials at the challenge
 ///
 /// # Returns
 ///
