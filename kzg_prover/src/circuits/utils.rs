@@ -150,8 +150,8 @@ pub fn open_grand_sums<const N_CURRENCIES: usize>(
         Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
     >(
         params,
-        &advice_polys[balance_column_range],
-        advice_blinds,
+        &advice_polys[balance_column_range.clone()],
+        &advice_blinds[balance_column_range],
         challenge,
     )
 }
@@ -190,8 +190,8 @@ pub fn open_user_points<const N_CURRENCIES: usize>(
         Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
     >(
         params,
-        &advice_polys[column_range],
-        advice_blinds,
+        &advice_polys[column_range.clone()],
+        &advice_blinds[column_range],
         omega_raised,
     )
 }
