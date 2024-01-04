@@ -60,7 +60,7 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
 
     let (zk_snark_proof, advice_polys, omega) = full_prover(&params, &pk, circuit, &[vec![]]);
 
-    let poly_length = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
+    let poly_length = 2 ^ u64::from(K);
 
     c.bench_function(&opening_grand_sum_bench_name, |b| {
         b.iter_batched(

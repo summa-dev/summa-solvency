@@ -61,7 +61,7 @@ mod test {
         let balance_column_range = 1..N_CURRENCIES + 1;
 
         // The Custodian communicates the polynomial length to the Verifier
-        let poly_length = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
+        let poly_length = 2 ^ u64::from(K);
 
         // The Custodian makes a batch opening proof of all user balance polynomials at x = 0 for the Verifier
         let grand_sums_batch_proof = open_grand_sums(
@@ -105,7 +105,7 @@ mod test {
         let omega = pk.get_vk().get_domain().get_omega();
 
         // The Custodian communicates the polynomial length to the Verifier
-        let poly_length = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
+        let poly_length = 2 ^ u64::from(K);
 
         // Both the Custodian and the Verifier know what column range are the balance columns
         let balance_column_range = 1..N_CURRENCIES + 1;
@@ -239,7 +239,7 @@ mod test {
         let balance_column_range = 1..N_CURRENCIES + 1;
 
         // The Custodian communicates the polynomial length to the Verifier
-        let poly_length = u64::try_from(advice_polys.advice_polys[0].len()).unwrap();
+        let poly_length = 2 ^ u64::from(K);
 
         // The Custodian makes a batch opening proof of all user balance polynomials at x = 0 for the Verifier
         let grand_sums_batch_proof = open_grand_sums(
@@ -259,7 +259,7 @@ mod test {
         assert!(full_verifier(&params, &vk, &zk_snark_proof, &[vec![]]));
 
         // The Custodian communicates the (invalid) polynomial length to the Verifier
-        let invalid_poly_length = u64::try_from(advice_polys.advice_polys[0].len()).unwrap() - 1;
+        let invalid_poly_length = 2 ^ u64::from(K) - 1;
 
         // Both the Custodian and the Verifier know what column range are the balance columns
         let balance_column_range = 1..N_CURRENCIES + 1;
