@@ -1,5 +1,7 @@
 #![feature(generic_const_exprs)]
 use criterion::{criterion_group, criterion_main, Criterion};
+use halo2_proofs::{arithmetic::Field, halo2curves::bn256::Fr as Fp};
+use num_bigint::BigUint;
 use rand::{rngs::OsRng, Rng};
 
 use summa_solvency::{
@@ -12,7 +14,7 @@ use summa_solvency::{
     },
     cryptocurrency::Cryptocurrency,
     entry::Entry,
-    utils::parse_csv_to_entries,
+    utils::{big_uint_to_fp, parse_csv_to_entries},
 };
 
 fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, const N_POINTS: usize>(
@@ -37,6 +39,15 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
     let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
     parse_csv_to_entries::<&str, N_CURRENCIES>(csv_path, &mut entries, &mut cryptos).unwrap();
 
+    // Calculate total for all entry columns
+    let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
+
+    for entry in &entries {
+        for (i, balance) in entry.balances().iter().enumerate() {
+            csv_total[i] += balance;
+        }
+    }
+
     c.bench_function(&range_check_bench_name, |b| {
         b.iter_batched(
             || circuit.clone(), // Setup function: clone the circuit for each iteration
@@ -49,15 +60,22 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
 
     let (zk_snark_proof, advice_polys, omega) = full_prover(&params, &pk, circuit, &[vec![]]);
 
+    let poly_length = 2 ^ u64::from(K);
+
     c.bench_function(&opening_grand_sum_bench_name, |b| {
         b.iter_batched(
             || 1..N_CURRENCIES + 1,
             |balance_column_range| {
-                open_grand_sums::<N_CURRENCIES>(
+                open_grand_sums(
                     &advice_polys.advice_polys,
                     &advice_polys.advice_blinds,
                     &params,
                     balance_column_range,
+                    csv_total
+                        .iter()
+                        .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
+                        .collect::<Vec<Fp>>()
+                        .as_slice(),
                 )
             },
             criterion::BatchSize::SmallInput,
@@ -74,13 +92,21 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
         b.iter_batched(
             || (get_random_user_index(), 0..N_CURRENCIES + 1),
             |(user_index, column_range)| {
-                open_user_points::<N_CURRENCIES>(
+                open_user_points(
                     &advice_polys.advice_polys,
                     &advice_polys.advice_blinds,
                     &params,
                     column_range,
                     omega,
                     user_index,
+                    &entries
+                        .get(user_index as usize)
+                        .map(|entry| {
+                            std::iter::once(big_uint_to_fp(&(entry.username_as_big_uint())))
+                                .chain(entry.balances().iter().map(|x| big_uint_to_fp(x)))
+                                .collect::<Vec<Fp>>()
+                        })
+                        .unwrap(),
                 )
             },
             criterion::BatchSize::SmallInput,
@@ -89,11 +115,16 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
 
     // Open grand sum for benchmark verifying grand sum
     let balance_column_range = 1..N_CURRENCIES + 1;
-    let grand_sums_batch_proof = open_grand_sums::<N_CURRENCIES>(
+    let grand_sums_batch_proof = open_grand_sums(
         &advice_polys.advice_polys,
         &advice_polys.advice_blinds,
         &params,
         balance_column_range.clone(),
+        csv_total
+            .iter()
+            .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
+            .collect::<Vec<Fp>>()
+            .as_slice(),
     );
 
     c.bench_function(&verifying_grand_sum_bench_name, |b| {
@@ -105,12 +136,12 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
                     balance_column_range.clone(),
                 )
             },
-            |(grand_sums_batch_proof, poly_degree, balance_column_range)| {
+            |(grand_sums_batch_proof, poly_length, balance_column_range)| {
                 verify_grand_sum_openings::<N_CURRENCIES>(
                     &params,
                     &zk_snark_proof,
                     &grand_sums_batch_proof,
-                    poly_degree,
+                    poly_length,
                     balance_column_range,
                 )
             },
@@ -122,13 +153,21 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
     let column_range = 0..N_CURRENCIES + 1;
     let omega = vk.get_domain().get_omega();
     let user_index = get_random_user_index();
-    let openings_batch_proof = open_user_points::<N_CURRENCIES>(
+    let openings_batch_proof = open_user_points(
         &advice_polys.advice_polys,
         &advice_polys.advice_blinds,
         &params,
         column_range.clone(),
         omega,
         user_index,
+        &entries
+            .get(user_index as usize)
+            .map(|entry| {
+                std::iter::once(big_uint_to_fp(&(entry.username_as_big_uint())))
+                    .chain(entry.balances().iter().map(|x| big_uint_to_fp(x)))
+                    .collect::<Vec<Fp>>()
+            })
+            .unwrap(),
     );
 
     c.bench_function(&verifying_user_bench_name, |b| {
