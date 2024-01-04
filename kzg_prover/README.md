@@ -24,7 +24,7 @@ Halo2 allows to efficiently implement the described algorithm for the following 
 
 The algorithm works as follows:
 
-1. Assign all the user balances to an unblinded advice column of the circuit. The unblinded advice column is a kind of advice column without the random values (blinding factors) added at the bottom.
+1. Assign all the user balances to an unblinded advice column of the [circuit](../kzg_prover/src/circuits/univariate_grand_sum.rs). The unblinded advice column is a kind of advice column without the random values (blinding factors) added at the bottom.
 2. Generate the ZK-SNARK proof for the circuit, effectively encoding the balance values into a polynomial and performing a KZG commitment to this polynomial.
 3. Perform a KZG opening proof of the polynomial at $x=0$ and publicly reveal the constant term $a_0$ of the polynomial. The public can then calculate the liabilities by multiplying the $a_0$ by $d + 1$ where $d$ is the polynomial degree.
 4. Privately provide to each user a KZG opening proof of the corresponding user opening.
