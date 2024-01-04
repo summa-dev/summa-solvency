@@ -48,6 +48,8 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
         }
     }
 
+    let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+
     c.bench_function(&range_check_bench_name, |b| {
         b.iter_batched(
             || circuit.clone(), // Setup function: clone the circuit for each iteration
@@ -189,14 +191,24 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
 }
 
 fn criterion_benchmark(_c: &mut Criterion) {
-    bench_kzg::<17, 16, 2, 3>(
-        "K = 17, N_USER = 16, N_CURRENCIES = 2",
-        "../csv/entry_16.csv",
-    );
-    bench_kzg::<17, 64, 2, 3>(
-        "K = 17, N_USER = 64, N_CURRENCIES = 2",
-        "../csv/entry_64.csv",
-    );
+    const N_CURRENCIES: usize = 2;
+    const N_POINTS: usize = 3;
+    {
+        const K: u32 = 17;
+        const N_USERS: usize = 16;
+        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS>(
+            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+            format!("../csv/entry_{N_USERS}.csv").as_str(),
+        );
+    }
+    {
+        const K: u32 = 17;
+        const N_USERS: usize = 64;
+        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS>(
+            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+            format!("../csv/entry_{N_USERS}.csv").as_str(),
+        );
+    }
 }
 
 criterion_group!(benches, criterion_benchmark);
