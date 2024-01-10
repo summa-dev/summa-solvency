@@ -50,6 +50,11 @@ jobs:
         run: |
           cd zk_prover
           cargo test --release --features dev-graph -- --nocapture
+      
+      - name: Test KZG Prover
+        run: |
+          cd kzg_prover
+          cargo test --release -- --nocapture
 
       - name: Test Nova Prover
         run: |
