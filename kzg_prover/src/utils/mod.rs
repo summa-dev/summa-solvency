@@ -1,3 +1,4 @@
+pub mod batched_kzg;
 mod csv_parser;
 mod operation_helpers;
 

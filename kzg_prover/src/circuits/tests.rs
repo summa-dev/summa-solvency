@@ -8,17 +8,58 @@ mod test {
     };
     use crate::cryptocurrency::Cryptocurrency;
     use crate::entry::Entry;
+    use crate::utils::batched_kzg::{compute_h, create_standard_kzg_proof};
     use crate::utils::{big_uint_to_fp, parse_csv_to_entries};
-    use halo2_proofs::arithmetic::Field;
+    use halo2_proofs::arithmetic::{best_multiexp, parallelize, Field};
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
     use halo2_proofs::halo2curves::bn256::{Bn256, Fr as Fp, G1Affine};
     use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
-    use halo2_proofs::poly::kzg::commitment::ParamsKZG;
+    use halo2_proofs::poly::commitment::Params;
+    use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
     use num_bigint::BigUint;
 
-    const K: u32 = 17;
+    const K: u32 = 9;
     const N_CURRENCIES: usize = 2;
     const N_USERS: usize = 16;
+
+    #[test]
+    fn test_batched_kzg() {
+        let path = "../csv/entry_16.csv";
+
+        let (_, circuit, pk, _, params) = set_up::<N_USERS, N_CURRENCIES>(path);
+
+        let (_, advice_polys, omega) = full_prover(&params, &pk, circuit.clone(), &[vec![]]);
+
+        let h = compute_h(
+            &params,
+            advice_polys.advice_polys.get(0).unwrap(),
+            pk.get_vk().get_domain(),
+        );
+
+        let kzg_proof = create_standard_kzg_proof::<KZGCommitmentScheme<Bn256>>(
+            &params,
+            pk.get_vk().get_domain(),
+            advice_polys.advice_polys.get(0).unwrap(),
+            omega,
+        );
+
+        println!("Standard KZG proof: {:?}", kzg_proof);
+
+        // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
+        let mut omega_powers = vec![Fp::zero(); params.n() as usize];
+        {
+            parallelize(&mut omega_powers, |o, start| {
+                let mut cur = omega.pow_vartime([start as u64]);
+                for v in o.iter_mut() {
+                    *v = cur;
+                    cur *= &omega;
+                }
+            })
+        }
+
+        let batched_kzg_proof = best_multiexp(&omega_powers, &h);
+        println!("Batched KZG proof: {:?}", batched_kzg_proof);
+    }
 
     #[test]
     fn test_valid_univariate_grand_sum_prover() {
