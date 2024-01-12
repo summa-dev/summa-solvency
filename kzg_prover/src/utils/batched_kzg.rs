@@ -19,7 +19,7 @@ pub fn commit_kzg(params: &ParamsKZG<Bn256>, poly: &Polynomial<Fp, Coeff>) -> G1
 pub fn compute_h(
     params: &ParamsKZG<Bn256>,
     f_poly: &Polynomial<Fp, Coeff>,
-    domain: &EvaluationDomain<Fp>,
+    double_domain: &EvaluationDomain<Fp>,
 ) -> Vec<G1Affine> {
     let d = f_poly.len(); // Degree of the polynomial
 
@@ -43,8 +43,7 @@ pub fn compute_h(
     c_fft[d..(2 * d)].copy_from_slice(&f_poly);
 
     println!("c_fft and s_fft assigned");
-    // Assuming omega is a d-th root of unity, and nu is its square (2d-th root of unity)
-    let nu = domain.get_omega().pow_vartime(&[2]); // 2d-th root of unity
+    let nu = double_domain.get_omega(); // 2d-th root of unity
     let s_len = s_fft.len();
     println!("performing FFT on s");
     best_fft(&mut s_fft, nu, s_len.trailing_zeros());

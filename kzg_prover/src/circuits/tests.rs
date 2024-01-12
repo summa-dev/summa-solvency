@@ -14,8 +14,9 @@ mod test {
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
     use halo2_proofs::halo2curves::bn256::{Bn256, Fr as Fp, G1Affine};
     use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
-    use halo2_proofs::poly::commitment::Params;
+    use halo2_proofs::poly::commitment::{Params, ParamsProver};
     use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
+    use halo2_proofs::poly::EvaluationDomain;
     use num_bigint::BigUint;
 
     const K: u32 = 9;
@@ -30,10 +31,12 @@ mod test {
 
         let (_, advice_polys, omega) = full_prover(&params, &pk, circuit.clone(), &[vec![]]);
 
+        // Double the polynomial length, thus K + 1
+        let double_domain = EvaluationDomain::new(1, K + 1);
         let h = compute_h(
             &params,
-            advice_polys.advice_polys.get(0).unwrap(),
-            pk.get_vk().get_domain(),
+            advice_polys.advice_polys.get(1).unwrap(),
+            &double_domain,
         );
 
         let kzg_proof = create_standard_kzg_proof::<KZGCommitmentScheme<Bn256>>(
