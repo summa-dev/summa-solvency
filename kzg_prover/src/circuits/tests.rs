@@ -31,36 +31,36 @@ mod test {
 
         let (_, advice_polys, omega) = full_prover(&params, &pk, circuit.clone(), &[vec![]]);
 
+        let f_poly = advice_polys.advice_polys.get(1).unwrap();
+
         // Double the polynomial length, thus K + 1
         let double_domain = EvaluationDomain::new(1, K + 1);
-        let h = compute_h(
-            &params,
-            advice_polys.advice_polys.get(1).unwrap(),
-            &double_domain,
-        );
+        let h = compute_h(&params, f_poly, &double_domain);
 
+        // Open the polynomial at X = 1 using the standard KZG
         let kzg_proof = create_standard_kzg_proof::<KZGCommitmentScheme<Bn256>>(
             &params,
             pk.get_vk().get_domain(),
-            advice_polys.advice_polys.get(0).unwrap(),
-            omega,
+            f_poly,
+            Fp::one(),
         );
 
         println!("Standard KZG proof: {:?}", kzg_proof);
 
-        // Compute [omega^0, omega^1, ..., omega^{params.n - 1}]
-        let mut omega_powers = vec![Fp::zero(); params.n() as usize];
-        {
-            parallelize(&mut omega_powers, |o, start| {
-                let mut cur = omega.pow_vartime([start as u64]);
-                for v in o.iter_mut() {
-                    *v = cur;
-                    cur *= &omega;
-                }
-            })
-        }
+        // Open the polynomial at X = 1 using the amortized KZG
+        let mut omega_powers = vec![Fp::one(); params.n() as usize];
+        //omega_powers[0] = Fp::one();
+        // {
+        //     parallelize(&mut omega_powers, |o, start| {
+        //         let mut cur = omega.pow_vartime([start as u64]);
+        //         for v in o.iter_mut() {
+        //             *v = cur;
+        //             cur *= &omega;
+        //         }
+        //     })
+        // }
 
-        let batched_kzg_proof = best_multiexp(&omega_powers, &h);
+        let mut batched_kzg_proof = best_multiexp(&omega_powers, &h);
         println!("Batched KZG proof: {:?}", batched_kzg_proof);
     }
 
