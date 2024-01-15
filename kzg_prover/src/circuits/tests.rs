@@ -8,9 +8,11 @@ mod test {
     };
     use crate::cryptocurrency::Cryptocurrency;
     use crate::entry::Entry;
-    use crate::utils::batched_kzg::{compute_h, create_standard_kzg_proof};
+    use crate::utils::batched_kzg::{
+        commit_kzg, compute_h, create_standard_kzg_proof, verify_kzg_proof,
+    };
     use crate::utils::{big_uint_to_fp, parse_csv_to_entries};
-    use halo2_proofs::arithmetic::{best_multiexp, parallelize, Field};
+    use halo2_proofs::arithmetic::{best_multiexp, Field};
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
     use halo2_proofs::halo2curves::bn256::{Bn256, Fr as Fp, G1Affine};
     use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
@@ -27,7 +29,7 @@ mod test {
     fn test_batched_kzg() {
         let path = "../csv/entry_16.csv";
 
-        let (_, circuit, pk, _, params) = set_up::<N_USERS, N_CURRENCIES>(path);
+        let (entries, circuit, pk, _, params) = set_up::<N_USERS, N_CURRENCIES>(path);
 
         let (_, advice_polys, omega) = full_prover(&params, &pk, circuit.clone(), &[vec![]]);
 
@@ -37,18 +39,43 @@ mod test {
         let double_domain = EvaluationDomain::new(1, K + 1);
         let h = compute_h(&params, f_poly, &double_domain);
 
-        // Open the polynomial at X = 1 using the standard KZG
+        let kzg_commitment = commit_kzg(&params, &f_poly);
+
+        // Open the polynomial at X = omega^1 (user 1) using the standard KZG
+        let challenge = omega;
         let kzg_proof = create_standard_kzg_proof::<KZGCommitmentScheme<Bn256>>(
             &params,
             pk.get_vk().get_domain(),
             f_poly,
-            Fp::one(),
+            challenge,
         );
 
         println!("Standard KZG proof: {:?}", kzg_proof);
 
+        assert!(
+            verify_kzg_proof(
+                &params,
+                kzg_commitment,
+                kzg_proof,
+                &challenge,
+                &big_uint_to_fp(&entries[1].balances()[0]),
+            ),
+            "KZG proof verification failed"
+        );
+        assert!(
+            !verify_kzg_proof(
+                &params,
+                kzg_commitment,
+                kzg_proof,
+                &challenge,
+                &big_uint_to_fp(&BigUint::from(123u32)),
+            ),
+            "Invalid proof verification should fail"
+        );
+        println!("KZG proof verified");
+
         // Open the polynomial at X = 1 using the amortized KZG
-        let mut omega_powers = vec![Fp::one(); params.n() as usize];
+        let mut omega_powers = vec![challenge; params.n() as usize];
         //omega_powers[0] = Fp::one();
         // {
         //     parallelize(&mut omega_powers, |o, start| {

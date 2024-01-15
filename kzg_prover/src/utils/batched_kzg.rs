@@ -1,8 +1,9 @@
 use halo2_proofs::{
     arithmetic::{best_fft, eval_polynomial, kate_division, Field},
     halo2curves::{
-        bn256::{Bn256, Fr as Fp, G1Affine, G1},
+        bn256::{Bn256, Fr as Fp, G1Affine, G2Affine, Gt, G1},
         group::{prime::PrimeCurveAffine, Curve, Group},
+        pairing::{Engine, PairingCurveAffine},
     },
     poly::{
         commitment::{Blind, CommitmentScheme, ParamsProver},
@@ -84,20 +85,39 @@ pub fn compute_h(
     h.iter().map(|h| h.to_affine()).collect()
 }
 
-//KZG proof π is a proof of f(y) = z: π[f(y) = z] = C_Ty, where C_Ty is a commitment to a polynomial Ty(X) = (f(X)−z)/(X−y)
+//J Thaler, Proofs, Arguments, and Zero-Knowledge, 15.2
+//KZG proof π is a proof of f(y) = z: π[f(y) = z] = C_Ty, where C_Ty is a commitment to a polynomial Ty(X) = (f(X)−z)/(X−y) and y is the challenge
 pub fn create_standard_kzg_proof<
     Scheme: CommitmentScheme<Curve = halo2_proofs::halo2curves::bn256::G1Affine, Scalar = Fp>,
 >(
     params: &ParamsKZG<Bn256>,
     domain: &EvaluationDomain<Fp>,
     f_poly: &Polynomial<<Scheme as CommitmentScheme>::Scalar, Coeff>,
-    y: Fp,
+    challenge: Fp,
 ) -> G1 {
-    let z = eval_polynomial(&f_poly, y);
+    let z = eval_polynomial(&f_poly, challenge);
     let numerator = f_poly - z;
-    let mut t_y_vals = kate_division(&numerator.to_vec(), y);
+    let mut t_y_vals = kate_division(&numerator.to_vec(), challenge);
     // The resulting degree is one less than the degree of the numerator, so we need to pad it with zeros back to the original polynomial size
     t_y_vals.resize(f_poly.len(), Fp::ZERO);
     let t_y = domain.coeff_from_vec(t_y_vals);
     commit_kzg(params, &t_y)
+}
+
+//J Thaler, Proofs, Arguments, and Zero-Knowledge, 15.2
+// e(c·g^(−z),g) = e(π,g^τ ·g^(−y)), y is the challenge
+pub fn verify_kzg_proof(params: &ParamsKZG<Bn256>, c: G1, pi: G1, challenge: &Fp, z: &Fp) -> bool
+where
+    G1Affine: PairingCurveAffine<Pair = G2Affine, PairingResult = Gt>,
+{
+    let g_to_minus_z = G1Affine::generator() * &(-z);
+    let c_g_to_minus_z: G1 = c + g_to_minus_z;
+    let left_side = Bn256::pairing(&c_g_to_minus_z.to_affine(), &G2Affine::generator());
+
+    let g_to_minus_y = G2Affine::generator() * &(-challenge);
+    let g_tau = params.s_g2();
+    let g_tau_g_to_minus_y = g_tau + g_to_minus_y;
+    let right_side = Bn256::pairing(&pi.to_affine(), &g_tau_g_to_minus_y.to_affine());
+
+    left_side == right_side
 }
