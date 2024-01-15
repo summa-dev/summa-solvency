@@ -13,7 +13,7 @@ use halo2_proofs::{
         VerifyingKey,
     },
     poly::{
-        commitment::{Blind, CommitmentScheme, Params, ParamsProver, Prover, Verifier},
+        commitment::{Blind, CommitmentScheme, Params, Prover, Verifier},
         kzg::{
             commitment::{KZGCommitmentScheme, ParamsKZG},
             multiopen::{ProverSHPLONK, VerifierSHPLONK},
@@ -26,6 +26,7 @@ use halo2_proofs::{
         TranscriptReadBuffer, TranscriptWriterBuffer,
     },
 };
+use halo2_solidity_verifier::Keccak256Transcript;
 use num_bigint::BigUint;
 use rand::rngs::OsRng;
 use rayon::prelude::*;
@@ -98,15 +99,16 @@ pub fn full_prover<C: Circuit<Fp>>(
     let instance: Vec<&[Fp]> = public_inputs.iter().map(|input| &input[..]).collect();
     let instances = &[&instance[..]];
 
-    let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+    let mut transcript: Keccak256Transcript<G1Affine, Vec<u8>> = Keccak256Transcript::new(vec![]);
     let result = create_proof::<
         KZGCommitmentScheme<Bn256>,
         ProverSHPLONK<'_, Bn256>,
-        Challenge255<G1Affine>,
         _,
-        Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
+        _,
+        Keccak256Transcript<G1Affine, Vec<u8>>,
         _,
     >(params, pk, &[circuit], instances, OsRng, &mut transcript);
+
     let result_unwrapped = result.unwrap();
     result_unwrapped.0.expect("prover should not fail");
     let advice_polys = result_unwrapped.1.clone();
@@ -145,10 +147,10 @@ pub fn open_grand_sums(
 ) -> Vec<u8> {
     let challenge = Fp::zero();
     create_opening_proof_at_challenge::<
-        KZGCommitmentScheme<Bn256>,
+        _,
         ProverSHPLONK<'_, Bn256>,
-        Challenge255<G1Affine>,
-        Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
+        _,
+        Keccak256Transcript<G1Affine, Vec<u8>>,
     >(
         params,
         &advice_polys[balance_column_range],
@@ -252,8 +254,7 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
     polynomial_length: u64,
     balance_column_range: Range<usize>,
 ) -> (bool, Vec<BigUint>) {
-    let mut transcript: Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>> =
-        Blake2bRead::<_, _, Challenge255<_>>::init(zk_snark_proof);
+    let mut transcript = Keccak256Transcript::new(zk_snark_proof);
 
     //Read the commitment points for all the advice polynomials from the proof transcript and put them into a vector
     let mut advice_commitments = Vec::new();
@@ -265,19 +266,13 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
         }
     }
 
-    let (verified, constant_terms) = verify_opening::<
-        KZGCommitmentScheme<Bn256>,
-        VerifierSHPLONK<'_, Bn256>,
-        Challenge255<G1Affine>,
-        Blake2bRead<_, _, Challenge255<_>>,
-        AccumulatorStrategy<_>,
-    >(
-        params,
-        grand_sum_opening_batch_proof,
-        Fp::zero(),
-        &advice_commitments,
-        balance_column_range.len(),
-    );
+    let (verified, constant_terms) =
+        verify_opening_keccak::<_, VerifierSHPLONK<Bn256>, AccumulatorStrategy<_>, N_CURRENCIES>(
+            params,
+            grand_sum_opening_batch_proof,
+            Fp::zero(),
+            &advice_commitments,
+        );
 
     (
         verified,
@@ -420,7 +415,7 @@ where
 ///
 /// * `bool` - whether the proof is verified correctly
 /// * `Vec<Fp>` - the evaluations of the polynomials at the challenge
-fn verify_opening<
+pub fn verify_opening<
     'a,
     'params,
     Scheme: CommitmentScheme<Curve = halo2_proofs::halo2curves::bn256::G1Affine, Scalar = Fp>,
@@ -467,6 +462,53 @@ where
     (strategy.finalize(), evaluations)
 }
 
+pub fn verify_opening_keccak<
+    'a,
+    'params,
+    Scheme: CommitmentScheme<Curve = halo2_proofs::halo2curves::bn256::G1Affine, Scalar = Fp>,
+    V: Verifier<'params, Scheme>,
+    // E: EncodedChallenge<Scheme::Curve>,
+    Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
+    const N_POINTS: usize,
+>(
+    params: &'params Scheme::ParamsVerifier,
+    // mut transcript: Keccak256Transcript<Scheme::Curve, &[u8]>,
+    proof: &'a [u8],
+    challenge: Fp,
+    commitment_points: &[G1Affine],
+) -> (bool, Vec<Fp>)
+where
+    Scheme::Scalar: WithSmallOrderMulGroup<3>,
+{
+    let mut transcript = Keccak256Transcript::new(proof);
+
+    // Read the polynomial evaluations from the transcript
+    let evaluations = (0..N_POINTS)
+        .map(|_| transcript.read_scalar().unwrap())
+        .collect::<Vec<_>>();
+
+    // Prepare verifier queries for the commitment
+    let queries = (0..N_POINTS)
+        .map(|i| VerifierQuery::new_commitment(&commitment_points[i], challenge, evaluations[i]))
+        .collect::<Vec<_>>();
+
+    // Initialize the verifier
+    let verifier = V::new(params);
+
+    // Use the provided strategy for verification
+    let strategy = Strategy::new(params);
+    let strategy = strategy
+        .process(|msm_accumulator| {
+            verifier
+                .verify_proof(&mut transcript, queries.iter().cloned(), msm_accumulator)
+                .map_err(|_| Error::Opening)
+        })
+        .unwrap();
+
+    // Return the result of the verification
+    (strategy.finalize(), evaluations)
+}
+
 /// Verifies a proof given the public setup, the verification key, the proof and the public inputs of the circuit.
 pub fn full_verifier(
     params: &ParamsKZG<Bn256>,
@@ -474,21 +516,17 @@ pub fn full_verifier(
     proof: &[u8],
     public_inputs: &[Vec<Fp>],
 ) -> bool {
-    let verifier_params = params.verifier_params();
-    let strategy = SingleStrategy::new(params);
-    let mut transcript: Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>> =
-        Blake2bRead::<_, _, Challenge255<_>>::init(proof);
-
     let instance: Vec<&[Fp]> = public_inputs.iter().map(|input| &input[..]).collect();
     let instances = &[&instance[..]];
 
-    verify_proof::<
-        KZGCommitmentScheme<Bn256>,
-        VerifierSHPLONK<'_, Bn256>,
-        Challenge255<G1Affine>,
-        Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>>,
-        SingleStrategy<'_, Bn256>,
-    >(verifier_params, vk, strategy, instances, &mut transcript)
+    let mut transcript = Keccak256Transcript::new(proof);
+    verify_proof::<_, VerifierSHPLONK<_>, _, _, _>(
+        params,
+        vk,
+        SingleStrategy::new(params),
+        instances,
+        &mut transcript,
+    )
     .is_ok()
 }
 
