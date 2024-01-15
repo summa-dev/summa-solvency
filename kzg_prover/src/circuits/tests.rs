@@ -12,7 +12,7 @@ mod test {
         commit_kzg, compute_h, create_standard_kzg_proof, verify_kzg_proof,
     };
     use crate::utils::{big_uint_to_fp, parse_csv_to_entries};
-    use halo2_proofs::arithmetic::{best_multiexp, Field};
+    use halo2_proofs::arithmetic::{best_multiexp, parallelize, Field};
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
     use halo2_proofs::halo2curves::bn256::{Bn256, Fr as Fp, G1Affine};
     use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
@@ -74,18 +74,17 @@ mod test {
         );
         println!("KZG proof verified");
 
-        // Open the polynomial at X = 1 using the amortized KZG
-        let mut omega_powers = vec![challenge; params.n() as usize];
-        //omega_powers[0] = Fp::one();
-        // {
-        //     parallelize(&mut omega_powers, |o, start| {
-        //         let mut cur = omega.pow_vartime([start as u64]);
-        //         for v in o.iter_mut() {
-        //             *v = cur;
-        //             cur *= &omega;
-        //         }
-        //     })
-        // }
+        // Open the polynomial at X = omega using the amortized KZG
+        let mut omega_powers = vec![Fp::zero(); params.n() as usize];
+        {
+            parallelize(&mut omega_powers, |o, start| {
+                let mut cur = omega.pow_vartime([start as u64]);
+                for v in o.iter_mut() {
+                    *v = cur;
+                    cur *= &omega;
+                }
+            })
+        }
 
         let mut batched_kzg_proof = best_multiexp(&omega_powers, &h);
         println!("Batched KZG proof: {:?}", batched_kzg_proof);
