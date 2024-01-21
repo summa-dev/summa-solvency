@@ -13,7 +13,7 @@ use summa_solvency::{
 const SAMPLE_SIZE: usize = 10;
 const LEVELS: usize = 20;
 const N_CURRENCIES: usize = 1;
-const N_BYTES: usize = 14;
+const N_BYTES: usize = 8;
 
 fn build_mstree(_c: &mut Criterion) {
     let mut criterion = Criterion::default().sample_size(SAMPLE_SIZE);

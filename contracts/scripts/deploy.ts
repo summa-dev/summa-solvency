@@ -20,7 +20,7 @@ async function main() {
   //The number of cryptocurrencies supported by the Merkle sum tree
   const currenciesCount = 2;
   // The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
-  const balanceByteRange = 14;
+  const balanceByteRange = 8;
   const summa = await ethers.deployContract("Summa", [
     inclusionVerifier.address,
     mstLevels,

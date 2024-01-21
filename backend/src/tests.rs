@@ -76,7 +76,7 @@ pub async fn initialize_test_env(
     //The number of cryptocurrencies supported by the Merkle sum tree
     let currencies_count = 2;
     // The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
-    let balance_byte_range = 14;
+    let balance_byte_range = 8;
 
     let args: &[Token] = &[
         Token::Address(inclusion_verifier_contract.address()),
@@ -92,7 +92,6 @@ pub async fn initialize_test_env(
         .unwrap();
 
     time::sleep(Duration::from_secs(3)).await;
-
 
     (anvil, cex_addr_1, cex_addr_2, client, summa_contract)
 }
@@ -162,8 +161,8 @@ mod test {
         let mst = MerkleSumTree::from_csv(entry_csv).unwrap();
 
         let mut round_one =
-            Round::<4, 2, 14>::new(&signer, Box::new(mst.clone()), params_path, 1).unwrap();
-        let mut round_two = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, 2).unwrap();
+            Round::<4, 2, 8>::new(&signer, Box::new(mst.clone()), params_path, 1).unwrap();
+        let mut round_two = Round::<4, 2, 8>::new(&signer, Box::new(mst), params_path, 2).unwrap();
 
         // Checking block number before sending transaction of liability commitment
         let outer_provider: Provider<Http> = Provider::try_from(anvil.endpoint().as_str())?;
@@ -240,7 +239,7 @@ mod test {
         let entry_csv = "../csv/entry_16.csv";
 
         let mst = MerkleSumTree::from_csv(entry_csv).unwrap();
-        let mut round = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, 1).unwrap();
+        let mut round = Round::<4, 2, 8>::new(&signer, Box::new(mst), params_path, 1).unwrap();
 
         let mut liability_commitment_logs = summa_contract
             .liabilities_commitment_submitted_filter()

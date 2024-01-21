@@ -17,7 +17,7 @@ use summa_solvency::{
 
 const LEVELS: usize = 4;
 const N_CURRENCIES: usize = 2;
-const N_BYTES: usize = 14;
+const N_BYTES: usize = 8;
 
 fn main() {
     let merkle_sum_tree =

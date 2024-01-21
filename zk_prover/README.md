@@ -34,7 +34,7 @@ cargo run --release --example gen_inclusion_verifier
 
 The script will generate a new `InclusionVerifier.sol` and `InclusionVerifier.yul` contracts in `contracts/src`.
 
-Note that the generic parameters of the circuits `LEVELS`, `N_CURRENCIES` and `N_BYTES` are set to `4`, `2` and `14`. This means that the circuit is tuned to verify the proof of inclusion for an exchange with a userbase of 4 levels (2^4 = 16 users), 2 currencies and a balances in a range of 14 bytes. These parameters can be changed in the script.
+Note that the generic parameters of the circuits `LEVELS`, `N_CURRENCIES` and `N_BYTES` are set to `4`, `2` and `8`. This means that the circuit is tuned to verify the proof of inclusion for an exchange with a userbase of 4 levels (2^4 = 16 users), 2 currencies and a balances in a range of 8 bytes. These parameters can be changed in the script.
 
 The verifier are generated based on a trusted setup located at `backend/ptau/hermez-raw-11`. Note that setting different generic parameters may require a bigger trusted setup. More details on how to generate a trusted setup can be found [here](https://summa.gitbook.io/summa-book/backend/summa-solvency#3.-generate-verifier-contract).
 
@@ -50,7 +50,7 @@ The script can be run as follows:
 cargo run --release --example gen_commitment
 ```
 
-Note that the generic parameters of the Merkle Sum Tree `N_CURRENCIES` and `N_BYTES` are set to `2` and `14`. This means that this should go in pair with a Inclusion Verifier Circuit tuned to the same generic parameters.
+Note that the generic parameters of the Merkle Sum Tree `N_CURRENCIES` and `N_BYTES` are set to `2` and `8`. This means that this should go in pair with a Inclusion Verifier Circuit tuned to the same generic parameters.
 
 ## Build an Inclusion Proof
 
@@ -62,7 +62,7 @@ cargo run --release --example gen_inclusion_proof
 
 This generated proof is saved in `inclusion_proof_solidity_calldata.json`. The file contains some testing calldata to be used within `contracts` to test the verifier. 
 
-In the example, the proof is generated based on the `../csv/entry_16.csv` file for a specific `user_index`, which is set to 0 by default. The setup parameters are set to `LEVELS = 4`, `N_CURRENCIES = 2` and `N_BYTES = 14`. The ptau file is located at `backend/ptau/hermez-raw-11`. Note that these parameters should go in pair with the ones used to generate Inclusion Verifier Circuit and the Commtiment in order to generate a valid proof.
+In the example, the proof is generated based on the `../csv/entry_16.csv` file for a specific `user_index`, which is set to 0 by default. The setup parameters are set to `LEVELS = 4`, `N_CURRENCIES = 2` and `N_BYTES = 8`. The ptau file is located at `backend/ptau/hermez-raw-11`. Note that these parameters should go in pair with the ones used to generate Inclusion Verifier Circuit and the Commtiment in order to generate a valid proof.
 
 ## Incremental Nova Verifier 
 

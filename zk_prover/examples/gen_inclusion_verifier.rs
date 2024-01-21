@@ -11,7 +11,7 @@ use summa_solvency::circuits::{merkle_sum_tree::MstInclusionCircuit, WithInstanc
 
 const LEVELS: usize = 4;
 const N_CURRENCIES: usize = 2;
-const N_BYTES: usize = 14;
+const N_BYTES: usize = 8;
 
 fn main() {
     // Assert that there is no risk of overflow in the Merkle Root given the combination of `N_BYTES` and `LEVELS`

@@ -19,7 +19,7 @@ mod test {
 
     const N_CURRENCIES: usize = 2;
     const LEVELS: usize = 4;
-    const N_BYTES: usize = 14;
+    const N_BYTES: usize = 8;
     const K: u32 = 11;
 
     #[test]
