@@ -459,18 +459,17 @@ where
 
             let mut next_balances = vec![];
 
-            // For every level, perform the swap of the balances (between `current_balances` and `sibling_balances`) according to the swap bit
+            // For every level, perform sum the balances `current_balances` and `sibling_balances`
             for currency in 0..N_CURRENCIES {
-                let next_balance = merkle_sum_tree_chip.swap_balances_per_level(
+                let next_balance = merkle_sum_tree_chip.sum_balances_per_level(
                     layouter.namespace(|| {
                         format!(
-                            "{}: currency {}: assign nodes balance",
+                            "{}: currency {}: perform balance sum",
                             namespace_prefix, currency
                         )
                     }),
                     &current_balances[currency],
                     &sibling_balances[currency],
-                    &swap_bit_level,
                 )?;
 
                 next_balances.push(next_balance);
