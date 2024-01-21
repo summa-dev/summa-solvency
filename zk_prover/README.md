@@ -119,20 +119,4 @@ Furthermore the benchmarking function `verify_zk_proof_benchmark` will also prin
 
 ## Current Benches
 
-Run on AWS m7a.8xlarge with 32 vcores and 128GB RAM
-
-2^20 entries (1048576) users, 1 currency
-
-| MST init              |
-| --------              |
-| 24.272 s              |
-
-| MST init (sorted)     |
-| --------              |
-| 25.480 s              |
-
-For Merkle Sum Tree Proof of Inclusion circuit
-
-| VK Gen             | Pk Gen              | Proof Generation    | Proof Verification  | Proof Size (bytes) |
-| ------------------ | ------------------- | ------------------- | ------------------- | ------------------ |
-| 87.78 ms           | 123.86 ms           | 380.86 ms           | 3.7287 ms           | 1632               |
+Benchmark results are available at [Summa Gitbook](https://summa.gitbook.io/summa-book/backend/summa-solvency/benchmarks)
