@@ -292,7 +292,7 @@ mod test {
                     column: (Any::advice(), 0).into(),
                     location: FailureLocation::InRegion {
                         region: (21, "assign value to perform range check").into(),
-                        offset: 14
+                        offset: 8
                     }
                 },
             ])
