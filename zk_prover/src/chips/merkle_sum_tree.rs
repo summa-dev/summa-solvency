@@ -214,7 +214,7 @@ impl<const N_CURRENCIES: usize> MerkleSumTreeChip<N_CURRENCIES> {
                 let current_balance_val = current_balance.value().copied();
                 let element_balance_val = element_balance.value().copied();
 
-                // compute the sum of the two balances and assign it to the column self.config.advice[1] at offset 0
+                // compute the sum of the two balances and assign it to the column self.config.advice[2] at offset 0
                 let sum = current_balance_val
                     .zip(element_balance_val)
                     .map(|(a, b)| a + b);
