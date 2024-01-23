@@ -63,7 +63,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
-    let mut round = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, timestamp).unwrap();
+    let mut round = Round::<4, 2, 8>::new(&signer, Box::new(mst), params_path, timestamp).unwrap();
 
     // Sends the commitment, which should ideally complete without errors.
     round.dispatch_commitment().await?;

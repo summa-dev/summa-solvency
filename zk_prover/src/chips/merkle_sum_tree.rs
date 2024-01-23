@@ -179,28 +179,23 @@ impl<const N_CURRENCIES: usize> MerkleSumTreeChip<N_CURRENCIES> {
     ///
     /// | a                 | b                 | c          |
     /// | ------------      | -------------     | ---------- |
-    /// | `current_balance` | `element_balance` | `0`        |
     /// | `current_balance` | `element_balance` | `sum`      |
     ///
-    /// At row 0 bool_and_swap_selector is enabled.
-    /// At row 1 sum_selector is enabled
-    /// If swap_bit is 0, the values will remain the same on the next row
-    /// If swap_bit is 1, the values will be swapped on the next row
-    pub fn swap_balances_per_level(
+    /// At row 0 sum_selector is enabled.
+    pub fn sum_balances_per_level(
         &self,
         mut layouter: impl Layouter<Fp>,
         current_balance: &AssignedCell<Fp, Fp>,
         element_balance: &AssignedCell<Fp, Fp>,
-        swap_bit_assigned: &AssignedCell<Fp, Fp>,
     ) -> Result<AssignedCell<Fp, Fp>, Error> {
         layouter.assign_region(
-            || "assign nodes balances per currency",
+            || "sum nodes balances per currency",
             |mut region| {
-                // enable the bool_and_swap_selector at row 0
-                self.config.bool_and_swap_selector.enable(&mut region, 0)?;
+                // enable the sum_selector at row 0
+                self.config.sum_selector.enable(&mut region, 0)?;
 
                 // copy the current_balances to the column self.config.advice[0] at offset 0
-                let l1 = current_balance.copy_advice(
+                let current_balance = current_balance.copy_advice(
                     || "copy current balance from prev level",
                     &mut region,
                     self.config.advice[0],
@@ -208,57 +203,23 @@ impl<const N_CURRENCIES: usize> MerkleSumTreeChip<N_CURRENCIES> {
                 )?;
 
                 // assign the element_balance to the column self.config.advice[1] at offset 0
-                let r1 = element_balance.copy_advice(
+                let element_balance = element_balance.copy_advice(
                     || "element balance",
                     &mut region,
                     self.config.advice[1],
                     0,
                 )?;
 
-                // assign the swap_bit to the column self.config.advice[2] at offset 0
-                let swap_bit = swap_bit_assigned.copy_advice(
-                    || "swap bit",
-                    &mut region,
-                    self.config.advice[2],
-                    0,
-                )?;
+                // Extract the values from the cell
+                let current_balance_val = current_balance.value().copied();
+                let element_balance_val = element_balance.value().copied();
 
-                // Extract the value from the cell
-                let mut l1_val = l1.value().copied();
-                let mut r1_val = r1.value().copied();
-
-                // perform the swap according to the swap bit
-                // if swap_bit is 0 return (l1, r1) else return (r1, l1)
-                swap_bit.value().copied().map(|x| {
-                    (l1_val, r1_val) = if x == Fp::zero() {
-                        (l1_val, r1_val)
-                    } else {
-                        (r1_val, l1_val)
-                    };
-                });
-
-                // Perform the assignment according to the swap at offset 1
-                let _left_currency_balance = region.assign_advice(
-                    || "assign left balance after swap",
-                    self.config.advice[0],
-                    1,
-                    || l1_val,
-                )?;
-
-                let _right_currency_balance = region.assign_advice(
-                    || "assign right balance after swap",
-                    self.config.advice[1],
-                    1,
-                    || r1_val,
-                )?;
-
-                // enable the sum_selector at offset 1
-                self.config.sum_selector.enable(&mut region, 1)?;
-
-                // compute the sum of the two balances and assign it to the column self.config.advice[2] at offset 1
-                let sum = l1_val.zip(r1_val).map(|(a, b)| a + b);
+                // compute the sum of the two balances and assign it to the column self.config.advice[2] at offset 0
+                let sum = current_balance_val
+                    .zip(element_balance_val)
+                    .map(|(a, b)| a + b);
                 let sum_cell =
-                    region.assign_advice(|| "sum of balances", self.config.advice[2], 1, || sum)?;
+                    region.assign_advice(|| "sum of balances", self.config.advice[2], 0, || sum)?;
 
                 Ok(sum_cell)
             },

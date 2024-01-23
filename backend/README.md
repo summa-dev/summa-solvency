@@ -50,7 +50,7 @@ cargo test --release -- --nocapture
 
 ### Generating and updating verifier contract for Backend
 
-The verifier contract in the backend were generated using a predefined set of parameters: `N_CURRENCIES = 2` and `N_BYTES=14`, as indicated [here](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_inclusion_verifier.rs#L21-L22).
+The verifier contract in the backend were generated using a predefined set of parameters: `N_CURRENCIES = 2` and `N_BYTES=8`, as indicated [here](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_inclusion_verifier.rs#L21-L22).
 If you intend to work with different parameters, you'll need to adjust these hard-coded values and then generate new verifier contract.
 
 The process described below assists in both generating the verifier and updating the Summa contract, which integrates the new verifier as constructors.
