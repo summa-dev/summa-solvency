@@ -1,4 +1,5 @@
 #![feature(generic_const_exprs)]
+
 use halo2_proofs::arithmetic::Field;
 use halo2_proofs::{
     halo2curves::bn256::Fr as Fp,
@@ -18,7 +19,10 @@ use rand::rngs::OsRng;
 use summa_solvency::{
     circuits::{
         univariate_grand_sum::UnivariateGrandSum,
-        utils::{generate_setup_artifacts, open_grand_sums, verify_grand_sum_openings},
+        utils::{
+            generate_setup_artifacts, open_grand_sums, open_user_points, verify_grand_sum_openings,
+            verify_user_inclusion,
+        },
     },
     cryptocurrency::Cryptocurrency,
     entry::Entry,
@@ -82,7 +86,7 @@ fn main() {
     let _advice_polys = result_unwrapped.1.clone();
     let advice_polys = _advice_polys[0].clone();
 
-    let _omega = pk.get_vk().get_domain().get_omega();
+    let omega = pk.get_vk().get_domain().get_omega();
     let zk_snark_proof = transcript.finalize();
 
     // Check verification on verifier function
@@ -98,7 +102,7 @@ fn main() {
     };
     assert!(verified.is_ok());
 
-    // 3. Deploy Snark Verifier Contract and verify snark proof, which is the Verifier contract
+    // 3. Deploy Snark Verifier Contract and verify snark proof
     let mut evm = Evm::default();
 
     // Calldata for verifying proof on evm
@@ -111,10 +115,11 @@ fn main() {
 
     // If successfuly verified, the verifier contract will return 1.
     assert_eq!(output, [vec![0; 31], vec![1]].concat());
-    save_solidity("verifier.sol", &verifier_solidity_fixed);
+    save_solidity("snark_verifier.sol", &verifier_solidity_fixed);
     save_solidity("verifying_key.sol", &vk_verifier);
 
     // 4. Generate Opening Proof for Grand Sums
+    //
     let balance_column_range = 1..N_CURRENCIES + 1;
     let poly_length = 1 << u64::from(K);
 
@@ -131,11 +136,10 @@ fn main() {
         &advice_polys.advice_blinds,
         &params,
         balance_column_range,
-        csv_total
+        &csv_total
             .iter()
             .map(|x| big_uint_to_fp(x) * Fp::from(poly_length).invert().unwrap())
-            .collect::<Vec<Fp>>()
-            .as_slice(),
+            .collect::<Vec<Fp>>(),
     );
 
     // The Custodian communicates the polynomial length to the Verifier
@@ -143,7 +147,6 @@ fn main() {
 
     // Both the Custodian and the Verifier know what column range are the balance columns
     let balance_column_range = 1..N_CURRENCIES + 1;
-
     let (verified, total_balances) = verify_grand_sum_openings::<N_CURRENCIES>(
         &params,
         &zk_snark_proof,
@@ -153,20 +156,6 @@ fn main() {
     );
     assert!(verified);
     assert_ne!(total_balances, vec![BigUint::from(0u32); N_CURRENCIES]);
-
-    // openining proof contract
-    let opening_proof_calldata = encode_calldata(
-        Some(vk_address.into()),
-        &grand_sum_opening_batch_proof,
-        &instances,
-    );
-
-    // TODO: fix proof generator, which is `open_grand_sums` to verifiable on the verifier contract.
-    let (gas_cost, output) = evm.call(verifier_address, opening_proof_calldata);
-    println!(
-        "opening_verifier gas_cost: {:?}, and its output: {:?}",
-        gas_cost, output
-    );
 }
 
 fn save_solidity(name: impl AsRef<str>, solidity: &str) {
