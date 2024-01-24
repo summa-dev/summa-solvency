@@ -16,7 +16,7 @@ use halo2_proofs::{
         commitment::{Blind, CommitmentScheme, Params, Prover, Verifier},
         kzg::{
             commitment::{KZGCommitmentScheme, ParamsKZG},
-            multiopen::{ProverSHPLONK, VerifierSHPLONK},
+            multiopen::{ProverGWC, ProverSHPLONK, VerifierSHPLONK},
             strategy::{AccumulatorStrategy, SingleStrategy},
         },
         Coeff, Polynomial, ProverQuery, VerificationStrategy, VerifierQuery,
@@ -159,6 +159,29 @@ pub fn open_grand_sums(
     )
 }
 
+// This function for comparison with open_grand_sums, which is used ProverSHPLONK
+pub fn open_grand_sums_gwc(
+    advice_polys: &[Polynomial<Fp, Coeff>],
+    advice_blinds: &[Blind<Fp>],
+    params: &ParamsKZG<Bn256>,
+    balance_column_range: Range<usize>,
+    constant_terms: &[Fp],
+) -> Vec<u8> {
+    let challenge = Fp::zero();
+    create_opening_proof_at_challenge::<
+        _,
+        ProverGWC<'_, Bn256>,
+        _,
+        Keccak256Transcript<G1Affine, Vec<u8>>,
+    >(
+        params,
+        &advice_polys[balance_column_range],
+        advice_blinds,
+        challenge,
+        constant_terms,
+    )
+}
+
 /// Creates a KZG batch proof for the `advice_polys` polynomial openings
 /// at a point corresponding to the `user_index`
 ///
@@ -187,10 +210,10 @@ pub fn open_user_points(
 ) -> Vec<u8> {
     let omega_raised = omega.pow_vartime([u64::from(user_index)]);
     create_opening_proof_at_challenge::<
-        KZGCommitmentScheme<Bn256>,
+        _,
         ProverSHPLONK<'_, Bn256>,
-        Challenge255<G1Affine>,
-        Blake2bWrite<Vec<u8>, G1Affine, Challenge255<G1Affine>>,
+        _,
+        Keccak256Transcript<G1Affine, Vec<u8>>,
     >(
         params,
         &advice_polys[column_range],
@@ -237,7 +260,7 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
     }
 
     let (verified, constant_terms) =
-        verify_opening_keccak::<_, VerifierSHPLONK<Bn256>, AccumulatorStrategy<_>, N_CURRENCIES>(
+        verify_opening::<KZGCommitmentScheme<_>, VerifierSHPLONK<Bn256>, SingleStrategy<_>>(
             params,
             grand_sum_opening_batch_proof,
             Fp::zero(),
@@ -277,8 +300,7 @@ pub fn verify_user_inclusion<const N_POINTS: usize>(
     omega: Fp,
     user_index: u16,
 ) -> (bool, Vec<BigUint>) {
-    let mut transcript: Blake2bRead<&[u8], G1Affine, Challenge255<G1Affine>> =
-        Blake2bRead::<_, _, Challenge255<_>>::init(zk_snark_proof);
+    let mut transcript = Keccak256Transcript::new(zk_snark_proof);
 
     //Read the commitment points for all the  advice polynomials from the proof transcript and put them into a vector
     let mut advice_commitments = Vec::new();
@@ -290,22 +312,15 @@ pub fn verify_user_inclusion<const N_POINTS: usize>(
         }
     }
 
-    let mut verification_results = Vec::<bool>::new();
+    let (verified, evaluations_at_challenge) =
+        verify_opening::<KZGCommitmentScheme<_>, VerifierSHPLONK<Bn256>, SingleStrategy<_>>(
+            params,
+            balance_opening_batch_proof,
+            omega.pow_vartime([user_index as u64]),
+            &advice_commitments,
+        );
 
-    let (verified, evaluations_at_challenge) = verify_opening::<
-        KZGCommitmentScheme<Bn256>,
-        VerifierSHPLONK<'_, Bn256>,
-        Challenge255<G1Affine>,
-        Blake2bRead<_, _, Challenge255<_>>,
-        AccumulatorStrategy<_>,
-        N_POINTS,
-    >(
-        params,
-        balance_opening_batch_proof,
-        omega.pow_vartime([user_index as u64]),
-        &advice_commitments,
-    );
-    verification_results.push(verified);
+    assert!(verified);
 
     (
         verified,
@@ -390,59 +405,9 @@ pub fn verify_opening<
     'params,
     Scheme: CommitmentScheme<Curve = halo2_proofs::halo2curves::bn256::G1Affine, Scalar = Fp>,
     V: Verifier<'params, Scheme>,
-    E: EncodedChallenge<Scheme::Curve>,
-    T: TranscriptReadBuffer<&'a [u8], Scheme::Curve, E>,
-    Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
-    const N_POINTS: usize,
+    Strategy: VerificationStrategy<'params, Scheme, V>,
 >(
     params: &'params Scheme::ParamsVerifier,
-    proof: &'a [u8],
-    challenge: Fp,
-    commitment_points: &[G1Affine],
-) -> (bool, Vec<Fp>)
-where
-    Scheme::Scalar: WithSmallOrderMulGroup<3>,
-{
-    let mut transcript = T::init(proof);
-
-    // Read the polynomial evaluations from the transcript
-    let evaluations = (0..N_POINTS)
-        .map(|_| transcript.read_scalar().unwrap())
-        .collect::<Vec<_>>();
-
-    // Prepare verifier queries for the commitment
-    let queries = (0..N_POINTS)
-        .map(|i| VerifierQuery::new_commitment(&commitment_points[i], challenge, evaluations[i]))
-        .collect::<Vec<_>>();
-
-    // Initialize the verifier
-    let verifier = V::new(params);
-
-    // Use the provided strategy for verification
-    let strategy = Strategy::new(params);
-    let strategy = strategy
-        .process(|msm_accumulator| {
-            verifier
-                .verify_proof(&mut transcript, queries.iter().cloned(), msm_accumulator)
-                .map_err(|_| Error::Opening)
-        })
-        .unwrap();
-
-    // Return the result of the verification
-    (strategy.finalize(), evaluations)
-}
-
-pub fn verify_opening_keccak<
-    'a,
-    'params,
-    Scheme: CommitmentScheme<Curve = halo2_proofs::halo2curves::bn256::G1Affine, Scalar = Fp>,
-    V: Verifier<'params, Scheme>,
-    // E: EncodedChallenge<Scheme::Curve>,
-    Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
-    const N_POINTS: usize,
->(
-    params: &'params Scheme::ParamsVerifier,
-    // mut transcript: Keccak256Transcript<Scheme::Curve, &[u8]>,
     proof: &'a [u8],
     challenge: Fp,
     commitment_points: &[G1Affine],
@@ -453,12 +418,13 @@ where
     let mut transcript = Keccak256Transcript::new(proof);
 
     // Read the polynomial evaluations from the transcript
-    let evaluations = (0..N_POINTS)
+    let n_points = commitment_points.len();
+    let evaluations = (0..n_points)
         .map(|_| transcript.read_scalar().unwrap())
         .collect::<Vec<_>>();
 
     // Prepare verifier queries for the commitment
-    let queries = (0..N_POINTS)
+    let queries = (0..n_points)
         .map(|i| VerifierQuery::new_commitment(&commitment_points[i], challenge, evaluations[i]))
         .collect::<Vec<_>>();
 
@@ -467,7 +433,7 @@ where
 
     // Use the provided strategy for verification
     let strategy = Strategy::new(params);
-    let strategy = strategy
+    strategy
         .process(|msm_accumulator| {
             verifier
                 .verify_proof(&mut transcript, queries.iter().cloned(), msm_accumulator)
@@ -475,8 +441,8 @@ where
         })
         .unwrap();
 
-    // Return the result of the verification
-    (strategy.finalize(), evaluations)
+    // `strategy.process`` return () without any error means the proof is verified
+    (true, evaluations)
 }
 
 /// Verifies a proof given the public setup, the verification key, the proof and the public inputs of the circuit.
