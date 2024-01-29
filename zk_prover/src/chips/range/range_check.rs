@@ -29,25 +29,25 @@ pub struct RangeCheckConfig<const N_BYTES: usize> {
 /// Helper chip that verifies that the value witnessed in a given cell lies within a given range defined by N_BYTES.
 /// For example, Let's say we want to constraint 0x1f2f3f4f to be within the range N_BYTES=4.
 ///
-/// `z(0) = 0x1f2f3f4f`
-/// `z(1) = (0x1f2f3f4f - 0x4f) / 2^8 = 0x1f2f3f`
-/// `z(2) = (0x1f2f3f - 0x3f) / 2^8 = 0x1f2f`
-/// `z(3) = (0x1f2f - 0x2f) / 2^8 = 0x1f`
-/// `z(4) = (0x1f - 0x1f) / 2^8 = 0x00`
+/// * `z(0) = 0x1f2f3f4f`
+/// * `z(1) = (0x1f2f3f4f - 0x4f) / 2^8 = 0x1f2f3f`
+/// * `z(2) = (0x1f2f3f - 0x3f) / 2^8 = 0x1f2f`
+/// * `z(3) = (0x1f2f - 0x2f) / 2^8 = 0x1f`
+/// * `z(4) = (0x1f - 0x1f) / 2^8 = 0x00`
 ///
-///  |     | z          |
-///  | --- | ---------- |
-///  | 0   | 0x1f2f3f4f |
-///  | 1   | 0x1f2f3f   |
-///  | 2   | 0x1f2f     |
-///  | 3   | 0x1f       |
-///  | 4   | 0x00       |
+/// |                | `z`          |
+/// | ------------   | -------------|
+///  | 0             | `0x1f2f3f4f` |
+///  | 1             | `0x1f2f3f`   |
+///  | 2             | `0x1f2f`     |
+///  | 3             | `0x1f`       |
+///  | 4             | `0x00`       |
 ///
 /// The column z contains the witnessed value to be checked at offset 0
-/// At offset i, the column z contains the value z(i+1) = (z(i) - k(i)) / 2^8 (shift right by 8 bits) where k(i) is the i-th decomposition big-endian of `value`
+/// At offset i, the column z contains the value `z(i+1) = (z(i) - k(i)) / 2^8` (shift right by 8 bits) where k(i) is the i-th decomposition big-endian of `value`
 /// The constraints that are enforced are:
-/// - z(i) - 2^8⋅z(i+1) ∈ lookup_u8_table (enabled by lookup_enable_selector at offset [0, N_BYTES - 1])
-/// - z(N_BYTES) == 0
+/// * `z(i) - 2^8⋅z(i+1) ∈ lookup_u8_table` (enabled by lookup_enable_selector at offset [0, N_BYTES - 1])
+/// * `z(N_BYTES) == 0`
 #[derive(Debug, Clone)]
 pub struct RangeCheckChip<const N_BYTES: usize> {
     config: RangeCheckConfig<N_BYTES>,
