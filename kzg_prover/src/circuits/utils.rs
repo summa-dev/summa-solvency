@@ -17,14 +17,11 @@ use halo2_proofs::{
         kzg::{
             commitment::{KZGCommitmentScheme, ParamsKZG},
             multiopen::{ProverGWC, ProverSHPLONK, VerifierSHPLONK},
-            strategy::{AccumulatorStrategy, SingleStrategy},
+            strategy::SingleStrategy,
         },
         Coeff, Polynomial, ProverQuery, VerificationStrategy, VerifierQuery,
     },
-    transcript::{
-        Blake2bRead, Blake2bWrite, Challenge255, EncodedChallenge, TranscriptRead,
-        TranscriptReadBuffer, TranscriptWriterBuffer,
-    },
+    transcript::{EncodedChallenge, TranscriptRead, TranscriptWriterBuffer},
 };
 use halo2_solidity_verifier::Keccak256Transcript;
 use num_bigint::BigUint;
