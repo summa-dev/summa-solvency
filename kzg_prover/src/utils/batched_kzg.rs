@@ -33,24 +33,22 @@ pub fn compute_h(
         .collect::<Vec<_>>();
     s_commitments_reversed.reverse();
 
-    let mut s_fft: Vec<G1> = vec![G1::identity(); 2 * d];
-    s_fft[..d].copy_from_slice(&s_commitments_reversed[..d]);
+    let mut y: Vec<G1> = vec![G1::identity(); 2 * d];
+    y[..d].copy_from_slice(&s_commitments_reversed[..d]);
 
     // Prepare coefficients vector and zero-pad at the beginning
-    let mut c_fft = vec![Fp::zero(); 2 * d];
+    let mut v = vec![Fp::zero(); 2 * d];
     //Create a reversed copy of the polynomial
     // let mut f_reversed = f_poly.to_vec();
     // f_reversed.reverse();
-    c_fft[d..(2 * d)].copy_from_slice(&f_poly);
+    v[d..(2 * d)].copy_from_slice(&f_poly);
 
     println!("c_fft and s_fft assigned");
     let nu = double_domain.get_omega(); // 2d-th root of unity
-    let s_len = s_fft.len();
     println!("performing FFT on s");
-    best_fft(&mut s_fft, nu, s_len.trailing_zeros());
-    let c_len = c_fft.len();
+    best_fft(&mut y, nu, (2 * d).trailing_zeros());
     println!("performing FFT on c");
-    best_fft(&mut c_fft, nu, c_len.trailing_zeros());
+    best_fft(&mut v, nu, (2 * d).trailing_zeros());
 
     println!("Computing powers of nu");
     // Compute powers of nu
@@ -61,22 +59,21 @@ pub fn compute_h(
 
     println!("Performing Hadamard product");
     // Perform the Hadamard product
-    let u: Vec<G1> = s_fft
+    let u: Vec<G1> = y
         .iter()
-        .zip(c_fft.iter())
+        .zip(v.iter())
         .zip(nu_powers.iter())
-        .map(|((&s, &c), &nu_power)| s * c * nu_power)
+        .map(|((&y, &v), &nu_power)| y * v * nu_power)
         .collect();
 
     // Perform inverse FFT
     let nu_inv = nu.invert().unwrap(); // Inverse of 2d-th root of unity
     let mut h = u;
-    let h_len = h.len();
     println!("Performing inverse FFT on h");
-    best_fft(&mut h, nu_inv, h_len.trailing_zeros());
+    best_fft(&mut h, nu_inv, (2 * d).trailing_zeros());
 
     // Scale the result by the size of the vector (part of the iFFT)
-    let n_inv = Fp::from(h_len as u64).invert().unwrap();
+    let n_inv = Fp::from(2 * d as u64).invert().unwrap();
     h.iter_mut().for_each(|h| *h *= n_inv);
 
     // Truncate to get the first d coefficients
