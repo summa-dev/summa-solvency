@@ -12,11 +12,11 @@ mod test {
         commit_kzg, compute_h, create_standard_kzg_proof, verify_kzg_proof,
     };
     use crate::utils::{big_uint_to_fp, parse_csv_to_entries};
-    use halo2_proofs::arithmetic::{best_multiexp, parallelize, Field};
+    use halo2_proofs::arithmetic::{best_fft, Field};
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
     use halo2_proofs::halo2curves::bn256::{Bn256, Fr as Fp, G1Affine};
+    use halo2_proofs::halo2curves::group::Curve;
     use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
-    use halo2_proofs::poly::commitment::{Params, ParamsProver};
     use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
     use halo2_proofs::poly::EvaluationDomain;
     use num_bigint::BigUint;
@@ -37,7 +37,7 @@ mod test {
 
         // Double the polynomial length, thus K + 1
         let double_domain = EvaluationDomain::new(1, K + 1);
-        let h = compute_h(&params, f_poly, &double_domain);
+        let mut h = compute_h(&params, f_poly, &double_domain);
 
         let kzg_commitment = commit_kzg(&params, &f_poly);
 
@@ -49,8 +49,6 @@ mod test {
             f_poly,
             challenge,
         );
-
-        println!("Standard KZG proof: {:?}", kzg_proof);
 
         assert!(
             verify_kzg_proof(
@@ -74,20 +72,26 @@ mod test {
         );
         println!("KZG proof verified");
 
-        // Open the polynomial at X = omega using the amortized KZG
-        let mut omega_powers = vec![Fp::zero(); params.n() as usize];
-        {
-            parallelize(&mut omega_powers, |o, start| {
-                let mut cur = omega.pow_vartime([start as u64]);
-                for v in o.iter_mut() {
-                    *v = cur;
-                    cur *= &omega;
-                }
-            })
-        }
+        // Compute all openings to the polynomial using the amortized KZG approach (FK23)
+        best_fft(&mut h, omega, f_poly.len().trailing_zeros());
 
-        let mut batched_kzg_proof = best_multiexp(&omega_powers, &h);
-        println!("Batched KZG proof: {:?}", batched_kzg_proof);
+        // Check that the amortized opening proof for user #1 is the same as the naive KZG opening proof
+        assert!(
+            h[1].to_affine() == kzg_proof.to_affine(),
+            "Amortized KZG proof for user 1 is not the same as the standard KZG proof"
+        );
+
+        // Verify the amortized KZG opening proof for user #1
+        assert!(
+            verify_kzg_proof(
+                &params,
+                kzg_commitment,
+                h[1],
+                &challenge,
+                &big_uint_to_fp(&entries[1].balances()[0]),
+            ),
+            "KZG proof verification failed"
+        );
     }
 
     #[test]

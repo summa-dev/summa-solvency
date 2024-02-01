@@ -21,7 +21,7 @@ pub fn compute_h(
     params: &ParamsKZG<Bn256>,
     f_poly: &Polynomial<Fp, Coeff>,
     double_domain: &EvaluationDomain<Fp>,
-) -> Vec<G1Affine> {
+) -> Vec<G1> {
     let d = f_poly.len(); // Degree of the polynomial
 
     println!("d: {}", d);
@@ -38,9 +38,6 @@ pub fn compute_h(
 
     // Prepare coefficients vector and zero-pad at the beginning
     let mut v = vec![Fp::zero(); 2 * d];
-    //Create a reversed copy of the polynomial
-    // let mut f_reversed = f_poly.to_vec();
-    // f_reversed.reverse();
     v[d..(2 * d)].copy_from_slice(&f_poly);
 
     println!("c_fft and s_fft assigned");
@@ -59,12 +56,7 @@ pub fn compute_h(
 
     println!("Performing Hadamard product");
     // Perform the Hadamard product
-    let u: Vec<G1> = y
-        .iter()
-        .zip(v.iter())
-        .zip(nu_powers.iter())
-        .map(|((&y, &v), &nu_power)| y * v * nu_power)
-        .collect();
+    let u: Vec<G1> = y.iter().zip(v.iter()).map(|(&y, &v)| y * v).collect();
 
     // Perform inverse FFT
     let nu_inv = nu.invert().unwrap(); // Inverse of 2d-th root of unity
@@ -79,7 +71,7 @@ pub fn compute_h(
     // Truncate to get the first d coefficients
     h.truncate(d);
 
-    h.iter().map(|h| h.to_affine()).collect()
+    h
 }
 
 //J Thaler, Proofs, Arguments, and Zero-Knowledge, 15.2
