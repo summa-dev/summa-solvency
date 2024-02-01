@@ -44,7 +44,7 @@ where
 {
     username: Column<Advice>,
     balances: [Column<Advice>; N_CURRENCIES],
-    //  range_check_configs: [RangeCheckU64Config; N_CURRENCIES],
+    range_check_configs: [RangeCheckU64Config; N_CURRENCIES],
     range_u16: Column<Fixed>,
 }
 
@@ -65,21 +65,21 @@ where
         meta.annotate_lookup_any_column(range_u16, || "LOOKUP_MAXBITS_RANGE");
 
         // Create an empty array of range check configs
-        // let mut range_check_configs = Vec::with_capacity(N_CURRENCIES);
+        let mut range_check_configs = Vec::with_capacity(N_CURRENCIES);
 
-        // for item in balances.iter().take(N_CURRENCIES) {
-        //     let z = *item;
-        //     // Create 4 advice columns for each range check chip
-        //     let zs = [(); 4].map(|_| meta.advice_column());
+        for item in balances.iter().take(N_CURRENCIES) {
+            let z = *item;
+            // Create 4 advice columns for each range check chip
+            let zs = [(); 4].map(|_| meta.advice_column());
 
-        //     for column in &zs {
-        //         meta.enable_equality(*column);
-        //     }
+            for column in &zs {
+                meta.enable_equality(*column);
+            }
 
-        //     let range_check_config = RangeCheckU64Chip::configure(meta, z, zs, range_u16);
+            let range_check_config = RangeCheckU64Chip::configure(meta, z, zs, range_u16);
 
-        //     range_check_configs.push(range_check_config);
-        // }
+            range_check_configs.push(range_check_config);
+        }
 
         let instance = meta.instance_column();
         meta.enable_equality(instance);
@@ -87,7 +87,7 @@ where
         Self {
             username,
             balances,
-            //    range_check_configs: range_check_configs.try_into().unwrap(),
+            range_check_configs: range_check_configs.try_into().unwrap(),
             range_u16,
         }
     }
@@ -157,46 +157,46 @@ where
         mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
         // Initiate the range check chips
-        // let range_check_chips = config
-        //     .range_check_configs
-        //     .iter()
-        //     .map(|config| RangeCheckU64Chip::construct(*config))
-        //     .collect::<Vec<_>>();
+        let range_check_chips = config
+            .range_check_configs
+            .iter()
+            .map(|config| RangeCheckU64Chip::construct(*config))
+            .collect::<Vec<_>>();
 
         // Load lookup table for range check u64 chip
-        // let range = 1 << 16;
+        let range = 1 << 16;
 
-        // layouter.assign_region(
-        //     || format!("load range check table of 16 bits"),
-        //     |mut region| {
-        //         for i in 0..range {
-        //             region.assign_fixed(
-        //                 || "assign cell in fixed column",
-        //                 config.range_u16,
-        //                 i,
-        //                 || Value::known(Fp::from(i as u64)),
-        //             )?;
-        //         }
-        //         Ok(())
-        //     },
-        // )?;
+        layouter.assign_region(
+            || format!("load range check table of 16 bits"),
+            |mut region| {
+                for i in 0..range {
+                    region.assign_fixed(
+                        || "assign cell in fixed column",
+                        config.range_u16,
+                        i,
+                        || Value::known(Fp::from(i as u64)),
+                    )?;
+                }
+                Ok(())
+            },
+        )?;
 
         // Assign entries
         let assigned_balances =
             config.assign_entries(layouter.namespace(|| "assign entries"), &self.entries)?;
 
         // Perform range check on the assigned balances
-        // for i in 0..N_USERS {
-        //     for j in 0..N_CURRENCIES {
-        //         layouter.assign_region(
-        //             || format!("Perform range check on balance {} of user {}", j, i),
-        //             |mut region| {
-        //                 range_check_chips[j].assign(&mut region, &assigned_balances[i][j])?;
-        //                 Ok(())
-        //             },
-        //         )?;
-        //     }
-        // }
+        for i in 0..N_USERS {
+            for j in 0..N_CURRENCIES {
+                layouter.assign_region(
+                    || format!("Perform range check on balance {} of user {}", j, i),
+                    |mut region| {
+                        range_check_chips[j].assign(&mut region, &assigned_balances[i][j])?;
+                        Ok(())
+                    },
+                )?;
+            }
+        }
 
         Ok(())
     }

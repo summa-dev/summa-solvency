@@ -3,9 +3,9 @@ use std::{fs::File, ops::Range};
 use ark_std::{end_timer, start_timer};
 use ethers::types::U256;
 use halo2_proofs::{
-    arithmetic::Field,
+    arithmetic::{best_fft, Field},
     halo2curves::{
-        bn256::{Bn256, Fr as Fp, G1Affine},
+        bn256::{Bn256, Fr as Fp, G1Affine, G1},
         ff::{PrimeField, WithSmallOrderMulGroup},
     },
     plonk::{
@@ -28,8 +28,9 @@ use halo2_proofs::{
 };
 use num_bigint::BigUint;
 use rand::rngs::OsRng;
+use rayon::prelude::*;
 
-use crate::utils::fp_to_big_uint;
+use crate::utils::{batched_kzg::compute_h, fp_to_big_uint};
 
 /// Generate setup artifacts for a circuit of size `k`, where 2^k represents the number of rows in the circuit.
 ///
@@ -196,6 +197,24 @@ pub fn open_user_points(
         omega_raised,
         user_balances,
     )
+}
+
+pub fn batch_open_user_points(
+    advice_polys: &[Polynomial<Fp, Coeff>],
+    params: &ParamsKZG<Bn256>,
+    column_range: Range<usize>,
+    omega: Fp,
+) -> Vec<G1> {
+    // Use Rayon's par_iter() to iterate over the slice in parallel
+    advice_polys[column_range]
+        .par_iter()
+        .map(|poly| {
+            let mut h = compute_h(params, poly);
+            best_fft(&mut h, omega, poly.len().trailing_zeros());
+            h
+        })
+        .flatten() // Flatten to combine all the h vectors into one
+        .collect()
 }
 
 /// Verifies the univariate polynomial grand sum openings

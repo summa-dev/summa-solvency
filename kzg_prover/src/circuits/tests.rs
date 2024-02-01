@@ -18,10 +18,9 @@ mod test {
     use halo2_proofs::halo2curves::group::Curve;
     use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
     use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
-    use halo2_proofs::poly::EvaluationDomain;
     use num_bigint::BigUint;
 
-    const K: u32 = 9;
+    const K: u32 = 17;
     const N_CURRENCIES: usize = 2;
     const N_USERS: usize = 16;
 
@@ -34,10 +33,6 @@ mod test {
         let (_, advice_polys, omega) = full_prover(&params, &pk, circuit.clone(), &[vec![]]);
 
         let f_poly = advice_polys.advice_polys.get(1).unwrap();
-
-        // Double the polynomial length, thus K + 1
-        let double_domain = EvaluationDomain::new(1, K + 1);
-        let mut h = compute_h(&params, f_poly, &double_domain);
 
         let kzg_commitment = commit_kzg(&params, &f_poly);
 
@@ -72,6 +67,7 @@ mod test {
         );
         println!("KZG proof verified");
 
+        let mut h = compute_h(&params, f_poly);
         // Compute all openings to the polynomial using the amortized KZG approach (FK23)
         best_fft(&mut h, omega, f_poly.len().trailing_zeros());
 

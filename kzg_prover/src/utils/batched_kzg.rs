@@ -6,7 +6,7 @@ use halo2_proofs::{
         pairing::{Engine, PairingCurveAffine},
     },
     poly::{
-        commitment::{Blind, CommitmentScheme, ParamsProver},
+        commitment::{Blind, CommitmentScheme, Params, ParamsProver},
         kzg::commitment::ParamsKZG,
         Coeff, EvaluationDomain, Polynomial,
     },
@@ -17,14 +17,12 @@ pub fn commit_kzg(params: &ParamsKZG<Bn256>, poly: &Polynomial<Fp, Coeff>) -> G1
 }
 
 /// Computes the polynomial h(X) for the batch KZG algorithm.
-pub fn compute_h(
-    params: &ParamsKZG<Bn256>,
-    f_poly: &Polynomial<Fp, Coeff>,
-    double_domain: &EvaluationDomain<Fp>,
-) -> Vec<G1> {
+pub fn compute_h(params: &ParamsKZG<Bn256>, f_poly: &Polynomial<Fp, Coeff>) -> Vec<G1> {
+    // Double the polynomial length, thus K + 1
+    let double_domain = EvaluationDomain::new(1, params.k() + 1);
+
     let d = f_poly.len(); // Degree of the polynomial
 
-    println!("d: {}", d);
     // Extract s_commitments from ParamsKZG and extend with neutral elements
     let mut s_commitments_reversed = params
         .get_g()
@@ -38,30 +36,21 @@ pub fn compute_h(
 
     // Prepare coefficients vector and zero-pad at the beginning
     let mut v = vec![Fp::zero(); 2 * d];
-    v[d..(2 * d)].copy_from_slice(&f_poly);
+    v[d..(2 * d)].copy_from_slice(f_poly);
 
-    println!("c_fft and s_fft assigned");
     let nu = double_domain.get_omega(); // 2d-th root of unity
-    println!("performing FFT on s");
+                                        // Perform FFT on s
     best_fft(&mut y, nu, (2 * d).trailing_zeros());
-    println!("performing FFT on c");
+    // Perform FFT on c
     best_fft(&mut v, nu, (2 * d).trailing_zeros());
 
-    println!("Computing powers of nu");
-    // Compute powers of nu
-    let mut nu_powers = vec![Fp::one(); 2 * d];
-    for i in 1..(2 * d) {
-        nu_powers[i] = nu_powers[i - 1] * nu;
-    }
-
-    println!("Performing Hadamard product");
     // Perform the Hadamard product
     let u: Vec<G1> = y.iter().zip(v.iter()).map(|(&y, &v)| y * v).collect();
 
     // Perform inverse FFT
     let nu_inv = nu.invert().unwrap(); // Inverse of 2d-th root of unity
     let mut h = u;
-    println!("Performing inverse FFT on h");
+    // Perform inverse FFT on h
     best_fft(&mut h, nu_inv, (2 * d).trailing_zeros());
 
     // Scale the result by the size of the vector (part of the iFFT)
@@ -84,7 +73,7 @@ pub fn create_standard_kzg_proof<
     f_poly: &Polynomial<<Scheme as CommitmentScheme>::Scalar, Coeff>,
     challenge: Fp,
 ) -> G1 {
-    let z = eval_polynomial(&f_poly, challenge);
+    let z = eval_polynomial(f_poly, challenge);
     let numerator = f_poly - z;
     let mut t_y_vals = kate_division(&numerator.to_vec(), challenge);
     // The resulting degree is one less than the degree of the numerator, so we need to pad it with zeros back to the original polynomial size
@@ -103,7 +92,7 @@ where
     let c_g_to_minus_z: G1 = c + g_to_minus_z;
     let left_side = Bn256::pairing(&c_g_to_minus_z.to_affine(), &G2Affine::generator());
 
-    let g_to_minus_y = G2Affine::generator() * &(-challenge);
+    let g_to_minus_y = G2Affine::generator() * (-challenge);
     let g_tau = params.s_g2();
     let g_tau_g_to_minus_y = g_tau + g_to_minus_y;
     let right_side = Bn256::pairing(&pi.to_affine(), &g_tau_g_to_minus_y.to_affine());
