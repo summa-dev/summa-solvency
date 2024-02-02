@@ -72,8 +72,8 @@ pub fn create_standard_kzg_proof<
     domain: &EvaluationDomain<Fp>,
     f_poly: &Polynomial<<Scheme as CommitmentScheme>::Scalar, Coeff>,
     challenge: Fp,
+    z: Fp,
 ) -> G1 {
-    let z = eval_polynomial(f_poly, challenge);
     let numerator = f_poly - z;
     let mut t_y_vals = kate_division(&numerator.to_vec(), challenge);
     // The resulting degree is one less than the degree of the numerator, so we need to pad it with zeros back to the original polynomial size

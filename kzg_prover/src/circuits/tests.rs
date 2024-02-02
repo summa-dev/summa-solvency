@@ -19,6 +19,8 @@ mod test {
     use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
     use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
     use num_bigint::BigUint;
+    use rand::rngs::OsRng;
+    use rand::Rng;
 
     const K: u32 = 17;
     const N_CURRENCIES: usize = 2;
@@ -36,24 +38,32 @@ mod test {
 
         let kzg_commitment = commit_kzg(&params, &f_poly);
 
-        // Open the polynomial at X = omega^1 (user 1) using the standard KZG
-        let challenge = omega;
+        // Generate a random user index
+        let get_random_user_index = || {
+            let user_range: std::ops::Range<usize> = 0..N_USERS;
+            OsRng.gen_range(user_range) as usize
+        };
+
+        // Open the polynomial at the user index using the standard KZG
+        let random_user_index = get_random_user_index();
+        let challenge = omega.pow_vartime(&[random_user_index as u64]);
         let kzg_proof = create_standard_kzg_proof::<KZGCommitmentScheme<Bn256>>(
             &params,
             pk.get_vk().get_domain(),
             f_poly,
             challenge,
+            big_uint_to_fp(&entries[random_user_index].balances()[0]),
         );
-
         assert!(
             verify_kzg_proof(
                 &params,
                 kzg_commitment,
                 kzg_proof,
                 &challenge,
-                &big_uint_to_fp(&entries[1].balances()[0]),
+                &big_uint_to_fp(&entries[random_user_index].balances()[0]),
             ),
-            "KZG proof verification failed"
+            "KZG proof verification failed for user {}",
+            random_user_index
         );
         assert!(
             !verify_kzg_proof(
@@ -65,28 +75,29 @@ mod test {
             ),
             "Invalid proof verification should fail"
         );
-        println!("KZG proof verified");
 
         let mut h = compute_h(&params, f_poly);
         // Compute all openings to the polynomial using the amortized KZG approach (FK23)
         best_fft(&mut h, omega, f_poly.len().trailing_zeros());
 
-        // Check that the amortized opening proof for user #1 is the same as the naive KZG opening proof
+        // Check that the amortized opening proof for the user is the same as the naive KZG opening proof
         assert!(
-            h[1].to_affine() == kzg_proof.to_affine(),
-            "Amortized KZG proof for user 1 is not the same as the standard KZG proof"
+            h[random_user_index].to_affine() == kzg_proof.to_affine(),
+            "Amortized KZG proof for user {} is not the same as the standard KZG proof",
+            random_user_index
         );
 
-        // Verify the amortized KZG opening proof for user #1
+        // Verify the amortized KZG opening proof for the user
         assert!(
             verify_kzg_proof(
                 &params,
                 kzg_commitment,
-                h[1],
+                h[random_user_index],
                 &challenge,
-                &big_uint_to_fp(&entries[1].balances()[0]),
+                &big_uint_to_fp(&entries[random_user_index].balances()[0]),
             ),
-            "KZG proof verification failed"
+            "KZG proof verification failed for user {}",
+            random_user_index
         );
     }
 
