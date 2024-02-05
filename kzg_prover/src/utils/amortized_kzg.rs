@@ -124,7 +124,7 @@ pub fn create_naive_kzg_proof<
 /// * `params` - The KZG parameters
 /// * `c` - The commitment to the polynomial
 /// * `pi` - The KZG opening proof
-/// * `challenge` - The challenge
+/// * `y` - The challenge
 /// * `z` - The value of the polynomial at the challenge
 ///
 /// # Returns
