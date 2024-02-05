@@ -25,6 +25,7 @@ mod test {
 
     const K: u32 = 17;
     const N_CURRENCIES: usize = 2;
+    const N_POINTS: usize = 3;
     const N_USERS: usize = 16;
 
     #[test]
@@ -234,7 +235,6 @@ mod test {
 
         let column_range = 0..N_CURRENCIES + 1;
         // The Verifier verifies the inclusion of the 4th user entry
-        const N_POINTS: usize = N_CURRENCIES + 1;
         let (inclusion_verified, id_and_balance_values) = verify_user_inclusion::<N_POINTS>(
             &params,
             &zk_snark_proof,
