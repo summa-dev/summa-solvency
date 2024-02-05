@@ -30,7 +30,7 @@ use num_bigint::BigUint;
 use rand::rngs::OsRng;
 use rayon::prelude::*;
 
-use crate::utils::{batched_kzg::compute_h, fp_to_big_uint};
+use crate::utils::{amortized_kzg::compute_h, fp_to_big_uint};
 
 /// Generate setup artifacts for a circuit of size `k`, where 2^k represents the number of rows in the circuit.
 ///
@@ -199,21 +199,32 @@ pub fn open_user_points(
     )
 }
 
-pub fn batch_open_user_points(
+/// Calculate all opening proofs at once for the polynomials using the amortized KZG approach
+///
+/// # Arguments
+///
+/// * `advice_polys` - the advice polynomials
+/// * `params` - the KZG parameters
+/// * `column_range` - the range of the advice columns of interest
+/// * `omega` - $\omega$, the generator of the multiplicative subgroup used to interpolate the polynomials.
+///
+/// # Returns
+///
+/// * `Vec<Vec<G1>>` - all KZG opening proofs for the polynomials in the range
+pub fn open_user_points_amortized(
     advice_polys: &[Polynomial<Fp, Coeff>],
     params: &ParamsKZG<Bn256>,
     column_range: Range<usize>,
     omega: Fp,
-) -> Vec<G1> {
-    // Use Rayon's par_iter() to iterate over the slice in parallel
+) -> Vec<Vec<G1>> {
     advice_polys[column_range]
+        // Parallelize the independent amortized openings of the user ID and balance polynomials
         .par_iter()
         .map(|poly| {
             let mut h = compute_h(params, poly);
             best_fft(&mut h, omega, poly.len().trailing_zeros());
             h
         })
-        .flatten() // Flatten to combine all the h vectors into one
         .collect()
 }
 

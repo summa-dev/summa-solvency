@@ -1,4 +1,4 @@
-pub mod batched_kzg;
+pub mod amortized_kzg;
 mod csv_parser;
 mod operation_helpers;
 

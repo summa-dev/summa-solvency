@@ -8,8 +8,8 @@ mod test {
     };
     use crate::cryptocurrency::Cryptocurrency;
     use crate::entry::Entry;
-    use crate::utils::batched_kzg::{
-        commit_kzg, compute_h, create_standard_kzg_proof, verify_kzg_proof,
+    use crate::utils::amortized_kzg::{
+        commit_kzg, compute_h, create_naive_kzg_proof, verify_kzg_proof,
     };
     use crate::utils::{big_uint_to_fp, parse_csv_to_entries};
     use halo2_proofs::arithmetic::{best_fft, Field};
@@ -44,10 +44,11 @@ mod test {
             OsRng.gen_range(user_range) as usize
         };
 
-        // Open the polynomial at the user index using the standard KZG
+        // Open the polynomial at the user index (challenge) using the naive KZG
+
         let random_user_index = get_random_user_index();
         let challenge = omega.pow_vartime(&[random_user_index as u64]);
-        let kzg_proof = create_standard_kzg_proof::<KZGCommitmentScheme<Bn256>>(
+        let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
             &params,
             pk.get_vk().get_domain(),
             f_poly,
@@ -76,6 +77,9 @@ mod test {
             "Invalid proof verification should fail"
         );
 
+        // Open the polynomial at the user index (challenge) using the amortized KZG
+
+        // Compute the h vector
         let mut h = compute_h(&params, f_poly);
         // Compute all openings to the polynomial using the amortized KZG approach (FK23)
         best_fft(&mut h, omega, f_poly.len().trailing_zeros());
@@ -83,11 +87,11 @@ mod test {
         // Check that the amortized opening proof for the user is the same as the naive KZG opening proof
         assert!(
             h[random_user_index].to_affine() == kzg_proof.to_affine(),
-            "Amortized KZG proof for user {} is not the same as the standard KZG proof",
+            "Amortized KZG proof for user {} is not the same as the naive KZG proof",
             random_user_index
         );
 
-        // Verify the amortized KZG opening proof for the user
+        // Verify the amortized KZG opening proof for the user using the same verifier as for the naive KZG proof
         assert!(
             verify_kzg_proof(
                 &params,
