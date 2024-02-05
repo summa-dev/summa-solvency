@@ -256,7 +256,7 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
         }
     }
 
-    let (verified, constant_terms) =
+    let opening_result =
         verify_opening::<KZGCommitmentScheme<_>, VerifierSHPLONK<Bn256>, SingleStrategy<_>>(
             params,
             grand_sum_opening_batch_proof,
@@ -264,13 +264,16 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
             &advice_commitments,
         );
 
-    (
-        verified,
-        constant_terms
-            .iter()
-            .map(|eval| fp_to_big_uint(eval * Fp::from(polynomial_length)))
-            .collect(),
-    )
+    match opening_result {
+        Ok((verified, evaluations)) => (
+            verified,
+            evaluations
+                .iter()
+                .map(|eval| fp_to_big_uint(*eval * Fp::from(polynomial_length)))
+                .collect(),
+        ),
+        Err(_) => (false, vec![]),
+    }
 }
 
 /// Verifies the KZG batch proof of the polynomial openings being the evaluations
@@ -309,7 +312,7 @@ pub fn verify_user_inclusion<const N_POINTS: usize>(
         }
     }
 
-    let (verified, evaluations_at_challenge) =
+    let opening_result =
         verify_opening::<KZGCommitmentScheme<_>, VerifierSHPLONK<Bn256>, SingleStrategy<_>>(
             params,
             balance_opening_batch_proof,
@@ -317,15 +320,17 @@ pub fn verify_user_inclusion<const N_POINTS: usize>(
             &advice_commitments,
         );
 
-    assert!(verified);
-
-    (
-        verified,
-        evaluations_at_challenge
-            .iter()
-            .map(|eval| fp_to_big_uint(*eval))
-            .collect(),
-    )
+    // return result error if it exists
+    match opening_result {
+        Ok((verified, evaluations)) => (
+            verified,
+            evaluations
+                .iter()
+                .map(|eval| fp_to_big_uint(*eval))
+                .collect(),
+        ),
+        Err(_) => (false, vec![]),
+    }
 }
 
 /// Creates a KZG batch proof for the polynomial evaluations at a challenge
@@ -408,7 +413,7 @@ pub fn verify_opening<
     proof: &'a [u8],
     challenge: Fp,
     commitment_points: &[G1Affine],
-) -> (bool, Vec<Fp>)
+) -> Result<(bool, Vec<Fp>), Box<Error>>
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3>,
 {
@@ -430,16 +435,17 @@ where
 
     // Use the provided strategy for verification
     let strategy = Strategy::new(params);
-    strategy
-        .process(|msm_accumulator| {
-            verifier
-                .verify_proof(&mut transcript, queries.iter().cloned(), msm_accumulator)
-                .map_err(|_| Error::Opening)
-        })
-        .unwrap();
+    let result = strategy.process(|msm_accumulator| {
+        verifier
+            .verify_proof(&mut transcript, queries.iter().cloned(), msm_accumulator)
+            .map_err(|_| Error::Opening)
+    });
 
     // `strategy.process`` return () without any error means the proof is verified
-    (true, evaluations)
+    match result {
+        Err(e) => Err(Box::new(e)),
+        _ => Ok((true, evaluations)),
+    }
 }
 
 /// Verifies a proof given the public setup, the verification key, the proof and the public inputs of the circuit.
