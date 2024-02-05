@@ -27,7 +27,7 @@ mod test {
     const N_USERS: usize = 16;
 
     #[test]
-    fn test_batched_kzg() {
+    fn test_amortized_kzg() {
         let path = "../csv/entry_16.csv";
 
         let (entries, circuit, pk, _, params) = set_up::<N_USERS, N_CURRENCIES>(path);
