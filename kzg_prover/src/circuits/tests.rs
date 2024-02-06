@@ -12,11 +12,12 @@ mod test {
         commit_kzg, compute_h, create_naive_kzg_proof, verify_kzg_proof,
     };
     use crate::utils::{big_uint_to_fp, parse_csv_to_entries};
-    use halo2_proofs::arithmetic::{best_fft, Field};
+    use halo2_proofs::arithmetic::{best_fft, best_multiexp, parallelize, Field};
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
     use halo2_proofs::halo2curves::bn256::{Bn256, Fr as Fp, G1Affine};
     use halo2_proofs::halo2curves::group::Curve;
     use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
+    use halo2_proofs::poly::commitment::Params;
     use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
     use num_bigint::BigUint;
     use rand::rngs::OsRng;
@@ -81,12 +82,32 @@ mod test {
 
         // Compute the h vector
         let mut h = compute_h(&params, f_poly);
-        // Compute all openings to the polynomial using the amortized KZG approach (FK23)
+
+        // Demonstrate a single-challenge opening using the calculated h (FK23, eq. 13)
+        let mut challenge_powers = vec![Fp::one(); params.n() as usize];
+        {
+            parallelize(&mut challenge_powers, |o, start| {
+                let mut cur = challenge.pow_vartime([start as u64]);
+                for v in o.iter_mut() {
+                    *v = cur;
+                    cur *= &challenge;
+                }
+            })
+        }
+        let h_affine = h.iter().map(|x| x.to_affine()).collect::<Vec<G1Affine>>();
+        let single_amortized_proof = best_multiexp(&challenge_powers, &h_affine);
+
+        assert!(
+            single_amortized_proof == kzg_proof,
+            "Single challenge amortized KZG proof is not the same as the naive KZG proof"
+        );
+
+        // Compute all openings to the polynomial at once using the amortized KZG approach ("CT" in FK23)
         best_fft(&mut h, omega, f_poly.len().trailing_zeros());
 
         // Check that the amortized opening proof for the user is the same as the naive KZG opening proof
         assert!(
-            h[random_user_index].to_affine() == kzg_proof.to_affine(),
+            h[random_user_index] == kzg_proof,
             "Amortized KZG proof for user {} is not the same as the naive KZG proof",
             random_user_index
         );

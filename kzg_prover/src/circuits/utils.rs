@@ -271,12 +271,12 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
         Challenge255<G1Affine>,
         Blake2bRead<_, _, Challenge255<_>>,
         AccumulatorStrategy<_>,
-        N_CURRENCIES,
     >(
         params,
         grand_sum_opening_batch_proof,
         Fp::zero(),
         &advice_commitments,
+        balance_column_range.len(),
     );
 
     (
@@ -333,12 +333,12 @@ pub fn verify_user_inclusion<const N_POINTS: usize>(
         Challenge255<G1Affine>,
         Blake2bRead<_, _, Challenge255<_>>,
         AccumulatorStrategy<_>,
-        N_POINTS,
     >(
         params,
         balance_opening_batch_proof,
         omega.pow_vartime([user_index as u64]),
         &advice_commitments,
+        column_range.len(),
     );
     verification_results.push(verified);
 
@@ -428,12 +428,12 @@ fn verify_opening<
     E: EncodedChallenge<Scheme::Curve>,
     T: TranscriptReadBuffer<&'a [u8], Scheme::Curve, E>,
     Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
-    const N_POINTS: usize,
 >(
     params: &'params Scheme::ParamsVerifier,
     proof: &'a [u8],
     challenge: Fp,
     commitment_points: &[G1Affine],
+    num_points: usize,
 ) -> (bool, Vec<Fp>)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3>,
@@ -441,12 +441,12 @@ where
     let mut transcript = T::init(proof);
 
     // Read the polynomial evaluations from the transcript
-    let evaluations = (0..N_POINTS)
+    let evaluations = (0..num_points)
         .map(|_| transcript.read_scalar().unwrap())
         .collect::<Vec<_>>();
 
     // Prepare verifier queries for the commitment
-    let queries = (0..N_POINTS)
+    let queries = (0..num_points)
         .map(|i| VerifierQuery::new_commitment(&commitment_points[i], challenge, evaluations[i]))
         .collect::<Vec<_>>();
 
