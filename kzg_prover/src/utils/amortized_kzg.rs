@@ -59,32 +59,32 @@ pub fn compute_h(params: &ParamsKZG<Bn256>, f_poly: &Polynomial<Fp, Coeff>) -> V
     v[d..(2 * d)].copy_from_slice(f_poly);
 
     let nu = double_domain.get_omega(); // 2d-th root of unity
-                                        // Perform FFT on s
+
+    // Perform the step 1 FFT from FK23, §2.2
     best_fft(&mut y, nu, (2 * d).trailing_zeros());
-    // Perform FFT on c
+    // Perform the step 2 FFT from FK23, §2.2
     best_fft(&mut v, nu, (2 * d).trailing_zeros());
 
-    // Perform the Hadamard product
+    // Perform the Hadamard product (FK23, §2.2, step 3)
     let u: Vec<G1> = y.iter().zip(v.iter()).map(|(&y, &v)| y * v).collect();
 
-    // Perform inverse FFT
     let nu_inv = nu.invert().unwrap(); // Inverse of 2d-th root of unity
     let mut h = u;
-    // Perform inverse FFT on h
+    // Perform inverse FFT on h (FK23, §2.2, step 4)
     best_fft(&mut h, nu_inv, (2 * d).trailing_zeros());
 
     // Scale the result by the size of the vector (part of the iFFT)
     let n_inv = Fp::from(2 * d as u64).invert().unwrap();
     h.iter_mut().for_each(|h| *h *= n_inv);
 
-    // Truncate to get the first d coefficients
+    // Truncate to get the first d coefficients (FK23, §2.2, step 5)
     h.truncate(d);
 
     h
 }
 
 /// Compute the naive KZG opening proof
-/// J Thaler, Proofs, Arguments, and Zero-Knowledge, 15.2
+/// J Thaler, Proofs, Arguments, and Zero-Knowledge, §15.2, p. 233
 /// KZG proof π is a proof of f(y) = z: π[f(y) = z] = C_Ty, where C_Ty is a commitment to a polynomial Ty(X) = (f(X)−z)/(X−y) and y is the challenge
 ///
 /// # Arguments
@@ -116,7 +116,7 @@ pub fn create_naive_kzg_proof<
 }
 
 /// Verify the naive KZG proof
-/// J Thaler, Proofs, Arguments, and Zero-Knowledge, 15.2
+/// J Thaler, Proofs, Arguments, and Zero-Knowledge, §15.2, eq. 15.2, p. 233
 /// e(c·g^(−z),g) = e(π,g^τ ·g^(−y)), y is the challenge
 ///
 /// # Arguments

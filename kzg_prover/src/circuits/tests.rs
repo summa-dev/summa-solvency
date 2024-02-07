@@ -35,6 +35,7 @@ mod test {
 
         let (_, advice_polys, omega) = full_prover(&params, &pk, circuit.clone(), &[vec![]]);
 
+        // Select the first user balance polynomial for the example
         let f_poly = advice_polys.advice_polys.get(1).unwrap();
 
         let kzg_commitment = commit_kzg(&params, &f_poly);
