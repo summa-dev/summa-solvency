@@ -19,10 +19,7 @@ use rand::rngs::OsRng;
 use summa_solvency::{
     circuits::{
         univariate_grand_sum::UnivariateGrandSum,
-        utils::{
-            generate_setup_artifacts, open_grand_sums, open_user_points, verify_grand_sum_openings,
-            verify_user_inclusion,
-        },
+        utils::{generate_setup_artifacts, open_grand_sums, verify_grand_sum_openings},
     },
     cryptocurrency::Cryptocurrency,
     entry::Entry,
