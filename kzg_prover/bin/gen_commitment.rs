@@ -3,13 +3,11 @@
 use halo2_proofs::{
     arithmetic::Field,
     halo2curves::{
-        bn256::{Bn256, Fr as Fp, G1},
-        group::{Curve, GroupEncoding},
+        bn256::{Bn256, Fr as Fp},
         serde::SerdeObject,
     },
     poly::kzg::commitment::KZGCommitmentScheme,
 };
-use hex::ToHex;
 use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;

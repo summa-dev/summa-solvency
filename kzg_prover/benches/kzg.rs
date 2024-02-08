@@ -9,7 +9,8 @@ use summa_solvency::{
         univariate_grand_sum::UnivariateGrandSum,
         utils::{
             full_prover, generate_setup_artifacts, open_grand_sums, open_grand_sums_gwc,
-            open_user_points, verify_grand_sum_openings, verify_user_inclusion,
+            open_user_points, open_user_points_amortized, verify_grand_sum_openings,
+            verify_user_inclusion,
         },
     },
     cryptocurrency::Cryptocurrency,

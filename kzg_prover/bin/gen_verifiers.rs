@@ -114,45 +114,6 @@ fn main() {
     assert_eq!(output, [vec![0; 31], vec![1]].concat());
     save_solidity("snark_verifier.sol", &verifier_solidity_fixed);
     save_solidity("verifying_key.sol", &vk_verifier);
-
-    // 4. Generate Opening Proof for Grand Sums
-    //
-    let balance_column_range = 1..N_CURRENCIES + 1;
-    let poly_length = 1 << u64::from(K);
-
-    // Calculate total for all entry columns
-    let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
-    for entry in &entries {
-        for (i, balance) in entry.balances().iter().enumerate() {
-            csv_total[i] += balance;
-        }
-    }
-
-    let grand_sum_opening_batch_proof = open_grand_sums(
-        &advice_polys.advice_polys,
-        &advice_polys.advice_blinds,
-        &params,
-        balance_column_range,
-        &csv_total
-            .iter()
-            .map(|x| big_uint_to_fp(x) * Fp::from(poly_length).invert().unwrap())
-            .collect::<Vec<Fp>>(),
-    );
-
-    // The Custodian communicates the polynomial length to the Verifier
-    let poly_length = 1 << u64::from(K);
-
-    // Both the Custodian and the Verifier know what column range are the balance columns
-    let balance_column_range = 1..N_CURRENCIES + 1;
-    let (verified, total_balances) = verify_grand_sum_openings::<N_CURRENCIES>(
-        &params,
-        &zk_snark_proof,
-        &grand_sum_opening_batch_proof,
-        poly_length,
-        balance_column_range,
-    );
-    assert!(verified);
-    assert_ne!(total_balances, vec![BigUint::from(0u32); N_CURRENCIES]);
 }
 
 fn save_solidity(name: impl AsRef<str>, solidity: &str) {
