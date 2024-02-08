@@ -19,6 +19,13 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
 
     // Extracting cryptocurrency names from column names
     for (i, header) in headers.iter().skip(1).enumerate() {
+        if i >= cryptocurrencies.len() {
+            println!(
+                "Too many columns in the CSV file, expected {}, skipping the rest",
+                cryptocurrencies.len()
+            );
+            break;
+        }
         // Skipping 'username' column
         let parts: Vec<&str> = header.split('_').collect();
         if parts.len() == 3 && parts[0] == "balance" {

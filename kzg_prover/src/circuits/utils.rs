@@ -3,9 +3,9 @@ use std::{fs::File, ops::Range};
 use ark_std::{end_timer, start_timer};
 use ethers::types::U256;
 use halo2_proofs::{
-    arithmetic::Field,
+    arithmetic::{best_fft, Field},
     halo2curves::{
-        bn256::{Bn256, Fr as Fp, G1Affine},
+        bn256::{Bn256, Fr as Fp, G1Affine, G1},
         ff::{PrimeField, WithSmallOrderMulGroup},
     },
     plonk::{
@@ -28,8 +28,9 @@ use halo2_proofs::{
 };
 use num_bigint::BigUint;
 use rand::rngs::OsRng;
+use rayon::prelude::*;
 
-use crate::utils::fp_to_big_uint;
+use crate::utils::{amortized_kzg::compute_h, fp_to_big_uint};
 
 /// Generate setup artifacts for a circuit of size `k`, where 2^k represents the number of rows in the circuit.
 ///
@@ -198,6 +199,35 @@ pub fn open_user_points(
     )
 }
 
+/// Calculate all opening proofs at once for the polynomials using the amortized KZG approach
+///
+/// # Arguments
+///
+/// * `advice_polys` - the advice polynomials
+/// * `params` - the KZG parameters
+/// * `column_range` - the range of the advice columns of interest
+/// * `omega` - $\omega$, the generator of the multiplicative subgroup used to interpolate the polynomials.
+///
+/// # Returns
+///
+/// * `Vec<Vec<G1>>` - all KZG opening proofs for the polynomials in the range
+pub fn open_user_points_amortized(
+    advice_polys: &[Polynomial<Fp, Coeff>],
+    params: &ParamsKZG<Bn256>,
+    column_range: Range<usize>,
+    omega: Fp,
+) -> Vec<Vec<G1>> {
+    advice_polys[column_range]
+        // Parallelize the independent amortized openings of the user ID and balance polynomials
+        .par_iter()
+        .map(|poly| {
+            let mut h = compute_h(params, poly);
+            best_fft(&mut h, omega, poly.len().trailing_zeros());
+            h
+        })
+        .collect()
+}
+
 /// Verifies the univariate polynomial grand sum openings
 /// and calculates the grand sums
 ///
@@ -241,12 +271,12 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
         Challenge255<G1Affine>,
         Blake2bRead<_, _, Challenge255<_>>,
         AccumulatorStrategy<_>,
-        N_CURRENCIES,
     >(
         params,
         grand_sum_opening_batch_proof,
         Fp::zero(),
         &advice_commitments,
+        balance_column_range.len(),
     );
 
     (
@@ -303,12 +333,12 @@ pub fn verify_user_inclusion<const N_POINTS: usize>(
         Challenge255<G1Affine>,
         Blake2bRead<_, _, Challenge255<_>>,
         AccumulatorStrategy<_>,
-        N_POINTS,
     >(
         params,
         balance_opening_batch_proof,
         omega.pow_vartime([user_index as u64]),
         &advice_commitments,
+        column_range.len(),
     );
     verification_results.push(verified);
 
@@ -398,12 +428,12 @@ fn verify_opening<
     E: EncodedChallenge<Scheme::Curve>,
     T: TranscriptReadBuffer<&'a [u8], Scheme::Curve, E>,
     Strategy: VerificationStrategy<'params, Scheme, V, Output = Strategy>,
-    const N_POINTS: usize,
 >(
     params: &'params Scheme::ParamsVerifier,
     proof: &'a [u8],
     challenge: Fp,
     commitment_points: &[G1Affine],
+    num_points: usize,
 ) -> (bool, Vec<Fp>)
 where
     Scheme::Scalar: WithSmallOrderMulGroup<3>,
@@ -411,12 +441,12 @@ where
     let mut transcript = T::init(proof);
 
     // Read the polynomial evaluations from the transcript
-    let evaluations = (0..N_POINTS)
+    let evaluations = (0..num_points)
         .map(|_| transcript.read_scalar().unwrap())
         .collect::<Vec<_>>();
 
     // Prepare verifier queries for the commitment
-    let queries = (0..N_POINTS)
+    let queries = (0..num_points)
         .map(|i| VerifierQuery::new_commitment(&commitment_points[i], challenge, evaluations[i]))
         .collect::<Vec<_>>();
 

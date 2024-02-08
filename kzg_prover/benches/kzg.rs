@@ -9,7 +9,7 @@ use summa_solvency::{
         univariate_grand_sum::UnivariateGrandSum,
         utils::{
             full_prover, generate_setup_artifacts, open_grand_sums, open_user_points,
-            verify_grand_sum_openings, verify_user_inclusion,
+            open_user_points_amortized, verify_grand_sum_openings, verify_user_inclusion,
         },
     },
     cryptocurrency::Cryptocurrency,
@@ -32,6 +32,8 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
     let range_check_bench_name = format!("<{}> range check", name);
     let opening_grand_sum_bench_name = format!("<{}> opening grand sum", name);
     let opening_user_bench_name = format!("<{}> opening user inclusion", name);
+    let amortized_opening_user_bench_name =
+        format!("<{}> amortized opening all 2^{} user inclusions", name, K);
     let verifying_grand_sum_bench_name = format!("<{}> verifying grand sum", name);
     let verifying_user_bench_name = format!("<{}> verifying user inclusion", name);
 
@@ -110,6 +112,16 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
                         })
                         .unwrap(),
                 )
+            },
+            criterion::BatchSize::SmallInput,
+        );
+    });
+
+    c.bench_function(&amortized_opening_user_bench_name, |b| {
+        b.iter_batched(
+            || (0..N_CURRENCIES + 1),
+            |column_range| {
+                open_user_points_amortized(&advice_polys.advice_polys, &params, column_range, omega)
             },
             criterion::BatchSize::SmallInput,
         );

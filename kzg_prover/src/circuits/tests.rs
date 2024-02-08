@@ -8,17 +8,124 @@ mod test {
     };
     use crate::cryptocurrency::Cryptocurrency;
     use crate::entry::Entry;
+    use crate::utils::amortized_kzg::{
+        commit_kzg, compute_h, create_naive_kzg_proof, verify_kzg_proof,
+    };
     use crate::utils::{big_uint_to_fp, parse_csv_to_entries};
-    use halo2_proofs::arithmetic::Field;
+    use halo2_proofs::arithmetic::{best_fft, best_multiexp, parallelize, Field};
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
     use halo2_proofs::halo2curves::bn256::{Bn256, Fr as Fp, G1Affine};
+    use halo2_proofs::halo2curves::group::Curve;
     use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
-    use halo2_proofs::poly::kzg::commitment::ParamsKZG;
+    use halo2_proofs::poly::commitment::Params;
+    use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
     use num_bigint::BigUint;
+    use rand::rngs::OsRng;
+    use rand::Rng;
 
     const K: u32 = 17;
     const N_CURRENCIES: usize = 2;
     const N_USERS: usize = 16;
+
+    #[test]
+    fn test_amortized_kzg() {
+        let path = "../csv/entry_16.csv";
+
+        let (entries, circuit, pk, _, params) = set_up::<N_USERS, N_CURRENCIES>(path);
+
+        let (_, advice_polys, omega) = full_prover(&params, &pk, circuit.clone(), &[vec![]]);
+
+        // Select the first user balance polynomial for the example
+        let f_poly = advice_polys.advice_polys.get(1).unwrap();
+
+        let kzg_commitment = commit_kzg(&params, &f_poly);
+
+        // Generate a random user index
+        let get_random_user_index = || {
+            let user_range: std::ops::Range<usize> = 0..N_USERS;
+            OsRng.gen_range(user_range) as usize
+        };
+
+        // Open the polynomial at the user index (challenge) using the naive KZG
+
+        let random_user_index = get_random_user_index();
+        let challenge = omega.pow_vartime(&[random_user_index as u64]);
+        let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
+            &params,
+            pk.get_vk().get_domain(),
+            f_poly,
+            challenge,
+            big_uint_to_fp(&entries[random_user_index].balances()[0]),
+        );
+        assert!(
+            verify_kzg_proof(
+                &params,
+                kzg_commitment,
+                kzg_proof,
+                &challenge,
+                &big_uint_to_fp(&entries[random_user_index].balances()[0]),
+            ),
+            "KZG proof verification failed for user {}",
+            random_user_index
+        );
+        assert!(
+            !verify_kzg_proof(
+                &params,
+                kzg_commitment,
+                kzg_proof,
+                &challenge,
+                &big_uint_to_fp(&BigUint::from(123u32)),
+            ),
+            "Invalid proof verification should fail"
+        );
+
+        // Open the polynomial at the user index (challenge) using the amortized KZG
+
+        // Compute the h vector
+        let mut h = compute_h(&params, f_poly);
+
+        // Demonstrate a single-challenge opening using the calculated h (FK23, eq. 13)
+        let mut challenge_powers = vec![Fp::one(); params.n() as usize];
+        {
+            parallelize(&mut challenge_powers, |o, start| {
+                let mut cur = challenge.pow_vartime([start as u64]);
+                for v in o.iter_mut() {
+                    *v = cur;
+                    cur *= &challenge;
+                }
+            })
+        }
+        let h_affine = h.iter().map(|x| x.to_affine()).collect::<Vec<G1Affine>>();
+        let single_amortized_proof = best_multiexp(&challenge_powers, &h_affine);
+
+        assert!(
+            single_amortized_proof == kzg_proof,
+            "Single challenge amortized KZG proof is not the same as the naive KZG proof"
+        );
+
+        // Compute all openings to the polynomial at once using the amortized KZG approach ("CT" in FK23)
+        best_fft(&mut h, omega, f_poly.len().trailing_zeros());
+
+        // Check that the amortized opening proof for the user is the same as the naive KZG opening proof
+        assert!(
+            h[random_user_index] == kzg_proof,
+            "Amortized KZG proof for user {} is not the same as the naive KZG proof",
+            random_user_index
+        );
+
+        // Verify the amortized KZG opening proof for the user using the same verifier as for the naive KZG proof
+        assert!(
+            verify_kzg_proof(
+                &params,
+                kzg_commitment,
+                h[random_user_index],
+                &challenge,
+                &big_uint_to_fp(&entries[random_user_index].balances()[0]),
+            ),
+            "KZG proof verification failed for user {}",
+            random_user_index
+        );
+    }
 
     #[test]
     fn test_valid_univariate_grand_sum_prover() {
