@@ -30,7 +30,6 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_CURRENCIES: usize, const N_B
     }
 
     let mut entries = Vec::new();
-    let mut balances_acc: Vec<BigUint> = vec![BigUint::from(0_usize); N_CURRENCIES];
 
     for result in rdr.deserialize() {
         let record: HashMap<String, String> = result?;
@@ -50,12 +49,6 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_CURRENCIES: usize, const N_B
             ))?;
             balances_big_int.push(balance);
         }
-
-        balances_acc = balances_acc
-            .iter()
-            .zip(balances_big_int.iter())
-            .map(|(x, y)| x + y)
-            .collect();
 
         let entry = Entry::new(username, balances_big_int.try_into().unwrap())?;
         entries.push(entry);
