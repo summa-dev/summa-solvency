@@ -42,3 +42,7 @@ path = "bin/gen_verifiers.rs"
 [[bin]]
 name = "generate_commitment"
 path = "bin/gen_commitment.rs"
+
+[[bin]]
+name = "kzg_verifier_test"
+path = "bin/test_kzg_verifier.rs"

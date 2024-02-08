@@ -1,6 +1,13 @@
 #![feature(generic_const_exprs)]
 
-use halo2_proofs::{arithmetic::Field, halo2curves::bn256::Fr as Fp};
+use halo2_proofs::{
+    arithmetic::Field,
+    halo2curves::{
+        bn256::{Bn256, Fr as Fp},
+        group::Curve,
+    },
+    poly::kzg::commitment::KZGCommitmentScheme,
+};
 use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
@@ -8,11 +15,14 @@ use std::{fs::File, io::Write};
 use summa_solvency::{
     circuits::{
         univariate_grand_sum::UnivariateGrandSum,
-        utils::{full_prover, full_verifier, generate_setup_artifacts, open_grand_sums},
+        utils::{full_prover, full_verifier, generate_setup_artifacts},
     },
     cryptocurrency::Cryptocurrency,
     entry::Entry,
-    utils::{big_uint_to_fp, parse_csv_to_entries},
+    utils::{
+        amortized_kzg::{commit_kzg, create_naive_kzg_proof, verify_kzg_proof},
+        big_uint_to_fp, parse_csv_to_entries,
+    },
 };
 
 const K: u32 = 17;
@@ -22,7 +32,7 @@ const N_USERS: usize = 16;
 #[derive(Serialize, Deserialize)]
 struct CommitmentSolidityCallData {
     range_check_snark_proof: String,
-    grand_sums_batch_proofs: String,
+    grand_sums_batch_proof: String,
 }
 
 fn main() {
@@ -44,7 +54,6 @@ fn main() {
     .unwrap();
 
     // Create a proof
-    // TODO: Inside `full_prover` ~ update describe about instance
     let instances = vec![Fp::one(); 1]; // This instance is necessary to verify proof on solidity verifier.
     let (zk_snark_proof, advice_polys, _omega) = full_prover(
         &params,
@@ -60,9 +69,8 @@ fn main() {
         &[instances]
     ));
 
-    let balance_column_range = 1..N_CURRENCIES + 1;
+    let challenge = Fp::zero();
     let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
-
     for entry in &entries {
         for (i, balance) in entry.balances().iter().enumerate() {
             csv_total[i] += balance;
@@ -70,22 +78,48 @@ fn main() {
     }
 
     let poly_length = 1 << u64::from(K);
+    let total_balances = csv_total
+        .iter()
+        .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
+        .collect::<Vec<Fp>>();
 
-    let grand_sums_batch_proof = open_grand_sums(
-        &advice_polys.advice_polys,
-        &advice_polys.advice_blinds,
-        &params,
-        balance_column_range,
-        csv_total
-            .iter()
-            .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
-            .collect::<Vec<Fp>>()
-            .as_slice(),
-    );
+    let mut grand_sums_kzg_proof = Vec::new();
+    for balance_column in 1..(N_CURRENCIES + 1) {
+        let f_poly = advice_polys.advice_polys.get(balance_column).unwrap();
+        let kzg_commitment = commit_kzg(&params, f_poly);
+
+        let currency_index = balance_column - 1;
+
+        let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
+            &params,
+            pk.get_vk().get_domain(),
+            f_poly,
+            challenge,
+            total_balances[currency_index],
+        );
+
+        assert!(verify_kzg_proof(
+            &params,
+            kzg_commitment,
+            kzg_proof,
+            &challenge,
+            &total_balances[currency_index],
+        ));
+
+        // Convert to affine point and serialize to bytes
+        let kzg_proof_affine = kzg_proof.to_affine();
+        let mut kzg_proof_affine_x = kzg_proof_affine.x.to_bytes();
+        let mut kzg_proof_affine_y = kzg_proof_affine.y.to_bytes();
+        kzg_proof_affine_x.reverse();
+        kzg_proof_affine_y.reverse();
+
+        // concat x, y of kzg_proof
+        grand_sums_kzg_proof.push([kzg_proof_affine_x, kzg_proof_affine_y].concat());
+    }
 
     let commitment = CommitmentSolidityCallData {
         range_check_snark_proof: format!("0x{}", hex::encode(zk_snark_proof)),
-        grand_sums_batch_proofs: format!("0x{}", hex::encode(grand_sums_batch_proof)),
+        grand_sums_batch_proof: format!("0x{}", hex::encode(grand_sums_kzg_proof.concat())),
     };
 
     // Serialize to a JSON string

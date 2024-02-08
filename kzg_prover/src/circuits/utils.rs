@@ -16,7 +16,7 @@ use halo2_proofs::{
         commitment::{Blind, CommitmentScheme, Params, Prover, Verifier},
         kzg::{
             commitment::{KZGCommitmentScheme, ParamsKZG},
-            multiopen::{ProverGWC, ProverSHPLONK, VerifierSHPLONK},
+            multiopen::{ProverGWC, ProverSHPLONK, VerifierGWC, VerifierSHPLONK},
             strategy::SingleStrategy,
         },
         Coeff, Polynomial, ProverQuery, VerificationStrategy, VerifierQuery,
@@ -287,7 +287,7 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
     }
 
     let opening_result =
-        verify_opening::<KZGCommitmentScheme<_>, VerifierSHPLONK<Bn256>, SingleStrategy<_>>(
+        verify_opening::<KZGCommitmentScheme<_>, VerifierGWC<Bn256>, SingleStrategy<_>>(
             params,
             grand_sum_opening_batch_proof,
             Fp::zero(),
