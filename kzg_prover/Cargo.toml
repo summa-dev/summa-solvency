@@ -26,6 +26,7 @@ ethers = { version = "2.0.7", default-features = false, features = ["ethers-solc
 regex-simple = { version = "1", package = "regex" }
 num-traits = "0.2.16"
 rayon = "1.8.0"
+halo2_solidity_verifier = { git = "https://github.com/summa-dev/halo2-solidity-verifier", version = "0.1.0", features = ["evm"] }
 
 [dev-dependencies]
 criterion= "0.3"
@@ -33,3 +34,11 @@ criterion= "0.3"
 [[bench]]
 name = "kzg"
 harness = false
+
+[[bin]]
+name = "generate_verifiers"
+path = "bin/gen_verifiers.rs"
+
+[[bin]]
+name = "generate_commitment"
+path = "bin/gen_commitment.rs"

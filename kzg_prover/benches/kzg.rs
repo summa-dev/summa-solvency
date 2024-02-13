@@ -8,8 +8,9 @@ use summa_solvency::{
     circuits::{
         univariate_grand_sum::UnivariateGrandSum,
         utils::{
-            full_prover, generate_setup_artifacts, open_grand_sums, open_user_points,
-            open_user_points_amortized, verify_grand_sum_openings, verify_user_inclusion,
+            full_prover, generate_setup_artifacts, open_grand_sums, open_grand_sums_gwc,
+            open_user_points, open_user_points_amortized, verify_grand_sum_openings,
+            verify_user_inclusion,
         },
     },
     cryptocurrency::Cryptocurrency,
@@ -71,6 +72,26 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
             || 1..N_CURRENCIES + 1,
             |balance_column_range| {
                 open_grand_sums(
+                    &advice_polys.advice_polys,
+                    &advice_polys.advice_blinds,
+                    &params,
+                    balance_column_range,
+                    csv_total
+                        .iter()
+                        .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
+                        .collect::<Vec<Fp>>()
+                        .as_slice(),
+                )
+            },
+            criterion::BatchSize::SmallInput,
+        );
+    });
+
+    c.bench_function(&format!("{} gwc", opening_grand_sum_bench_name), |b| {
+        b.iter_batched(
+            || 1..N_CURRENCIES + 1,
+            |balance_column_range| {
+                open_grand_sums_gwc(
                     &advice_polys.advice_polys,
                     &advice_polys.advice_blinds,
                     &params,
