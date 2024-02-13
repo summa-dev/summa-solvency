@@ -78,12 +78,6 @@ fn main() {
     );
     assert!(result.is_ok());
 
-    let result_unwrapped = result.unwrap();
-    result_unwrapped.0.expect("prover should not fail");
-    let _advice_polys = result_unwrapped.1.clone();
-    let advice_polys = _advice_polys[0].clone();
-
-    let omega = pk.get_vk().get_domain().get_omega();
     let zk_snark_proof = transcript.finalize();
 
     // Check verification on verifier function
