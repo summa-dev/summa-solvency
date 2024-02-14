@@ -11,12 +11,10 @@ import "./interfaces/IVerifier.sol";
 contract Summa is Ownable {
     /**
      * @dev Struct representing the configuration of the Summa instance
-     * @param mstLevels The number of levels of the Merkle sum tree
-     * @param currenciesCount The number of cryptocurrencies supported by the Merkle sum tree
-     * @param balanceByteRange The number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree
+     * @param currenciesCount The number of cryptocurrency balances encoded in the polynomials
+     * @param balanceByteRange The number of bytes used to represent the balance of a cryptocurrency in the polynomials
      */
     struct SummaConfig {
-        uint16 mstLevels;
         uint16 currenciesCount;
         uint8 balanceByteRange;
     }
@@ -46,14 +44,12 @@ contract Summa is Ownable {
 
     /**
      * @dev Struct representing a commitment submitted by the CEX.
-     * @param mstRoot Merkle sum tree root of the CEX's liabilities
-     * @param rootBalances The total sums of the liabilities included in the tree
-     * @param blockchainNames The names of the blockchains where the CEX holds the cryptocurrencies included into the tree
-     * @param cryptocurrencyNames The names of the cryptocurrencies included into the tree
+     * @param proof ZK proof of the valid polynomial encoding
+     * @param blockchainNames The names of the blockchains where the CEX holds the cryptocurrencies included into the balance polynomials
+     * @param cryptocurrencyNames The names of the cryptocurrencies included into the balance polynomials
      */
     struct Commitment {
-        uint256 mstRoot;
-        uint256[] rootBalances;
+        bytes proof;
         string[] cryptocurrencyNames;
         string[] blockchainNames;
     }
@@ -61,11 +57,48 @@ contract Summa is Ownable {
     // Summa configuration
     SummaConfig public config;
 
-    // User inclusion proof verifier
-    IVerifier private immutable inclusionVerifier;
+    // Verification key contract address
+    address public verificationKey;
 
     // List of all address ownership proofs submitted by the CEX
     AddressOwnershipProof[] public addressOwnershipProofs;
+
+    // Solvency commitments by timestamp submitted by the CEX
+    mapping(uint256 => Commitment) public commitments;
+
+    // Convenience mapping to check if an address has already been verified
+    mapping(bytes32 => uint256) private _ownershipProofByAddress;
+
+    // zkSNARK verifier of the valid polynomial encoding
+    IVerifier private immutable polynomialEncodingVerifier;
+
+    event AddressOwnershipProofSubmitted(
+        AddressOwnershipProof[] addressOwnershipProofs
+    );
+    event LiabilitiesCommitmentSubmitted(
+        uint256 indexed timestamp,
+        bytes proof,
+        Cryptocurrency[] cryptocurrencies
+    );
+
+    constructor(
+        address _verificationKey,
+        IVerifier _polynomialEncodingVerifier,
+        uint16 currenciesCount,
+        uint8 balanceByteRange
+    ) {
+        require(
+            _verificationKey != address(0),
+            "Invalid verifying key address"
+        );
+        verificationKey = _verificationKey;
+        require(
+            address(_polynomialEncodingVerifier) != address(0),
+            "Invalid polynomial encoding verifier address"
+        );
+        polynomialEncodingVerifier = _polynomialEncodingVerifier;
+        config = SummaConfig(currenciesCount, balanceByteRange);
+    }
 
     function getAddressOwnershipProof(
         bytes32 addressHash
@@ -77,32 +110,6 @@ contract Summa is Ownable {
         // -1 comes from the fact that 0 is reserved to distinguish the case when the proof has not yet been submitted
         return
             addressOwnershipProofs[_ownershipProofByAddress[addressHash] - 1];
-    }
-
-    // Convenience mapping to check if an address has already been verified
-    mapping(bytes32 => uint256) private _ownershipProofByAddress;
-
-    // Solvency commitments by timestamp submitted by the CEX
-    mapping(uint256 => Commitment) public commitments;
-
-    event AddressOwnershipProofSubmitted(
-        AddressOwnershipProof[] addressOwnershipProofs
-    );
-    event LiabilitiesCommitmentSubmitted(
-        uint256 indexed timestamp,
-        uint256 mstRoot,
-        uint256[] rootBalances,
-        Cryptocurrency[] cryptocurrencies
-    );
-
-    constructor(
-        IVerifier _inclusionVerifier,
-        uint16 mstLevels,
-        uint16 currenciesCount,
-        uint8 balanceByteRange
-    ) {
-        inclusionVerifier = _inclusionVerifier;
-        config = SummaConfig(mstLevels, currenciesCount, balanceByteRange);
     }
 
     /**
@@ -136,22 +143,36 @@ contract Summa is Ownable {
 
     /**
      * @dev Submit commitment for a CEX
-     * @param mstRoot Merkle sum tree root of the CEX's liabilities
-     * @param rootBalances The total sums of the liabilities included into the Merkle sum tree
-     * @param cryptocurrencies The cryptocurrencies included into the Merkle sum tree
+     * @param proof ZK proof of the valid polynomial encoding
+     * @param cryptocurrencies The cryptocurrencies included into the balance polynomials
      * @param timestamp The timestamp at which the CEX took the snapshot of its assets and liabilities
      */
     function submitCommitment(
-        uint256 mstRoot,
-        uint256[] memory rootBalances,
+        bytes memory proof,
         Cryptocurrency[] memory cryptocurrencies,
         uint256 timestamp
     ) public onlyOwner {
-        require(mstRoot != 0, "Invalid MST root");
+        require(proof.length == 5376, "Invalid proof length");
         require(
-            rootBalances.length == cryptocurrencies.length,
-            "Root liabilities sums and liabilities number mismatch"
+            cryptocurrencies.length > 0,
+            "Cryptocurrencies list cannot be empty"
         );
+        uint[] memory args = new uint[](1);
+        args[0] = 1; // Workaround to satisfy the verifier (TODO remove after https://github.com/summa-dev/halo2-solidity-verifier/issues/1 is resolved)
+        require(
+            polynomialEncodingVerifier.verifyProof(
+                verificationKey,
+                proof,
+                args
+            ),
+            "Invalid proof"
+        );
+        // TODO slice the proof to get the balance commitments
+        // require(
+        //     balanceCommitments.length == cryptocurrencies.length,
+        //     "Liability commitments and cryptocurrencies number mismatch"
+        // );
+
         string[] memory cryptocurrencyNames = new string[](
             cryptocurrencies.length
         );
@@ -162,49 +183,16 @@ contract Summa is Ownable {
                     bytes(cryptocurrencies[i].name).length != 0,
                 "Invalid cryptocurrency"
             );
-            require(
-                rootBalances[i] != 0,
-                "All root sums should be greater than zero"
-            );
             cryptocurrencyNames[i] = cryptocurrencies[i].name;
             blockchainNames[i] = cryptocurrencies[i].chain;
         }
 
         commitments[timestamp] = Commitment(
-            mstRoot,
-            rootBalances,
+            proof,
             cryptocurrencyNames,
             blockchainNames
         );
 
-        emit LiabilitiesCommitmentSubmitted(
-            timestamp,
-            mstRoot,
-            rootBalances,
-            cryptocurrencies
-        );
-    }
-
-    /**
-     * Verify the proof of user inclusion into the liabilities tree
-     * @param proof ZK proof
-     * @param publicInputs proof inputs
-     */
-    function verifyInclusionProof(
-        bytes memory proof,
-        uint256[] memory publicInputs,
-        uint256 timestamp
-    ) public view returns (bool) {
-        require(
-            commitments[timestamp].mstRoot == publicInputs[1],
-            "Invalid MST root"
-        );
-        for (uint i = 2; i < publicInputs.length; i++) {
-            require(
-                commitments[timestamp].rootBalances[i - 2] == publicInputs[i],
-                "Invalid root balance"
-            );
-        }
-        return inclusionVerifier.verify(publicInputs, proof);
+        emit LiabilitiesCommitmentSubmitted(timestamp, proof, cryptocurrencies);
     }
 }
