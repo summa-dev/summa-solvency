@@ -8,23 +8,9 @@ import * as fs from "fs";
 import * as path from "path";
 
 describe("Summa Contract", () => {
-  function submitCommitment(
-    summa: Summa,
-    rangeCheckSnarkProof: string,
-    cryptocurrencies = [
-      {
-        chain: "ETH",
-        name: "ETH",
-      },
-      {
-        chain: "BTC",
-        name: "BTC",
-      },
-    ]
-  ): any {
+  function submitCommitment(summa: Summa, rangeCheckSnarkProof: string): any {
     return summa.submitCommitment(
       rangeCheckSnarkProof,
-      cryptocurrencies,
       BigNumber.from(1693559255)
     );
   }
@@ -47,8 +33,9 @@ describe("Summa Contract", () => {
     const summa = await ethers.deployContract("Summa", [
       verifyingKey.address,
       snarkVerifier.address,
-      2, // The number of cryptocurrencies in the balance polynomials
-      14, // The number of bytes used to represent the balance of a cryptocurrency in the polynomials
+      ["ETH", "BTC"],
+      ["ETH", "BTC"],
+      8, // The number of bytes used to represent the balance of a cryptocurrency in the polynomials
     ]);
     await summa.deployed();
 
@@ -60,6 +47,129 @@ describe("Summa Contract", () => {
       addr3,
     };
   }
+
+  describe("deployment tests", () => {
+    it("should not deploy with invalid currencies", async () => {
+      const verifyingKey = await ethers.deployContract(
+        "src/VerifyingKey.sol:Halo2VerifyingKey"
+      );
+      await verifyingKey.deployed();
+
+      const snarkVerifier = await ethers.deployContract(
+        "src/SnarkVerifier.sol:Verifier"
+      );
+      await snarkVerifier.deployed();
+
+      await expect(
+        ethers.deployContract("Summa", [
+          verifyingKey.address,
+          snarkVerifier.address,
+          ["", "BTC"],
+          ["ETH", "BTC"],
+          8,
+        ])
+      ).to.be.revertedWith("Invalid cryptocurrency");
+
+      await expect(
+        ethers.deployContract("Summa", [
+          verifyingKey.address,
+          snarkVerifier.address,
+          ["ETH", "BTC"],
+          ["ETH", ""],
+          8,
+        ])
+      ).to.be.revertedWith("Invalid cryptocurrency");
+
+      await expect(
+        ethers.deployContract("Summa", [
+          verifyingKey.address,
+          snarkVerifier.address,
+          [],
+          ["ETH", ""],
+          8,
+        ])
+      ).to.be.revertedWith("Cryptocurrency names and chains number mismatch");
+    });
+
+    it("should not deploy with invalid byte range", async () => {
+      const verifyingKey = await ethers.deployContract(
+        "src/VerifyingKey.sol:Halo2VerifyingKey"
+      );
+      await verifyingKey.deployed();
+
+      const snarkVerifier = await ethers.deployContract(
+        "src/SnarkVerifier.sol:Verifier"
+      );
+      await snarkVerifier.deployed();
+
+      await expect(
+        ethers.deployContract("Summa", [
+          verifyingKey.address,
+          snarkVerifier.address,
+          ["ETH", "BTC"],
+          ["ETH", "BTC"],
+          0, // Invalid byte range
+        ])
+      ).to.be.revertedWith("Invalid balance byte range");
+    });
+
+    it("should not deploy with invalid snark verifier key", async () => {
+      const verifyingKey = await ethers.deployContract(
+        "src/VerifyingKey.sol:Halo2VerifyingKey"
+      );
+      await verifyingKey.deployed();
+      await expect(
+        ethers.deployContract("Summa", [
+          verifyingKey.address,
+          ethers.constants.AddressZero,
+          ["ETH", "BTC"],
+          ["ETH", "BTC"],
+          0, // Invalid byte range
+        ])
+      ).to.be.revertedWith("Invalid polynomial encoding verifier address");
+    });
+
+    it("should not deploy with invalid verification key", async () => {
+      const snarkVerifier = await ethers.deployContract(
+        "src/SnarkVerifier.sol:Verifier"
+      );
+      await snarkVerifier.deployed();
+
+      await expect(
+        ethers.deployContract("Summa", [
+          ethers.constants.AddressZero,
+          snarkVerifier.address,
+          ["ETH", "BTC"],
+          ["ETH", "BTC"],
+          0, // Invalid byte range
+        ])
+      ).to.be.revertedWith("Invalid verifying key address");
+    });
+
+    it("should not deploy if the number of cryptocurrencies is not matching the verification key ", async () => {
+      const verifyingKey = await ethers.deployContract(
+        "src/DummyVerifyingKey.sol:Halo2VerifyingKey"
+      );
+      await verifyingKey.deployed();
+
+      const snarkVerifier = await ethers.deployContract(
+        "src/SnarkVerifier.sol:Verifier"
+      );
+      await snarkVerifier.deployed();
+
+      await expect(
+        ethers.deployContract("Summa", [
+          verifyingKey.address,
+          snarkVerifier.address,
+          ["ETH", "BTC"],
+          ["ETH", "BTC"],
+          0, // Invalid byte range
+        ])
+      ).to.be.revertedWith(
+        "The number of cryptocurrencies does not correspond to the verifying key"
+      );
+    });
+  });
 
   describe("verify address ownership", () => {
     let summa: Summa;
@@ -255,68 +365,24 @@ describe("Summa Contract", () => {
       rangeCheckSnarkProof = commitmentCalldata.range_check_snark_proof;
     });
 
-    it("should submit commitment for the given public input", async () => {
-      await summa.submitProofOfAddressOwnership(ownedAddresses);
-
+    it("should submit a valid commitment", async () => {
       await expect(submitCommitment(summa, rangeCheckSnarkProof))
         .to.emit(summa, "LiabilitiesCommitmentSubmitted")
-        .withArgs(
-          BigNumber.from(1693559255),
-          rangeCheckSnarkProof,
-          (cryptocurrencies: [Summa.CryptocurrencyStruct]) => {
-            return (
-              cryptocurrencies[0].chain == "ETH" &&
-              cryptocurrencies[0].name == "ETH"
-            );
-          }
-        );
+        .withArgs(BigNumber.from(1693559255), rangeCheckSnarkProof);
+    });
+
+    it("should not submit an invalid commitment", async () => {
+      await expect(
+        submitCommitment(summa, rangeCheckSnarkProof.replace("1", "2"))
+      ).to.be.revertedWithoutReason();
     });
 
     it("should revert if the caller is not the owner", async () => {
       await expect(
-        summa.connect(account2).submitCommitment(
-          rangeCheckSnarkProof,
-          [
-            {
-              chain: "ETH",
-              name: "ETH",
-            },
-          ],
-          BigNumber.from(1693559255)
-        )
+        summa
+          .connect(account2)
+          .submitCommitment(rangeCheckSnarkProof, BigNumber.from(1693559255))
       ).to.be.revertedWith("Ownable: caller is not the owner");
-    });
-
-    it("should revert with invalid cryptocurrencies", async () => {
-      await expect(
-        submitCommitment(summa, rangeCheckSnarkProof, [])
-      ).to.be.revertedWith("Cryptocurrencies list cannot be empty");
-
-      await expect(
-        submitCommitment(summa, rangeCheckSnarkProof, [
-          {
-            chain: "BTC",
-            name: "BTC",
-          },
-          {
-            chain: "",
-            name: "ETH",
-          },
-        ])
-      ).to.be.revertedWith("Invalid cryptocurrency");
-
-      await expect(
-        submitCommitment(summa, rangeCheckSnarkProof, [
-          {
-            chain: "ETH",
-            name: "ETH",
-          },
-          {
-            chain: "BTC",
-            name: "",
-          },
-        ])
-      ).to.be.revertedWith("Invalid cryptocurrency");
     });
 
     it("should not submit invalid proof", async () => {
