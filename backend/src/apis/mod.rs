@@ -5,7 +5,7 @@ pub mod round;
 use ethers::types::U256;
 use num_bigint::BigUint;
 use num_traits::Num;
-use summa_solvency::merkle_sum_tree::Entry;
+use summa_solvency::entry::Entry;
 
 pub fn leaf_hash_from_inputs<const N_CURRENCIES: usize>(
     username: String,
@@ -23,6 +23,7 @@ where
     let entry: Entry<N_CURRENCIES> = Entry::new(username, balances.try_into().unwrap()).unwrap();
 
     // Convert Fp to U256
-    let hash_str = format!("{:?}", entry.compute_leaf().hash);
-    U256::from_str_radix(&hash_str, 16).unwrap()
+    // TODO: Instead of hash of userdata, What should we out to this function?
+    let username_big_uint = format!("{:?}", entry.username_as_big_uint());
+    U256::from_str_radix(&username_big_uint, 16).unwrap()
 }

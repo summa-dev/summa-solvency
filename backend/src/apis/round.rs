@@ -1,34 +1,30 @@
 use ethers::types::{Bytes, U256};
 use halo2_proofs::{
-    halo2curves::bn256::{Bn256, G1Affine},
-    plonk::{ProvingKey, VerifyingKey},
-    poly::kzg::commitment::ParamsKZG,
+    arithmetic::Field,
+    halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
+    halo2curves::group::Curve,
+    plonk::{AdviceSingle, ProvingKey, VerifyingKey},
+    poly::{
+        kzg::commitment::{KZGCommitmentScheme, ParamsKZG},
+        Coeff,
+    },
 };
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
-use crate::contracts::{generated::summa_contract::summa::Cryptocurrency, signer::SummaSigner};
+use crate::contracts::signer::SummaSigner;
 use summa_solvency::{
-    circuits::{
-        merkle_sum_tree::MstInclusionCircuit,
-        utils::{gen_proof_solidity_calldata, generate_setup_artifacts},
-    },
-    merkle_sum_tree::Tree,
+    circuits::{univariate_grand_sum::UnivariateGrandSum, utils::generate_setup_artifacts},
+    utils::amortized_kzg::{commit_kzg, create_naive_kzg_proof, verify_kzg_proof},
 };
 
-pub(crate) type SetupArtifacts = (
-    ParamsKZG<Bn256>,
-    ProvingKey<G1Affine>,
-    VerifyingKey<G1Affine>,
-);
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MstInclusionProof {
+pub struct KZGInclusionProof {
     public_inputs: Vec<U256>,
     proof_calldata: Bytes,
 }
 
-impl MstInclusionProof {
+impl KZGInclusionProof {
     pub fn get_public_inputs(&self) -> &Vec<U256> {
         &self.public_inputs
     }
@@ -38,35 +34,48 @@ impl MstInclusionProof {
     }
 }
 
-pub struct Snapshot<const LEVELS: usize, const N_CURRENCIES: usize, const N_BYTES: usize> {
-    pub mst: Box<dyn Tree<N_CURRENCIES, N_BYTES>>,
-    trusted_setup: SetupArtifacts,
-}
-
-pub struct Round<'a, const LEVELS: usize, const N_CURRENCIES: usize, const N_BYTES: usize> {
+/// The `Round` struct represents a single operational cycle within the Summa Solvency protocol.
+///
+/// # Type Parameters
+///
+/// * `N_CURRENCIES`: The number of currencies for which solvency is verified in this round.
+/// * `N_POINTS`: The number of points in the `UnivariateGrandSum` circuit, which is `N_CURRENCIES + 1`.
+/// * `N_USERS`: The number of users involved in this round of the protocol.
+///
+/// /// These parameters are used for initializing the `UniVariantGrandSum` circuit within the `Snapshot` struct.
+///
+/// # Fields
+///
+/// * `timestamp`: A Unix timestamp marking the initiation of this round. It serves as a temporal reference point
+///   for the operations carried out in this phase of the protocol.
+/// * `snapshot`: A `Snapshot` struct capturing the round's state, including user identities and balances.
+/// * `signer`: A reference to a `SummaSigner`, the entity responsible for signing transactions with the Summa contract in this round.
+pub struct Round<'a, const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize> {
     timestamp: u64,
-    snapshot: Snapshot<LEVELS, N_CURRENCIES, N_BYTES>,
+    snapshot: Snapshot<N_CURRENCIES, N_POINTS, N_USERS>,
     signer: &'a SummaSigner,
 }
 
-impl<const LEVELS: usize, const N_CURRENCIES: usize, const N_BYTES: usize>
-    Round<'_, LEVELS, N_CURRENCIES, N_BYTES>
+impl<const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize>
+    Round<'_, N_CURRENCIES, N_POINTS, N_USERS>
 where
     [usize; N_CURRENCIES + 1]: Sized,
-    [usize; N_CURRENCIES + 2]: Sized,
 {
     pub fn new<'a>(
         signer: &'a SummaSigner,
-        mst: Box<dyn Tree<N_CURRENCIES, N_BYTES>>,
+        advice_polys: AdviceSingle<G1Affine, Coeff>,
+        user_data: [Vec<Fp>; N_POINTS],
         params_path: &str,
         timestamp: u64,
-    ) -> Result<Round<'a, LEVELS, N_CURRENCIES, N_BYTES>, Box<dyn Error>>
-    where
-        [(); N_CURRENCIES + 2]: Sized,
-    {
+    ) -> Result<Round<'a, N_CURRENCIES, N_POINTS, N_USERS>, Box<dyn Error>> {
         Ok(Round {
             timestamp,
-            snapshot: Snapshot::<LEVELS, N_CURRENCIES, N_BYTES>::new(mst, params_path).unwrap(),
+            snapshot: Snapshot::<N_CURRENCIES, N_POINTS, N_USERS>::new(
+                advice_polys,
+                user_data,
+                params_path,
+            )
+            .unwrap(),
             signer: &signer,
         })
     }
@@ -75,100 +84,116 @@ where
         self.timestamp
     }
 
+    // TODO: What will be the commit on the V2?
     pub async fn dispatch_commitment(&mut self) -> Result<(), Box<dyn Error>> {
-        let root_str = format!("{:?}", self.snapshot.mst.root().hash);
-        let mst_root = U256::from_str_radix(&root_str, 16).unwrap();
-
-        let mut root_sums = Vec::<U256>::new();
-
-        for balance in self.snapshot.mst.root().balances.iter() {
-            let fp_str = format!("{:?}", balance);
-            root_sums.push(U256::from_str_radix(&fp_str, 16).unwrap());
-        }
-
-        self.signer
-            .submit_commitment(
-                mst_root,
-                root_sums,
-                self.snapshot
-                    .mst
-                    .cryptocurrencies()
-                    .iter()
-                    .map(|cryptocurrency| Cryptocurrency {
-                        name: cryptocurrency.name.clone(),
-                        chain: cryptocurrency.chain.clone(),
-                    })
-                    .collect::<Vec<Cryptocurrency>>()
-                    .as_slice()
-                    .try_into()
-                    .unwrap(),
-                U256::from(self.get_timestamp()),
-            )
-            .await?;
-
         Ok(())
     }
 
-    pub fn get_proof_of_inclusion(
-        &self,
-        user_index: usize,
-    ) -> Result<MstInclusionProof, &'static str>
+    pub fn get_proof_of_inclusion(&self, user_index: u16) -> Result<KZGInclusionProof, &'static str>
     where
-        [(); N_CURRENCIES + 2]: Sized,
+        [(); N_CURRENCIES + 1]: Sized,
     {
+        // Iterate unblinded advice polynomials evaluate balances array
         Ok(self
             .snapshot
-            .generate_proof_of_inclusion(user_index)
+            .generate_proof_of_inclusion(user_index, &self.snapshot.user_data)
             .unwrap())
     }
 }
 
-impl<const LEVELS: usize, const N_CURRENCIES: usize, const N_BYTES: usize>
-    Snapshot<LEVELS, N_CURRENCIES, N_BYTES>
+/// The `Snapshot` struct represents the state of database that contains users balance on holds by Custodians at a specific moment.
+///
+/// # Fields
+///
+/// * `advice_polys`: Composed of the unblinded advice polynomial, `advice_poly`, and the polynomials of blind factors, `advice_blind`.
+/// * `user_balances`: A 2D array of user identity and balances.
+/// * `trusted_setup`: The trusted setup artifacts generated from the `UnivariateGrandSum` circuit.
+///
+/// TODO: make a link to explanation what the advice polynomial expression is.
+pub struct Snapshot<const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize> {
+    advice_polys: AdviceSingle<G1Affine, Coeff>,
+    user_data: [Vec<Fp>; N_POINTS],
+    trusted_setup: (
+        ParamsKZG<Bn256>,
+        ProvingKey<G1Affine>,
+        VerifyingKey<G1Affine>,
+    ),
+}
+
+impl<const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize>
+    Snapshot<N_CURRENCIES, N_POINTS, N_USERS>
 where
     [usize; N_CURRENCIES + 1]: Sized,
-    [usize; N_CURRENCIES + 2]: Sized,
 {
     pub fn new(
-        mst: Box<dyn Tree<N_CURRENCIES, N_BYTES>>,
+        advice_polys: AdviceSingle<G1Affine, Coeff>,
+        user_balances: [Vec<Fp>; N_POINTS],
         params_path: &str,
-    ) -> Result<Snapshot<LEVELS, N_CURRENCIES, N_BYTES>, Box<dyn std::error::Error>> {
-        let mst_inclusion_circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init_empty();
+    ) -> Result<Snapshot<N_CURRENCIES, N_POINTS, N_USERS>, Box<dyn Error>> {
+        let univariant_grand_sum_circuit: UnivariateGrandSum<N_USERS, N_CURRENCIES> =
+            UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
 
         // get k from ptau file name
-        let parts: Vec<&str> = params_path.split("-").collect();
+        let parts: Vec<&str> = params_path.split('-').collect();
         let last_part = parts.last().unwrap();
         let k = last_part.parse::<u32>().unwrap();
 
-        let mst_inclusion_setup_artifacts: SetupArtifacts =
-            generate_setup_artifacts(k, Some(params_path), mst_inclusion_circuit).unwrap();
+        let univariant_grand_sum_setup_artifcats =
+            generate_setup_artifacts(k, Some(params_path), &univariant_grand_sum_circuit).unwrap();
 
         Ok(Snapshot {
-            mst,
-            trusted_setup: mst_inclusion_setup_artifacts,
+            advice_polys,
+            user_data: user_balances,
+            trusted_setup: univariant_grand_sum_setup_artifcats,
         })
     }
 
     pub fn generate_proof_of_inclusion(
         &self,
-        user_index: usize,
-    ) -> Result<MstInclusionProof, &'static str>
+        user_index: u16,
+        user_data: &[Vec<Fp>; N_POINTS],
+    ) -> Result<KZGInclusionProof, &'static str>
     where
-        [(); N_CURRENCIES + 2]: Sized,
+        [(); N_CURRENCIES + 1]: Sized, // TODO: check is this necessary to compile?
     {
-        let merkle_proof = self.mst.generate_proof(user_index).unwrap();
-        let circuit = MstInclusionCircuit::<LEVELS, N_CURRENCIES, N_BYTES>::init(merkle_proof);
+        let (params, _, vk) = &self.trusted_setup;
+        let omega: halo2_proofs::halo2curves::grumpkin::Fq = vk.get_domain().get_omega();
 
-        // Currently, default manner of generating a inclusion proof for solidity-verifier.
-        let calldata = gen_proof_solidity_calldata(
-            &self.trusted_setup.0,
-            &self.trusted_setup.1,
-            circuit.clone(),
-        );
+        let column_range = 0..N_CURRENCIES + 1;
+        let mut opening_proofs = Vec::new();
+        for column_index in column_range {
+            let f_poly = self.advice_polys.advice_polys.get(column_index).unwrap();
+            let kzg_commitment = commit_kzg(&params, f_poly);
 
-        Ok(MstInclusionProof {
-            proof_calldata: calldata.0,
-            public_inputs: calldata.1,
+            let challenge = omega.pow_vartime(&[user_index as u64]);
+            let z = user_data[column_index][user_index as usize];
+            let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
+                &params,
+                vk.get_domain(),
+                f_poly,
+                challenge,
+                z,
+            );
+
+            assert!(
+                verify_kzg_proof(&params, kzg_commitment, kzg_proof, &challenge, &z),
+                "KZG proof verification failed for user {}",
+                user_index
+            );
+
+            // Convert to affine point and serialize to bytes
+            let kzg_proof_affine = kzg_proof.to_affine();
+            let mut kzg_proof_affine_x = kzg_proof_affine.x.to_bytes();
+            let mut kzg_proof_affine_y = kzg_proof_affine.y.to_bytes();
+            kzg_proof_affine_x.reverse();
+            kzg_proof_affine_y.reverse();
+
+            opening_proofs.push([kzg_proof_affine_x, kzg_proof_affine_y].concat());
+        }
+
+        Ok(KZGInclusionProof {
+            proof_calldata: Bytes::from(opening_proofs.concat()),
+            public_inputs: Vec::<U256>::new(),
         })
     }
 }

@@ -2,4 +2,6 @@
 pub mod apis;
 pub mod contracts;
 pub mod tests;
-pub use summa_solvency::merkle_sum_tree;
+
+// TODO: Check necessary of re-exported modules
+// pub use summa_solvency::*;
