@@ -113,7 +113,7 @@ describe("Summa Contract", () => {
       ).to.be.revertedWith("Invalid balance byte range");
     });
 
-    it("should not deploy with invalid snark verifier key", async () => {
+    it("should not deploy with invalid snark verifier", async () => {
       const verifyingKey = await ethers.deployContract(
         "src/VerifyingKey.sol:Halo2VerifyingKey"
       );
@@ -124,7 +124,7 @@ describe("Summa Contract", () => {
           ethers.constants.AddressZero,
           ["ETH", "BTC"],
           ["ETH", "BTC"],
-          0, // Invalid byte range
+          8,
         ])
       ).to.be.revertedWith("Invalid polynomial encoding verifier address");
     });
@@ -141,7 +141,7 @@ describe("Summa Contract", () => {
           snarkVerifier.address,
           ["ETH", "BTC"],
           ["ETH", "BTC"],
-          0, // Invalid byte range
+          8,
         ])
       ).to.be.revertedWith("Invalid verifying key address");
     });
@@ -163,7 +163,7 @@ describe("Summa Contract", () => {
           snarkVerifier.address,
           ["ETH", "BTC"],
           ["ETH", "BTC"],
-          0, // Invalid byte range
+          8,
         ])
       ).to.be.revertedWith(
         "The number of cryptocurrencies does not correspond to the verifying key"
