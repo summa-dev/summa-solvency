@@ -38,7 +38,7 @@ contract Summa is Ownable {
     SummaConfig public config;
 
     // Verification key contract address
-    address public immutable verificationKey;
+    address public immutable verifyingKey;
 
     // List of all address ownership proofs submitted by the CEX
     AddressOwnershipProof[] public addressOwnershipProofs;
@@ -60,18 +60,23 @@ contract Summa is Ownable {
         bytes proof
     );
 
+    /**
+     * Summa contract
+     * @param _verifyingKey The address of the verification key contract
+     * @param _polynomialEncodingVerifier the address of the polynomial encoding zkSNARK verifier
+     * @param cryptocurrencyNames the names of the cryptocurrencies whose balances are encoded in the polynomials
+     * @param cryptocurrencyChains the chain names of the cryptocurrencies whose balances are encoded in the polynomials
+     * @param balanceByteRange maximum accepted byte range for the balance of a cryptocurrency
+     */
     constructor(
-        address _verificationKey,
+        address _verifyingKey,
         IVerifier _polynomialEncodingVerifier,
         string[] memory cryptocurrencyNames,
         string[] memory cryptocurrencyChains,
         uint8 balanceByteRange
     ) {
-        require(
-            _verificationKey != address(0),
-            "Invalid verifying key address"
-        );
-        verificationKey = _verificationKey;
+        require(_verifyingKey != address(0), "Invalid verifying key address");
+        verifyingKey = _verifyingKey;
         require(
             cryptocurrencyNames.length == cryptocurrencyChains.length,
             "Cryptocurrency names and chains number mismatch"
@@ -85,17 +90,17 @@ contract Summa is Ownable {
         }
         require(
             validateVKPermutationsLength(
-                _verificationKey,
-                cryptocurrencyNames.length
+                _verifyingKey,
+                cryptocurrencyNames.length,
+                balanceByteRange
             ),
-            "The number of cryptocurrencies does not correspond to the verifying key"
+            "The config parameters do not correspond to the verifying key"
         );
         require(
             address(_polynomialEncodingVerifier) != address(0),
             "Invalid polynomial encoding verifier address"
         );
         polynomialEncodingVerifier = _polynomialEncodingVerifier;
-        require(balanceByteRange > 0, "Invalid balance byte range");
         config = SummaConfig(
             cryptocurrencyNames,
             cryptocurrencyChains,
@@ -111,11 +116,14 @@ contract Summa is Ownable {
      */
     function validateVKPermutationsLength(
         address vkContract,
-        uint256 numberOfCurrencies
+        uint256 numberOfCurrencies,
+        uint8 balanceByteRange
     ) internal view returns (bool isValid) {
-        // The number of permutations is 2 + 4 * numberOfCurrencies because of the circuit structure:
-        // 1 per instance column, 1 per constant column (range check) and 4 per range check columns times the number of currencies
-        uint256 numPermutations = 2 + 4 * numberOfCurrencies;
+        // The number of permutations is 2 + (balanceByteRange/2) * numberOfCurrencies because of the circuit structure:
+        // 1 per instance column, 1 per constant column (range check) and balanceByteRange/2 per range check columns times the number of currencies
+        uint256 numPermutations = 2 +
+            (balanceByteRange / 2) *
+            numberOfCurrencies;
 
         uint256 startOffsetForPermutations = 0x2e0; // The value can be observed in the VerificationKey contract, the offset is pointing after all the parameters and the fixed column commitment
 
@@ -196,11 +204,7 @@ contract Summa is Ownable {
         uint[] memory args = new uint[](1);
         args[0] = 1; // Workaround to satisfy the verifier (TODO remove after https://github.com/summa-dev/halo2-solidity-verifier/issues/1 is resolved)
         require(
-            polynomialEncodingVerifier.verifyProof(
-                verificationKey,
-                proof,
-                args
-            ),
+            polynomialEncodingVerifier.verifyProof(verifyingKey, proof, args),
             "Invalid proof"
         );
         // TODO slice the proof to get the ID and balance commitments

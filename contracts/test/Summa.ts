@@ -110,7 +110,9 @@ describe("Summa Contract", () => {
           ["ETH", "BTC"],
           0, // Invalid byte range
         ])
-      ).to.be.revertedWith("Invalid balance byte range");
+      ).to.be.revertedWith(
+        "The config parameters do not correspond to the verifying key"
+      );
     });
 
     it("should not deploy with invalid snark verifier", async () => {
@@ -166,7 +168,7 @@ describe("Summa Contract", () => {
           8,
         ])
       ).to.be.revertedWith(
-        "The number of cryptocurrencies does not correspond to the verifying key"
+        "The config parameters do not correspond to the verifying key"
       );
     });
   });
