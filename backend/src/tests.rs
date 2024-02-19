@@ -175,7 +175,7 @@ mod test {
         let univariate_grand_sum_circuit =
             UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
-        let (params, pk, _) =
+        let (params, pk, vk) =
             generate_setup_artifacts(K, None, &univariate_grand_sum_circuit).unwrap();
 
         // Create a proof
@@ -188,8 +188,9 @@ mod test {
         );
 
         let mut round_one =
-            Round::<2, 3, 16>::new(&signer, advice_polys.clone(), params_path, 1).unwrap();
-        let mut round_two = Round::<2, 3, 16>::new(&signer, advice_polys, params_path, 2).unwrap();
+            Round::<2, 3, 16>::new(&signer, advice_polys.clone(), params.clone(), vk.clone(), 1)
+                .unwrap();
+        let mut round_two = Round::<2, 3, 16>::new(&signer, advice_polys, params, vk, 2).unwrap();
 
         // Checking block number before sending transaction of liability commitment
         let outer_provider: Provider<Http> = Provider::try_from(anvil.endpoint().as_str())?;
@@ -271,7 +272,7 @@ mod test {
         let univariate_grand_sum_circuit =
             UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
-        let (params, pk, _) =
+        let (params, pk, vk) =
             generate_setup_artifacts(K, None, &univariate_grand_sum_circuit).unwrap();
 
         // Create a proof
@@ -284,7 +285,7 @@ mod test {
         );
 
         let mut round =
-            Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(&signer, advice_polys, params_path, 1)
+            Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(&signer, advice_polys, params, vk, 1)
                 .unwrap();
 
         // TODO: fix checking inclusion proof after Summa contract is concrete

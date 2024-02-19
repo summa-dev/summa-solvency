@@ -74,7 +74,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let univariate_grand_sum_circuit =
         UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
-    let (params, pk, _) = generate_setup_artifacts(K, None, &univariate_grand_sum_circuit).unwrap();
+    let (params, pk, vk) =
+        generate_setup_artifacts(K, None, &univariate_grand_sum_circuit).unwrap();
 
     // Create a proof
     let instances = vec![Fp::one(); 1]; // This instance is necessary to verify proof on solidity verifier.
@@ -88,7 +89,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
     let mut round =
-        Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(&signer, advice_polys, params_path, 1)
+        Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(&signer, advice_polys, params, vk, 1)
             .unwrap();
 
     // // Sends the commitment, which should ideally complete without errors.

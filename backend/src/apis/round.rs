@@ -2,10 +2,10 @@ use ethers::types::{Bytes, U256};
 use halo2_proofs::{
     arithmetic::{best_fft, Field},
     halo2curves::{
-        bn256::{Bn256, Fr as Fp, G1Affine},
+        bn256::{Bn256, G1Affine},
         group::Curve,
     },
-    plonk::{AdviceSingle, ProvingKey, VerifyingKey},
+    plonk::{AdviceSingle, VerifyingKey},
     poly::{
         kzg::commitment::{KZGCommitmentScheme, ParamsKZG},
         Coeff,
@@ -15,14 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 
 use crate::contracts::signer::SummaSigner;
-use summa_solvency::{
-    circuits::{univariate_grand_sum::UnivariateGrandSum, utils::generate_setup_artifacts},
-    entry::Entry,
-    utils::{
-        amortized_kzg::{commit_kzg, create_naive_kzg_proof, verify_kzg_proof},
-        big_uint_to_fp,
-    },
-};
+use summa_solvency::utils::amortized_kzg::{commit_kzg, create_naive_kzg_proof, verify_kzg_proof};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KZGInclusionProof {
@@ -56,6 +49,7 @@ impl KZGInclusionProof {
 ///   for the operations carried out in this phase of the protocol.
 /// * `snapshot`: A `Snapshot` struct capturing the round's state, including user identities and balances.
 /// * `signer`: A reference to a `SummaSigner`, the entity responsible for signing transactions with the Summa contract in this round.
+///
 pub struct Round<'a, const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize> {
     timestamp: u64,
     snapshot: Snapshot<N_CURRENCIES, N_POINTS, N_USERS>,
@@ -70,13 +64,18 @@ where
     pub fn new<'a>(
         signer: &'a SummaSigner,
         advice_polys: AdviceSingle<G1Affine, Coeff>,
-        params_path: &str,
+        params: ParamsKZG<Bn256>,
+        verifying_key: VerifyingKey<G1Affine>,
         timestamp: u64,
     ) -> Result<Round<'a, N_CURRENCIES, N_POINTS, N_USERS>, Box<dyn Error>> {
         Ok(Round {
             timestamp,
-            snapshot: Snapshot::<N_CURRENCIES, N_POINTS, N_USERS>::new(advice_polys, params_path)
-                .unwrap(),
+            snapshot: Snapshot::<N_CURRENCIES, N_POINTS, N_USERS>::new(
+                advice_polys,
+                params,
+                verifying_key,
+            )
+            .unwrap(),
             signer: &signer,
         })
     }
@@ -110,16 +109,13 @@ where
 /// # Fields
 ///
 /// * `advice_polys`: Composed of the unblinded advice polynomial, `advice_poly`, and the polynomials of blind factors, `advice_blind`.
-/// * `user_balances`: A 2D array of user identity and balances.
-/// * `trusted_setup`: The trusted setup artifacts generated from the `UnivariateGrandSum` circuit.
+/// * `params`: The parameters for the KZG commitment scheme.
+/// * `verifying_key`: The verifying key for getting domains, which is used for generating inclusion proofs.
 ///
 pub struct Snapshot<const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize> {
     advice_polys: AdviceSingle<G1Affine, Coeff>,
-    trusted_setup: (
-        ParamsKZG<Bn256>,
-        ProvingKey<G1Affine>,
-        VerifyingKey<G1Affine>,
-    ),
+    params: ParamsKZG<Bn256>,
+    verifying_key: VerifyingKey<G1Affine>,
 }
 
 impl<const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize>
@@ -129,22 +125,13 @@ where
 {
     pub fn new(
         advice_polys: AdviceSingle<G1Affine, Coeff>,
-        params_path: &str,
+        params: ParamsKZG<Bn256>,
+        verifying_key: VerifyingKey<G1Affine>,
     ) -> Result<Snapshot<N_CURRENCIES, N_POINTS, N_USERS>, Box<dyn Error>> {
-        let univariate_grand_sum_circuit: UnivariateGrandSum<N_USERS, N_CURRENCIES> =
-            UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
-
-        // get k from ptau file name
-        let parts: Vec<&str> = params_path.split('-').collect();
-        let last_part = parts.last().unwrap();
-        let k = last_part.parse::<u32>().unwrap();
-
-        let univariate_grand_sum_setup_artifacts =
-            generate_setup_artifacts(k, Some(params_path), &univariate_grand_sum_circuit).unwrap();
-
         Ok(Snapshot {
             advice_polys,
-            trusted_setup: univariate_grand_sum_setup_artifacts,
+            params,
+            verifying_key,
         })
     }
 
@@ -155,8 +142,8 @@ where
     where
         [(); N_CURRENCIES + 1]: Sized, // TODO: check is this necessary to compile?
     {
-        let (params, _, vk) = &self.trusted_setup;
-        let omega: halo2_proofs::halo2curves::grumpkin::Fq = vk.get_domain().get_omega();
+        let domain = self.verifying_key.get_domain();
+        let omega: halo2_proofs::halo2curves::grumpkin::Fq = domain.get_omega();
 
         let column_range = 0..N_CURRENCIES + 1;
         let mut opening_proofs = Vec::new();
@@ -164,7 +151,7 @@ where
 
         for column_index in column_range {
             let f_poly = self.advice_polys.advice_polys.get(column_index).unwrap();
-            let kzg_commitment = commit_kzg(&params, f_poly);
+            let kzg_commitment = commit_kzg(&self.params, f_poly);
 
             // Do iDFT for getting value of polynomial
             let mut vec_f_poly = f_poly.to_vec();
@@ -172,15 +159,15 @@ where
             let z = vec_f_poly[user_index];
 
             let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
-                &params,
-                vk.get_domain(),
+                &self.params,
+                domain,
                 f_poly,
                 challenge,
                 z,
             );
 
             assert!(
-                verify_kzg_proof(&params, kzg_commitment, kzg_proof, &challenge, &z),
+                verify_kzg_proof(&self.params, kzg_commitment, kzg_proof, &challenge, &z),
                 "KZG proof verification failed for user {}",
                 user_index
             );
