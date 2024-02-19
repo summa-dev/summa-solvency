@@ -139,12 +139,12 @@ where
         let last_part = parts.last().unwrap();
         let k = last_part.parse::<u32>().unwrap();
 
-        let univariant_grand_sum_setup_artifcats =
+        let univariate_grand_sum_setup_artifacts =
             generate_setup_artifacts(k, Some(params_path), &univariate_grand_sum_circuit).unwrap();
 
         Ok(Snapshot {
             advice_polys,
-            trusted_setup: univariant_grand_sum_setup_artifcats,
+            trusted_setup: univariate_grand_sum_setup_artifacts,
         })
     }
 
