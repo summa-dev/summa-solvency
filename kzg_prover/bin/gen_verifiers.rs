@@ -1,6 +1,5 @@
 #![feature(generic_const_exprs)]
 
-use halo2_proofs::arithmetic::Field;
 use halo2_proofs::{
     halo2curves::bn256::Fr as Fp,
     poly::kzg::{
@@ -13,17 +12,13 @@ use halo2_solidity_verifier::{
     compile_solidity, encode_calldata, BatchOpenScheme::Bdfg21, Evm, Keccak256Transcript,
     SolidityGenerator,
 };
-use num_bigint::BigUint;
 use prelude::*;
 use rand::rngs::OsRng;
 use summa_solvency::{
-    circuits::{
-        univariate_grand_sum::UnivariateGrandSum,
-        utils::{generate_setup_artifacts, open_grand_sums, verify_grand_sum_openings},
-    },
+    circuits::{univariate_grand_sum::UnivariateGrandSum, utils::generate_setup_artifacts},
     cryptocurrency::Cryptocurrency,
     entry::Entry,
-    utils::{big_uint_to_fp, parse_csv_to_entries},
+    utils::parse_csv_to_entries,
 };
 
 const K: u32 = 17;
@@ -106,12 +101,12 @@ fn main() {
 
     // If successfuly verified, the verifier contract will return 1.
     assert_eq!(output, [vec![0; 31], vec![1]].concat());
-    save_solidity("snark_verifier.sol", &verifier_solidity_fixed);
-    save_solidity("verifying_key.sol", &vk_verifier);
+    save_solidity("SnarkVerifier.sol", &verifier_solidity_fixed);
+    save_solidity("VerifyingKey.sol", &vk_verifier);
 }
 
 fn save_solidity(name: impl AsRef<str>, solidity: &str) {
-    const DIR_GENERATED: &str = "./generated";
+    const DIR_GENERATED: &str = "../contracts/src";
 
     create_dir_all(DIR_GENERATED).unwrap();
     File::create(format!("{DIR_GENERATED}/{}", name.as_ref()))

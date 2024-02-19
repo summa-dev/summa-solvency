@@ -106,25 +106,26 @@ impl SummaSigner {
 
     pub async fn submit_commitment(
         &self,
-        mst_root: U256,
-        root_sums: Vec<U256>,
+        commitments: Vec<U256>,
+        grand_sums: Vec<U256>,
         cryptocurrencies: Vec<Cryptocurrency>,
         timestamp: U256,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let lock_guard = self.nonce_lock.lock().await;
 
-        let submit_liability_commitment = &self.summa_contract.submit_commitment(
-            mst_root,
-            root_sums,
-            cryptocurrencies,
-            timestamp,
-        );
+        // TODO: fix this after Summa contract is concrete
+        // let submit_liability_commitment = &self.summa_contract.submit_commitment(
+        //     mst_root,
+        //     root_sums,
+        //     cryptocurrencies,
+        //     timestamp,
+        // );
 
-        // To prevent nonce collision, we lock the nonce before sending the transaction
-        let tx = submit_liability_commitment.send().await?;
+        // // To prevent nonce collision, we lock the nonce before sending the transaction
+        // let tx = submit_liability_commitment.send().await?;
 
-        // Wait for the pending transaction to be mined
-        tx.await?;
+        // // Wait for the pending transaction to be mined
+        // tx.await?;
 
         drop(lock_guard);
 
