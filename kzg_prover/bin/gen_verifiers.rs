@@ -1,6 +1,5 @@
 #![feature(generic_const_exprs)]
 
-use halo2_proofs::arithmetic::Field;
 use halo2_proofs::{
     halo2curves::bn256::Fr as Fp,
     poly::kzg::{
@@ -13,17 +12,16 @@ use halo2_solidity_verifier::{
     compile_solidity, encode_calldata, BatchOpenScheme::Bdfg21, Evm, Keccak256Transcript,
     SolidityGenerator,
 };
-use num_bigint::BigUint;
 use prelude::*;
 use rand::rngs::OsRng;
 use summa_solvency::{
     circuits::{
-        univariate_grand_sum::UnivariateGrandSum,
-        utils::{generate_setup_artifacts, open_grand_sums, verify_grand_sum_openings},
+        univariate_grand_sum::{UnivariateGrandSum, UnivariateGrandSumConfig},
+        utils::generate_setup_artifacts,
     },
     cryptocurrency::Cryptocurrency,
     entry::Entry,
-    utils::{big_uint_to_fp, parse_csv_to_entries},
+    utils::parse_csv_to_entries,
 };
 
 const K: u32 = 17;
@@ -32,7 +30,11 @@ const N_USERS: usize = 16;
 
 fn main() {
     // In order to generate the verifier we create the circuit using the init_empty() method, which means that the circuit is not initialized with any data.
-    let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
+    let circuit = UnivariateGrandSum::<
+        N_USERS,
+        N_CURRENCIES,
+        UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
+    >::init_empty();
 
     let (params, pk, _) =
         generate_setup_artifacts(K, Some("../backend/ptau/hermez-raw-17"), &circuit).unwrap();
@@ -44,8 +46,11 @@ fn main() {
     parse_csv_to_entries::<&str, N_CURRENCIES>("../csv/entry_16.csv", &mut entries, &mut cryptos)
         .unwrap();
 
-    let univariate_grand_sum_circuit =
-        UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+    let univariate_grand_sum_circuit = UnivariateGrandSum::<
+        N_USERS,
+        N_CURRENCIES,
+        UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
+    >::init(entries.to_vec());
 
     // 1. Generate Snark Verifier Contract and Verification Key
     //

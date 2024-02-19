@@ -6,10 +6,11 @@ use rand::{rngs::OsRng, Rng};
 
 use summa_solvency::{
     circuits::{
-        univariate_grand_sum::UnivariateGrandSum,
+        univariate_grand_sum::{CircuitConfig, UnivariateGrandSum, UnivariateGrandSumConfig},
         utils::{
-            full_prover, generate_setup_artifacts, open_grand_sums, open_grand_sums_gwc,
-            open_user_points, open_user_points_amortized, verify_grand_sum_openings,
+            compute_h_parallel, full_prover, generate_setup_artifacts,
+            open_all_user_points_amortized, open_grand_sums, open_grand_sums_gwc,
+            open_single_user_point_amortized, open_user_points, verify_grand_sum_openings,
             verify_user_inclusion,
         },
     },
@@ -18,7 +19,13 @@ use summa_solvency::{
     utils::{big_uint_to_fp, parse_csv_to_entries},
 };
 
-fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, const N_POINTS: usize>(
+fn bench_kzg<
+    const K: u32,
+    const N_USERS: usize,
+    const N_CURRENCIES: usize,
+    const N_POINTS: usize,
+    CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
+>(
     name: &str,
     csv_path: &str,
 ) where
@@ -27,14 +34,22 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
     let mut c = Criterion::default().sample_size(10);
 
     // Initialize an empty circuit
-    let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
+    let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES, CONFIG>::init_empty();
     let (params, pk, vk) = generate_setup_artifacts(K, None, &circuit).unwrap();
 
     let range_check_bench_name = format!("<{}> range check", name);
     let opening_grand_sum_bench_name = format!("<{}> opening grand sum", name);
-    let opening_user_bench_name = format!("<{}> opening user inclusion", name);
-    let amortized_opening_user_bench_name =
-        format!("<{}> amortized opening all 2^{} user inclusions", name, K);
+    let opening_user_bench_name = format!("<{}> opening single user inclusion", name);
+    let calculate_h_bench_name =
+        format!("<{}> calculating h(X) for the amortized KZG approach", name);
+    let amortized_opening_all_bench_name = format!(
+        "<{}> opening all 2^{} user inclusions using the amortized approach",
+        name, K
+    );
+    let amortized_opening_user_bench_name = format!(
+        "<{}> opening single user inclusion using the amortized approach",
+        name
+    );
     let verifying_grand_sum_bench_name = format!("<{}> verifying grand sum", name);
     let verifying_user_bench_name = format!("<{}> verifying user inclusion", name);
 
@@ -51,7 +66,7 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
         }
     }
 
-    let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+    let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES, CONFIG>::init(entries.to_vec());
 
     c.bench_function(&range_check_bench_name, |b| {
         b.iter_batched(
@@ -138,12 +153,30 @@ fn bench_kzg<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize, cons
         );
     });
 
-    c.bench_function(&amortized_opening_user_bench_name, |b| {
+    c.bench_function(&calculate_h_bench_name, |b| {
         b.iter_batched(
             || (0..N_CURRENCIES + 1),
-            |column_range| {
-                open_user_points_amortized(&advice_polys.advice_polys, &params, column_range, omega)
-            },
+            |column_range| compute_h_parallel(&advice_polys.advice_polys, &params, column_range),
+            criterion::BatchSize::SmallInput,
+        );
+    });
+
+    let h_vectors = compute_h_parallel(&advice_polys.advice_polys, &params, 0..N_CURRENCIES + 1);
+    let vec_of_slices = h_vectors.iter().map(|v| v.as_slice()).collect::<Vec<_>>();
+    let h_slices = vec_of_slices.as_slice();
+
+    c.bench_function(&amortized_opening_all_bench_name, |b| {
+        b.iter_batched(
+            || {},
+            |_| open_all_user_points_amortized(h_slices, omega),
+            criterion::BatchSize::SmallInput,
+        );
+    });
+
+    c.bench_function(&amortized_opening_user_bench_name, |b| {
+        b.iter_batched(
+            || {},
+            |_| open_single_user_point_amortized(h_slices, &params, omega),
             criterion::BatchSize::SmallInput,
         );
     });
@@ -231,7 +264,13 @@ fn criterion_benchmark(_c: &mut Criterion) {
     {
         const K: u32 = 18;
         const N_USERS: usize = 16;
-        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS>(
+        bench_kzg::<
+            K,
+            N_USERS,
+            N_CURRENCIES,
+            N_POINTS,
+            UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
+        >(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
             format!("../csv/entry_{N_USERS}.csv").as_str(),
         );
@@ -239,11 +278,50 @@ fn criterion_benchmark(_c: &mut Criterion) {
     {
         const K: u32 = 17;
         const N_USERS: usize = 64;
-        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS>(
+        bench_kzg::<
+            K,
+            N_USERS,
+            N_CURRENCIES,
+            N_POINTS,
+            UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
+        >(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
             format!("../csv/entry_{N_USERS}.csv").as_str(),
         );
     }
+    // Use the following benchmarks for quick evaluation/prototyping (no range check)
+    // {
+    //     const K: u32 = 9;
+    //     const N_USERS: usize = 64;
+    //     bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
+    //     );
+    // }
+    // {
+    //     const K: u32 = 10;
+    //     const N_USERS: usize = 64;
+    //     bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
+    //     );
+    // }
+    // {
+    //     const K: u32 = 11;
+    //     const N_USERS: usize = 64;
+    //     bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
+    //     );
+    // }
+    // {
+    //     const K: u32 = 12;
+    //     const N_USERS: usize = 64;
+    //     bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
+    //     );
+    // }
 }
 
 criterion_group!(benches, criterion_benchmark);

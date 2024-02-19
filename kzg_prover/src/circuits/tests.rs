@@ -1,23 +1,23 @@
 #[cfg(test)]
 mod test {
 
-    use crate::circuits::univariate_grand_sum::UnivariateGrandSum;
+    use crate::circuits::univariate_grand_sum::{
+        CircuitConfig, NoRangeCheckConfig, UnivariateGrandSum, UnivariateGrandSumConfig,
+    };
     use crate::circuits::utils::{
-        full_prover, full_verifier, generate_setup_artifacts, open_grand_sums, open_user_points,
-        verify_grand_sum_openings, verify_user_inclusion,
+        compute_h_parallel, full_prover, full_verifier, generate_setup_artifacts,
+        open_all_user_points_amortized, open_grand_sums, open_single_user_point_amortized,
+        open_user_points, verify_grand_sum_openings, verify_user_inclusion,
     };
     use crate::cryptocurrency::Cryptocurrency;
     use crate::entry::Entry;
-    use crate::utils::amortized_kzg::{
-        commit_kzg, compute_h, create_naive_kzg_proof, verify_kzg_proof,
-    };
+    use crate::utils::amortized_kzg::{commit_kzg, create_naive_kzg_proof, verify_kzg_proof};
     use crate::utils::{big_uint_to_fp, parse_csv_to_entries};
-    use halo2_proofs::arithmetic::{best_fft, best_multiexp, parallelize, Field};
+    use ark_std::{end_timer, start_timer};
+    use halo2_proofs::arithmetic::Field;
     use halo2_proofs::dev::{FailureLocation, MockProver, VerifyFailure};
     use halo2_proofs::halo2curves::bn256::{Bn256, Fr as Fp, G1Affine};
-    use halo2_proofs::halo2curves::group::Curve;
     use halo2_proofs::plonk::{Any, ProvingKey, VerifyingKey};
-    use halo2_proofs::poly::commitment::Params;
     use halo2_proofs::poly::kzg::commitment::{KZGCommitmentScheme, ParamsKZG};
     use num_bigint::BigUint;
     use rand::rngs::OsRng;
@@ -32,7 +32,8 @@ mod test {
     fn test_amortized_kzg() {
         let path = "../csv/entry_16.csv";
 
-        let (entries, circuit, pk, _, params) = set_up::<N_USERS, N_CURRENCIES>(path);
+        let (entries, circuit, pk, _, params) =
+            set_up::<9, N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(path);
 
         let (_, advice_polys, omega) = full_prover(&params, &pk, circuit.clone(), &[vec![]]);
 
@@ -83,33 +84,28 @@ mod test {
         // Open the polynomial at the user index (challenge) using the amortized KZG
 
         // Compute the h vector
-        let mut h = compute_h(&params, f_poly);
+        let timer = start_timer!(|| "Computing h");
+        let h = &compute_h_parallel(&[f_poly.clone()], &params, 0..1)[0];
+        end_timer!(timer);
 
         // Demonstrate a single-challenge opening using the calculated h (FK23, eq. 13)
-        let mut challenge_powers = vec![Fp::one(); params.n() as usize];
-        {
-            parallelize(&mut challenge_powers, |o, start| {
-                let mut cur = challenge.pow_vartime([start as u64]);
-                for v in o.iter_mut() {
-                    *v = cur;
-                    cur *= &challenge;
-                }
-            })
-        }
-        let h_affine = h.iter().map(|x| x.to_affine()).collect::<Vec<G1Affine>>();
-        let single_amortized_proof = best_multiexp(&challenge_powers, &h_affine);
+        let timer = start_timer!(|| "Computing single amortized proof");
+        let single_amortized_proof = &open_single_user_point_amortized(&[h], &params, challenge)[0];
+        end_timer!(timer);
 
         assert!(
-            single_amortized_proof == kzg_proof,
+            *single_amortized_proof == kzg_proof,
             "Single challenge amortized KZG proof is not the same as the naive KZG proof"
         );
 
         // Compute all openings to the polynomial at once using the amortized KZG approach ("CT" in FK23)
-        best_fft(&mut h, omega, f_poly.len().trailing_zeros());
+        let timer = start_timer!(|| "Computing all amortized proofs");
+        let amortized_openings = &open_all_user_points_amortized(&[h], omega)[0];
+        end_timer!(timer);
 
         // Check that the amortized opening proof for the user is the same as the naive KZG opening proof
         assert!(
-            h[random_user_index] == kzg_proof,
+            amortized_openings[random_user_index] == kzg_proof,
             "Amortized KZG proof for user {} is not the same as the naive KZG proof",
             random_user_index
         );
@@ -119,7 +115,7 @@ mod test {
             verify_kzg_proof(
                 &params,
                 kzg_commitment,
-                h[random_user_index],
+                amortized_openings[random_user_index],
                 &challenge,
                 &big_uint_to_fp(&entries[random_user_index].balances()[0]),
             ),
@@ -136,7 +132,11 @@ mod test {
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
         parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
 
-        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+        let circuit = UnivariateGrandSum::<
+            N_USERS,
+            N_CURRENCIES,
+            UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
+        >::init(entries.to_vec());
 
         let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
 
@@ -147,7 +147,10 @@ mod test {
     fn test_valid_univariate_grand_sum_full_prover() {
         let path = "../csv/entry_16.csv";
 
-        let (entries, circuit, pk, vk, params) = set_up::<N_USERS, N_CURRENCIES>(path);
+        let (entries, circuit, pk, vk, params) =
+            set_up::<K, N_USERS, N_CURRENCIES, UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>>(
+                path,
+            );
 
         // Calculate total for all entry columns
         let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
@@ -179,6 +182,7 @@ mod test {
             balance_column_range,
             csv_total
                 .iter()
+                // The inversion represents the division by the polynomial length (grand total is equal to the constant coefficient times the number of points)
                 .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
                 .collect::<Vec<Fp>>()
                 .as_slice(),
@@ -266,7 +270,10 @@ mod test {
     fn test_invalid_omega_univariate_grand_sum_proof() {
         let path = "../csv/entry_16.csv";
 
-        let (entries, circuit, pk, vk, params) = set_up::<N_USERS, N_CURRENCIES>(path);
+        let (entries, circuit, pk, vk, params) =
+            set_up::<K, N_USERS, N_CURRENCIES, UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>>(
+                path,
+            );
 
         // 1. Proving phase
         // The Custodian generates the ZK proof
@@ -324,7 +331,10 @@ mod test {
     fn test_invalid_poly_length_univariate_grand_sum_full_prover() {
         let path = "../csv/entry_16.csv";
 
-        let (entries, circuit, pk, vk, params) = set_up::<N_USERS, N_CURRENCIES>(path);
+        let (entries, circuit, pk, vk, params) =
+            set_up::<K, N_USERS, N_CURRENCIES, UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>>(
+                path,
+            );
 
         // Calculate total for all entry columns
         let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
@@ -397,7 +407,11 @@ mod test {
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
         parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
 
-        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+        let circuit = UnivariateGrandSum::<
+            N_USERS,
+            N_CURRENCIES,
+            UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
+        >::init(entries.to_vec());
 
         let invalid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
 
@@ -456,11 +470,16 @@ mod test {
             .unwrap();
     }
 
-    fn set_up<const N_USERS: usize, const N_CURRENCIES: usize>(
+    fn set_up<
+        const K: u32,
+        const N_USERS: usize,
+        const N_CURRENCIES: usize,
+        CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
+    >(
         path: &str,
     ) -> (
         Vec<Entry<N_CURRENCIES>>,
-        UnivariateGrandSum<N_USERS, N_CURRENCIES>,
+        UnivariateGrandSum<N_USERS, N_CURRENCIES, CONFIG>,
         ProvingKey<G1Affine>,
         VerifyingKey<G1Affine>,
         ParamsKZG<Bn256>,
@@ -469,7 +488,7 @@ mod test {
         [(); N_CURRENCIES + 1]:,
     {
         // Initialize an empty circuit
-        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
+        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES, CONFIG>::init_empty();
 
         // Generate a universal trusted setup for testing purposes.
         //
@@ -485,7 +504,7 @@ mod test {
 
         parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
 
-        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES, CONFIG>::init(entries.to_vec());
 
         (entries, circuit, pk, vk, params)
     }

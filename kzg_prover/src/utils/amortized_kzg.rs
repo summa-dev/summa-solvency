@@ -11,6 +11,9 @@ use halo2_proofs::{
         Coeff, EvaluationDomain, Polynomial,
     },
 };
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+};
 
 /// Commit to a polynomial using the KZG commitment scheme
 ///
@@ -41,15 +44,15 @@ pub fn compute_h(params: &ParamsKZG<Bn256>, f_poly: &Polynomial<Fp, Coeff>) -> V
     // Double the polynomial length, thus K + 1
     let double_domain = EvaluationDomain::new(1, params.k() + 1);
 
-    let d = f_poly.len(); // Degree of the polynomial
+    let d: usize = f_poly.len(); // Degree of the polynomial
 
-    // Extract s_commitments from ParamsKZG and extend with neutral elements
-    let mut s_commitments_reversed = params
+    // Extract s_commitments from ParamsKZG, reverse and extend with neutral elements
+    let s_commitments_reversed = params
         .get_g()
-        .iter()
+        .par_iter()
+        .rev()
         .map(PrimeCurveAffine::to_curve)
         .collect::<Vec<_>>();
-    s_commitments_reversed.reverse();
 
     let mut y: Vec<G1> = vec![G1::identity(); 2 * d];
     y[..d].copy_from_slice(&s_commitments_reversed[..d]);
@@ -60,13 +63,17 @@ pub fn compute_h(params: &ParamsKZG<Bn256>, f_poly: &Polynomial<Fp, Coeff>) -> V
 
     let nu = double_domain.get_omega(); // 2d-th root of unity
 
-    // Perform the step 1 FFT from FK23, §2.2
-    best_fft(&mut y, nu, (2 * d).trailing_zeros());
-    // Perform the step 2 FFT from FK23, §2.2
-    best_fft(&mut v, nu, (2 * d).trailing_zeros());
+    rayon::join(
+        || best_fft(&mut y, nu, (2 * d).trailing_zeros()), // Perform the step 1 FFT from FK23, §2.2
+        || best_fft(&mut v, nu, (2 * d).trailing_zeros()), // Perform the step 2 FFT from FK23, §2.2
+    );
 
     // Perform the Hadamard product (FK23, §2.2, step 3)
-    let u: Vec<G1> = y.iter().zip(v.iter()).map(|(&y, &v)| y * v).collect();
+    let u: Vec<G1> = y
+        .par_iter()
+        .zip(v.par_iter())
+        .map(|(&y, &v)| y * v)
+        .collect();
 
     let nu_inv = nu.invert().unwrap(); // Inverse of 2d-th root of unity
     let mut h = u;
@@ -75,7 +82,7 @@ pub fn compute_h(params: &ParamsKZG<Bn256>, f_poly: &Polynomial<Fp, Coeff>) -> V
 
     // Scale the result by the size of the vector (part of the iFFT)
     let n_inv = Fp::from(2 * d as u64).invert().unwrap();
-    h.iter_mut().for_each(|h| *h *= n_inv);
+    h.par_iter_mut().map(|h| *h *= n_inv).collect::<Vec<_>>();
 
     // Truncate to get the first d coefficients (FK23, §2.2, step 5)
     h.truncate(d);
