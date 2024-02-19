@@ -87,14 +87,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
-    let mut round = Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(
-        &signer,
-        advice_polys,
-        entries,
-        params_path,
-        1,
-    )
-    .unwrap();
+    let mut round =
+        Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(&signer, advice_polys, params_path, 1)
+            .unwrap();
 
     // // Sends the commitment, which should ideally complete without errors.
     // round.dispatch_commitment().await?;
@@ -104,7 +99,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // 3. Generate Inclusion Proof
     //
     // Generate and export the inclusion proof for the specified user to a JSON file.
-    let inclusion_proof = round.get_proof_of_inclusion(USER_INDEX as u16).unwrap();
+    let inclusion_proof = round.get_proof_of_inclusion(USER_INDEX).unwrap();
 
     let filename = format!("user_{}_proof.json", USER_INDEX);
     let mut file = File::create(filename.clone()).expect("Unable to create file");

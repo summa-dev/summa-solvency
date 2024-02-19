@@ -103,6 +103,7 @@ mod test {
         utils::to_checksum,
     };
     use halo2_proofs::halo2curves::bn256::Fr as Fp;
+    use rand::{rngs::OsRng, Rng};
     use std::{convert::TryFrom, error::Error};
     use tokio::{
         join,
@@ -186,18 +187,9 @@ mod test {
             &[instances.clone()],
         );
 
-        let dummy_entries = vec![Entry::init_empty(); 2];
-
-        let mut round_one = Round::<2, 3, 16>::new(
-            &signer,
-            advice_polys.clone(),
-            dummy_entries.clone(),
-            params_path,
-            1,
-        )
-        .unwrap();
-        let mut round_two =
-            Round::<2, 3, 16>::new(&signer, advice_polys, dummy_entries, params_path, 2).unwrap();
+        let mut round_one =
+            Round::<2, 3, 16>::new(&signer, advice_polys.clone(), params_path, 1).unwrap();
+        let mut round_two = Round::<2, 3, 16>::new(&signer, advice_polys, params_path, 2).unwrap();
 
         // Checking block number before sending transaction of liability commitment
         let outer_provider: Provider<Http> = Provider::try_from(anvil.endpoint().as_str())?;
@@ -291,14 +283,9 @@ mod test {
             &[instances.clone()],
         );
 
-        let mut round = Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(
-            &signer,
-            advice_polys,
-            entries,
-            params_path,
-            1,
-        )
-        .unwrap();
+        let mut round =
+            Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(&signer, advice_polys, params_path, 1)
+                .unwrap();
 
         // TODO: fix checking inclusion proof after Summa contract is concrete
         // let mut liability_commitment_logs = summa_contract
@@ -340,7 +327,9 @@ mod test {
         // );
 
         // Test inclusion proof
-        let inclusion_proof = round.get_proof_of_inclusion(0).unwrap();
+        let user_range: std::ops::Range<usize> = 0..N_USERS;
+        let random_user_index = OsRng.gen_range(user_range) as usize;
+        let inclusion_proof = round.get_proof_of_inclusion(random_user_index).unwrap();
 
         // check inclusion proof is not non
         assert!(inclusion_proof.get_proof().len() > 0);

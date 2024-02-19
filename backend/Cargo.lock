@@ -3205,6 +3205,7 @@ dependencies = [
  "halo2_solidity_verifier",
  "num-bigint",
  "num-traits",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",

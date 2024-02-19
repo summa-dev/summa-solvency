@@ -1,8 +1,10 @@
 use ethers::types::{Bytes, U256};
 use halo2_proofs::{
-    arithmetic::Field,
-    halo2curves::bn256::{Bn256, Fr as Fp, G1Affine},
-    halo2curves::group::Curve,
+    arithmetic::{best_fft, Field},
+    halo2curves::{
+        bn256::{Bn256, Fr as Fp, G1Affine},
+        group::Curve,
+    },
     plonk::{AdviceSingle, ProvingKey, VerifyingKey},
     poly::{
         kzg::commitment::{KZGCommitmentScheme, ParamsKZG},
@@ -68,18 +70,13 @@ where
     pub fn new<'a>(
         signer: &'a SummaSigner,
         advice_polys: AdviceSingle<G1Affine, Coeff>,
-        entries: Vec<Entry<N_CURRENCIES>>,
         params_path: &str,
         timestamp: u64,
     ) -> Result<Round<'a, N_CURRENCIES, N_POINTS, N_USERS>, Box<dyn Error>> {
         Ok(Round {
             timestamp,
-            snapshot: Snapshot::<N_CURRENCIES, N_POINTS, N_USERS>::new(
-                advice_polys,
-                entries,
-                params_path,
-            )
-            .unwrap(),
+            snapshot: Snapshot::<N_CURRENCIES, N_POINTS, N_USERS>::new(advice_polys, params_path)
+                .unwrap(),
             signer: &signer,
         })
     }
@@ -93,14 +90,17 @@ where
         Ok(())
     }
 
-    pub fn get_proof_of_inclusion(&self, user_index: u16) -> Result<KZGInclusionProof, &'static str>
+    pub fn get_proof_of_inclusion(
+        &self,
+        user_index: usize,
+    ) -> Result<KZGInclusionProof, &'static str>
     where
         [(); N_CURRENCIES + 1]: Sized,
     {
         // Iterate unblinded advice polynomials evaluate balances array
         Ok(self
             .snapshot
-            .generate_proof_of_inclusion(user_index, &self.snapshot.entries)
+            .generate_proof_of_inclusion(user_index)
             .unwrap())
     }
 }
@@ -115,7 +115,6 @@ where
 ///
 pub struct Snapshot<const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize> {
     advice_polys: AdviceSingle<G1Affine, Coeff>,
-    entries: Vec<Entry<N_CURRENCIES>>,
     trusted_setup: (
         ParamsKZG<Bn256>,
         ProvingKey<G1Affine>,
@@ -130,7 +129,6 @@ where
 {
     pub fn new(
         advice_polys: AdviceSingle<G1Affine, Coeff>,
-        entries: Vec<Entry<N_CURRENCIES>>,
         params_path: &str,
     ) -> Result<Snapshot<N_CURRENCIES, N_POINTS, N_USERS>, Box<dyn Error>> {
         let univariate_grand_sum_circuit: UnivariateGrandSum<N_USERS, N_CURRENCIES> =
@@ -146,15 +144,13 @@ where
 
         Ok(Snapshot {
             advice_polys,
-            entries,
             trusted_setup: univariant_grand_sum_setup_artifcats,
         })
     }
 
     pub fn generate_proof_of_inclusion(
         &self,
-        user_index: u16,
-        entries: &[Entry<N_CURRENCIES>],
+        user_index: usize,
     ) -> Result<KZGInclusionProof, &'static str>
     where
         [(); N_CURRENCIES + 1]: Sized, // TODO: check is this necessary to compile?
@@ -164,20 +160,16 @@ where
 
         let column_range = 0..N_CURRENCIES + 1;
         let mut opening_proofs = Vec::new();
+        let challenge = omega.pow_vartime([user_index as u64]);
+
         for column_index in column_range {
             let f_poly = self.advice_polys.advice_polys.get(column_index).unwrap();
             let kzg_commitment = commit_kzg(&params, f_poly);
 
-            let challenge = omega.pow_vartime([user_index as u64]);
-
-            let mut z: Fp = Fp::zero();
-            let user_entry = entries.get(user_index as usize).unwrap();
-            if column_index == 0 {
-                z = big_uint_to_fp(user_entry.username_as_big_uint());
-            } else {
-                let user_balances = user_entry.balances();
-                z = big_uint_to_fp(user_balances.get(column_index - 1).unwrap());
-            }
+            // Do iDFT for getting value of polynomial
+            let mut vec_f_poly = f_poly.to_vec();
+            best_fft(&mut vec_f_poly, omega, f_poly.len().trailing_zeros());
+            let z = vec_f_poly[user_index];
 
             let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
                 &params,
