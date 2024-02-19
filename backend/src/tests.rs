@@ -122,7 +122,7 @@ mod test {
         },
         cryptocurrency::Cryptocurrency,
         entry::Entry,
-        utils::{big_uint_to_fp, parse_csv_to_entries},
+        utils::parse_csv_to_entries,
     };
 
     const K: u32 = 17;
@@ -186,22 +186,18 @@ mod test {
             &[instances.clone()],
         );
 
-        let dummy_user_data = [
-            vec![Fp::zero(); N_USERS],
-            vec![Fp::zero(); N_USERS],
-            vec![Fp::zero(); N_USERS],
-        ];
+        let dummy_entries = vec![Entry::init_empty(); 2];
 
         let mut round_one = Round::<2, 3, 16>::new(
             &signer,
             advice_polys.clone(),
-            dummy_user_data.clone(),
+            dummy_entries.clone(),
             params_path,
             1,
         )
         .unwrap();
         let mut round_two =
-            Round::<2, 3, 16>::new(&signer, advice_polys, dummy_user_data, params_path, 2).unwrap();
+            Round::<2, 3, 16>::new(&signer, advice_polys, dummy_entries, params_path, 2).unwrap();
 
         // Checking block number before sending transaction of liability commitment
         let outer_provider: Provider<Http> = Provider::try_from(anvil.endpoint().as_str())?;
@@ -295,20 +291,10 @@ mod test {
             &[instances.clone()],
         );
 
-        // Iterate entries and collect values to `[Vec[Fp]; N_POINTS]`
-        const FP_ARRAY: Vec<Fp> = Vec::new();
-        let mut user_data = [FP_ARRAY; N_POINTS];
-        for (i, entry) in entries.iter().enumerate() {
-            user_data[0].push(big_uint_to_fp(entry.username_as_big_uint()));
-            for (j, balance) in entry.balances().iter().enumerate() {
-                user_data[j + 1].push(big_uint_to_fp(balance));
-            }
-        }
-
         let mut round = Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(
             &signer,
             advice_polys,
-            user_data,
+            entries,
             params_path,
             1,
         )

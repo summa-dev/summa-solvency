@@ -85,22 +85,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         &[instances.clone()],
     );
 
-    // Iterate entries and collect values to `[Vec[Fp]; N_POINTS]`
-    const FP_ARRAY: Vec<Fp> = Vec::new();
-    let mut user_data = [FP_ARRAY; N_POINTS];
-    for (i, entry) in entries.iter().enumerate() {
-        user_data[0].push(big_uint_to_fp(entry.username_as_big_uint()));
-        for (j, balance) in entry.balances().iter().enumerate() {
-            user_data[j + 1].push(big_uint_to_fp(balance));
-        }
-    }
-
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
     let mut round = Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(
         &signer,
         advice_polys,
-        user_data,
+        entries,
         params_path,
         1,
     )

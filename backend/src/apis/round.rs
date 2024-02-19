@@ -15,7 +15,11 @@ use std::error::Error;
 use crate::contracts::signer::SummaSigner;
 use summa_solvency::{
     circuits::{univariate_grand_sum::UnivariateGrandSum, utils::generate_setup_artifacts},
-    utils::amortized_kzg::{commit_kzg, create_naive_kzg_proof, verify_kzg_proof},
+    entry::Entry,
+    utils::{
+        amortized_kzg::{commit_kzg, create_naive_kzg_proof, verify_kzg_proof},
+        big_uint_to_fp,
+    },
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,7 +46,7 @@ impl KZGInclusionProof {
 /// * `N_POINTS`: The number of points in the `UnivariateGrandSum` circuit, which is `N_CURRENCIES + 1`.
 /// * `N_USERS`: The number of users involved in this round of the protocol.
 ///
-/// /// These parameters are used for initializing the `UniVariantGrandSum` circuit within the `Snapshot` struct.
+/// These parameters are used for initializing the `UnivariateGrandSum` circuit within the `Snapshot` struct.
 ///
 /// # Fields
 ///
@@ -64,7 +68,7 @@ where
     pub fn new<'a>(
         signer: &'a SummaSigner,
         advice_polys: AdviceSingle<G1Affine, Coeff>,
-        user_data: [Vec<Fp>; N_POINTS],
+        entries: Vec<Entry<N_CURRENCIES>>,
         params_path: &str,
         timestamp: u64,
     ) -> Result<Round<'a, N_CURRENCIES, N_POINTS, N_USERS>, Box<dyn Error>> {
@@ -72,7 +76,7 @@ where
             timestamp,
             snapshot: Snapshot::<N_CURRENCIES, N_POINTS, N_USERS>::new(
                 advice_polys,
-                user_data,
+                entries,
                 params_path,
             )
             .unwrap(),
@@ -96,7 +100,7 @@ where
         // Iterate unblinded advice polynomials evaluate balances array
         Ok(self
             .snapshot
-            .generate_proof_of_inclusion(user_index, &self.snapshot.user_data)
+            .generate_proof_of_inclusion(user_index, &self.snapshot.entries)
             .unwrap())
     }
 }
@@ -109,10 +113,9 @@ where
 /// * `user_balances`: A 2D array of user identity and balances.
 /// * `trusted_setup`: The trusted setup artifacts generated from the `UnivariateGrandSum` circuit.
 ///
-/// TODO: make a link to explanation what the advice polynomial expression is.
 pub struct Snapshot<const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize> {
     advice_polys: AdviceSingle<G1Affine, Coeff>,
-    user_data: [Vec<Fp>; N_POINTS],
+    entries: Vec<Entry<N_CURRENCIES>>,
     trusted_setup: (
         ParamsKZG<Bn256>,
         ProvingKey<G1Affine>,
@@ -127,10 +130,10 @@ where
 {
     pub fn new(
         advice_polys: AdviceSingle<G1Affine, Coeff>,
-        user_balances: [Vec<Fp>; N_POINTS],
+        entries: Vec<Entry<N_CURRENCIES>>,
         params_path: &str,
     ) -> Result<Snapshot<N_CURRENCIES, N_POINTS, N_USERS>, Box<dyn Error>> {
-        let univariant_grand_sum_circuit: UnivariateGrandSum<N_USERS, N_CURRENCIES> =
+        let univariate_grand_sum_circuit: UnivariateGrandSum<N_USERS, N_CURRENCIES> =
             UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init_empty();
 
         // get k from ptau file name
@@ -139,11 +142,11 @@ where
         let k = last_part.parse::<u32>().unwrap();
 
         let univariant_grand_sum_setup_artifcats =
-            generate_setup_artifacts(k, Some(params_path), &univariant_grand_sum_circuit).unwrap();
+            generate_setup_artifacts(k, Some(params_path), &univariate_grand_sum_circuit).unwrap();
 
         Ok(Snapshot {
             advice_polys,
-            user_data: user_balances,
+            entries,
             trusted_setup: univariant_grand_sum_setup_artifcats,
         })
     }
@@ -151,7 +154,7 @@ where
     pub fn generate_proof_of_inclusion(
         &self,
         user_index: u16,
-        user_data: &[Vec<Fp>; N_POINTS],
+        entries: &[Entry<N_CURRENCIES>],
     ) -> Result<KZGInclusionProof, &'static str>
     where
         [(); N_CURRENCIES + 1]: Sized, // TODO: check is this necessary to compile?
@@ -165,8 +168,17 @@ where
             let f_poly = self.advice_polys.advice_polys.get(column_index).unwrap();
             let kzg_commitment = commit_kzg(&params, f_poly);
 
-            let challenge = omega.pow_vartime(&[user_index as u64]);
-            let z = user_data[column_index][user_index as usize];
+            let challenge = omega.pow_vartime([user_index as u64]);
+
+            let mut z: Fp = Fp::zero();
+            let user_entry = entries.get(user_index as usize).unwrap();
+            if column_index == 0 {
+                z = big_uint_to_fp(user_entry.username_as_big_uint());
+            } else {
+                let user_balances = user_entry.balances();
+                z = big_uint_to_fp(user_balances.get(column_index - 1).unwrap());
+            }
+
             let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
                 &params,
                 vk.get_domain(),
