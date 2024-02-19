@@ -111,12 +111,12 @@ fn main() {
 
     // If successfuly verified, the verifier contract will return 1.
     assert_eq!(output, [vec![0; 31], vec![1]].concat());
-    save_solidity("snark_verifier.sol", &verifier_solidity_fixed);
-    save_solidity("verifying_key.sol", &vk_verifier);
+    save_solidity("SnarkVerifier.sol", &verifier_solidity_fixed);
+    save_solidity("VerifyingKey.sol", &vk_verifier);
 }
 
 fn save_solidity(name: impl AsRef<str>, solidity: &str) {
-    const DIR_GENERATED: &str = "./generated";
+    const DIR_GENERATED: &str = "../contracts/src";
 
     create_dir_all(DIR_GENERATED).unwrap();
     File::create(format!("{DIR_GENERATED}/{}", name.as_ref()))

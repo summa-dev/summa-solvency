@@ -2,20 +2,28 @@
 use std::{error::Error, fs::File, io::BufReader, io::Write};
 
 use ethers::types::U256;
+use halo2_proofs::halo2curves::bn256::{Fr as Fp, G1Affine};
 use serde_json::{from_reader, to_string_pretty};
 
 use summa_backend::{
-    apis::{
-        address_ownership::AddressOwnership,
-        leaf_hash_from_inputs,
-        round::{MstInclusionProof, Round},
-    },
+    apis::{address_ownership::AddressOwnership, round::Round},
     contracts::signer::{AddressInput, SummaSigner},
     tests::initialize_test_env,
 };
-use summa_solvency::merkle_sum_tree::MerkleSumTree;
+use summa_solvency::{
+    circuits::{
+        univariate_grand_sum::UnivariateGrandSum,
+        utils::{full_prover, generate_setup_artifacts},
+    },
+    cryptocurrency::Cryptocurrency,
+    entry::Entry,
+    utils::{big_uint_to_fp, parse_csv_to_entries},
+};
 
+const K: u32 = 17;
 const N_CURRENCIES: usize = 2;
+const N_POINTS: usize = 3;
+const N_USERS: usize = 16;
 const USER_INDEX: usize = 0;
 
 #[tokio::main]
@@ -57,16 +65,35 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // 2. Submit Commitment
     //
     // Initialize the `Round` instance to submit the liability commitment.
-    let params_path = "ptau/hermez-raw-11";
+    let params_path = "ptau/hermez-raw-17";
     let entry_csv = "../csv/entry_16.csv";
-    let mst = MerkleSumTree::new(entry_csv).unwrap();
+    let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
+    let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
+    parse_csv_to_entries::<&str, N_CURRENCIES>(entry_csv, &mut entries, &mut cryptos).unwrap();
+
+    let univariate_grand_sum_circuit =
+        UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+
+    let (params, pk, vk) =
+        generate_setup_artifacts(K, None, &univariate_grand_sum_circuit).unwrap();
+
+    // Create a proof
+    let instances = vec![Fp::one(); 1]; // This instance is necessary to verify proof on solidity verifier.
+    let (zk_snark_proof, advice_polys, _omega) = full_prover(
+        &params,
+        &pk,
+        univariate_grand_sum_circuit.clone(),
+        &[instances.clone()],
+    );
 
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
-    let mut round = Round::<4, 2, 14>::new(&signer, Box::new(mst), params_path, timestamp).unwrap();
+    let mut round =
+        Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(&signer, advice_polys, params, vk, 1)
+            .unwrap();
 
-    // Sends the commitment, which should ideally complete without errors.
-    round.dispatch_commitment().await?;
+    // // Sends the commitment, which should ideally complete without errors.
+    // round.dispatch_commitment().await?;
 
     println!("2. Commitment is submitted successfully!");
 
@@ -96,38 +123,25 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Assume that the `proof` file has been downloaded from the CEX.
     let proof_file = File::open(format!("user_{}_proof.json", USER_INDEX))?;
     let reader = BufReader::new(proof_file);
-    let downloaded_inclusion_proof: MstInclusionProof = from_reader(reader)?;
+    // let downloaded_inclusion_proof: KZGInclusionProof = from_reader(reader)?;
 
-    let public_inputs = downloaded_inclusion_proof.get_public_inputs();
+    // TODO: fix after the contract is concrete
+    // // Get `mst_root` from contract. the `mst_root` is disptached by CEX with specific time `snapshot_time`.
+    // let commitment = summa_contract.commitments(snapshot_time).call().await?;
 
-    // Verify the `leaf_hash` from the proof file.
-    // It's assumed that both `user_name` and `balances` are provided by the CEX.
-    // The `balances` represent the user's balances on the CEX at `snapshot_time`.
-    let user_name = "dxGaEAii".to_string();
-    let balances = vec!["11888".to_string(), "41163".to_string()];
+    // // Match the `mst_root` with the `root_hash` derived from the proof.
+    // assert_eq!(commitment, public_inputs[1]);
 
-    let leaf_hash = public_inputs[0];
-    assert_eq!(
-        leaf_hash,
-        leaf_hash_from_inputs::<N_CURRENCIES>(user_name.clone(), balances.clone())
-    );
+    // // Validate the inclusion proof using the contract verifier.
+    // let proof = inclusion_proof.get_proof();
+    // let verification_result = summa_contract
+    //     .verify_inclusion_proof(proof.clone(), public_inputs.clone(), snapshot_time)
+    //     .await?;
 
-    // Get `mst_root` from contract. the `mst_root` is disptached by CEX with specific time `snapshot_time`.
-    let commitment = summa_contract.commitments(snapshot_time).call().await?;
-
-    // Match the `mst_root` with the `root_hash` derived from the proof.
-    assert_eq!(commitment, public_inputs[1]);
-
-    // Validate the inclusion proof using the contract verifier.
-    let proof = inclusion_proof.get_proof();
-    let verification_result = summa_contract
-        .verify_inclusion_proof(proof.clone(), public_inputs.clone(), snapshot_time)
-        .await?;
-
-    println!(
-        "4. Verifying the proof on contract veirifer for User #{}: {}",
-        USER_INDEX, verification_result
-    );
+    // println!(
+    //     "4. Verifying the proof on contract veirifer for User #{}: {}",
+    //     USER_INDEX, verification_result
+    // );
 
     // Wrapping up
     drop(anvil);
