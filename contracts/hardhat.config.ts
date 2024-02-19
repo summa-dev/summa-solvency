@@ -5,7 +5,7 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 module.exports = {
-  defaultNetwork: "hardhat",
+  // defaultNetwork: "hardhat",
   networks: {
     localhost: {
       chainId: 31337,

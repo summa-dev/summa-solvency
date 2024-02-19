@@ -2,13 +2,13 @@
 
 pragma solidity ^0.8.0;
 
-contract Verifier {
+contract GrandsumVerifier {
     // Calldata positions for proofs
     uint256 internal constant       PROOF_LEN_CPTR = 0x64;
     uint256 internal constant           PROOF_CPTR = 0x84;
 
     // Memory positions for the verifying key.
-    // The memory location starts at 0x200 due to the maximum operation on the ec_pairing function being 0x180, which is the maximum memory location for used.
+    // The memory location starts at 0x200 due to the maximum operation on the ec_pairing function being 0x180, marking the maximum memory location used
     uint256 internal constant                VK_MPTR = 0x200;
     uint256 internal constant         VK_DIGEST_MPTR = 0x200;
     uint256 internal constant                 K_MPTR = 0x220;
@@ -32,7 +32,6 @@ contract Verifier {
     uint256 internal constant      NEG_S_G2_Y_1_MPTR = 0x460;
     uint256 internal constant      NEG_S_G2_Y_2_MPTR = 0x480;
 
-    // TODO: move the position to upper for optimization
     uint256 internal constant       LHS_X_MPTR = 0x4a0;
     uint256 internal constant       LHS_Y_MPTR = 0x4c0;
 
@@ -42,8 +41,8 @@ contract Verifier {
         uint256[] calldata values
     ) public view returns (bool) {
         assembly {
-            // Check EC point (x, y) is on the curve.
-            // the point is on affine plane, and then return success.
+            // Check if EC point (x, y) is on the curve.
+            // if the point is on the affine plane, it then returns updated (success).
             function check_ec_point(success, proof_cptr, q) -> ret {
                 let x := calldataload(proof_cptr)
                 let y := calldataload(add(proof_cptr, 0x20))
@@ -80,19 +79,6 @@ contract Verifier {
                 mstore(0xc0, scalar)
                 ret := and(success, staticcall(gas(), 0x07, 0x80, 0x60, 0x80, 0x40))
             }
-            
-            // Perform pairing check for lhs.
-            // Return updated (success).
-            function ec_pairing_lhs(success, lhs_x, lhs_y) -> ret {
-                mstore(0x00, lhs_x)
-                mstore(0x20, lhs_y)
-                mstore(0x40, mload(G2_X_1_MPTR))
-                mstore(0x60, mload(G2_X_2_MPTR))
-                mstore(0x80, mload(G2_Y_1_MPTR))
-                mstore(0xa0, mload(G2_Y_2_MPTR))
-                ret := and(success, staticcall(gas(), 0x08, 0x00, 0xc0, 0x00, 0x20))
-                ret := and(ret, mload(0x00))
-            }
 
             // Perform pairing check.
             // Return updated (success).
@@ -126,13 +112,15 @@ contract Verifier {
             extcodecopy(vk, VK_MPTR, 0x00, 0x02a0)
 
             // The proof length should be divisible by `0x80` bytes, equivalent to four words.
+            //
             // The proof is structured as follows: 
-            // 2W * n: Commitment points in the SNARK proof.
-            // 2W * n: Points in the opening proof.
-            // 1W    : Length of evaluation values. 
-            // 1W * n: Evaluation values.
-            // where W is referred to as a Word, which is 32 bytes.
-            // and `n` denotes the number of commitments as well as the number of evaluation values.
+            //  2W * n: Commitment points in the SNARK proof.
+            //  2W * n: Points in the opening proof.
+            //  1W    : Length of evaluation values. 
+            //  1W * n: Evaluation values.
+            //
+            // Where W is refers to a Word, which is 32 bytes.
+            // And 'n' denotes the number of commitments as well as the number of evaluation values.
             let proof_length := calldataload(PROOF_LEN_CPTR)
 
             // Ensure the proof length is divisible by `0x80`, accommodating the structured data layout.
@@ -158,8 +146,8 @@ contract Verifier {
                 let double_shift_pos := mul(shift_pos, 2) // for next point
                 let total_balance := calldataload(add(evaluation_values_length_pos, add(shift_pos, 0x20)))
 
-                // `z` is evaluated with 'total_balance' multiply by `N_INV`
-                // The `N_INV` is equivalent to `Fp::from(poly_length).invert().unwrap()` as input on the `open_grand_sums` function.
+                // The `z` is evaluated with 'total_balance' multiply by `N_INV`
+                // The `N_INV` is equivalent to `Fp::from(poly_length).invert().unwrap()` as input on the `open_grand_sums` function in Rust implementation.
                 let z := mulmod(total_balance, mload(N_INV_MPTR), r)
                 let minus_z := sub(r, z)
 
@@ -183,7 +171,7 @@ contract Verifier {
                     mstore(0x40, commitment_proof_pos)
                     revert(0, 0x60)
                 }
-                let lhs_x := calldataload(commitment_proof_pos) // C_X
+                let lhs_x := calldataload(commitment_proof_pos)            // C_X
                 let lhs_y := calldataload(add(commitment_proof_pos, 0x20)) // C_Y
                 success := ec_add_tmp(success, lhs_x, lhs_y)
                 if iszero(success) {
@@ -195,7 +183,7 @@ contract Verifier {
                 mstore(LHS_X_MPTR, mload(0x80))
                 mstore(LHS_Y_MPTR, mload(0xa0))
 
-                // Checking from calldata
+                // Checking from calldata for grand sum proof
                 let proof_pos := add(PROOF_CPTR, double_shift_pos)
                 success := check_ec_point(success, PROOF_CPTR, q)
                 if iszero(success) {

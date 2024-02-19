@@ -1,10 +1,9 @@
 use halo2_proofs::{
     arithmetic::{best_fft, kate_division, Field},
     halo2curves::{
-        bn256::{Bn256, Fr as Fp, G1Affine, G2Affine, G2Prepared, Gt, G1},
+        bn256::{Bn256, Fr as Fp, G1Affine, G2Affine, Gt, G1},
         group::{prime::PrimeCurveAffine, Curve, Group},
         pairing::{Engine, PairingCurveAffine},
-        CurveAffine, CurveExt,
     },
     poly::{
         commitment::{Blind, CommitmentScheme, Params, ParamsProver},

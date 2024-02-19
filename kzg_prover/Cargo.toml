@@ -36,13 +36,13 @@ name = "kzg"
 harness = false
 
 [[bin]]
-name = "generate_verifiers"
-path = "bin/gen_verifiers.rs"
+name = "generate_verifier"
+path = "bin/gen_verifier.rs"
 
 [[bin]]
 name = "generate_commitment"
 path = "bin/gen_commitment.rs"
 
 [[bin]]
-name = "kzg_verifier_test"
-path = "bin/test_kzg_verifier.rs"
+name = "generate_inclusion_proof"
+path = "bin/gen_inclusion_proof.rs"

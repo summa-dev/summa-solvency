@@ -11,7 +11,7 @@ type Deployments = {
 
 async function main() {
   const inclusionVerifier = await ethers.deployContract(
-    "src/InclusionVerifier.sol:Verifier"
+    "src/inclusion_kzg_verifier.sol:InclusionVerifier"
   );
   await inclusionVerifier.deployed();
 
