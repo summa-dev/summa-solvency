@@ -158,7 +158,7 @@ pub fn open_grand_sums(
     )
 }
 
-// This function for comparison with open_grand_sums, which is used ProverSHPLONK
+// This function is for comparison with open_grand_sums and is using GWC instead of ProverSHPLONK
 pub fn open_grand_sums_gwc(
     advice_polys: &[Polynomial<Fp, Coeff>],
     advice_blinds: &[Blind<Fp>],
@@ -267,6 +267,17 @@ pub fn open_all_user_points_amortized(h_vectors: &[&[G1]], omega: Fp) -> Vec<Vec
         .collect()
 }
 
+/// Calculate a single-user opening proofs using the amortized KZG approach
+///
+/// # Arguments
+///
+/// * `h_vectors` - the h(X) vectors calculated for the polynomials using the amortized KZG approach
+/// * `params` - the KZG parameters
+/// * `challenge` - the challenge at which the openings are evaluated
+///
+/// # Returns
+///
+/// * `Vec<G1>` - the KZG opening proofs for the polynomials at `challenge`
 pub fn open_single_user_point_amortized(
     h_vectors: &[&[G1]],
     params: &ParamsKZG<Bn256>,
