@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { ethers } from "hardhat";
-import { Verifier as SnarkVerifier, InclusionVerifier, GrandSumVerifier, Halo2VerifyingKey } from "../typechain-types";
+import { Verifier as SnarkVerifier, InclusionVerifier, GrandsumVerifier, Halo2VerifyingKey } from "../typechain-types";
 import { BigNumber, providers } from "ethers";
 import { Bytes, BytesLike, defaultAbiCoder, isBytesLike } from "ethers/lib/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -18,7 +18,7 @@ describe("Verifier Contracts", () => {
   async function deployVerifyingFixture() {
     // Contracts are deployed using the first signer/account by default
     const verifyingKey = await ethers.deployContract(
-      "src/verifying_key.sol:Halo2VerifyingKey",
+      "src/VerifyingKey.sol:Halo2VerifyingKey",
     ) as Halo2VerifyingKey;
 
     const commitmentJson = fs.readFileSync(path.resolve(__dirname, "../../kzg_prover/bin/commitment_solidity_calldata.json"), "utf-8");
@@ -79,7 +79,7 @@ describe("Verifier Contracts", () => {
 
       // Deploy SnarkVerifier contract
       snarkVerifier = await ethers.deployContract(
-        "src/snark_verifier.sol:Verifier"
+        "src/SnarkVerifier.sol:Verifier"
       ) as SnarkVerifier;
 
       await snarkVerifier.deployed();
@@ -97,7 +97,7 @@ describe("Verifier Contracts", () => {
   });
 
   describe("Grandsum Proof Verifier", () => {
-    let grandSumVerifier: GrandSumVerifier;
+    let grandSumVerifier: GrandsumVerifier;
     let verifyingKey: Halo2VerifyingKey;
     let commitmentCalldata: {
       range_check_snark_proof: BytesLike;
@@ -111,8 +111,8 @@ describe("Verifier Contracts", () => {
 
       // Deploy GrandSumVerifier contract
       grandSumVerifier = await ethers.deployContract(
-        "src/grandsum_kzg_verifier.sol:GrandsumVerifier"
-      ) as GrandSumVerifier;
+        "src/GrandsumVerifier.sol:GrandsumVerifier"
+      ) as GrandsumVerifier;
     });
 
     it("should verify grandsum proof", async () => {
@@ -131,7 +131,7 @@ describe("Verifier Contracts", () => {
       // [    snark_proof_p1_x,     snark_proof_p1_y,     snark_proof_p2_x,     snark_proof_p2_y, ...     snark_proof_pN_x,     snark_proof_pN_y, ...] 
       //  Where `N` is the number of currencies
       let proofs = ethers.utils.hexlify(ethers.utils.concat([grandSumProofArray, grandSumCommitments]));
-      
+
       expect(await grandSumVerifier.verifyProof(verifyingKey.address, proofs, [])).to.be.true;
     });
   });
@@ -159,12 +159,12 @@ describe("Verifier Contracts", () => {
       // InclusionVerifier requires BN256G2 contract for performing elliptic curve operations on G2 subgroup
       const bn256g2 = await deployBN256G2();
       inclusionVerifier = await ethers.deployContract(
-        "src/inclusion_kzg_verifier.sol:InclusionVerifier", [bn256g2.address]
+        "src/InclusionVerifier.sol:InclusionVerifier", [bn256g2.address]
       ) as InclusionVerifier;
       await inclusionVerifier.deployed();
 
       verifyingKey = deploymentInfo.verifyingKey;
-      
+
       const inclusionJson = fs.readFileSync(
         path.resolve(
           __dirname,
@@ -194,31 +194,12 @@ describe("Verifier Contracts", () => {
       let combinedProof = ethers.utils.concat([proofArray, snarkProofarray]);
       let proofs = ethers.utils.hexlify(combinedProof);
 
-      let verifiy_tx = await inclusionVerifier.populateTransaction.verifyProof(
+      expect(await inclusionVerifier.verifyProof(
         verifyingKey.address,
         challenge,
         proofs,
         [username_biguint, balance1, balance2]
-      )
-
-      try {
-
-        let result = await inclusionVerifier.verifyProof(
-          verifyingKey.address,
-          challenge,
-          proofs,
-          [username_biguint, balance1, balance2]
-        )
-        console.log("result\n", result);
-      } catch (error) {
-        if (error instanceof Error) {
-          // parse message data field 
-          // let parsed_message = error.message.split("data:");
-          console.log("error\n", error.message);
-        } else {
-          console.log("unparsed error\n", error);
-        }
-      }
+      )).to.be.true;
     });
   });
 });
