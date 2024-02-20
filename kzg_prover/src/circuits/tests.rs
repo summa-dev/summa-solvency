@@ -456,7 +456,11 @@ mod test {
         let _ =
             parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
 
-        let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries);
+        let circuit = UnivariateGrandSum::<
+            N_USERS,
+            N_CURRENCIES,
+            UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
+        >::init(entries);
 
         let root = BitMapBackend::new("prints/univariate-grand-sum-layout.png", (2048, 32768))
             .into_drawing_area();
