@@ -12,7 +12,7 @@ use summa_backend::{
 };
 use summa_solvency::{
     circuits::{
-        univariate_grand_sum::UnivariateGrandSum,
+        univariate_grand_sum::{UnivariateGrandSum, UnivariateGrandSumConfig},
         utils::{full_prover, generate_setup_artifacts},
     },
     cryptocurrency::Cryptocurrency,
