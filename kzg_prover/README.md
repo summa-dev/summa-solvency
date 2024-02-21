@@ -52,3 +52,13 @@ cargo doc --no-deps --open
 
 For testing purposes, it's not necessary to download the `ptau` file. The `generate_setup_artifacts` function can manage this by generating a new setup from a randomly generated value. This automated generation process is intended for testing and development convenience, and it should not be used in production.
 For real-world situations, you must provide the path of a specific `ptau` file to the `generate_setup_artifacts`. The circuit will use the randomness from the given file. You can find an example that initializes a `Snapshot` instance [here](https://github.com/summa-dev/summa-solvency/blob/11d4fce5d18f6175804aa792fc9fc5ac27bf5c00/backend/src/apis/snapshot.rs#L115-L116) in the backend.
+
+## Chunked Univariate Grand Sum Example
+
+The goal of the univariate grand sum Summa version was to speed up the user inclusion proof calculation to allow the Custodian to calculate all the user inclusion proofs for a solvency round in one go. One of the ways of doing that is to split the user base into chunks and calculate the proofs of user inclusion into each chunk using the amortized KZG approach. The example demonstrates how the KZG commitments to individual chunks relate to each other and the KZG opening proof of the grand total (Custodian's liabilities).
+
+To execute this example, use the command:
+
+```
+cargo run --release --example chunked_univariate_grand_sum
+```
