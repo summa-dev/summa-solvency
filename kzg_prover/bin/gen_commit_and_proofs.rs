@@ -1,9 +1,9 @@
 #![feature(generic_const_exprs)]
-
+use ethers::types::U256;
 use halo2_proofs::{
     arithmetic::Field,
     halo2curves::{
-        bn256::{Bn256, Fr as Fp},
+        bn256::{Bn256, Fr as Fp, G2Affine},
         group::Curve,
     },
     poly::kzg::commitment::KZGCommitmentScheme,
@@ -33,6 +33,15 @@ const N_USERS: usize = 16;
 struct CommitmentSolidityCallData {
     range_check_snark_proof: String,
     grand_sums_batch_proof: String,
+    total_balances: Vec<U256>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct InclusionProofCallData {
+    proof: String,
+    challenges: Vec<U256>,
+    username: String,
+    user_values: Vec<U256>,
 }
 
 fn main() {
@@ -55,7 +64,7 @@ fn main() {
 
     // Create a proof
     let instances = vec![Fp::one(); 1]; // This instance is necessary to verify proof on solidity verifier.
-    let (zk_snark_proof, advice_polys, _omega) = full_prover(
+    let (zk_snark_proof, advice_polys, omega) = full_prover(
         &params,
         &pk,
         univariate_grand_sum_circuit.clone(),
@@ -120,6 +129,10 @@ fn main() {
     let commitment = CommitmentSolidityCallData {
         range_check_snark_proof: format!("0x{}", hex::encode(zk_snark_proof)),
         grand_sums_batch_proof: format!("0x{}", hex::encode(grand_sums_kzg_proof.concat())),
+        total_balances: csv_total
+            .iter()
+            .map(|x| U256::from_little_endian(big_uint_to_fp(x).to_bytes().as_slice()))
+            .collect::<Vec<U256>>(),
     };
 
     // Serialize to a JSON string
@@ -128,6 +141,87 @@ fn main() {
     // Save the serialized data to a JSON file
     let mut file =
         File::create("./bin/commitment_solidity_calldata.json").expect("Unable to create file");
+    file.write_all(serialized_data.as_bytes())
+        .expect("Unable to write data to file");
+
+    // For testing purposes, we will open the user balances and generate a proof for the user at index 2.
+    let user_index = 1_u16;
+    let challenge = omega.pow_vartime([user_index as u64]);
+
+    let user_values = &entries
+        .get(user_index as usize)
+        .map(|entry| {
+            std::iter::once(big_uint_to_fp(&(entry.username_as_big_uint())))
+                .chain(entry.balances().iter().map(|x| big_uint_to_fp(x)))
+                .collect::<Vec<Fp>>()
+        })
+        .unwrap();
+
+    let column_range = 0..N_CURRENCIES + 1;
+    let mut inclusion_proof: Vec<Vec<u8>> = Vec::new();
+    for column_index in column_range {
+        let f_poly = advice_polys.advice_polys.get(column_index).unwrap();
+        let kzg_commitment = commit_kzg(&params, f_poly);
+
+        let z = if column_index == 0 {
+            big_uint_to_fp(entries[user_index as usize].username_as_big_uint())
+        } else {
+            big_uint_to_fp(&entries[user_index as usize].balances()[column_index - 1])
+        };
+
+        let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
+            &params,
+            pk.get_vk().get_domain(),
+            f_poly,
+            challenge,
+            z,
+        );
+
+        assert!(
+            verify_kzg_proof(&params, kzg_commitment, kzg_proof, &challenge, &z,),
+            "KZG proof verification failed for user {}",
+            user_index
+        );
+
+        // Convert to affine point and serialize to bytes
+        let kzg_proof_affine = kzg_proof.to_affine();
+        let mut kzg_proof_affine_x = kzg_proof_affine.x.to_bytes();
+        let mut kzg_proof_affine_y = kzg_proof_affine.y.to_bytes();
+        kzg_proof_affine_x.reverse();
+        kzg_proof_affine_y.reverse();
+
+        // Concat x, y of kzg_proof
+        inclusion_proof.push([kzg_proof_affine_x, kzg_proof_affine_y].concat());
+    }
+
+    let user_values = user_values
+        .iter()
+        .map(|x| U256::from_little_endian(x.to_bytes().as_slice()))
+        .collect::<Vec<U256>>();
+
+    // Evaluate S_G2 points with challenge for verifying proof on the KZG solidity verifier
+    let s_g2 = -params.s_g2() + (G2Affine::generator() * challenge);
+    let s_g2_affine = s_g2.to_affine();
+
+    let challenges = vec![
+        U256::from_little_endian(s_g2_affine.x.c1.to_bytes().as_slice()),
+        U256::from_little_endian(s_g2_affine.x.c0.to_bytes().as_slice()),
+        U256::from_little_endian(s_g2_affine.y.c1.to_bytes().as_slice()),
+        U256::from_little_endian(s_g2_affine.y.c0.to_bytes().as_slice()),
+    ];
+
+    let data = InclusionProofCallData {
+        proof: format!("0x{}", hex::encode(inclusion_proof.concat())),
+        username: entries[user_index as usize].username().to_string(),
+        challenges,
+        user_values,
+    };
+
+    let serialized_data = to_string_pretty(&data).expect("Failed to serialize data");
+
+    // Save the serialized data to a JSON file
+    let mut file = File::create("./bin/inclusion_proof_solidity_calldata.json")
+        .expect("Unable to create file");
     file.write_all(serialized_data.as_bytes())
         .expect("Unable to write data to file");
 }
