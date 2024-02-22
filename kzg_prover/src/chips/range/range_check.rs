@@ -43,7 +43,7 @@ pub struct RangeCheckU64Config {
 /// Column zs[2], at offset 0, contains the truncated right-shifted value zs[1] - ks[2] / 2^16 (shift right by 16 bits) where ks[2] is the 2-th decomposition big-endian of the element to be checked
 /// Column zs[3], at offset 0, contains the truncated right-shifted value zs[2] - ks[3] / 2^16 (shift right by 16 bits) where ks[3] is the 3-th decomposition big-endian of the element to be checked
 ///
-/// The contraints that are enforced are:
+/// The constraints that are enforced are:
 /// 1.
 /// z - 2^16⋅zs[0] = ks[0] ∈ range_u16
 ///
