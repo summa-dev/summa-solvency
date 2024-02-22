@@ -49,6 +49,7 @@ fn main() {
     let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
     let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
 
+    // Parse CSV to update entries and cryptos arrays
     parse_csv_to_entries::<&str, N_CURRENCIES>("../csv/entry_16.csv", &mut entries, &mut cryptos)
         .unwrap();
 
@@ -71,6 +72,7 @@ fn main() {
         &[instances.clone()],
     );
 
+    // Verify the proof to ensure validity
     assert!(full_verifier(
         &params,
         pk.get_vk(),
@@ -107,6 +109,7 @@ fn main() {
             total_balances[currency_index],
         );
 
+        // Ensure the KZG proof is valid
         assert!(verify_kzg_proof(
             &params,
             kzg_commitment,
@@ -122,7 +125,7 @@ fn main() {
         kzg_proof_affine_x.reverse();
         kzg_proof_affine_y.reverse();
 
-        // concat x, y of kzg_proof
+        // Concatenate x and y of the KZG proof
         grand_sums_kzg_proof.push([kzg_proof_affine_x, kzg_proof_affine_y].concat());
     }
 
@@ -135,7 +138,7 @@ fn main() {
             .collect::<Vec<U256>>(),
     };
 
-    // Serialize to a JSON string
+    // Serialize the data for solidity
     let serialized_data = to_string_pretty(&commitment).expect("Failed to serialize data");
 
     // Save the serialized data to a JSON file
@@ -144,8 +147,8 @@ fn main() {
     file.write_all(serialized_data.as_bytes())
         .expect("Unable to write data to file");
 
-    // For testing purposes, we will open the user balances and generate a proof for the user at index 2.
-    let user_index = 1_u16;
+    // For testing, open user balances and generate a proof for a specific user index
+    let user_index = 1_u16; // Example user index for proof generation
     let challenge = omega.pow_vartime([user_index as u64]);
 
     let user_values = &entries
