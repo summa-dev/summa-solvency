@@ -28,9 +28,6 @@ contract InclusionVerifier {
         uint256[] calldata challenges,
         uint256[] calldata values
     ) public view returns (bool) {
-        // G2Point memory itermediate_g2 = g2_to_c(vk, challengeScalar);
-        // g2_tau_g2c(vk, itermediate_g2);
-
         assembly {
             // Check EC point (x, y) is on the curve.
             // the point is on affine plane, and then return success.
@@ -98,7 +95,6 @@ contract InclusionVerifier {
                 mstore(0x120, mload(NEG_S_G2_X_2_MPTR))
                 mstore(0x140, mload(NEG_S_G2_Y_1_MPTR))
                 mstore(0x160, mload(NEG_S_G2_Y_2_MPTR))
-                // revert(0, 0x180)
                 ret := and(success, staticcall(gas(), 0x08, 0x00, 0x180, 0x00, 0x20))
                 ret := and(ret, mload(0x00))
             }
@@ -124,8 +120,7 @@ contract InclusionVerifier {
             // Ensure the proof length is divisible by `0x80`, accommodating the structured data layout.
             success := and(success, eq(0, mod(proof_length, 0x80)))
             if iszero(success) {
-                mstore(0, "Invalid proof length")
-                revert(0, 0x20)
+                revert(0, 0)
             }
 
             // Load the NEG_S_G2 point with the calculated point
@@ -133,8 +128,7 @@ contract InclusionVerifier {
             let challenges_length := calldataload(challenges_length_pos)
             success := and(success, eq(challenges_length, 4))
             if iszero(success) {
-                mstore(0, "Invalid number of challenges")
-                revert(0, 0x20)
+                revert(0, 0)
             }
 
             mstore(NEG_S_G2_X_1_MPTR, calldataload(add(challenges_length_pos, 0x20)))
@@ -149,8 +143,7 @@ contract InclusionVerifier {
             // The proof length should match 4 times the length of the evaluation values.
             success := and(success, eq(4, div(proof_length, mul(evaluation_values_length, 0x20))))
             if iszero(success) {
-                mstore(0, "Number of evaluation mismatch")
-                revert(0, 0x20)
+                revert(0, 0)
             }
 
             for { let i := 0 } lt(i, evaluation_values_length) { i := add(i, 1) } {
@@ -166,8 +159,7 @@ contract InclusionVerifier {
                 mstore(0xc0, minus_z)
                 success := and(success, ec_mul_tmp(success, minus_z))
                 if iszero(success) {
-                    mstore(0, "Failed to multiply G1 by minus_z")
-                    revert(0, 0x80)
+                    revert(0, 0)
                 }
 
                 // Performaing like `c_g_to_minus_z = c + g_to_minus_z` in `verify_kzg_proof` function that is located in `amortized_kzg.rs`. 
@@ -177,16 +169,14 @@ contract InclusionVerifier {
                 let commitment_proof_pos := add(add(PROOF_CPTR, div(proof_length, 2)), double_shift_pos)
                 success := check_ec_point(success, commitment_proof_pos, q)
                 if iszero(success) {
-                    mstore(0, "Commitment point is not EC point")
-                    revert(0, 0x20)
+                    revert(0, 0)
                 }
 
                 let lhs_x := calldataload(commitment_proof_pos)            // C_X
                 let lhs_y := calldataload(add(commitment_proof_pos, 0x20)) // C_Y
                 success := ec_add_tmp(success, lhs_x, lhs_y)
                 if iszero(success) {
-                    mstore(0, "Failed to add C and g_to_minus_z")
-                    revert(0, 0x20)
+                    revert(0, 0)
                 }
                 
                 mstore(LHS_X_MPTR, mload(0x80))
@@ -194,23 +184,21 @@ contract InclusionVerifier {
 
                 // Checking from calldata
                 let proof_pos := add(PROOF_CPTR, double_shift_pos)
-                success := check_ec_point(success, PROOF_CPTR, q)
+                success := check_ec_point(success, proof_pos, q)
                 if iszero(success) {
-                    mstore(0, "Opening point is not EC point")
-                    revert(0, 0x20)
+                    revert(0, 0)
                 }
                 let rhs_x := calldataload(proof_pos) // PI_X
                 let rhs_y := calldataload(add(proof_pos, 0x20)) // PI_Y
 
                 success := and(success, ec_pairing(success, mload(LHS_X_MPTR), mload(LHS_Y_MPTR), rhs_x, rhs_y))
                 if iszero(success) {
-                    mstore(0, "Failed to perform pairing check")
-                    revert(0, 0x20)
+                    revert(0, 0)
                 }
             }
 
             // Return 1 as result if everything succeeds
-            mstore(0x00, 1)
+            mstore(0x00, success)
             return(0x00, 0x20)
         }
     }

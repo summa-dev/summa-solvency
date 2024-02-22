@@ -2,9 +2,8 @@ import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { ethers } from "hardhat";
 import { Verifier as SnarkVerifier, InclusionVerifier, GrandsumVerifier, Halo2VerifyingKey } from "../typechain-types";
-import { BigNumber, providers } from "ethers";
-import { Bytes, BytesLike, defaultAbiCoder, isBytesLike } from "ethers/lib/utils";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { BigNumber } from "ethers";
+import { BytesLike } from "ethers/lib/utils";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -93,9 +92,9 @@ describe("Verifier Contracts", () => {
       // [grand_sum_proof_p1_x, grand_sum_proof_p1_y, grand_sum_proof_p2_x, grand_sum_proof_p2_y, ... grand_sum_proof_pN_x, grand_sum_proof_pN_y, ...]
       // [    snark_proof_p1_x,     snark_proof_p1_y,     snark_proof_p2_x,     snark_proof_p2_y, ...     snark_proof_pN_x,     snark_proof_pN_y, ...] 
       //  Where `N` is the number of currencies
-      let proofs = ethers.utils.hexlify(ethers.utils.concat([grandSumProofArray, grandSumCommitments]));
+      let proofs = ethers.utils.concat([grandSumProofArray, grandSumCommitments]);
 
-      expect(await grandSumVerifier.verifyProof(verifyingKey.address, proofs, totalBalances)).to.be.true;
+      expect(await grandSumVerifier.verifyProof(verifyingKey.address, proofs, totalBalances)).to.be.not.reverted;
     });
   });
 
@@ -154,8 +153,7 @@ describe("Verifier Contracts", () => {
       let proofArray = ethers.utils.arrayify(inclusionProof);
       let snarkProofarray = ethers.utils.arrayify(snarkProof).slice(0, proofArray.length);
 
-      let combinedProof = ethers.utils.concat([proofArray, snarkProofarray]);
-      let proofs = ethers.utils.hexlify(combinedProof);
+      let proofs = ethers.utils.concat([proofArray, snarkProofarray]);
 
       expect(await inclusionVerifier.verifyProof(
         verifyingKey.address,
@@ -163,6 +161,24 @@ describe("Verifier Contracts", () => {
         [challenges[0], challenges[1], challenges[2], challenges[3]],
         [username_biguint, balance1, balance2]
       )).to.be.true;
+    });
+
+    it("should not verify inclusion proof", async () => {
+      // Generating proof with concatenated snark proof and inclusion proof
+      let snarkProof = commitmentCalldata.range_check_snark_proof;
+
+      // Slice the snarkProof to match the length of inclusionProof
+      let proofArray = ethers.utils.arrayify(inclusionProof);
+      let snarkProofarray = ethers.utils.arrayify(snarkProof).slice(0, proofArray.length);
+
+      let wrongProofs = ethers.utils.concat([snarkProofarray, snarkProofarray]);
+
+      await expect(inclusionVerifier.callStatic.verifyProof(
+        verifyingKey.address,
+        wrongProofs,
+        [challenges[0], challenges[1], challenges[2], challenges[3]],
+        [username_biguint, balance1, balance2]
+      )).to.be.reverted;
     });
   });
 });

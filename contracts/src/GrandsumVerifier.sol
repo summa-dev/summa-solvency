@@ -39,7 +39,7 @@ contract GrandsumVerifier {
         address vk,
         bytes calldata proof,
         uint256[] calldata values
-    ) public view returns (bool) {
+    ) public returns (bool) {
         assembly {
             // Check if EC point (x, y) is on the curve.
             // if the point is on the affine plane, it then returns updated (success).
@@ -185,7 +185,7 @@ contract GrandsumVerifier {
 
                 // Checking from calldata for grand sum proof
                 let proof_pos := add(PROOF_CPTR, double_shift_pos)
-                success := check_ec_point(success, PROOF_CPTR, q)
+                success := check_ec_point(success, proof_pos, q)
                 if iszero(success) {
                     mstore(0, "Opening point is not EC point")
                     revert(0, 0x20)
@@ -200,7 +200,7 @@ contract GrandsumVerifier {
             }
 
             // Return 1 as result if everything succeeds
-            mstore(0x00, 1)
+            mstore(0x00, success)
             return(0x00, 0x20)
         }
     }

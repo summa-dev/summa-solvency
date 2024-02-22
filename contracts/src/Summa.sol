@@ -7,6 +7,7 @@ pragma solidity ^0.8.18;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./interfaces/IVerifier.sol";
+import "./interfaces/IInclusionVerifier.sol";
 
 contract Summa is Ownable {
     /**
@@ -51,12 +52,19 @@ contract Summa is Ownable {
 
     // zkSNARK verifier of the valid polynomial encoding
     IVerifier private immutable polynomialEncodingVerifier;
+    
+    // KZG verifier of the grand sum
+    IVerifier private immutable grandSumVerifier;
+    
+    // KZG verifier of the inclusion proof
+    IInclusionVerifier private immutable inclusionVerifier;
 
     event AddressOwnershipProofSubmitted(
         AddressOwnershipProof[] addressOwnershipProofs
     );
     event LiabilitiesCommitmentSubmitted(
         uint256 indexed timestamp,
+        uint256[] totalBalances,
         bytes proof
     );
 
@@ -64,6 +72,8 @@ contract Summa is Ownable {
      * Summa contract
      * @param _verifyingKey The address of the verification key contract
      * @param _polynomialEncodingVerifier the address of the polynomial encoding zkSNARK verifier
+     * @param _grandSumVerifier the address of the grand sum KZG verifier
+     * @param _inclusionVerifier the address of the inclusion KZG verifier
      * @param cryptocurrencyNames the names of the cryptocurrencies whose balances are encoded in the polynomials
      * @param cryptocurrencyChains the chain names of the cryptocurrencies whose balances are encoded in the polynomials
      * @param balanceByteRange maximum accepted byte range for the balance of a cryptocurrency
@@ -71,6 +81,8 @@ contract Summa is Ownable {
     constructor(
         address _verifyingKey,
         IVerifier _polynomialEncodingVerifier,
+        IVerifier _grandSumVerifier,
+        IInclusionVerifier _inclusionVerifier,
         string[] memory cryptocurrencyNames,
         string[] memory cryptocurrencyChains,
         uint8 balanceByteRange
@@ -101,6 +113,16 @@ contract Summa is Ownable {
             "Invalid polynomial encoding verifier address"
         );
         polynomialEncodingVerifier = _polynomialEncodingVerifier;
+        require(
+            address(_grandSumVerifier) != address(0),
+            "Invalid grandsum verifier address"
+        );
+        grandSumVerifier = _grandSumVerifier;
+        require(
+            address(_inclusionVerifier) != address(0),
+            "Invalid inclusion verifier address"
+        );
+        inclusionVerifier = _inclusionVerifier;
         config = SummaConfig(
             cryptocurrencyNames,
             cryptocurrencyChains,
@@ -193,28 +215,64 @@ contract Summa is Ownable {
 
     /**
      * @dev Submit commitment for a CEX
-     * @param proof ZK proof of the valid polynomial encoding
+     * @param snarkProof ZK proof of the valid polynomial encoding
+     * @param grandsumProof kzg proof of the grand sum
+     * @param totalBalances The array of total balances in the grand sum
      * @param timestamp The timestamp at which the CEX took the snapshot of its assets and liabilities
      */
     function submitCommitment(
-        bytes memory proof,
+        bytes memory snarkProof,
+        bytes memory grandsumProof,
+        uint256[] memory totalBalances,
         uint256 timestamp
     ) public onlyOwner {
-        require(proof.length == 5376, "Invalid proof length");
+        // Check input lengths
+        require(totalBalances.length > 0, "Invalid total balances length");
+        require(grandsumProof.length == (totalBalances.length * 0x40), "Invalid grandsum proof length");
+        require(snarkProof.length > grandsumProof.length, "Invalid snark proof length");
+        
         uint[] memory args = new uint[](1);
         args[0] = 1; // Workaround to satisfy the verifier (TODO remove after https://github.com/summa-dev/halo2-solidity-verifier/issues/1 is resolved)
         require(
-            polynomialEncodingVerifier.verifyProof(verifyingKey, proof, args),
-            "Invalid proof"
+            polynomialEncodingVerifier.verifyProof(verifyingKey, snarkProof, args),
+            "Invalid snark proof"
         );
-        // TODO slice the proof to get the ID and balance commitments
-        // require(
-        //     balanceCommitments.length == config.cryptocurrencies.length,
-        //     "Liability commitments and cryptocurrencies number mismatch"
-        // );
+        require(
+            totalBalances.length == config.cryptocurrencyNames.length,
+            "Liability commitments and cryptocurrencies number mismatch"
+        );
 
-        commitments[timestamp] = proof;
+        bytes memory slicedSnarkProof = new bytes(grandsumProof.length);
+        for (uint256 i = 0; i < grandsumProof.length; i++) {
+            slicedSnarkProof[i] = snarkProof[i + 64]; // Skip first 64 bytes, it's not for total balance.
+        }
 
-        emit LiabilitiesCommitmentSubmitted(timestamp, proof);
+        // Concatenate the grandsumProof with snarkProof with same length
+        bytes memory combinedProofs = new bytes(slicedSnarkProof.length + grandsumProof.length);
+        for (uint256 i = 0; i < grandsumProof.length; i++) {
+            combinedProofs[i] = grandsumProof[i];
+        }
+        for (uint256 i = 0; i < slicedSnarkProof.length; i++) {
+            combinedProofs[i + grandsumProof.length] = slicedSnarkProof[i];
+        }
+
+        require(grandSumVerifier.verifyProof(verifyingKey, combinedProofs, totalBalances), "Invalid grandsum proof");
+
+        // Slice the proof aa length as grandsumProof 
+        commitments[timestamp] = slicedSnarkProof;
+
+        emit LiabilitiesCommitmentSubmitted(timestamp, totalBalances, slicedSnarkProof);
+    }
+
+    function verifyInclusionProof(
+        bytes memory inclusionProof,
+        uint256[] memory challenges,
+        uint256[] memory values
+    ) public view returns (bool) {
+        require(values.length > 1, "Invalid values length");
+        require(inclusionProof.length == (values.length * 0x80), "Invalid inclusion proof length");
+        require(challenges.length == 4, "Invalid challenges length");
+
+        return inclusionVerifier.verifyProof(verifyingKey, inclusionProof, challenges, values);
     }
 }
