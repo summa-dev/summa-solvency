@@ -396,7 +396,7 @@ describe("Summa Contract", () => {
     });
 
     it("should submit a valid commitment", async () => {
-      let expect_commitment_on_contract = "0x" + rangeCheckSnarkProof.slice(130, grandsumProof.length + 128);
+      let expect_commitment_on_contract = rangeCheckSnarkProof.slice(0, grandsumProof.length + 128);
       expect(await summa.commitments(1)).to.be.equal("0x");
       await summa.submitCommitment(rangeCheckSnarkProof, grandsumProof, totalBalances, 1);
       expect(await summa.commitments(1)).to.be.equal(expect_commitment_on_contract);
