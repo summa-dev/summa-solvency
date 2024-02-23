@@ -222,8 +222,8 @@ contract Summa is Ownable {
      * @param timestamp The timestamp at which the CEX took the snapshot of its assets and liabilities
      */
     function submitCommitment(
-        bytes memory snarkProof,
-        bytes memory grandSumProof,
+        bytes calldata snarkProof,
+        bytes calldata grandSumProof,
         uint256[] memory totalBalances,
         uint256 timestamp
     ) public onlyOwner {
@@ -243,21 +243,8 @@ contract Summa is Ownable {
             "Liability commitments and cryptocurrencies number mismatch"
         );
 
-        // For storing first 64 bytes of snarkProof, which is corresponding to the userId
-        uint256 slicedSnarkProofLength = 64 + grandSumProof.length;
-        bytes memory slicedSnarkProof = new bytes(slicedSnarkProofLength);
-        for (uint256 i = 0; i < slicedSnarkProofLength; i++) {
-            slicedSnarkProof[i] = snarkProof[i];
-        }
-
-        // Concatenate the grandSumProof with snarkProof with same length
-        bytes memory combinedProofs = new bytes(2 * grandSumProof.length);
-        for (uint256 i = 0; i < grandSumProof.length; i++) {
-            combinedProofs[i] = grandSumProof[i];
-        }
-        for (uint256 i = 0; i < grandSumProof.length; i++) {
-            combinedProofs[i + grandSumProof.length] = slicedSnarkProof[i+ 64];  // Skip first 64 bytes, it's not for total balance.
-        }
+        bytes calldata slicedSnarkProof = snarkProof[0:64 + grandSumProof.length];
+        bytes memory combinedProofs = abi.encodePacked(grandSumProof, slicedSnarkProof[64:]);
 
         require(grandSumVerifier.verifyProof(verifyingKey, combinedProofs, totalBalances), "Invalid grand sum proof");
 

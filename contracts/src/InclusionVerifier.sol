@@ -8,19 +8,18 @@ contract InclusionVerifier {
 
     // Memory positions for the verifying key.
     // The memory location starts at 0x200 due to the maximum operation on the ec_pairing function being 0x180.
-    uint256 internal constant                VK_MPTR = 0x200;
-    uint256 internal constant             LHS_X_MPTR = 0x2e0;
-    uint256 internal constant             LHS_Y_MPTR = 0x300;
-    uint256 internal constant              G1_X_MPTR = 0x360;
-    uint256 internal constant              G1_Y_MPTR = 0x380;
-    uint256 internal constant            G2_X_1_MPTR = 0x3a0;
-    uint256 internal constant            G2_X_2_MPTR = 0x3c0;
-    uint256 internal constant            G2_Y_1_MPTR = 0x3e0;
-    uint256 internal constant            G2_Y_2_MPTR = 0x400;
-    uint256 internal constant      NEG_S_G2_X_1_MPTR = 0x420;
-    uint256 internal constant      NEG_S_G2_X_2_MPTR = 0x440;
-    uint256 internal constant      NEG_S_G2_Y_1_MPTR = 0x460;
-    uint256 internal constant      NEG_S_G2_Y_2_MPTR = 0x480;
+    uint256 internal constant             LHS_X_MPTR = 0x200;
+    uint256 internal constant             LHS_Y_MPTR = 0x220;
+    uint256 internal constant              G1_X_MPTR = 0x240;
+    uint256 internal constant              G1_Y_MPTR = 0x260;
+    uint256 internal constant            G2_X_1_MPTR = 0x280;
+    uint256 internal constant            G2_X_2_MPTR = 0x2a0;
+    uint256 internal constant            G2_Y_1_MPTR = 0x2c0;
+    uint256 internal constant            G2_Y_2_MPTR = 0x2e0;
+    uint256 internal constant      NEG_S_G2_X_1_MPTR = 0x300;
+    uint256 internal constant      NEG_S_G2_X_2_MPTR = 0x320;
+    uint256 internal constant      NEG_S_G2_Y_1_MPTR = 0x340;
+    uint256 internal constant      NEG_S_G2_Y_2_MPTR = 0x360;
 
     function verifyProof(
         address vk,
@@ -106,9 +105,9 @@ contract InclusionVerifier {
             // Initialize success as true
             let success := true
 
-            // Copy variables from the verifying key until `neg_s_g2` 
-            extcodecopy(vk, VK_MPTR, 0x00, 0x0220)
-            
+            // Copy the six variables from the verifying key up to the memory address 0x200 (= 0x160 + 0xc0), where `g2_y_2` is located.
+            extcodecopy(vk, G1_X_MPTR, 0x160, 0xc0)
+
             // The proof length should be divisible by `0x80` bytes, equivalent to four words.
             // The proof is structured as follows: 
             // 2W * n: Commitment points in the SNARK proof.

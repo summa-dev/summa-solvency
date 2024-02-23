@@ -9,31 +9,21 @@ contract GrandSumVerifier {
 
     // Memory positions for the verifying key.
     // The memory location starts at 0x200 due to the maximum operation on the ec_pairing function being 0x180, marking the maximum memory location used
-    uint256 internal constant                VK_MPTR = 0x200;
-    uint256 internal constant         VK_DIGEST_MPTR = 0x200;
-    uint256 internal constant                 K_MPTR = 0x220;
-    uint256 internal constant             N_INV_MPTR = 0x240;
-    uint256 internal constant             OMEGA_MPTR = 0x260;
-    uint256 internal constant         OMEGA_INV_MPTR = 0x280;
-    uint256 internal constant    OMEGA_INV_TO_L_MPTR = 0x2a0;
-    uint256 internal constant     NUM_INSTANCES_MPTR = 0x2c0;
-    uint256 internal constant   HAS_ACCUMULATOR_MPTR = 0x2e0;
-    uint256 internal constant        ACC_OFFSET_MPTR = 0x300;
-    uint256 internal constant     NUM_ACC_LIMBS_MPTR = 0x320;
-    uint256 internal constant NUM_ACC_LIMB_BITS_MPTR = 0x340;
-    uint256 internal constant              G1_X_MPTR = 0x360;
-    uint256 internal constant              G1_Y_MPTR = 0x380;
-    uint256 internal constant            G2_X_1_MPTR = 0x3a0;
-    uint256 internal constant            G2_X_2_MPTR = 0x3c0;
-    uint256 internal constant            G2_Y_1_MPTR = 0x3e0;
-    uint256 internal constant            G2_Y_2_MPTR = 0x400;
-    uint256 internal constant      NEG_S_G2_X_1_MPTR = 0x420;
-    uint256 internal constant      NEG_S_G2_X_2_MPTR = 0x440;
-    uint256 internal constant      NEG_S_G2_Y_1_MPTR = 0x460;
-    uint256 internal constant      NEG_S_G2_Y_2_MPTR = 0x480;
+    uint256 internal constant             N_INV_MPTR = 0x220;
+    uint256 internal constant             LHS_X_MPTR = 0x240;
+    uint256 internal constant             LHS_Y_MPTR = 0x260;
+    uint256 internal constant              G1_X_MPTR = 0x280;
+    uint256 internal constant              G1_Y_MPTR = 0x2a0;
+    uint256 internal constant            G2_X_1_MPTR = 0x2c0;
+    uint256 internal constant            G2_X_2_MPTR = 0x2e0;
+    uint256 internal constant            G2_Y_1_MPTR = 0x300;
+    uint256 internal constant            G2_Y_2_MPTR = 0x320;
+    uint256 internal constant      NEG_S_G2_X_1_MPTR = 0x340;
+    uint256 internal constant      NEG_S_G2_X_2_MPTR = 0x360;
+    uint256 internal constant      NEG_S_G2_Y_1_MPTR = 0x380;
+    uint256 internal constant      NEG_S_G2_Y_2_MPTR = 0x3a0;
 
-    uint256 internal constant       LHS_X_MPTR = 0x4a0;
-    uint256 internal constant       LHS_Y_MPTR = 0x4c0;
+
 
     function verifyProof(
         address vk,
@@ -106,10 +96,10 @@ contract GrandSumVerifier {
             // Initialize success as true
             let success := true
 
-            // Copy part of the vk into memory.
-            // The address 0x02a0 marks the end location that `neg_s_g2` points to in the vk contract.
-            // This step is for verifying the opening proof; the permutation commitments in the vk contract are not needed.
-            extcodecopy(vk, VK_MPTR, 0x00, 0x02a0)
+            // Copy part of the verifying key contract into memory.
+            extcodecopy(vk, N_INV_MPTR, 0x40, 0x020)
+            // The address 0x02a0(= 0x160 + 0x140) indicates the memory location to which `neg_s_g2` points in the verifying key contract
+            extcodecopy(vk, G1_X_MPTR, 0x160, 0x140)
 
             // The proof length should be divisible by `0x80` bytes, equivalent to four words.
             //
