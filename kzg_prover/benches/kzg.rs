@@ -4,9 +4,13 @@ use halo2_proofs::{arithmetic::Field, halo2curves::bn256::Fr as Fp};
 use num_bigint::BigUint;
 use rand::{rngs::OsRng, Rng};
 
+#[cfg(feature = "no_range_check")]
+use summa_solvency::circuits::univariate_grand_sum::NoRangeCheckConfig;
+#[cfg(not(feature = "no_range_check"))]
+use summa_solvency::circuits::univariate_grand_sum::UnivariateGrandSumConfig;
 use summa_solvency::{
     circuits::{
-        univariate_grand_sum::{CircuitConfig, UnivariateGrandSum, UnivariateGrandSumConfig},
+        univariate_grand_sum::{CircuitConfig, UnivariateGrandSum},
         utils::{
             compute_h_parallel, full_prover, generate_setup_artifacts,
             open_all_user_points_amortized, open_grand_sums, open_grand_sums_gwc,
@@ -37,7 +41,7 @@ fn bench_kzg<
     let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES, CONFIG>::init_empty();
     let (params, pk, vk) = generate_setup_artifacts(K, None, &circuit).unwrap();
 
-    let range_check_bench_name = format!("<{}> range check", name);
+    let range_check_proof_bench_name = format!("<{}> range check", name);
     let opening_grand_sum_bench_name = format!("<{}> opening grand sum", name);
     let opening_user_bench_name = format!("<{}> opening single user inclusion", name);
     let calculate_h_bench_name =
@@ -68,7 +72,7 @@ fn bench_kzg<
 
     let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES, CONFIG>::init(entries.to_vec());
 
-    c.bench_function(&range_check_bench_name, |b| {
+    c.bench_function(&range_check_proof_bench_name, |b| {
         b.iter_batched(
             || circuit.clone(), // Setup function: clone the circuit for each iteration
             |circuit| {
@@ -261,6 +265,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     const N_POINTS: usize = 3;
 
     // Demonstrating that a higher value of K has a more significant impact on benchmark performance than the number of users
+    #[cfg(not(feature = "no_range_check"))]
     {
         const K: u32 = 18;
         const N_USERS: usize = 16;
@@ -275,6 +280,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
             format!("../csv/entry_{N_USERS}.csv").as_str(),
         );
     }
+    #[cfg(not(feature = "no_range_check"))]
     {
         const K: u32 = 17;
         const N_USERS: usize = 64;
@@ -289,39 +295,43 @@ fn criterion_benchmark(_c: &mut Criterion) {
             format!("../csv/entry_{N_USERS}.csv").as_str(),
         );
     }
-    // Use the following benchmarks for quick evaluation/prototyping (no range check)
-    // {
-    //     const K: u32 = 9;
-    //     const N_USERS: usize = 64;
-    //     bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
-    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
-    //     );
-    // }
-    // {
-    //     const K: u32 = 10;
-    //     const N_USERS: usize = 64;
-    //     bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
-    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
-    //     );
-    // }
-    // {
-    //     const K: u32 = 11;
-    //     const N_USERS: usize = 64;
-    //     bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
-    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
-    //     );
-    // }
-    // {
-    //     const K: u32 = 12;
-    //     const N_USERS: usize = 64;
-    //     bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
-    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
-    //     );
-    // }
+    //Use the following benchmarks for quick evaluation/prototyping (no range check)
+    #[cfg(feature = "no_range_check")]
+    {
+        const K: u32 = 9;
+        const N_USERS: usize = 64;
+        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+            format!("../csv/entry_{N_USERS}.csv").as_str(),
+        );
+    }
+    #[cfg(feature = "no_range_check")]
+    {
+        const K: u32 = 10;
+        const N_USERS: usize = 64;
+        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+            format!("../csv/entry_{N_USERS}.csv").as_str(),
+        );
+    }
+    #[cfg(feature = "no_range_check")]
+    {
+        const K: u32 = 11;
+        const N_USERS: usize = 64;
+        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+            format!("../csv/entry_{N_USERS}.csv").as_str(),
+        );
+    }
+    #[cfg(feature = "no_range_check")]
+    {
+        const K: u32 = 12;
+        const N_USERS: usize = 64;
+        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+            format!("../csv/entry_{N_USERS}.csv").as_str(),
+        );
+    }
 }
 
 criterion_group!(benches, criterion_benchmark);
