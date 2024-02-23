@@ -457,6 +457,8 @@ describe("Summa Contract", () => {
       const commitmentCalldata: any = JSON.parse(commitmentCalldataJson);
 
       rangeCheckSnarkProof = commitmentCalldata.range_check_snark_proof;
+      const grandsumProof = commitmentCalldata.grand_sums_batch_proof;
+      const totalBalances = commitmentCalldata.total_balances;
 
       const inclusionCalldataJson = fs.readFileSync(
         path.resolve(
@@ -466,6 +468,9 @@ describe("Summa Contract", () => {
         "utf-8"
       );
       const inclusionCalldata: any = JSON.parse(inclusionCalldataJson);
+
+      await summa.submitCommitment(rangeCheckSnarkProof, grandsumProof, totalBalances, 1);
+
       inclusionProof = inclusionCalldata.proof;
       challenges = inclusionCalldata.challenges;
       values = inclusionCalldata.user_values;
@@ -473,37 +478,24 @@ describe("Summa Contract", () => {
 
     // Testing verifyInclusionProof function
     it("should verify inclusion proof with `verifyInclusionProof` function", async () => {
-      let proofArray = ethers.utils.arrayify(inclusionProof);
-      let snarkProofarray = ethers.utils.arrayify(rangeCheckSnarkProof).slice(0, proofArray.length);
-      let proof = ethers.utils.concat([proofArray, snarkProofarray]);
-
-      expect(await summa.verifyInclusionProof(proof, challenges, values)).to.be.true;
+      expect(await summa.verifyInclusionProof(1, inclusionProof, challenges, values)).to.be.true;
     });
 
-    it("should reject invalid inclusion proof", async () => {
-      let proofArray = ethers.utils.arrayify(inclusionProof);
-      let snarkProofarray = ethers.utils.arrayify(rangeCheckSnarkProof).slice(0, proofArray.length);
-      let wrongProof = ethers.utils.concat([snarkProofarray, snarkProofarray]);
-
-      // This is an issue with https://github.com/NomicFoundation/hardhat/issues/3446
-      await expect(summa.verifyInclusionProof(wrongProof, challenges, values)).to.be.reverted;
-    });
-
-    it("should reject verifying inclusion proof length mismatches with values length", async () => {
-      let proofArray = ethers.utils.arrayify(inclusionProof);
-      let snarkProofarray = ethers.utils.arrayify(rangeCheckSnarkProof).slice(0, proofArray.length - 1);
-      let wrongProof = ethers.utils.concat([proofArray, snarkProofarray]);
-
-      await expect(summa.verifyInclusionProof(wrongProof, challenges, values)).to.be.revertedWith("Invalid inclusion proof length");
-      await expect(summa.verifyInclusionProof(wrongProof, challenges, values.slice(0, values.length - 1))).to.be.revertedWith("Invalid inclusion proof length");
+    it("should reject invalid inclusion proof with wrong snark proof", async () => {
+      // No commitment is submitted at timestamp 2
+      await expect(summa.verifyInclusionProof(2, inclusionProof, challenges, values)).to.be.reverted;
     });
 
     it("should reject verifying inclusion proof with wrong challenge points", async () => {
-      let proofArray = ethers.utils.arrayify(inclusionProof);
-      let snarkProofarray = ethers.utils.arrayify(rangeCheckSnarkProof).slice(0, proofArray.length);
-      let proof = ethers.utils.concat([proofArray, snarkProofarray]);
+      let wrongChallenges = challenges.slice(0, challenges.length - 1);
 
-      await expect(summa.verifyInclusionProof(proof, challenges.slice(0, challenges.length - 1), values)).to.be.revertedWith("Invalid challenges length");
+      await expect(summa.verifyInclusionProof(1, inclusionProof, wrongChallenges, values)).to.be.revertedWith("Invalid challenges length");
+    });
+
+    it("should reject verifying inclusion proof with value length mismatches with config", async () => {
+      let wrongValues = values.slice(0, values.length - 1);
+
+      await expect(summa.verifyInclusionProof(1, inclusionProof, challenges, wrongValues)).to.be.revertedWith("Values length mismatch with config");
     });
   });
 });

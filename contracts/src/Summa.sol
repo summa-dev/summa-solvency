@@ -242,37 +242,50 @@ contract Summa is Ownable {
             "Liability commitments and cryptocurrencies number mismatch"
         );
 
-        bytes memory slicedSnarkProof = new bytes(grandsumProof.length);
-        for (uint256 i = 0; i < grandsumProof.length; i++) {
-            slicedSnarkProof[i] = snarkProof[i + 64]; // Skip first 64 bytes, it's not for total balance.
+        // For storing first 64 bytes of snarkProof, which is corresponding to the username
+        uint256 slicedSnarkProofLength = 64 + grandsumProof.length;
+        bytes memory slicedSnarkProof = new bytes(slicedSnarkProofLength);
+        for (uint256 i = 0; i < slicedSnarkProofLength; i++) {
+            slicedSnarkProof[i] = snarkProof[i];
         }
 
         // Concatenate the grandsumProof with snarkProof with same length
-        bytes memory combinedProofs = new bytes(slicedSnarkProof.length + grandsumProof.length);
+        bytes memory combinedProofs = new bytes(2 * grandsumProof.length);
         for (uint256 i = 0; i < grandsumProof.length; i++) {
             combinedProofs[i] = grandsumProof[i];
         }
-        for (uint256 i = 0; i < slicedSnarkProof.length; i++) {
-            combinedProofs[i + grandsumProof.length] = slicedSnarkProof[i];
+        for (uint256 i = 0; i < grandsumProof.length; i++) {
+            combinedProofs[i + grandsumProof.length] = slicedSnarkProof[i+ 64];  // Skip first 64 bytes, it's not for total balance.
         }
 
         require(grandSumVerifier.verifyProof(verifyingKey, combinedProofs, totalBalances), "Invalid grandsum proof");
 
-        // Slice the proof aa length as grandsumProof 
         commitments[timestamp] = slicedSnarkProof;
 
         emit LiabilitiesCommitmentSubmitted(timestamp, totalBalances, slicedSnarkProof);
     }
 
     function verifyInclusionProof(
+        uint256 timestamp,
         bytes memory inclusionProof,
         uint256[] memory challenges,
         uint256[] memory values
     ) public view returns (bool) {
-        require(values.length > 1, "Invalid values length");
-        require(inclusionProof.length == (values.length * 0x80), "Invalid inclusion proof length");
         require(challenges.length == 4, "Invalid challenges length");
+        
+        // Excluding `usename` in values
+        require((values.length - 1) == config.cryptocurrencyNames.length, "Values length mismatch with config");
 
-        return inclusionVerifier.verifyProof(verifyingKey, inclusionProof, challenges, values);
+        bytes memory snarkProof = commitments[timestamp];
+    
+        bytes memory combinedProofs = new bytes(snarkProof.length + inclusionProof.length);
+        for (uint256 i = 0; i < inclusionProof.length; i++) {
+            combinedProofs[i] = inclusionProof[i];
+        }
+        for (uint256 i = 0; i < snarkProof.length; i++) {
+            combinedProofs[i + inclusionProof.length] = snarkProof[i];
+        }
+
+        return inclusionVerifier.verifyProof(verifyingKey, combinedProofs, challenges, values);
     }
 }
