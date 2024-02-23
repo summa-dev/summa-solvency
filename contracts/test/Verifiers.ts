@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { ethers } from "hardhat";
-import { Verifier as SnarkVerifier, InclusionVerifier, GrandsumVerifier, Halo2VerifyingKey } from "../typechain-types";
+import { Verifier as SnarkVerifier, InclusionVerifier, GrandSumVerifier, Halo2VerifyingKey } from "../typechain-types";
 import { BigNumber } from "ethers";
 import { BytesLike } from "ethers/lib/utils";
 import * as fs from "fs";
@@ -50,14 +50,13 @@ describe("Verifier Contracts", () => {
       expect(await snarkVerifier.verifyProof(verifyingKey.address, commitmentCalldata.range_check_snark_proof, [1])).to.be.true;
     });
 
-    it("should fail to verify snark proof without the number of instances", async () => {
-      await expect(snarkVerifier.verifyProof(verifyingKey.address, commitmentCalldata.range_check_snark_proof, [])).to.be.reverted;
+    it("should revert grand sum proof", async () => {
+      await expect(snarkVerifier.callStatic.verifyProof(verifyingKey.address, commitmentCalldata.grand_sums_batch_proof, [1])).to.be.reverted;
     });
-
   });
 
-  describe("Grandsum Proof Verifier", () => {
-    let grandSumVerifier: GrandsumVerifier;
+  describe("GrandSum Proof Verifier", () => {
+    let grandSumVerifier: GrandSumVerifier;
     let verifyingKey: Halo2VerifyingKey;
     let commitmentCalldata: {
       range_check_snark_proof: BytesLike;
@@ -72,17 +71,17 @@ describe("Verifier Contracts", () => {
 
       // Deploy GrandSumVerifier contract
       grandSumVerifier = await ethers.deployContract(
-        "src/GrandsumVerifier.sol:GrandsumVerifier"
-      ) as GrandsumVerifier;
+        "src/GrandSumVerifier.sol:GrandSumVerifier"
+      ) as GrandSumVerifier;
     });
 
-    it("should verify grandsum proof", async () => {
+    it("should verify grand sum proof", async () => {
       // Concatenates the snark proof and the grand sum proof
       let snarkProofArray = ethers.utils.arrayify(commitmentCalldata.range_check_snark_proof);
       let grandSumProofArray = ethers.utils.arrayify(commitmentCalldata.grand_sums_batch_proof);
       let totalBalances = commitmentCalldata.total_balances;
 
-      // The first 64 bytes of the snark proof represent a commitment to the corresponding username polynomial
+      // The first 64 bytes of the snark proof represent a commitment to the corresponding to the user identity
       // Starting from the next 64 bytes, each set of 64 bytes represents commitments corresponding to the total sum of balances
       let grandSumCommitments = snarkProofArray.slice(64, (64 + grandSumProofArray.length));
 
@@ -109,8 +108,8 @@ describe("Verifier Contracts", () => {
       total_balances: BigNumber[];
     };
     let challenges: [BigNumber, BigNumber, BigNumber, BigNumber];
-    let username: BytesLike;
-    let username_biguint: BigNumber;
+    let userId: BytesLike;
+    let userIdBigUint: BigNumber;
     let balance1: BigNumber;
     let balance2: BigNumber;
 
@@ -119,8 +118,6 @@ describe("Verifier Contracts", () => {
       verifyingKey = deploymentInfo.verifyingKey;
       commitmentCalldata = deploymentInfo.commitmentCalldata;
 
-      // InclusionVerifier requires BN256G2 contract for performing elliptic curve operations on G2 subgroup
-      // const bn256g2 = await deployBN256G2();
       inclusionVerifier = await ethers.deployContract(
         "src/InclusionVerifier.sol:InclusionVerifier"
       ) as InclusionVerifier;
@@ -138,9 +135,9 @@ describe("Verifier Contracts", () => {
       const inclusionCalldata: any = JSON.parse(inclusionJson);
 
       inclusionProof = inclusionCalldata.proof;
-      username = inclusionCalldata.username;
+      userId = inclusionCalldata.user_id;
       challenges = inclusionCalldata.challenges;
-      username_biguint = inclusionCalldata.user_values[0];
+      userIdBigUint = inclusionCalldata.user_values[0];
       balance1 = inclusionCalldata.user_values[1];
       balance2 = inclusionCalldata.user_values[2];
     });
@@ -159,11 +156,11 @@ describe("Verifier Contracts", () => {
         verifyingKey.address,
         proofs,
         [challenges[0], challenges[1], challenges[2], challenges[3]],
-        [username_biguint, balance1, balance2]
+        [userIdBigUint, balance1, balance2]
       )).to.be.true;
     });
 
-    it("should not verify inclusion proof", async () => {
+    it("should revert invalid inclusion proof", async () => {
       // Generating proof with concatenated snark proof and inclusion proof
       let snarkProof = commitmentCalldata.range_check_snark_proof;
 
@@ -177,7 +174,7 @@ describe("Verifier Contracts", () => {
         verifyingKey.address,
         wrongProofs,
         [challenges[0], challenges[1], challenges[2], challenges[3]],
-        [username_biguint, balance1, balance2]
+        [userIdBigUint, balance1, balance2]
       )).to.be.reverted;
     });
   });

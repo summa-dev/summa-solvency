@@ -10,7 +10,7 @@ interface IInclusionVerifier {
      * @param vk The verification key
      * @param proof The proof
      * @param challenges The pre-calculated g2 points with challenge 
-     * @param values The user data that includes username, balance of currency 1
+     * @param values The user data that includes userId, balance of currency 1
      * @return true if the proof is valid, false otherwise
      */
         function verifyProof(

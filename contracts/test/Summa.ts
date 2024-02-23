@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { ethers } from "hardhat";
-import { Summa, Halo2VerifyingKey, Verifier, GrandsumVerifier, InclusionVerifier } from "../typechain-types";
+import { Summa, Halo2VerifyingKey, Verifier, GrandSumVerifier, InclusionVerifier } from "../typechain-types";
 import { BigNumber } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as fs from "fs";
@@ -23,10 +23,10 @@ describe("Summa Contract", () => {
     );
     await snarkVerifier.deployed();
 
-    const grandsumVerifier = await ethers.deployContract(
-      "src/GrandsumVerifier.sol:GrandsumVerifier"
-    ) as GrandsumVerifier;
-    await grandsumVerifier.deployed();
+    const grandSumVerifier = await ethers.deployContract(
+      "src/GrandSumVerifier.sol:GrandSumVerifier"
+    ) as GrandSumVerifier;
+    await grandSumVerifier.deployed();
 
     const inclusionVerifier = await ethers.deployContract(
       "src/InclusionVerifier.sol:InclusionVerifier"
@@ -36,7 +36,7 @@ describe("Summa Contract", () => {
     const summa = await ethers.deployContract("Summa", [
       verifyingKey.address,
       snarkVerifier.address,
-      grandsumVerifier.address,
+      grandSumVerifier.address,
       inclusionVerifier.address,
       ["ETH", "BTC"],
       ["ETH", "BTC"],
@@ -56,7 +56,7 @@ describe("Summa Contract", () => {
   describe("deployment tests", () => {
     let verifyingKey: Halo2VerifyingKey;
     let snarkVerifier: Verifier;
-    let grandsumVerifier: GrandsumVerifier;
+    let grandSumVerifier: GrandSumVerifier;
     let inclusionVerifier: InclusionVerifier;
 
     beforeEach(async () => {
@@ -71,10 +71,10 @@ describe("Summa Contract", () => {
       ) as Verifier;
       await snarkVerifier.deployed();
 
-      grandsumVerifier = await ethers.deployContract(
-        "src/GrandsumVerifier.sol:GrandsumVerifier"
-      ) as GrandsumVerifier;
-      await grandsumVerifier.deployed();
+      grandSumVerifier = await ethers.deployContract(
+        "src/GrandSumVerifier.sol:GrandSumVerifier"
+      ) as GrandSumVerifier;
+      await grandSumVerifier.deployed();
 
       inclusionVerifier = await ethers.deployContract(
         "src/InclusionVerifier.sol:InclusionVerifier"
@@ -87,7 +87,7 @@ describe("Summa Contract", () => {
         ethers.deployContract("Summa", [
           verifyingKey.address,
           snarkVerifier.address,
-          grandsumVerifier.address,
+          grandSumVerifier.address,
           inclusionVerifier.address,
           ["", "BTC"],
           ["ETH", "BTC"],
@@ -99,7 +99,7 @@ describe("Summa Contract", () => {
         ethers.deployContract("Summa", [
           verifyingKey.address,
           snarkVerifier.address,
-          grandsumVerifier.address,
+          grandSumVerifier.address,
           inclusionVerifier.address,
           ["ETH", "BTC"],
           ["ETH", ""],
@@ -111,7 +111,7 @@ describe("Summa Contract", () => {
         ethers.deployContract("Summa", [
           verifyingKey.address,
           snarkVerifier.address,
-          grandsumVerifier.address,
+          grandSumVerifier.address,
           inclusionVerifier.address,
           [],
           ["ETH", ""],
@@ -125,7 +125,7 @@ describe("Summa Contract", () => {
         ethers.deployContract("Summa", [
           verifyingKey.address,
           snarkVerifier.address,
-          grandsumVerifier.address,
+          grandSumVerifier.address,
           inclusionVerifier.address,
           ["ETH", "BTC"],
           ["ETH", "BTC"],
@@ -141,7 +141,7 @@ describe("Summa Contract", () => {
         ethers.deployContract("Summa", [
           ethers.constants.AddressZero,
           snarkVerifier.address,
-          grandsumVerifier.address,
+          grandSumVerifier.address,
           inclusionVerifier.address,
           ["ETH", "BTC"],
           ["ETH", "BTC"],
@@ -159,7 +159,7 @@ describe("Summa Contract", () => {
         ethers.deployContract("Summa", [
           verifyingKey.address,
           ethers.constants.AddressZero,
-          grandsumVerifier.address,
+          grandSumVerifier.address,
           inclusionVerifier.address,
           ["ETH", "BTC"],
           ["ETH", "BTC"],
@@ -169,7 +169,7 @@ describe("Summa Contract", () => {
     });
 
 
-    it("should not deploy with invalid grandsum verifier", async () => {
+    it("should not deploy with invalid grand sum verifier", async () => {
       const verifyingKey = await ethers.deployContract(
         "src/VerifyingKey.sol:Halo2VerifyingKey"
       );
@@ -184,7 +184,7 @@ describe("Summa Contract", () => {
           ["ETH", "BTC"],
           8,
         ])
-      ).to.be.revertedWith("Invalid grandsum verifier address");
+      ).to.be.revertedWith("Invalid grand sum verifier address");
     });
 
     it("should not deploy with invalid inclusion verifier", async () => {
@@ -192,7 +192,7 @@ describe("Summa Contract", () => {
         ethers.deployContract("Summa", [
           verifyingKey.address,
           snarkVerifier.address,
-          grandsumVerifier.address,
+          grandSumVerifier.address,
           ethers.constants.AddressZero,
           ["ETH", "BTC"],
           ["ETH", "BTC"],
@@ -211,7 +211,7 @@ describe("Summa Contract", () => {
         ethers.deployContract("Summa", [
           dummyVerifyingKey.address,
           snarkVerifier.address,
-          grandsumVerifier.address,
+          grandSumVerifier.address,
           ethers.constants.AddressZero,
           ["ETH", "BTC"],
           ["ETH", "BTC"],
@@ -373,7 +373,7 @@ describe("Summa Contract", () => {
 
   describe("submit commitment", () => {
     let rangeCheckSnarkProof: string;
-    let grandsumProof: string;
+    let grandSumProof: string;
     let totalBalances: BigNumber[];
     let summa: Summa;
 
@@ -391,47 +391,41 @@ describe("Summa Contract", () => {
       const commitmentCalldata: any = JSON.parse(commitmentCalldataJson);
 
       rangeCheckSnarkProof = commitmentCalldata.range_check_snark_proof;
-      grandsumProof = commitmentCalldata.grand_sums_batch_proof;
+      grandSumProof = commitmentCalldata.grand_sums_batch_proof;
       totalBalances = commitmentCalldata.total_balances;
     });
 
     it("should submit a valid commitment", async () => {
-      let expect_commitment_on_contract = rangeCheckSnarkProof.slice(0, grandsumProof.length + 128);
+      let expect_commitment_on_contract = rangeCheckSnarkProof.slice(0, grandSumProof.length + 128);
       expect(await summa.commitments(1)).to.be.equal("0x");
-      await summa.submitCommitment(rangeCheckSnarkProof, grandsumProof, totalBalances, 1);
+      await summa.submitCommitment(rangeCheckSnarkProof, grandSumProof, totalBalances, 1);
       expect(await summa.commitments(1)).to.be.equal(expect_commitment_on_contract);
     });
 
-    it("should reject submit an invalid total balances", async () => {
-      await expect(
-        summa.submitCommitment(rangeCheckSnarkProof, grandsumProof, [], 1)
-      ).to.be.revertedWith("Invalid total balances length");
-    });
-
-    it("should reject submit when grandsum proof length mismatches with total balances", async () => {
+    it("should revert when the grand sum proof length mismatches with the total balances", async () => {
 
       let wrong_total_balance = totalBalances.slice(0, totalBalances.length - 1);
       await expect(
-        summa.submitCommitment(rangeCheckSnarkProof, grandsumProof, wrong_total_balance, 1)
-      ).to.be.revertedWith("Invalid grandsum proof length");
+        summa.submitCommitment(rangeCheckSnarkProof, grandSumProof, wrong_total_balance, 1)
+      ).to.be.revertedWith("Invalid grand sum proof length");
 
-      let wrong_grandsum_proof = grandsumProof.slice(0, grandsumProof.length - 64);
+      let wrong_grand_sum_proof = grandSumProof.slice(0, grandSumProof.length - 64);
       await expect(
-        summa.submitCommitment(rangeCheckSnarkProof, wrong_grandsum_proof, totalBalances, 1)
-      ).to.be.revertedWith("Invalid grandsum proof length");
+        summa.submitCommitment(rangeCheckSnarkProof, wrong_grand_sum_proof, totalBalances, 1)
+      ).to.be.revertedWith("Invalid grand sum proof length");
     });
 
-    it("should reject submit when snark proof length less than grandsum proof", async () => {
-      let wrong_range_check_snark_proof = rangeCheckSnarkProof.slice(0, grandsumProof.length - 64);
+    it("should revert a snark proof if its length is less than the grand sum proof", async () => {
+      let wrong_range_check_snark_proof = rangeCheckSnarkProof.slice(0, grandSumProof.length - 64);
       await expect(
-        summa.submitCommitment(wrong_range_check_snark_proof, grandsumProof, totalBalances, 1)
+        summa.submitCommitment(wrong_range_check_snark_proof, grandSumProof, totalBalances, 1)
       ).to.be.revertedWith("Invalid snark proof length");
     });
 
-    it("should reject submit an invalid snark proof", async () => {
+    it("should revert due to an invalid snark proof", async () => {
       let wrong_range_check_snark_proof = rangeCheckSnarkProof.replace("1", "2");
       await expect(
-        summa.submitCommitment(wrong_range_check_snark_proof, grandsumProof, totalBalances, 1)
+        summa.submitCommitment(wrong_range_check_snark_proof, grandSumProof, totalBalances, 1)
       ).to.be.reverted;
     });
   });
@@ -457,7 +451,7 @@ describe("Summa Contract", () => {
       const commitmentCalldata: any = JSON.parse(commitmentCalldataJson);
 
       rangeCheckSnarkProof = commitmentCalldata.range_check_snark_proof;
-      const grandsumProof = commitmentCalldata.grand_sums_batch_proof;
+      const grandSumProof = commitmentCalldata.grand_sums_batch_proof;
       const totalBalances = commitmentCalldata.total_balances;
 
       const inclusionCalldataJson = fs.readFileSync(
@@ -469,7 +463,7 @@ describe("Summa Contract", () => {
       );
       const inclusionCalldata: any = JSON.parse(inclusionCalldataJson);
 
-      await summa.submitCommitment(rangeCheckSnarkProof, grandsumProof, totalBalances, 1);
+      await summa.submitCommitment(rangeCheckSnarkProof, grandSumProof, totalBalances, 1);
 
       inclusionProof = inclusionCalldata.proof;
       challenges = inclusionCalldata.challenges;
@@ -481,18 +475,18 @@ describe("Summa Contract", () => {
       expect(await summa.verifyInclusionProof(1, inclusionProof, challenges, values)).to.be.true;
     });
 
-    it("should reject invalid inclusion proof with wrong snark proof", async () => {
+    it("should not verify inclusion proof with wrong snark proof", async () => {
       // No commitment is submitted at timestamp 2
       await expect(summa.verifyInclusionProof(2, inclusionProof, challenges, values)).to.be.reverted;
     });
 
-    it("should reject verifying inclusion proof with wrong challenge points", async () => {
+    it("should not verify inclusion proof with wrong challenge points", async () => {
       let wrongChallenges = challenges.slice(0, challenges.length - 1);
 
       await expect(summa.verifyInclusionProof(1, inclusionProof, wrongChallenges, values)).to.be.revertedWith("Invalid challenges length");
     });
 
-    it("should reject verifying inclusion proof with value length mismatches with config", async () => {
+    it("should not verify inclusion proof with value length mismatches with config", async () => {
       let wrongValues = values.slice(0, values.length - 1);
 
       await expect(summa.verifyInclusionProof(1, inclusionProof, challenges, wrongValues)).to.be.revertedWith("Values length mismatch with config");

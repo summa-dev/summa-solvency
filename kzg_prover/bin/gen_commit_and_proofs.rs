@@ -3,11 +3,13 @@ use ethers::types::U256;
 use halo2_proofs::{
     arithmetic::Field,
     halo2curves::{
-        bn256::{Bn256, Fr as Fp, G2Affine},
-        group::Curve,
+        bn256::{Bn256, Fr as Fp, G1Affine, G2Affine},
+        group::{cofactor::CofactorCurveAffine, Curve},
     },
     poly::kzg::commitment::KZGCommitmentScheme,
+    transcript::TranscriptRead,
 };
+use halo2_solidity_verifier::Keccak256Transcript;
 use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
 use serde_json::to_string_pretty;
@@ -20,7 +22,7 @@ use summa_solvency::{
     cryptocurrency::Cryptocurrency,
     entry::Entry,
     utils::{
-        amortized_kzg::{commit_kzg, create_naive_kzg_proof, verify_kzg_proof},
+        amortized_kzg::{create_naive_kzg_proof, verify_kzg_proof},
         big_uint_to_fp, parse_csv_to_entries,
     },
 };
@@ -40,7 +42,7 @@ struct CommitmentSolidityCallData {
 struct InclusionProofCallData {
     proof: String,
     challenges: Vec<U256>,
-    username: String,
+    user_id: String,
     user_values: Vec<U256>,
 }
 
@@ -88,6 +90,14 @@ fn main() {
         }
     }
 
+    // Evaluate the commitments from the snark proof
+    let mut kzg_commitments = Vec::with_capacity(N_CURRENCIES);
+    let mut transcript = Keccak256Transcript::new(zk_snark_proof.as_slice());
+    for _ in 0..(N_CURRENCIES + 1) {
+        let point: G1Affine = transcript.read_point().unwrap();
+        kzg_commitments.push(point.to_curve());
+    }
+
     let poly_length = 1 << u64::from(K);
     let total_balances = csv_total
         .iter()
@@ -97,10 +107,8 @@ fn main() {
     let mut grand_sums_kzg_proof = Vec::new();
     for balance_column in 1..(N_CURRENCIES + 1) {
         let f_poly = advice_polys.advice_polys.get(balance_column).unwrap();
-        let kzg_commitment = commit_kzg(&params, f_poly);
 
         let currency_index = balance_column - 1;
-
         let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
             &params,
             pk.get_vk().get_domain(),
@@ -112,7 +120,7 @@ fn main() {
         // Ensure the KZG proof is valid
         assert!(verify_kzg_proof(
             &params,
-            kzg_commitment,
+            kzg_commitments[balance_column],
             kzg_proof,
             &challenge,
             &total_balances[currency_index],
@@ -164,7 +172,6 @@ fn main() {
     let mut inclusion_proof: Vec<Vec<u8>> = Vec::new();
     for column_index in column_range {
         let f_poly = advice_polys.advice_polys.get(column_index).unwrap();
-        let kzg_commitment = commit_kzg(&params, f_poly);
 
         let z = if column_index == 0 {
             big_uint_to_fp(entries[user_index as usize].username_as_big_uint())
@@ -181,7 +188,13 @@ fn main() {
         );
 
         assert!(
-            verify_kzg_proof(&params, kzg_commitment, kzg_proof, &challenge, &z,),
+            verify_kzg_proof(
+                &params,
+                kzg_commitments[column_index],
+                kzg_proof,
+                &challenge,
+                &z,
+            ),
             "KZG proof verification failed for user {}",
             user_index
         );
@@ -215,7 +228,7 @@ fn main() {
 
     let data = InclusionProofCallData {
         proof: format!("0x{}", hex::encode(inclusion_proof.concat())),
-        username: entries[user_index as usize].username().to_string(),
+        user_id: entries[user_index as usize].username().to_string(),
         challenges,
         user_values,
     };

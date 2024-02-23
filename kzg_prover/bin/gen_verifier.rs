@@ -74,7 +74,6 @@ fn main() {
 
     let result_unwrapped = result.unwrap();
     result_unwrapped.0.expect("prover should not fail");
-    let _advice_polys = result_unwrapped.1.clone();
 
     let zk_snark_proof = transcript.finalize();
 

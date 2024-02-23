@@ -65,7 +65,8 @@ contract Summa is Ownable {
     event LiabilitiesCommitmentSubmitted(
         uint256 indexed timestamp,
         uint256[] totalBalances,
-        bytes proof
+        bytes snarkProof,
+        bytes grandSumProof
     );
 
     /**
@@ -115,7 +116,7 @@ contract Summa is Ownable {
         polynomialEncodingVerifier = _polynomialEncodingVerifier;
         require(
             address(_grandSumVerifier) != address(0),
-            "Invalid grandsum verifier address"
+            "Invalid grand sum verifier address"
         );
         grandSumVerifier = _grandSumVerifier;
         require(
@@ -216,20 +217,20 @@ contract Summa is Ownable {
     /**
      * @dev Submit commitment for a CEX
      * @param snarkProof ZK proof of the valid polynomial encoding
-     * @param grandsumProof kzg proof of the grand sum
+     * @param grandSumProof kzg proof of the grand sum
      * @param totalBalances The array of total balances in the grand sum
      * @param timestamp The timestamp at which the CEX took the snapshot of its assets and liabilities
      */
     function submitCommitment(
         bytes memory snarkProof,
-        bytes memory grandsumProof,
+        bytes memory grandSumProof,
         uint256[] memory totalBalances,
         uint256 timestamp
     ) public onlyOwner {
         // Check input lengths
         require(totalBalances.length > 0, "Invalid total balances length");
-        require(grandsumProof.length == (totalBalances.length * 0x40), "Invalid grandsum proof length");
-        require(snarkProof.length > grandsumProof.length, "Invalid snark proof length");
+        require(grandSumProof.length == (totalBalances.length * 0x40), "Invalid grand sum proof length");
+        require(snarkProof.length > grandSumProof.length, "Invalid snark proof length");
         
         uint[] memory args = new uint[](1);
         args[0] = 1; // Workaround to satisfy the verifier (TODO remove after https://github.com/summa-dev/halo2-solidity-verifier/issues/1 is resolved)
@@ -242,27 +243,27 @@ contract Summa is Ownable {
             "Liability commitments and cryptocurrencies number mismatch"
         );
 
-        // For storing first 64 bytes of snarkProof, which is corresponding to the username
-        uint256 slicedSnarkProofLength = 64 + grandsumProof.length;
+        // For storing first 64 bytes of snarkProof, which is corresponding to the userId
+        uint256 slicedSnarkProofLength = 64 + grandSumProof.length;
         bytes memory slicedSnarkProof = new bytes(slicedSnarkProofLength);
         for (uint256 i = 0; i < slicedSnarkProofLength; i++) {
             slicedSnarkProof[i] = snarkProof[i];
         }
 
-        // Concatenate the grandsumProof with snarkProof with same length
-        bytes memory combinedProofs = new bytes(2 * grandsumProof.length);
-        for (uint256 i = 0; i < grandsumProof.length; i++) {
-            combinedProofs[i] = grandsumProof[i];
+        // Concatenate the grandSumProof with snarkProof with same length
+        bytes memory combinedProofs = new bytes(2 * grandSumProof.length);
+        for (uint256 i = 0; i < grandSumProof.length; i++) {
+            combinedProofs[i] = grandSumProof[i];
         }
-        for (uint256 i = 0; i < grandsumProof.length; i++) {
-            combinedProofs[i + grandsumProof.length] = slicedSnarkProof[i+ 64];  // Skip first 64 bytes, it's not for total balance.
+        for (uint256 i = 0; i < grandSumProof.length; i++) {
+            combinedProofs[i + grandSumProof.length] = slicedSnarkProof[i+ 64];  // Skip first 64 bytes, it's not for total balance.
         }
 
-        require(grandSumVerifier.verifyProof(verifyingKey, combinedProofs, totalBalances), "Invalid grandsum proof");
+        require(grandSumVerifier.verifyProof(verifyingKey, combinedProofs, totalBalances), "Invalid grand sum proof");
 
         commitments[timestamp] = slicedSnarkProof;
 
-        emit LiabilitiesCommitmentSubmitted(timestamp, totalBalances, slicedSnarkProof);
+        emit LiabilitiesCommitmentSubmitted(timestamp, totalBalances, slicedSnarkProof, grandSumProof);
     }
 
     function verifyInclusionProof(

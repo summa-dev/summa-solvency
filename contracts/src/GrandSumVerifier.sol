@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-contract GrandsumVerifier {
+contract GrandSumVerifier {
     // Calldata positions for proofs
     uint256 internal constant       PROOF_LEN_CPTR = 0x64;
     uint256 internal constant           PROOF_CPTR = 0x84;
