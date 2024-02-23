@@ -3,10 +3,11 @@ use std::{fs::File, ops::Range};
 use ark_std::{end_timer, start_timer};
 use ethers::types::U256;
 use halo2_proofs::{
-    arithmetic::{best_fft, Field},
+    arithmetic::{best_fft, best_multiexp, parallelize, Field},
     halo2curves::{
         bn256::{Bn256, Fr as Fp, G1Affine, G1},
         ff::{PrimeField, WithSmallOrderMulGroup},
+        group::Curve,
     },
     plonk::{
         create_proof, keygen_pk, keygen_vk, verify_proof, AdviceSingle, Circuit, Error, ProvingKey,
@@ -157,7 +158,7 @@ pub fn open_grand_sums(
     )
 }
 
-// This function for comparison with open_grand_sums, which is used ProverSHPLONK
+// This function is for comparison with open_grand_sums and is using GWC instead of ProverSHPLONK
 pub fn open_grand_sums_gwc(
     advice_polys: &[Polynomial<Fp, Coeff>],
     advice_blinds: &[Blind<Fp>],
@@ -221,33 +222,88 @@ pub fn open_user_points(
     )
 }
 
-/// Calculate all opening proofs at once for the polynomials using the amortized KZG approach
+/// Calculate h(x) for the amortized KZG algorithm as per FK23 for all advice polynomials in the range in parallel
 ///
 /// # Arguments
 ///
 /// * `advice_polys` - the advice polynomials
 /// * `params` - the KZG parameters
 /// * `column_range` - the range of the advice columns of interest
+///
+/// # Returns
+///
+/// * `Vec<Vec<G1>>` - h(x) vectors corresponding to the polynomials
+pub fn compute_h_parallel(
+    advice_polys: &[Polynomial<Fp, Coeff>],
+    params: &ParamsKZG<Bn256>,
+    column_range: Range<usize>,
+) -> Vec<Vec<G1>> {
+    advice_polys[column_range]
+        // Parallelize the independent amortized openings of the user ID and balance polynomials
+        .par_iter()
+        .map(|poly| compute_h(params, poly))
+        .collect()
+}
+
+/// Calculate all opening proofs at once for the polynomials using the amortized KZG approach
+///
+/// # Arguments
+///
+/// * `h_vectors` - the h(X) vectors calculated for the polynomials using the amortized KZG approach
 /// * `omega` - $\omega$, the generator of the multiplicative subgroup used to interpolate the polynomials.
 ///
 /// # Returns
 ///
 /// * `Vec<Vec<G1>>` - all KZG opening proofs for the polynomials in the range
-pub fn open_user_points_amortized(
-    advice_polys: &[Polynomial<Fp, Coeff>],
-    params: &ParamsKZG<Bn256>,
-    column_range: Range<usize>,
-    omega: Fp,
-) -> Vec<Vec<G1>> {
-    advice_polys[column_range]
+pub fn open_all_user_points_amortized(h_vectors: &[&[G1]], omega: Fp) -> Vec<Vec<G1>> {
+    h_vectors
         // Parallelize the independent amortized openings of the user ID and balance polynomials
         .par_iter()
-        .map(|poly| {
-            let mut h = compute_h(params, poly);
-            best_fft(&mut h, omega, poly.len().trailing_zeros());
+        .map(|h_vector| {
+            let mut h: Vec<G1> = (*h_vector).to_vec();
+            best_fft(&mut h, omega, h_vector.len().trailing_zeros());
             h
         })
         .collect()
+}
+
+/// Calculate a single-user opening proofs using the amortized KZG approach
+///
+/// # Arguments
+///
+/// * `h_vectors` - the h(X) vectors calculated for the polynomials using the amortized KZG approach
+/// * `params` - the KZG parameters
+/// * `challenge` - the challenge at which the openings are evaluated
+///
+/// # Returns
+///
+/// * `Vec<G1>` - the KZG opening proofs for the polynomials at `challenge`
+pub fn open_single_user_point_amortized(
+    h_vectors: &[&[G1]],
+    params: &ParamsKZG<Bn256>,
+    challenge: Fp,
+) -> Vec<G1> {
+    let mut challenge_powers = vec![Fp::one(); params.n() as usize];
+    {
+        parallelize(&mut challenge_powers, |o, start| {
+            let mut cur = challenge.pow_vartime([start as u64]);
+            for v in o.iter_mut() {
+                *v = cur;
+                cur *= &challenge;
+            }
+        })
+    }
+    // Convert the h vectors to affine form and calculate the opening proofs
+    h_vectors
+        .par_iter()
+        .map(|h_vector| {
+            let h_affine = (*h_vector)
+                .par_iter()
+                .map(G1::to_affine)
+                .collect::<Vec<_>>();
+            best_multiexp(&challenge_powers, &h_affine)
+        })
+        .collect::<Vec<_>>()
 }
 
 /// Verifies the univariate polynomial grand sum openings

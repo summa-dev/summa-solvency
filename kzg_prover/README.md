@@ -52,3 +52,28 @@ cargo doc --no-deps --open
 
 For testing purposes, it's not necessary to download the `ptau` file. The `generate_setup_artifacts` function can manage this by generating a new setup from a randomly generated value. This automated generation process is intended for testing and development convenience, and it should not be used in production.
 For real-world situations, you must provide the path of a specific `ptau` file to the `generate_setup_artifacts`. The circuit will use the randomness from the given file. You can find an example that initializes a `Snapshot` instance [here](https://github.com/summa-dev/summa-solvency/blob/11d4fce5d18f6175804aa792fc9fc5ac27bf5c00/backend/src/apis/snapshot.rs#L115-L116) in the backend.
+
+## Benchmarks
+
+The following benchmarks are available in the `kzg` module:
+
+- `range_check_proof`: the zk-SNARK proof generation time of the polynomial interpolation of user balances with range check;
+- `opening_grand_sum`: the time to generate the KZG opening proof of the grand sum of user balances;
+- `opening_user`: the time to generate the KZG opening proof of a single user inclusion;
+- `calculate_h`: the time to calculate the h(X) for the amortized KZG approach;
+- `amortized_opening_all`: the time to generate open proofs for all 2^K user inclusions using the amortized approach;
+- `amortized_opening_user`: the time to generate the KZG opening proof of a single user inclusion using the precomputed h(x) from the amortized approach;
+- `verifying_grand_sum`: the time to verify the KZG opening proof of the grand sum of user balances;
+- `verifying_user`: the time to verify the KZG opening proof of a single user inclusion.
+
+To run the benchmarks with the default full configuration of the circuit (range check enabled), use the following command:
+
+```shell
+cargo bench
+```
+
+To run the quick benchmarks with the range check disabled (K=9..12), use the following command:
+
+```shell
+cargo bench --features "no_range_check"
+```

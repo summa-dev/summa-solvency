@@ -14,7 +14,7 @@ use serde_json::to_string_pretty;
 use std::{fs::File, io::Write};
 use summa_solvency::{
     circuits::{
-        univariate_grand_sum::UnivariateGrandSum,
+        univariate_grand_sum::{UnivariateGrandSum, UnivariateGrandSumConfig},
         utils::{full_prover, full_verifier, generate_setup_artifacts},
     },
     cryptocurrency::Cryptocurrency,
@@ -40,8 +40,11 @@ fn main() {
     parse_csv_to_entries::<&str, N_CURRENCIES>("../csv/entry_16.csv", &mut entries, &mut cryptos)
         .unwrap();
 
-    let univariate_grand_sum_circuit =
-        UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+    let univariate_grand_sum_circuit = UnivariateGrandSum::<
+        N_USERS,
+        N_CURRENCIES,
+        UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
+    >::init(entries.to_vec());
 
     let (params, pk, _) = generate_setup_artifacts(
         K,
