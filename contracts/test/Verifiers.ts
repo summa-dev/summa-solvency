@@ -51,7 +51,7 @@ describe("Verifier Contracts", () => {
     });
 
     it("should revert grand sum proof", async () => {
-      await expect(snarkVerifier.callStatic.verifyProof(verifyingKey.address, commitmentCalldata.grand_sums_batch_proof, [1])).to.be.reverted;
+      await expect(snarkVerifier.verifyProof(verifyingKey.address, commitmentCalldata.grand_sums_batch_proof, [1])).to.be.reverted;
     });
   });
 
@@ -170,7 +170,7 @@ describe("Verifier Contracts", () => {
 
       let wrongProofs = ethers.utils.concat([snarkProofarray, snarkProofarray]);
 
-      await expect(inclusionVerifier.callStatic.verifyProof(
+      await expect(inclusionVerifier.verifyProof(
         verifyingKey.address,
         wrongProofs,
         [challenges[0], challenges[1], challenges[2], challenges[3]],
