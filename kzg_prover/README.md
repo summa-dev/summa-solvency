@@ -94,3 +94,23 @@ To run the quick benchmarks with the range check disabled (K=9..12), use the fol
 ```shell
 cargo bench --features "no_range_check"
 ```
+
+## Chunked Univariate Grand Sum Example
+
+the following technique is proposed to further improve the performance of the univariate grand sum version of Summa:
+
+1. Split the user base into chunks;
+2. Generate the zkSNARK range proof for all the users of each chunk (one proof per chunk) alongside with the advice polynomials;
+3. Generate the proofs of inclusion of a user into a specific chunk;
+4. Prove the grand total across the chunks by performing the following:
+   1. Add together the chunk polynomials generated in step 2;
+   2. Add their corresponding KZG commitments together using the homomorphic property of the KZG commitment;
+   3. Generate the opening proof of the grand sum for the resulting polynomial from step 4.1 against the commitment from step 4.3
+
+Step 4 of the algorithm establishes the relation between the chunks containing individual user liabilities and the grand sum of all user liabilities. The proof of inclusion generation in step 3 should be carried out using the amortized KZG approach in the similar fashion as in the non-chunked version of Summa.
+
+The proof of concept implementation of the suggested approach can be found in the [example file](kzg_prover/examples/chunked_univariate_grand_sum.rs). To execute the example, use the command:
+
+```shell
+cargo run --release --example chunked_univariate_grand_sum
+```
