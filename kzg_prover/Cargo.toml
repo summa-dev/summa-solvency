@@ -38,9 +38,9 @@ name = "kzg"
 harness = false
 
 [[bin]]
-name = "generate_verifiers"
-path = "bin/gen_verifiers.rs"
+name = "generate_verifier"
+path = "bin/gen_verifier.rs"
 
 [[bin]]
-name = "generate_commitment"
-path = "bin/gen_commitment.rs"
+name = "generate_commitment_and_proofs"
+path = "bin/gen_commit_and_proofs.rs"

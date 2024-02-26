@@ -1,5 +1,4 @@
 #![feature(generic_const_exprs)]
-
 use halo2_proofs::{
     halo2curves::bn256::Fr as Fp,
     poly::kzg::{
@@ -83,6 +82,9 @@ fn main() {
     );
     assert!(result.is_ok());
 
+    let result_unwrapped = result.unwrap();
+    result_unwrapped.0.expect("prover should not fail");
+
     let zk_snark_proof = transcript.finalize();
 
     // Check verification on verifier function
@@ -116,10 +118,7 @@ fn main() {
 }
 
 fn save_solidity(name: impl AsRef<str>, solidity: &str) {
-    const DIR_GENERATED: &str = "../contracts/src";
-
-    create_dir_all(DIR_GENERATED).unwrap();
-    File::create(format!("{DIR_GENERATED}/{}", name.as_ref()))
+    File::create(format!("../contracts/src/{}", name.as_ref()))
         .unwrap()
         .write_all(solidity.as_bytes())
         .unwrap();

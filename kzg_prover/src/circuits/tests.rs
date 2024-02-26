@@ -49,9 +49,9 @@ mod test {
         };
 
         // Open the polynomial at the user index (challenge) using the naive KZG
-
         let random_user_index = get_random_user_index();
         let challenge = omega.pow_vartime(&[random_user_index as u64]);
+
         let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
             &params,
             pk.get_vk().get_domain(),
