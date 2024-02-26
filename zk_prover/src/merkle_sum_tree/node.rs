@@ -58,8 +58,11 @@ impl<const N_CURRENCIES: usize> Node<N_CURRENCIES> {
     where
         [usize; N_CURRENCIES + 1]: Sized,
     {
+        let hash =
+            poseidon::Hash::<Fp, PoseidonSpec, ConstantLength<{ N_CURRENCIES + 1 }>, 2, 1>::init()
+                .hash(preimage.clone());
         Node {
-            hash: Self::poseidon_hash_leaf(preimage[0], preimage[1..].try_into().unwrap()),
+            hash,
             balances: preimage[1..].try_into().unwrap(),
         }
     }
@@ -71,44 +74,12 @@ impl<const N_CURRENCIES: usize> Node<N_CURRENCIES> {
     where
         [usize; N_CURRENCIES + 2]: Sized,
     {
+        let hash =
+            poseidon::Hash::<Fp, PoseidonSpec, ConstantLength<{ N_CURRENCIES + 2 }>, 2, 1>::init()
+                .hash(preimage.clone());
         Node {
-            hash: Self::poseidon_hash_middle(
-                preimage[0..N_CURRENCIES].try_into().unwrap(),
-                preimage[N_CURRENCIES],
-                preimage[N_CURRENCIES + 1],
-            ),
+            hash,
             balances: preimage[0..N_CURRENCIES].try_into().unwrap(),
         }
-    }
-
-    fn poseidon_hash_middle(
-        balances_sum: [Fp; N_CURRENCIES],
-        hash_child_left: Fp,
-        hash_child_right: Fp,
-    ) -> Fp
-    where
-        [usize; N_CURRENCIES + 2]: Sized,
-    {
-        let mut hash_inputs: [Fp; N_CURRENCIES + 2] = [Fp::zero(); N_CURRENCIES + 2];
-
-        hash_inputs[0..N_CURRENCIES].copy_from_slice(&balances_sum);
-        hash_inputs[N_CURRENCIES] = hash_child_left;
-        hash_inputs[N_CURRENCIES + 1] = hash_child_right;
-
-        poseidon::Hash::<Fp, PoseidonSpec, ConstantLength<{ N_CURRENCIES + 2 }>, 2, 1>::init()
-            .hash(hash_inputs)
-    }
-
-    fn poseidon_hash_leaf(username: Fp, balances: [Fp; N_CURRENCIES]) -> Fp
-    where
-        [usize; N_CURRENCIES + 1]: Sized,
-    {
-        let mut hash_inputs: [Fp; N_CURRENCIES + 1] = [Fp::zero(); N_CURRENCIES + 1];
-
-        hash_inputs[0] = username;
-        hash_inputs[1..N_CURRENCIES + 1].copy_from_slice(&balances);
-
-        poseidon::Hash::<Fp, PoseidonSpec, ConstantLength<{ N_CURRENCIES + 1 }>, 2, 1>::init()
-            .hash(hash_inputs)
     }
 }

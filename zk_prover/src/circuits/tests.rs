@@ -172,8 +172,7 @@ mod test {
         let invalid_leaf_balances = [1000.to_biguint().unwrap(), 1000.to_biguint().unwrap()];
 
         // invalidate user entry
-        let invalid_entry =
-            Entry::new(circuit.entry.username().to_string(), invalid_leaf_balances).unwrap();
+        let invalid_entry = Entry::new(circuit.entry.username().to_string(), invalid_leaf_balances);
 
         circuit.entry = invalid_entry;
 
