@@ -64,7 +64,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             csv_total_2[i] += balance;
         }
     }
-
+    // Index of the advice polynomial to be used for the subsequent examples
+    const BALANCES_INDEX: usize = 1;
     assert!(
         &csv_total_1[BALANCES_INDEX - 1] + &csv_total_2[BALANCES_INDEX - 1]
             == csv_total[BALANCES_INDEX - 1],
@@ -88,8 +89,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let (proof_1, advice_polys_1, _) = full_prover(&params, &pk, circuit_1.clone(), &[vec![]]);
     let (proof_2, advice_polys_2, _) = full_prover(&params, &pk, circuit_2.clone(), &[vec![]]);
 
-    const BALANCES_INDEX: usize = 1;
-    // Get the 1st advice polynomial (user balances #0) from each chunk
+    // Get the BALANCES_INDEX advice polynomial from each chunk
     let f_poly_1 = advice_polys_1.advice_polys.get(BALANCES_INDEX).unwrap();
     let f_poly_2 = advice_polys_2.advice_polys.get(BALANCES_INDEX).unwrap();
 
@@ -147,25 +147,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     // to be equal to the grand total divided by the size of the polynomial
     // thanks to the univariate grand sum property.
     let challenge = Fp::ZERO;
+    // The expected evaluation of the polynomial at x = 0 is the grand total divided by the size of the polynomial
+    let eval =
+        big_uint_to_fp(&(csv_total[BALANCES_INDEX - 1])) * Fp::from(poly_length).invert().unwrap();
     let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
         &params,
         &domain,
         &f_poly_total,
         challenge,
-        big_uint_to_fp(&(csv_total[BALANCES_INDEX - 1])) * Fp::from(poly_length).invert().unwrap(),
+        eval,
     );
 
     // KZG proof verification demonstrates that we can successfully verify the grand total
     // after building the total KZG commitment from the chunk commitments
     assert!(
-        verify_kzg_proof(
-            &params,
-            kzg_commitment_sum,
-            kzg_proof,
-            &challenge,
-            &(big_uint_to_fp(&(csv_total[BALANCES_INDEX - 1]))
-                * Fp::from(poly_length).invert().unwrap())
-        ),
+        verify_kzg_proof(&params, kzg_commitment_sum, kzg_proof, &challenge, &eval),
         "KZG proof verification failed"
     );
     assert!(
