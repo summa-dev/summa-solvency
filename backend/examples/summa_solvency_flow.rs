@@ -12,7 +12,7 @@ use summa_backend::{
 };
 use summa_solvency::{
     circuits::{
-        univariate_grand_sum::UnivariateGrandSum,
+        univariate_grand_sum::{UnivariateGrandSum, UnivariateGrandSumConfig},
         utils::{full_prover, generate_setup_artifacts},
     },
     cryptocurrency::Cryptocurrency,
@@ -71,8 +71,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
     parse_csv_to_entries::<&str, N_CURRENCIES>(entry_csv, &mut entries, &mut cryptos).unwrap();
 
-    let univariate_grand_sum_circuit =
-        UnivariateGrandSum::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+    let univariate_grand_sum_circuit = UnivariateGrandSum::<
+        N_USERS,
+        N_CURRENCIES,
+        UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
+    >::init(entries.to_vec());
 
     let (params, pk, vk) =
         generate_setup_artifacts(K, None, &univariate_grand_sum_circuit).unwrap();

@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::chips::range::range_check::{RangeCheckU64Chip, RangeCheckU64Config};
 use crate::entry::Entry;
 use crate::utils::big_uint_to_fp;
@@ -6,14 +8,28 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed};
 
 #[derive(Clone)]
-pub struct UnivariateGrandSum<const N_USERS: usize, const N_CURRENCIES: usize> {
+pub struct UnivariateGrandSum<
+    const N_USERS: usize,
+    const N_CURRENCIES: usize,
+    CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
+> {
     pub entries: Vec<Entry<N_CURRENCIES>>,
+    _marker: PhantomData<CONFIG>,
 }
 
-impl<const N_USERS: usize, const N_CURRENCIES: usize> UnivariateGrandSum<N_USERS, N_CURRENCIES> {
-    pub fn init_empty() -> Self {
+impl<
+        const N_USERS: usize,
+        const N_CURRENCIES: usize,
+        CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
+    > UnivariateGrandSum<N_USERS, N_CURRENCIES, CONFIG>
+{
+    pub fn init_empty() -> Self
+    where
+        [(); N_CURRENCIES + 1]:,
+    {
         Self {
             entries: vec![Entry::init_empty(); N_USERS],
+            _marker: PhantomData,
         }
     }
 
@@ -21,11 +37,12 @@ impl<const N_USERS: usize, const N_CURRENCIES: usize> UnivariateGrandSum<N_USERS
     pub fn init(user_entries: Vec<Entry<N_CURRENCIES>>) -> Self {
         Self {
             entries: user_entries,
+            _marker: PhantomData,
         }
     }
 }
 
-/// Configuration for the Mst Inclusion circuit
+/// Configuration for the univariate grand sum circuit
 /// # Type Parameters
 ///
 /// * `N_CURRENCIES`: The number of currencies for which the solvency is verified.
@@ -48,12 +65,12 @@ where
     range_u16: Column<Fixed>,
 }
 
-impl<const N_CURRENCIES: usize, const N_USERS: usize>
-    UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>
+impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES, N_USERS>
+    for UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>
 where
     [(); N_CURRENCIES + 1]:,
 {
-    pub fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
+    fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
         let username = meta.advice_column();
 
         let balances = [(); N_CURRENCIES].map(|_| meta.unblinded_advice_column());
@@ -91,14 +108,90 @@ where
             range_u16,
         }
     }
+
+    fn synthesize(
+        &self,
+        mut layouter: impl Layouter<Fp>,
+        assigned_balances: Vec<Vec<AssignedCell<Fp, Fp>>>,
+    ) -> Result<(), Error>
+    where
+        [(); N_CURRENCIES + 1]:,
+        [(); N_CURRENCIES + 1]:,
+    {
+        // Initiate the range check chips
+        let range_check_chips = self
+            .range_check_configs
+            .iter()
+            .map(|config| RangeCheckU64Chip::construct(*config))
+            .collect::<Vec<_>>();
+
+        // Load lookup table for range check u64 chip
+        let range = 1 << 16;
+
+        layouter.assign_region(
+            || format!("load range check table of 16 bits"),
+            |mut region| {
+                for i in 0..range {
+                    region.assign_fixed(
+                        || "assign cell in fixed column",
+                        self.range_u16,
+                        i,
+                        || Value::known(Fp::from(i as u64)),
+                    )?;
+                }
+                Ok(())
+            },
+        )?;
+
+        // Perform range check on the assigned balances
+        for i in 0..N_USERS {
+            for j in 0..N_CURRENCIES {
+                layouter.assign_region(
+                    || format!("Perform range check on balance {} of user {}", j, i),
+                    |mut region| {
+                        range_check_chips[j].assign(&mut region, &assigned_balances[i][j])?;
+                        Ok(())
+                    },
+                )?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn get_username(&self) -> Column<Advice> {
+        self.username
+    }
+
+    fn get_balances(&self) -> [Column<Advice>; N_CURRENCIES] {
+        self.balances
+    }
+}
+
+pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone {
+    fn configure(meta: &mut ConstraintSystem<Fp>) -> Self;
+
+    fn get_username(&self) -> Column<Advice>;
+
+    fn get_balances(&self) -> [Column<Advice>; N_CURRENCIES];
+
+    fn synthesize(
+        &self,
+        layouter: impl Layouter<Fp>,
+        assigned_balances: Vec<Vec<AssignedCell<Fp, Fp>>>,
+    ) -> Result<(), Error>;
+
     /// Assigns the entries to the circuit
     /// At row i, the username is set to the username of the i-th entry, the balance is set to the balance of the i-th entry
     /// Returns a bidimensional vector of the assigned balances to the circuit.
-    pub fn assign_entries(
+    fn assign_entries(
         &self,
         mut layouter: impl Layouter<Fp>,
         entries: &[Entry<N_CURRENCIES>],
-    ) -> Result<Vec<Vec<AssignedCell<Fp, Fp>>>, Error> {
+    ) -> Result<Vec<Vec<AssignedCell<Fp, Fp>>>, Error>
+    where
+        [(); N_CURRENCIES + 1]:,
+    {
         layouter.assign_region(
             || "assign entries to the table",
             |mut region| {
@@ -108,7 +201,7 @@ where
                 for i in 0..N_USERS {
                     region.assign_advice(
                         || "username",
-                        self.username,
+                        self.get_username(),
                         i,
                         || Value::known(big_uint_to_fp(entries[i].username_as_big_uint())),
                     )?;
@@ -118,7 +211,7 @@ where
                     for (j, balance) in entries[i].balances().iter().enumerate() {
                         let assigned_balance = region.assign_advice(
                             || format!("balance {}", j),
-                            self.balances[j],
+                            self.get_balances()[j],
                             i,
                             || Value::known(big_uint_to_fp(balance)),
                         )?;
@@ -135,20 +228,26 @@ where
     }
 }
 
-impl<const N_USERS: usize, const N_CURRENCIES: usize> Circuit<Fp>
-    for UnivariateGrandSum<N_USERS, N_CURRENCIES>
+impl<
+        const N_USERS: usize,
+        const N_CURRENCIES: usize,
+        CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
+    > Circuit<Fp> for UnivariateGrandSum<N_USERS, N_CURRENCIES, CONFIG>
 where
     [(); N_CURRENCIES + 1]:,
 {
-    type Config = UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>;
+    type Config = CONFIG;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
         Self::init_empty()
     }
 
-    fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-        UnivariateGrandSumConfig::<N_CURRENCIES, N_USERS>::configure(meta)
+    fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config
+    where
+        [(); N_CURRENCIES + 1]:,
+    {
+        CONFIG::configure(meta)
     }
 
     fn synthesize(
@@ -156,48 +255,61 @@ where
         config: Self::Config,
         mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
-        // Initiate the range check chips
-        let range_check_chips = config
-            .range_check_configs
-            .iter()
-            .map(|config| RangeCheckU64Chip::construct(*config))
-            .collect::<Vec<_>>();
-
-        // Load lookup table for range check u64 chip
-        let range = 1 << 16;
-
-        layouter.assign_region(
-            || format!("load range check table of 16 bits"),
-            |mut region| {
-                for i in 0..range {
-                    region.assign_fixed(
-                        || "assign cell in fixed column",
-                        config.range_u16,
-                        i,
-                        || Value::known(Fp::from(i as u64)),
-                    )?;
-                }
-                Ok(())
-            },
-        )?;
-
         // Assign entries
         let assigned_balances =
             config.assign_entries(layouter.namespace(|| "assign entries"), &self.entries)?;
 
-        // Perform range check on the assigned balances
-        for i in 0..N_USERS {
-            for j in 0..N_CURRENCIES {
-                layouter.assign_region(
-                    || format!("Perform range check on balance {} of user {}", j, i),
-                    |mut region| {
-                        range_check_chips[j].assign(&mut region, &assigned_balances[i][j])?;
-                        Ok(())
-                    },
-                )?;
-            }
-        }
+        config.synthesize(layouter, assigned_balances)
+    }
+}
 
+/// Configuration that does not perform range checks. Warning: not for use in production!
+/// The circuit without range checks can use a lower K value than the full circuit (convenient for prototyping and testing).
+///
+/// # Type Parameters
+///
+/// * `N_CURRENCIES`: The number of currencies for which the solvency is verified.
+/// * `N_USERS`: The number of users for which the solvency is verified.
+///
+/// # Fields
+///
+/// * `username`: Advice column used to store the usernames of the users
+/// * `balances`: Advice columns used to store the balances of the users
+#[derive(Clone)]
+pub struct NoRangeCheckConfig<const N_CURRENCIES: usize, const N_USERS: usize> {
+    username: Column<Advice>,
+    balances: [Column<Advice>; N_CURRENCIES],
+}
+
+impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES, N_USERS>
+    for NoRangeCheckConfig<N_CURRENCIES, N_USERS>
+where
+    [(); N_CURRENCIES + 1]:,
+{
+    fn configure(meta: &mut ConstraintSystem<Fp>) -> NoRangeCheckConfig<N_CURRENCIES, N_USERS> {
+        let username = meta.advice_column();
+
+        let balances = [(); N_CURRENCIES].map(|_| meta.unblinded_advice_column());
+
+        let instance = meta.instance_column();
+        meta.enable_equality(instance);
+
+        Self { username, balances }
+    }
+
+    fn synthesize(
+        &self,
+        _: impl Layouter<Fp>,
+        _: Vec<Vec<AssignedCell<Fp, Fp>>>,
+    ) -> Result<(), Error> {
         Ok(())
+    }
+
+    fn get_username(&self) -> Column<Advice> {
+        self.username
+    }
+
+    fn get_balances(&self) -> [Column<Advice>; N_CURRENCIES] {
+        self.balances
     }
 }
