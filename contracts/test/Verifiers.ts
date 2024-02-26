@@ -50,7 +50,7 @@ describe("Verifier Contracts", () => {
       expect(await snarkVerifier.verifyProof(verifyingKey.address, commitmentCalldata.range_check_snark_proof, [1])).to.be.true;
     });
 
-    it("should revert grand sum proof", async () => {
+    it("should revert with invalid proof", async () => {
       await expect(snarkVerifier.verifyProof(verifyingKey.address, commitmentCalldata.grand_sums_batch_proof, [1])).to.be.reverted;
     });
   });
@@ -108,7 +108,6 @@ describe("Verifier Contracts", () => {
       total_balances: BigNumber[];
     };
     let challenges: [BigNumber, BigNumber, BigNumber, BigNumber];
-    let userId: BytesLike;
     let userIdBigUint: BigNumber;
     let balance1: BigNumber;
     let balance2: BigNumber;
@@ -135,7 +134,6 @@ describe("Verifier Contracts", () => {
       const inclusionCalldata: any = JSON.parse(inclusionJson);
 
       inclusionProof = inclusionCalldata.proof;
-      userId = inclusionCalldata.user_id;
       challenges = inclusionCalldata.challenges;
       userIdBigUint = inclusionCalldata.user_values[0];
       balance1 = inclusionCalldata.user_values[1];
