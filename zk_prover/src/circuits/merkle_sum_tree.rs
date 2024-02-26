@@ -249,7 +249,7 @@ where
         // Assign the entry username to the witness
         let username = self.assign_value_to_witness(
             layouter.namespace(|| "assign entry username"),
-            big_uint_to_fp(self.entry.username_as_big_uint()),
+            big_uint_to_fp(&self.entry.username_as_big_uint()),
             "entry username",
             config.advices[0],
         )?;

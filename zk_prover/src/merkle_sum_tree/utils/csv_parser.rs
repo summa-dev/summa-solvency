@@ -50,7 +50,8 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_CURRENCIES: usize, const N_B
             balances_big_int.push(balance);
         }
 
-        let entry = Entry::new(username, balances_big_int.try_into().unwrap())?;
+        let entry = Entry::new(username, balances_big_int.try_into().unwrap());
+
         entries.push(entry);
     }
 
