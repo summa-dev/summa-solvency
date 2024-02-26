@@ -2,6 +2,7 @@
 use std::error::Error;
 
 use halo2_proofs::halo2curves::bn256::{Fr as Fp, G1Affine};
+use halo2_proofs::halo2curves::group::cofactor::CofactorCurveAffine;
 use halo2_proofs::halo2curves::group::Curve;
 use halo2_proofs::transcript::TranscriptRead;
 use halo2_proofs::{
@@ -111,11 +112,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         advice_commitments_2.push(point);
     });
     let kzg_commitment_2 = advice_commitments_2[BALANCES_INDEX];
-    // TODO fix the test data (avoid repetition of the same data in the csv file)
-    // assert!(
-    //     kzg_commitment_1.to_affine() != kzg_commitment_2.to_affine(),
-    //     "Commitments should be different"
-    // );
+    assert!(
+        kzg_commitment_1 != kzg_commitment_2,
+        "Commitments should be different"
+    );
 
     // The homomorphic property of KZG commitments allows us to sum the individual chunk commitments
     // to produce the KZG opening proof for the grand total
