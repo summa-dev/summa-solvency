@@ -167,16 +167,7 @@ where
             let mut vec_f_poly = f_poly.to_vec();
             best_fft(&mut vec_f_poly, omega, f_poly.len().trailing_zeros());
 
-            // Summing all f_poly values
-            let mut total_balance = Fp::zero();
-            vec_f_poly.iter().for_each(|x| total_balance += x);
-
-            let total_balance_from_sum = vec_f_poly.iter().sum();
-            assert_eq!(
-                total_balance, total_balance_from_sum,
-                "Sum of f_poly values is not equal to the total balance"
-            );
-
+            let total_balance: Fp = vec_f_poly.iter().sum();
             let z = total_balance * Fp::from(f_poly.len() as u64).invert().unwrap();
 
             let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(

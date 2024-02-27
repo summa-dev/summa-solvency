@@ -227,7 +227,7 @@ contract Summa is Ownable {
         uint256[] memory totalBalances,
         uint256 timestamp
     ) public onlyOwner {
-        // Check input lengths
+        // Check input length
         require(totalBalances.length > 0, "Invalid total balances length");
         require(grandSumProof.length == (totalBalances.length * 0x40), "Invalid grand sum proof length");
         require(snarkProof.length > grandSumProof.length, "Invalid snark proof length");
@@ -261,7 +261,7 @@ contract Summa is Ownable {
     ) public view returns (bool) {
         require(challenges.length == 4, "Invalid challenges length");
         
-        // Excluding `usename` in values
+        // Excluding `usename` in the values
         require((values.length - 1) == config.cryptocurrencyNames.length, "Values length mismatch with config");
 
         bytes memory snarkProof = commitments[timestamp];
