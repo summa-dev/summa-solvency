@@ -9,6 +9,21 @@ fn main() {
             "Summa",
         ),
         (
+            "src/contracts/generated/verifying_key.rs",
+            "Halo2VerifyingKey",
+            "VerifyingKey",
+        ),
+        (
+            "src/contracts/generated/snark_verifier.rs",
+            "Verifier",
+            "SnarkVerifier",
+        ),
+        (
+            "src/contracts/generated/grandsum_verifier.rs",
+            "GrandSumVerifier",
+            "GrandSumVerifier",
+        ),
+        (
             "src/contracts/generated/inclusion_verifier.rs",
             "InclusionVerifier",
             "InclusionVerifier",

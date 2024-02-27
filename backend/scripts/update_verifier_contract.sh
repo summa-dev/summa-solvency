@@ -1,15 +1,15 @@
 #!/bin/bash
 set -e
 
-# Build the verifier contracts
+# Build the verifier contract
 echo "1. Building verifier contracts"
 cd ../zk_prover
-cargo run --release --example gen_inclusion_verifier
+cargo run --release --bin generate_verifier
 
-# Generate Commitment for Merkle Sum Tree
-echo "2. Generate Commitment for Merkle Sum Tree"
+# Generate Commitment and Proofs for Encoded Polynomials
+echo "2. Generate Commitment and Proofs for Encoded Polynomials"
 cd ../zk_prover
-cargo run --release --example gen_commitment
+cargo run --release --bin generate_commitment_and_proofs
 
 # Deploy contracts to local environment
 echo "3. Deploying contracts to local environment"
