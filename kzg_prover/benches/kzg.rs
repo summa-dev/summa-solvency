@@ -27,7 +27,6 @@ fn bench_kzg<
     const K: u32,
     const N_USERS: usize,
     const N_CURRENCIES: usize,
-    const N_POINTS: usize,
     CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
 >(
     name: &str,
@@ -157,33 +156,33 @@ fn bench_kzg<
         );
     });
 
-    c.bench_function(&calculate_h_bench_name, |b| {
-        b.iter_batched(
-            || (0..N_CURRENCIES + 1),
-            |column_range| compute_h_parallel(&advice_polys.advice_polys, &params, column_range),
-            criterion::BatchSize::SmallInput,
-        );
-    });
+    // c.bench_function(&calculate_h_bench_name, |b| {
+    //     b.iter_batched(
+    //         || (0..N_CURRENCIES + 1),
+    //         |column_range| compute_h_parallel(&advice_polys.advice_polys, &params, column_range),
+    //         criterion::BatchSize::SmallInput,
+    //     );
+    // });
 
-    let h_vectors = compute_h_parallel(&advice_polys.advice_polys, &params, 0..N_CURRENCIES + 1);
-    let vec_of_slices = h_vectors.iter().map(|v| v.as_slice()).collect::<Vec<_>>();
-    let h_slices = vec_of_slices.as_slice();
+    // let h_vectors = compute_h_parallel(&advice_polys.advice_polys, &params, 0..N_CURRENCIES + 1);
+    // let vec_of_slices = h_vectors.iter().map(|v| v.as_slice()).collect::<Vec<_>>();
+    // let h_slices = vec_of_slices.as_slice();
 
-    c.bench_function(&amortized_opening_all_bench_name, |b| {
-        b.iter_batched(
-            || {},
-            |_| open_all_user_points_amortized(h_slices, omega),
-            criterion::BatchSize::SmallInput,
-        );
-    });
+    // c.bench_function(&amortized_opening_all_bench_name, |b| {
+    //     b.iter_batched(
+    //         || {},
+    //         |_| open_all_user_points_amortized(h_slices, omega),
+    //         criterion::BatchSize::SmallInput,
+    //     );
+    // });
 
-    c.bench_function(&amortized_opening_user_bench_name, |b| {
-        b.iter_batched(
-            || {},
-            |_| open_single_user_point_amortized(h_slices, &params, omega),
-            criterion::BatchSize::SmallInput,
-        );
-    });
+    // c.bench_function(&amortized_opening_user_bench_name, |b| {
+    //     b.iter_batched(
+    //         || {},
+    //         |_| open_single_user_point_amortized(h_slices, &params, omega),
+    //         criterion::BatchSize::SmallInput,
+    //     );
+    // });
 
     // Open grand sum for benchmark verifying grand sum
     let balance_column_range = 1..N_CURRENCIES + 1;
@@ -246,7 +245,7 @@ fn bench_kzg<
         b.iter_batched(
             || (column_range.clone(), omega, user_index),
             |(column_range, omega, user_index)| {
-                verify_user_inclusion::<N_POINTS>(
+                verify_user_inclusion(
                     &params,
                     &zk_snark_proof,
                     &openings_batch_proof,
@@ -261,77 +260,72 @@ fn bench_kzg<
 }
 
 fn criterion_benchmark(_c: &mut Criterion) {
-    const N_CURRENCIES: usize = 2;
-    const N_POINTS: usize = 3;
+    const N_CURRENCIES: usize = 350;
 
-    // Demonstrating that a higher value of K has a more significant impact on benchmark performance than the number of users
     #[cfg(not(feature = "no_range_check"))]
-    {
-        const K: u32 = 18;
-        const N_USERS: usize = 16;
-        bench_kzg::<
-            K,
-            N_USERS,
-            N_CURRENCIES,
-            N_POINTS,
-            UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
-        >(
-            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
-        );
-    }
+    // {
+    //     const K: u32 = 18;
+    //     const N_USERS: usize = 16;
+    //     bench_kzg::<K, N_USERS, N_CURRENCIES, UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>>(
+    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
+    //     );
+    // }
     #[cfg(not(feature = "no_range_check"))]
     {
         const K: u32 = 17;
         const N_USERS: usize = 64;
-        bench_kzg::<
-            K,
-            N_USERS,
-            N_CURRENCIES,
-            N_POINTS,
-            UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
-        >(
+        bench_kzg::<K, N_USERS, N_CURRENCIES, UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
+            format!("../csv/entry_64_350.csv").as_str(),
         );
     }
     //Use the following benchmarks for quick evaluation/prototyping (no range check)
-    #[cfg(feature = "no_range_check")]
-    {
-        const K: u32 = 9;
-        const N_USERS: usize = 64;
-        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
-            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
-        );
-    }
-    #[cfg(feature = "no_range_check")]
-    {
-        const K: u32 = 10;
-        const N_USERS: usize = 64;
-        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
-            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
-        );
-    }
-    #[cfg(feature = "no_range_check")]
-    {
-        const K: u32 = 11;
-        const N_USERS: usize = 64;
-        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
-            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
-        );
-    }
-    #[cfg(feature = "no_range_check")]
-    {
-        const K: u32 = 12;
-        const N_USERS: usize = 64;
-        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
-            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
-        );
-    }
+    //#[cfg(feature = "no_range_check")]
+    // {
+    //     const K: u32 = 9;
+    //     const N_USERS: usize = 64;
+    //     bench_kzg::<K, N_USERS, 350, NoRangeCheckConfig<350, N_USERS>>(
+    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = 350").as_str(),
+    //         format!("../csv/entry_64_350.csv").as_str(),
+    //     );
+    // }
+    // #[cfg(feature = "no_range_check")]
+    // {
+    //     const K: u32 = 9;
+    //     const N_USERS: usize = 64;
+    //     bench_kzg::<K, N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
+    //     );
+    // }
+    // #[cfg(feature = "no_range_check")]
+    // {
+    //     const K: u32 = 10;
+    //     const N_USERS: usize = 64;
+    //     bench_kzg::<K, N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
+    //     );
+    // }
+    // #[cfg(feature = "no_range_check")]
+    // {
+    //     const K: u32 = 11;
+    //     const N_USERS: usize = 64;
+    //     bench_kzg::<K, N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
+    //     );
+    // }
+    // #[cfg(feature = "no_range_check")]
+    // {
+    //     const K: u32 = 12;
+    //     const N_USERS: usize = 64;
+    //     bench_kzg::<K, N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+    //         format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+    //         format!("../csv/entry_{N_USERS}.csv").as_str(),
+    //     );
+    // }
 }
 
 criterion_group!(benches, criterion_benchmark);
