@@ -23,7 +23,7 @@ use summa_solvency::utils::amortized_kzg::{create_naive_kzg_proof, verify_kzg_pr
 pub struct KZGProof {
     proof_calldata: Bytes,
     input_values: Vec<U256>,
-    challenge: Option<Vec<U256>>,
+    challenge_s_g2: Option<Vec<U256>>,
 }
 
 impl KZGProof {
@@ -36,7 +36,7 @@ impl KZGProof {
     }
 
     pub fn get_challenge(&self) -> &Option<Vec<U256>> {
-        &self.challenge
+        &self.challenge_s_g2
     }
 }
 
@@ -145,10 +145,49 @@ where
     }
 
     pub fn generate_grand_sum_proof(&self) -> Result<KZGProof, &'static str> {
-        let domain = self.verifying_key.get_domain();
-        let omega: halo2_proofs::halo2curves::grumpkin::Fq = domain.get_omega();
-
         let challenge = Fp::zero();
+        let (proof_calldata, input_values) = self.generate_kzg_proof(None, challenge).unwrap();
+
+        Ok(KZGProof {
+            proof_calldata,
+            input_values,
+            challenge_s_g2: None,
+        })
+    }
+
+    pub fn generate_proof_of_inclusion(&self, user_index: usize) -> Result<KZGProof, &'static str> {
+        let omega = self.verifying_key.get_domain().get_omega();
+        let challenge = omega.pow_vartime([user_index as u64]);
+        let (proof_calldata, input_values) = self
+            .generate_kzg_proof(Some(user_index), challenge)
+            .unwrap();
+
+        // Prepare S_G2 points with the challenge for proof verification on the KZG Solidity verifier.
+        let s_g2 = -self.params.s_g2() + (G2Affine::generator() * challenge);
+        let s_g2_affine = s_g2.to_affine();
+
+        let s_g2_point = vec![
+            U256::from_little_endian(s_g2_affine.x.c1.to_bytes().as_slice()),
+            U256::from_little_endian(s_g2_affine.x.c0.to_bytes().as_slice()),
+            U256::from_little_endian(s_g2_affine.y.c1.to_bytes().as_slice()),
+            U256::from_little_endian(s_g2_affine.y.c0.to_bytes().as_slice()),
+        ];
+
+        Ok(KZGProof {
+            proof_calldata,
+            input_values,
+            challenge_s_g2: Some(s_g2_point),
+        })
+    }
+
+    fn generate_kzg_proof(
+        &self,
+        user_index: Option<usize>,
+        challenge: Fp,
+    ) -> Result<(Bytes, Vec<U256>), &'static str> {
+        let domain = self.verifying_key.get_domain();
+        let omega = domain.get_omega();
+
         let mut opening_proofs = Vec::new();
         let mut input_values = Vec::new();
 
@@ -157,18 +196,28 @@ where
         let mut transcript = Keccak256Transcript::new(self.zk_snark_proof.as_slice());
         for _ in 0..(N_CURRENCIES + 1) {
             let point: G1Affine = transcript.read_point().unwrap();
-            kzg_commitments.push(point.to_curve());
+            kzg_commitments.push(point);
         }
 
-        for column_index in 1..(N_CURRENCIES + 1) {
+        // If the user index is None, assign 1 or else 0, for skipping the usename polynomial.
+        let start_index = user_index.map_or(1, |_| 0);
+
+        for column_index in start_index..N_CURRENCIES + 1 {
             let f_poly = self.advice_polys.advice_polys.get(column_index).unwrap();
 
             // Perform iDFT to obtain the actual value that is encoded in the polynomial.
             let mut vec_f_poly = f_poly.to_vec();
             best_fft(&mut vec_f_poly, omega, f_poly.len().trailing_zeros());
 
-            let total_balance: Fp = vec_f_poly.iter().sum();
-            let z = total_balance * Fp::from(f_poly.len() as u64).invert().unwrap();
+            let z = if let Some(user_index) = user_index {
+                let _z = vec_f_poly[user_index];
+                input_values.push(U256::from_little_endian(&_z.to_bytes()));
+                _z
+            } else {
+                let total_balance: Fp = vec_f_poly.iter().sum();
+                input_values.push(U256::from_little_endian(&total_balance.to_bytes()));
+                total_balance * Fp::from(f_poly.len() as u64).invert().unwrap()
+            };
 
             let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
                 &self.params,
@@ -180,66 +229,12 @@ where
 
             if !verify_kzg_proof(
                 &self.params,
-                kzg_commitments[column_index],
+                kzg_commitments[column_index].to_curve(),
                 kzg_proof,
                 &challenge,
                 &z,
             ) {
-                return Err("KZG proof verification failed for grand sum");
-            }
-
-            // Convert to affine point and serialize to bytes
-            let kzg_proof_affine = kzg_proof.to_affine();
-            let mut kzg_proof_affine_x = kzg_proof_affine.x.to_bytes();
-            let mut kzg_proof_affine_y = kzg_proof_affine.y.to_bytes();
-            kzg_proof_affine_x.reverse();
-            kzg_proof_affine_y.reverse();
-
-            opening_proofs.push([kzg_proof_affine_x, kzg_proof_affine_y].concat());
-            input_values.push(U256::from_little_endian(&total_balance.to_bytes()));
-        }
-
-        Ok(KZGProof {
-            proof_calldata: Bytes::from(opening_proofs.concat()),
-            input_values,
-            challenge: None,
-        })
-    }
-
-    pub fn generate_proof_of_inclusion(&self, user_index: usize) -> Result<KZGProof, &'static str> {
-        let domain = self.verifying_key.get_domain();
-        let omega: halo2_proofs::halo2curves::grumpkin::Fq = domain.get_omega();
-
-        let challenge_point = omega.pow_vartime([user_index as u64]);
-        let mut opening_proofs = Vec::new();
-        let mut input_values = Vec::new();
-
-        let mut transcript = Keccak256Transcript::new(self.zk_snark_proof.as_slice());
-        for column_index in 0..N_CURRENCIES + 1 {
-            let kzg_commitment: G1Affine = transcript.read_point().unwrap();
-            let f_poly = self.advice_polys.advice_polys.get(column_index).unwrap();
-
-            // Perform iDFT to obtain the actual value that is encoded in the polynomial.
-            let mut vec_f_poly = f_poly.to_vec();
-            best_fft(&mut vec_f_poly, omega, f_poly.len().trailing_zeros());
-            let z = vec_f_poly[user_index];
-
-            let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
-                &self.params,
-                domain,
-                f_poly,
-                challenge_point,
-                z,
-            );
-
-            if !verify_kzg_proof(
-                &self.params,
-                kzg_commitment.to_curve(),
-                kzg_proof,
-                &challenge_point,
-                &z,
-            ) {
-                return Err("KZG proof verification failed for inclusion proof");
+                return Err("KZG proof verification failed");
             }
 
             // Convert the KZG proof to an affine point and serialize it to bytes.
@@ -250,24 +245,8 @@ where
             kzg_proof_affine_y.reverse();
 
             opening_proofs.push([kzg_proof_affine_x, kzg_proof_affine_y].concat());
-            input_values.push(U256::from_little_endian(&z.to_bytes()));
         }
 
-        // Prepare S_G2 points with the challenge for proof verification on the KZG Solidity verifier.
-        let s_g2 = -self.params.s_g2() + (G2Affine::generator() * challenge_point);
-        let s_g2_affine = s_g2.to_affine();
-
-        let challenges = vec![
-            U256::from_little_endian(s_g2_affine.x.c1.to_bytes().as_slice()),
-            U256::from_little_endian(s_g2_affine.x.c0.to_bytes().as_slice()),
-            U256::from_little_endian(s_g2_affine.y.c1.to_bytes().as_slice()),
-            U256::from_little_endian(s_g2_affine.y.c0.to_bytes().as_slice()),
-        ];
-
-        Ok(KZGProof {
-            proof_calldata: Bytes::from(opening_proofs.concat()),
-            input_values,
-            challenge: Some(challenges),
-        })
+        Ok((Bytes::from(opening_proofs.concat()), input_values))
     }
 }
