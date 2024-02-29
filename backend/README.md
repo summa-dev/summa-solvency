@@ -27,15 +27,15 @@ Key Features:
 
 ## Prerequisites
 
-The `ptau` file, containing the Powers of Tau trusted setup parameters needed to build the zk circuits, is already included. However, if you wish to test or run the code with a higher number of entries, you may choose to download a different `ptau` file.
+Before testing or running the Summa backend, the ptau file, containing the Powers of Tau trusted setup parameters essential for building the ZK circuits, must be downloaded. Specifically, the `hermez-raw-17` file is required for the [Summa flow](./examples/summa_solvency_flow.rs) example and its associated test case.
 
-You can find the necessary files at https://github.com/han0110/halo2-kzg-srs. To download a specific file, you can use:
+You can find this and other necessary files at https://github.com/han0110/halo2-kzg-srs. To download `hermez-raw-17`, use the command:
 
 ```
-wget https://trusted-setup-halo2kzg.s3.eu-central-1.amazonaws.com/hermez-raw-11
+wget https://trusted-setup-halo2kzg.s3.eu-central-1.amazonaws.com/hermez-raw-17
 ```
 
-After downloading, pass the path to the desired file to the `Snapshot::new` method. If you are using the included `ptau` file, no additional steps are necessary.
+Ensure this file is downloaded before proceeding with the example or test case.
 
 ## Running Test
 
@@ -50,7 +50,7 @@ cargo test --release -- --nocapture
 
 ### Generating and updating verifier contract for Backend
 
-The verifier contract in the backend were generated using a predefined set of parameters: `N_CURRENCIES = 2` and `N_BYTES=14`, as indicated [here](https://github.com/summa-dev/summa-solvency/blob/master/zk_prover/examples/gen_inclusion_verifier.rs#L21-L22).
+The verifier contract in the backend were generated using a predefined set of parameters: `N_CURRENCIES = 2`, `N_USERS = 16` and `K = 17` as indicated [here](../kzg_prover/bin/gen_verifier.rs#L26-L28)
 If you intend to work with different parameters, you'll need to adjust these hard-coded values and then generate new verifier contract.
 
 The process described below assists in both generating the verifier and updating the Summa contract, which integrates the new verifier as constructors.
@@ -95,17 +95,17 @@ If executed successfully, you'll see:
 
 ### 2. Submit Commitment
 
-The CEX must submit a commitment to the Summa contract for each round. This commitment consists of a `timestamp`, the root hash of the Merkle Sum Tree (`mst_root`), and `balances`.
+The CEX must submit a commitment to the Summa contract for each round. This commitment consists of a timestamp, a snark proof, a grand sum proof and total balances.
 
-Without publishing the commitment, users cannot verify their inclusion proof on the Summa contract. This is because the inclusion verifier function internally requires the `mst_root`, but users only know the `timestamp` associated with the round and the verifier functions does not requre `mst_root` directly.
+Without publishing the commitment, users cannot verify their inclusion proof on the Summa contract. This is because the inclusion verifier function internally requires the snark proof, but users only know the timestamp associated with the round and the verifier functions does not requre the snark proof directly.
 
 In here, we'll introduce you through the process of submitting a commitment using the `Round` to the Summa contract.
 The Round serves as the core of the backend in Summa, and we have briefly described it in the Components section.
 
-To initialize the `Round` instance, you'll need paths to the liabilities CSV file (`entry_16.csv`) and the `ptau/hermez-raw-11` file. The files serve the following purpose:
+To initialize the `Round` instance, you'll need paths to the liabilities CSV file (`entry_16.csv`) and the `ptau/hermez-raw-17` file. The files serve the following purpose:
 
 - `entry_16.csv`: contains the username and liabilities entries for each CEX user (necessary to build the commitment). Liabilities column names have the following format: `balance_<CRYPTOCURRENCY>_<CHAIN>`, where <CRYPTOCURRENCY> and <CHAIN> are the names of the cryptocurrencies and their corresponding blockchains. <CHAIN> values are the same as in the Address Ownership Proof step;
-- `ptau/hermez-raw-11`: contains parameters for constructing the zk circuits.
+- `ptau/hermez-raw-17`: contains parameters for constructing the zk circuits.
 
 Using the `Round` instance, the solvency proof is dispatched to the Summa contract with the `dispatch_solvency_proof` method.
 
@@ -117,7 +117,7 @@ If this step successfully ran, you can see this message:
 
 ### 3. Generating and Exporting Inclusion Proofs
 
-Assuming you're a CEX, after committing the `solvency` and `ownership` proofs to the Summa contract, you should generate inclusion proofs for every user. This proof verifies the presence of specific elements in the Merkle sum tree, which is part of the solvency proof.
+Assuming you're a CEX, after committing the commitment and ownership proofs to the Summa contract, you should generate inclusion proofs for every user. This proof verifies the presence of specific elements in the polynomials encoding the username, balances.
 
 After generating the inclusion proof, it's transformed into a JSON format for easy sharing.
 
@@ -135,11 +135,8 @@ Users receive the proof for a specific round and use methods available on the de
 
 In this step, the user has to:
 
-- Ensure the `leaf_hash` (public input of the proof) aligns with the Poseidon hash of the `username` and `balances` provided by the CEX.
-- Submit the proof to the `verify_inclusion_proof` method on the Summa contract Which will:
-  - Retrieve the `mstRoot` from the Summa contract and match it with the `root_hash` in the proof.
-  - Retrieve the `rootBalances` from the Summa contract and match it with the `root_balances` in the proof
-  - Verify the zk Proof
+- Ensure the user values in the proof file aligns with `username` and `balances` provided by the CEX.
+- Submit the proof to the `verify_inclusion_proof` method on the Summa contract.
 
 The result will display as:
 
@@ -147,6 +144,4 @@ The result will display as:
 4. Verifying the proof on contract verifier for User #0: true
 ```
 
-**Note:** In a production environment, users can independently verify their proof using public interfaces, such as Etherscan, as shown below:
-![Summa contract interface on Etherscan](summa_verifier_interface.png)
-This offers an added layer of transparency and trust.
+**Note:** In a production environment, users can independently verify their proof using public interfaces, such as Etherscan.
