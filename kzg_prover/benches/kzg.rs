@@ -260,7 +260,7 @@ fn bench_kzg<
 }
 
 fn criterion_benchmark(_c: &mut Criterion) {
-    const N_CURRENCIES: usize = 100;
+    const N_CURRENCIES: usize = 175;
 
     #[cfg(not(feature = "no_range_check"))]
     // {
@@ -273,7 +273,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     // }
     #[cfg(not(feature = "no_range_check"))]
     {
-        const K: u32 = 19;
+        const K: u32 = 18;
         const N_USERS: usize = 64;
         bench_kzg::<K, N_USERS, N_CURRENCIES, UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
