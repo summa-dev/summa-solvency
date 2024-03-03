@@ -46,7 +46,13 @@ pub trait Tree<const N_CURRENCIES: usize, const N_BYTES: usize> {
 
         // for each balance in the left and right child, add them together and store in preimage
         for (i, balance) in preimage.iter_mut().enumerate().take(N_CURRENCIES) {
-            *balance = left_child.balances[i] + right_child.balances[i];
+            // *balance = left_child.balances[i] + right_child.balances[i];
+            //@change
+            if left_child.balances[i] > right_child.balances[i] {
+                *balance = left_child.balances[i];
+            } else {
+                *balance = right_child.balances[i];
+            }
         }
 
         // Add left and right child hashes to preimage

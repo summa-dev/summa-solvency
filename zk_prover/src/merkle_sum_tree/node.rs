@@ -35,7 +35,13 @@ impl<const N_CURRENCIES: usize> Node<N_CURRENCIES> {
     {
         let mut hash_preimage = [Fp::zero(); N_CURRENCIES + 2];
         for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_CURRENCIES) {
-            *balance = child_l.balances[i] + child_r.balances[i];
+            // *balance = child_l.balances[i] + child_r.balances[i];
+            //@change
+            if child_r.balances[i] > child_l.balances[i] {
+                *balance = child_r.balances[i];
+            } else {
+                *balance = child_l.balances[i];
+            }
         }
         hash_preimage[N_CURRENCIES] = child_l.hash;
         hash_preimage[N_CURRENCIES + 1] = child_r.hash;

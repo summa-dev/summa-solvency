@@ -85,8 +85,14 @@ where
             let mut hash_preimage = [Fp::zero(); N_CURRENCIES + 2];
 
             for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_CURRENCIES) {
-                *balance =
-                    tree[level - 1][index].balances[i] + tree[level - 1][index + 1].balances[i];
+                // *balance =
+                //     tree[level - 1][index].balances[i] + tree[level - 1][index + 1].balances[i];
+                //@change
+                if tree[level - 1][index + 1].balances[i] > tree[level - 1][index].balances[i] {
+                    *balance = tree[level - 1][index + 1].balances[i];
+                } else {
+                    *balance = tree[level - 1][index].balances[i];
+                }
             }
 
             hash_preimage[N_CURRENCIES] = tree[level - 1][index].hash;

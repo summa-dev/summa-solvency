@@ -192,7 +192,13 @@ impl<const N_CURRENCIES: usize, const N_BYTES: usize> MerkleSumTree<N_CURRENCIES
 
             let mut hash_preimage = [Fp::zero(); N_CURRENCIES + 2];
             for (i, balance) in hash_preimage.iter_mut().enumerate().take(N_CURRENCIES) {
-                *balance = left_child.balances[i] + right_child.balances[i];
+                // *balance = left_child.balances[i] + right_child.balances[i];
+                //@change
+                if right_child.balances[i] > left_child.balances[i] {
+                    *balance = right_child.balances[i];
+                } else {
+                    *balance = left_child.balances[i];
+                }
             }
             hash_preimage[N_CURRENCIES] = left_child.hash;
             hash_preimage[N_CURRENCIES + 1] = right_child.hash;
