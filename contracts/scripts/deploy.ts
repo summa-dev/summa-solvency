@@ -20,6 +20,16 @@ async function main() {
   );
   await snarkVerifier.deployed();
 
+  const grandSumVerifier = await ethers.deployContract(
+    "src/GrandSumVerifier.sol:GrandSumVerifier"
+  );
+  await grandSumVerifier.deployed();
+
+  const inclusionVerifier = await ethers.deployContract(
+    "src/InclusionVerifier.sol:InclusionVerifier"
+  );
+  await inclusionVerifier.deployed();
+
   // The number of cryptocurrencies in the balance polynomials
   const currenciesCount = 2;
   // The number of bytes used to represent the balance of a cryptocurrency in the polynomials
@@ -27,7 +37,10 @@ async function main() {
   const summa = await ethers.deployContract("Summa", [
     verifyingKey.address,
     snarkVerifier.address,
-    currenciesCount,
+    grandSumVerifier.address,
+    inclusionVerifier.address,
+    ["ETH", "USDT"], // cryptocurrency names
+    ["ETH", "ETH"],  // cryptocurrency chain
     balanceByteRange,
   ]);
 
@@ -69,6 +82,8 @@ async function main() {
   copyAbi(fs, "Summa", "Summa");
   copyAbi(fs, "VerifyingKey", "Halo2VerifyingKey");
   copyAbi(fs, "SnarkVerifier", "Verifier");
+  copyAbi(fs, "GrandSumVerifier", "GrandSumVerifier");
+  copyAbi(fs, "InclusionVerifier", "InclusionVerifier");
 }
 
 // We recommend this pattern to be able to use async/await everywhere

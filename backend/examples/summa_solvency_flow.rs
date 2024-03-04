@@ -2,11 +2,14 @@
 use std::{error::Error, fs::File, io::BufReader, io::Write};
 
 use ethers::types::U256;
-use halo2_proofs::halo2curves::bn256::{Fr as Fp, G1Affine};
+use halo2_proofs::halo2curves::bn256::Fr as Fp;
 use serde_json::{from_reader, to_string_pretty};
 
 use summa_backend::{
-    apis::{address_ownership::AddressOwnership, round::Round},
+    apis::{
+        address_ownership::AddressOwnership,
+        round::{KZGProof, Round},
+    },
     contracts::signer::{AddressInput, SummaSigner},
     tests::initialize_test_env,
 };
@@ -17,7 +20,7 @@ use summa_solvency::{
     },
     cryptocurrency::Cryptocurrency,
     entry::Entry,
-    utils::{big_uint_to_fp, parse_csv_to_entries},
+    utils::parse_csv_to_entries,
 };
 
 const K: u32 = 17;
@@ -65,7 +68,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // 2. Submit Commitment
     //
     // Initialize the `Round` instance to submit the liability commitment.
-    let params_path = "ptau/hermez-raw-17";
     let entry_csv = "../csv/entry_16.csv";
     let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
     let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
@@ -77,12 +79,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
     >::init(entries.to_vec());
 
+    // This ptau file is also utilized in the generation of the verifier contract.
+    // It corresponds to the same file used in the `gen_verifier.rs` script.
+    let params_path = "../backend/ptau/hermez-raw-17";
     let (params, pk, vk) =
-        generate_setup_artifacts(K, None, &univariate_grand_sum_circuit).unwrap();
+        generate_setup_artifacts(K, Some(params_path), &univariate_grand_sum_circuit).unwrap();
 
     // Create a proof
     let instances = vec![Fp::one(); 1]; // This instance is necessary to verify proof on solidity verifier.
-    let (zk_snark_proof, advice_polys, _omega) = full_prover(
+    let (zk_snark_proof, advice_polys, _) = full_prover(
         &params,
         &pk,
         univariate_grand_sum_circuit.clone(),
@@ -91,12 +96,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
-    let mut round =
-        Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(&signer, advice_polys, params, vk, 1)
-            .unwrap();
+    let mut round = Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(
+        &signer,
+        zk_snark_proof,
+        advice_polys,
+        params,
+        vk,
+        timestamp,
+    );
 
-    // // Sends the commitment, which should ideally complete without errors.
-    // round.dispatch_commitment().await?;
+    // Sends the commitment, which should ideally complete without errors.
+    round.dispatch_commitment().await?;
 
     println!("2. Commitment is submitted successfully!");
 
@@ -118,33 +128,43 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // 4. Verify Inclusion Proof
     //
-    // The `snapshot_time` denotes the specific moment when entries were created for the Merkle sum tree.
+    // The `snapshot_time` denotes the specific moment when entries were created for polynomal encoding.
     // This timestamp is established during the initialization of the Round instance.
-    let snapshot_time = U256::from(1);
+    let snapshot_time = U256::from(timestamp);
 
     // When verifying the inclusion proof from the user's perspective, the user have to fetch `proof`.
     // Assume that the `proof` file has been downloaded from the CEX.
     let proof_file = File::open(format!("user_{}_proof.json", USER_INDEX))?;
     let reader = BufReader::new(proof_file);
-    // let downloaded_inclusion_proof: KZGInclusionProof = from_reader(reader)?;
 
-    // TODO: fix after the contract is concrete
-    // // Get `mst_root` from contract. the `mst_root` is disptached by CEX with specific time `snapshot_time`.
-    // let commitment = summa_contract.commitments(snapshot_time).call().await?;
+    let downloaded_inclusion_proof: KZGProof = from_reader(reader)?;
 
-    // // Match the `mst_root` with the `root_hash` derived from the proof.
-    // assert_eq!(commitment, public_inputs[1]);
+    // Fetch commitment data from the contract with timestamp, `snapshot_time`.
+    let commitment = summa_contract.commitments(snapshot_time).call().await?;
 
-    // // Validate the inclusion proof using the contract verifier.
-    // let proof = inclusion_proof.get_proof();
-    // let verification_result = summa_contract
-    //     .verify_inclusion_proof(proof.clone(), public_inputs.clone(), snapshot_time)
-    //     .await?;
+    // Ensure the length of the commitment matches the expected size for the number of points.
+    assert_eq!(commitment.to_vec().len(), 0x40 * N_POINTS);
 
-    // println!(
-    //     "4. Verifying the proof on contract veirifer for User #{}: {}",
-    //     USER_INDEX, verification_result
-    // );
+    // Validate the inclusion proof using the contract verifier.
+    let mut verification_result = false;
+
+    if let Some(challenges) = downloaded_inclusion_proof.get_challenge().as_ref() {
+        verification_result = summa_contract
+            .verify_inclusion_proof(
+                snapshot_time,
+                inclusion_proof.get_proof().clone(),
+                challenges.clone(),
+                inclusion_proof.get_input_values().clone(),
+            )
+            .await?;
+    } else {
+        eprintln!("No challenges found in the proof, This may not a inclusion proof");
+    }
+
+    println!(
+        "4. Verifying the proof on contract veirifer for User #{}: {}",
+        USER_INDEX, verification_result
+    );
 
     // Wrapping up
     drop(anvil);
