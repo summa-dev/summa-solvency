@@ -95,9 +95,9 @@ If executed successfully, you'll see:
 
 ### 2. Submit Commitment
 
-The CEX must submit a commitment to the Summa contract for each round. This commitment consists of a timestamp, a snark proof, a grand sum proof and total balances.
+The CEX must submit a commitment to the Summa contract for each round. This commitment consists of a timestamp, a SNARK proof, a grand sum proof and total balances.
 
-Without publishing the commitment, users cannot verify their inclusion proof on the Summa contract. This is because the inclusion verifier function internally requires the snark proof, but users only know the timestamp associated with the round and the verifier functions does not requre the snark proof directly.
+Without CEX publishing the commitment, users cannot verify their inclusion proof on the Summa contract. This is because the inclusion verifier function internally requires the SNARK proof, but users only know the timestamp associated with the round and the verifier functions does not requre the SNARK proof directly.
 
 In here, we'll introduce you through the process of submitting a commitment using the `Round` to the Summa contract.
 The Round serves as the core of the backend in Summa, and we have briefly described it in the Components section.

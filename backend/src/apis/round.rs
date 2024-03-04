@@ -113,7 +113,7 @@ where
 ///
 /// # Fields
 ///
-/// * `zk_snark_proof`: The zk-snark proof for the round, which is used to verify the validity of the round's commitments.
+/// * `zk_snark_proof`: The zk-SNARK proof for the round, which is used to verify the validity of the round's commitments.
 /// * `advice_polys`: Composed of the unblinded advice polynomial, `advice_poly`, and the polynomials of blind factors, `advice_blind`.
 /// * `params`: The parameters for the KZG commitment scheme.
 /// * `verifying_key`: The verifying key for getting domains, which is used for generating inclusion proofs.
@@ -191,7 +191,7 @@ where
         let mut opening_proofs = Vec::new();
         let mut input_values = Vec::new();
 
-        // Evaluate the commitments from the snark proof
+        // Evaluate the commitments from the SNARK proof
         let mut kzg_commitments = Vec::with_capacity(N_CURRENCIES);
         let mut transcript = Keccak256Transcript::new(self.zk_snark_proof.as_slice());
         for _ in 0..(N_CURRENCIES + 1) {
