@@ -203,12 +203,16 @@ pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone 
                         || "username",
                         self.get_username(),
                         i,
-                        || Value::known(big_uint_to_fp(entries[i].username_as_big_uint())),
+                        || {
+                            Value::known(big_uint_to_fp(
+                                entries[i % entries.len()].username_as_big_uint(),
+                            ))
+                        },
                     )?;
 
                     let mut assigned_balances_row = vec![];
 
-                    for (j, balance) in entries[i].balances().iter().enumerate() {
+                    for (j, balance) in entries[i % entries.len()].balances().iter().enumerate() {
                         let assigned_balance = region.assign_advice(
                             || format!("balance {}", j),
                             self.get_balances()[j],

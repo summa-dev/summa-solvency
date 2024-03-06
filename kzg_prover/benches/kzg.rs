@@ -56,7 +56,7 @@ fn bench_kzg<
     let verifying_grand_sum_bench_name = format!("<{}> verifying grand sum", name);
     let verifying_user_bench_name = format!("<{}> verifying user inclusion", name);
 
-    let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
+    let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); 64];
     let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
     parse_csv_to_entries::<&str, N_CURRENCIES>(csv_path, &mut entries, &mut cryptos).unwrap();
 
@@ -71,15 +71,15 @@ fn bench_kzg<
 
     let circuit = UnivariateGrandSum::<N_USERS, N_CURRENCIES, CONFIG>::init(entries.to_vec());
 
-    // c.bench_function(&range_check_proof_bench_name, |b| {
-    //     b.iter_batched(
-    //         || circuit.clone(), // Setup function: clone the circuit for each iteration
-    //         |circuit| {
-    //             full_prover(&params, &pk, circuit, &[vec![]]);
-    //         },
-    //         criterion::BatchSize::SmallInput, // Choose an appropriate batch size
-    //     );
-    // });
+    c.bench_function(&range_check_proof_bench_name, |b| {
+        b.iter_batched(
+            || circuit.clone(), // Setup function: clone the circuit for each iteration
+            |circuit| {
+                full_prover(&params, &pk, circuit, &[vec![]]);
+            },
+            criterion::BatchSize::SmallInput, // Choose an appropriate batch size
+        );
+    });
 
     let (zk_snark_proof, advice_polys, omega) = full_prover(&params, &pk, circuit, &[vec![]]);
 
@@ -126,10 +126,10 @@ fn bench_kzg<
     // });
 
     // Generate a random user index
-    let get_random_user_index = || {
-        let user_range: std::ops::Range<usize> = 0..N_USERS;
-        OsRng.gen_range(user_range) as u16
-    };
+    // let get_random_user_index = || {
+    //     let user_range: std::ops::Range<usize> = 0..N_USERS;
+    //     OsRng.gen_range(user_range) as u16
+    // };
 
     // c.bench_function(&opening_user_bench_name, |b| {
     //     b.iter_batched(
@@ -156,25 +156,25 @@ fn bench_kzg<
     //     );
     // });
 
-    c.bench_function(&calculate_h_bench_name, |b| {
-        b.iter_batched(
-            || (0..N_CURRENCIES + 1),
-            |column_range| compute_h_parallel(&advice_polys.advice_polys, &params, column_range),
-            criterion::BatchSize::SmallInput,
-        );
-    });
+    // c.bench_function(&calculate_h_bench_name, |b| {
+    //     b.iter_batched(
+    //         || (0..N_CURRENCIES + 1),
+    //         |column_range| compute_h_parallel(&advice_polys.advice_polys, &params, column_range),
+    //         criterion::BatchSize::SmallInput,
+    //     );
+    // });
 
-    let h_vectors = compute_h_parallel(&advice_polys.advice_polys, &params, 0..N_CURRENCIES + 1);
-    let vec_of_slices = h_vectors.iter().map(|v| v.as_slice()).collect::<Vec<_>>();
-    let h_slices = vec_of_slices.as_slice();
+    // let h_vectors = compute_h_parallel(&advice_polys.advice_polys, &params, 0..N_CURRENCIES + 1);
+    // let vec_of_slices = h_vectors.iter().map(|v| v.as_slice()).collect::<Vec<_>>();
+    // let h_slices = vec_of_slices.as_slice();
 
-    c.bench_function(&amortized_opening_all_bench_name, |b| {
-        b.iter_batched(
-            || {},
-            |_| open_all_user_points_amortized(h_slices, omega),
-            criterion::BatchSize::SmallInput,
-        );
-    });
+    // c.bench_function(&amortized_opening_all_bench_name, |b| {
+    //     b.iter_batched(
+    //         || {},
+    //         |_| open_all_user_points_amortized(h_slices, omega),
+    //         criterion::BatchSize::SmallInput,
+    //     );
+    // });
 
     // c.bench_function(&amortized_opening_user_bench_name, |b| {
     //     b.iter_batched(
@@ -273,11 +273,11 @@ fn criterion_benchmark(_c: &mut Criterion) {
     // }
     #[cfg(not(feature = "no_range_check"))]
     {
-        const K: u32 = 18;
-        const N_USERS: usize = 64;
+        const K: u32 = 26;
+        const N_USERS: usize = (2_u32.pow(25_u32)) as usize;
         bench_kzg::<K, N_USERS, N_CURRENCIES, UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_64.csv").as_str(),
+            format!("../csv/entry_64_350.csv").as_str(),
         );
     }
     // Use the following benchmarks for quick evaluation/prototyping (no range check)
