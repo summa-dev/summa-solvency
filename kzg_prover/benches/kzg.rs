@@ -273,8 +273,8 @@ fn criterion_benchmark(_c: &mut Criterion) {
     // }
     #[cfg(not(feature = "no_range_check"))]
     {
-        const K: u32 = 25;
-        const N_USERS: usize = (2_u32.pow(24_u32)) as usize;
+        const K: u32 = 24;
+        const N_USERS: usize = (2_u32.pow(23_u32)) as usize;
         bench_kzg::<K, N_USERS, N_CURRENCIES, UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
             format!("../csv/entry_64_350.csv").as_str(),
