@@ -1,12 +1,12 @@
-# Summa V2: Polynomial Encoding Approach
+# Summa V2: Polynomial Interpolation Approach
 
 ## Motivation
 
-[Summa V1](https://github.com/summa-dev/summa-solvency/releases/tag/merkle_sum_tree_v1.1) was using a Merkle sum tree (MST) as the main data structure and a cryptographic commitment. MST that has $n$ leaves involves $2n-1$ hashing operations, making it computationally demanding. Additionally, the MST inclusion proofs in Summa V1 have to be wrapped into a ZK-SNARK, making it infeasible to generate all of them at once for the entire user base of the Custodian (~100M users).
+[Summa V1](https://github.com/summa-dev/summa-solvency/releases/tag/merkle_sum_tree_v1.1.1) was using a Merkle sum tree (MST) as the main data structure and a cryptographic commitment. MST that has $n$ leaves involves $2n-1$ hashing operations, making it computationally demanding. Additionally, the MST inclusion proofs in Summa V1 have to be wrapped into a ZK-SNARK, making it infeasible to generate all of them at once for the entire user base of the Custodian (~100M users).
 
 ## Univariate Grand Sum Calculation
 
-The grand total of all the Custodian's $n$ user cryptocurrency balances is the Custodian's liabilities $S$. Summa V2 is using a property of the _sum of all roots of unity in a finite field_ being _equal to zero_ to find the liabilities. This property allows to efficiently calculate the grand sum of univariate polynomial evaluations. Summa V2 takes advantage of that by encoding the user balances into a univariate polynomial in a special way. The resulting proof of solvency protocol has the following steps:
+The grand total of all the Custodian's $n$ user cryptocurrency balances is the Custodian's liabilities $S$. Summa V2 is using a property of the _sum of all roots of unity in a finite field_ being _equal to zero_ to find the liabilities. This property allows to efficiently calculate the grand sum of univariate polynomial evaluations. Summa V2 takes advantage of that by interpolating the user balances into a univariate polynomial in a special way. The resulting proof of solvency protocol has the following steps:
 
 1. construct a polynomial of degree $d = n - 1$ that interpolates the points $(\omega^i, b_i)$ where $i \in 0..n-1$ is the user index, $\omega^i$ is the power of an $n$-th primitive root of unity ($x$ value), and $b_i$ is the $i$-th user balance value ($y$ value);
 2. multiply the constant term $a_0$ of the polynomial by $n$ to obtain the grand sum:
@@ -27,7 +27,7 @@ The algorithm works as follows:
 
 1. Assign all the user balances to an unblinded advice column of the [circuit](../kzg_prover/src/circuits/univariate_grand_sum.rs). The unblinded advice column is a special kind of advice column without the random values (blinding factors) added at the bottom. The constant term of such polynomial correctly yields the grand total of user balances according to (1) because the polynomial only interpolates the user balances but not the blinding factors (as in the case with a normal advice column).
 2. Assign the user IDs (e.g., hashes of user emails) to another (normal) advice column.
-3. Generate the ZK-SNARK proof for the circuit, effectively encoding the balance values into a polynomial and performing a KZG commitment to this polynomial.
+3. Generate the ZK-SNARK proof for the circuit, effectively interpolating the balance values into a polynomial and performing a KZG commitment to this polynomial.
 4. Perform a KZG opening proof of the polynomial at $x=0$ and publicly reveal the constant term $a_0$ of the polynomial. The public can then calculate the liabilities by multiplying the $a_0$ by $d + 1$ where $d$ is the polynomial degree.
 5. Privately provide to each user a KZG proof of the corresponding user opening (namely, the openings of the user ID and balance polynomials). Cross-checking the balance opening and the user ID opening $\omega^i$ value ensures that no malicious Custodian can provide the same balance opening to multiple users with the identical balance value.
 

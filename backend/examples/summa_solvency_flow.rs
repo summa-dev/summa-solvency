@@ -128,7 +128,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // 4. Verify Inclusion Proof
     //
-    // The `snapshot_time` denotes the specific moment when entries were created for polynomal encoding.
+    // The `snapshot_time` denotes the specific moment when entries were created for polynomal interpolation.
     // This timestamp is established during the initialization of the Round instance.
     let snapshot_time = U256::from(timestamp);
 
