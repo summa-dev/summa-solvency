@@ -25,7 +25,7 @@ mod test {
 
     const K: u32 = 17;
     const N_CURRENCIES: usize = 2;
-    const N_POINTS: usize = 3;
+    const N_POINTS: usize = N_CURRENCIES + 1;
     const N_USERS: usize = 16;
 
     #[test]

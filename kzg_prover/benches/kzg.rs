@@ -56,9 +56,7 @@ fn bench_kzg<
     let verifying_grand_sum_bench_name = format!("<{}> verifying grand sum", name);
     let verifying_user_bench_name = format!("<{}> verifying user inclusion", name);
 
-    let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
-    let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
-    let _ = generate_dummy_entries(&mut entries, &mut cryptos);
+    let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
 
     // Calculate total for all entry columns
     let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
@@ -261,13 +259,13 @@ fn bench_kzg<
 
 fn criterion_benchmark(_c: &mut Criterion) {
     const N_CURRENCIES: usize = 1;
-    const N_POINTS: usize = 2;
+    const N_POINTS: usize = N_CURRENCIES + 1;
 
     // Demonstrating that a higher value of K has a more significant impact on benchmark performance than the number of users
     #[cfg(not(feature = "no_range_check"))]
     {
         const K: u32 = 18;
-        const N_USERS: usize = (1 << 17) + (1 << 16) - 6;
+        const N_USERS: usize = 2usize.pow(K - 1) + 2usize.pow(K - 2) - 6; // Which is equal to (1 << 17) + (1 << 16) - 6
         bench_kzg::<
             K,
             N_USERS,
@@ -279,7 +277,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     #[cfg(not(feature = "no_range_check"))]
     {
         const K: u32 = 17;
-        const N_USERS: usize = (1 << 16) - 6;
+        const N_USERS: usize = 2usize.pow(K - 1) - 6; // Which is equal to (1 << 16) - 6
         bench_kzg::<
             K,
             N_USERS,
@@ -292,7 +290,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     #[cfg(feature = "no_range_check")]
     {
         const K: u32 = 9;
-        const N_USERS: usize = (1 << 9) - 6;
+        const N_USERS: usize = 2usize.pow(K - 1) - 6; // Which is equal to (1 << 8) - 6
         bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
         );
@@ -300,7 +298,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     #[cfg(feature = "no_range_check")]
     {
         const K: u32 = 10;
-        const N_USERS: usize = (1 << 10) - 6;
+        const N_USERS: usize = 2usize.pow(K - 1) - 6; // Which is equal to (1 << 9) - 6
         bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
         );
@@ -308,7 +306,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     #[cfg(feature = "no_range_check")]
     {
         const K: u32 = 11;
-        const N_USERS: usize = (1 << 11) - 6;
+        const N_USERS: usize = 2usize.pow(K - 1) - 6; // Which is equal to (1 << 10) - 6
         bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
         );
@@ -316,7 +314,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     #[cfg(feature = "no_range_check")]
     {
         const K: u32 = 12;
-        const N_USERS: usize = (1 << 12) - 6;
+        const N_USERS: usize = 2usize.pow(K - 1) - 6; // Which is equal to (1 << 11) - 6
         bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
         );
