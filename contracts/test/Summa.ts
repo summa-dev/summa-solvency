@@ -165,7 +165,7 @@ describe("Summa Contract", () => {
           ["ETH", "BTC"],
           8,
         ])
-      ).to.be.revertedWith("Invalid polynomial encoding verifier address");
+      ).to.be.revertedWith("Invalid polynomial interpolation verifier address");
     });
 
 

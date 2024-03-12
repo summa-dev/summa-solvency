@@ -50,8 +50,8 @@ contract Summa is Ownable {
     // Convenience mapping to check if an address has already been verified
     mapping(bytes32 => uint256) private _ownershipProofByAddress;
 
-    // zkSNARK verifier of the valid polynomial encoding
-    IVerifier private immutable polynomialEncodingVerifier;
+    // zkSNARK verifier of the valid polynomial interpolation
+    IVerifier private immutable polynomialInterpolationVerifier;
     
     // KZG verifier of the grand sum
     IVerifier private immutable grandSumVerifier;
@@ -72,7 +72,7 @@ contract Summa is Ownable {
     /**
      * Summa contract
      * @param _verifyingKey The address of the verification key contract
-     * @param _polynomialEncodingVerifier the address of the polynomial encoding zkSNARK verifier
+     * @param _polynomialInterpolationVerifier the address of the polynomial interpolation zkSNARK verifier
      * @param _grandSumVerifier the address of the grand sum KZG verifier
      * @param _inclusionVerifier the address of the inclusion KZG verifier
      * @param cryptocurrencyNames the names of the cryptocurrencies whose balances are encoded in the polynomials
@@ -81,7 +81,7 @@ contract Summa is Ownable {
      */
     constructor(
         address _verifyingKey,
-        IVerifier _polynomialEncodingVerifier,
+        IVerifier _polynomialInterpolationVerifier,
         IVerifier _grandSumVerifier,
         IInclusionVerifier _inclusionVerifier,
         string[] memory cryptocurrencyNames,
@@ -110,10 +110,10 @@ contract Summa is Ownable {
             "The config parameters do not correspond to the verifying key"
         );
         require(
-            address(_polynomialEncodingVerifier) != address(0),
-            "Invalid polynomial encoding verifier address"
+            address(_polynomialInterpolationVerifier) != address(0),
+            "Invalid polynomial interpolation verifier address"
         );
-        polynomialEncodingVerifier = _polynomialEncodingVerifier;
+        polynomialInterpolationVerifier = _polynomialInterpolationVerifier;
         require(
             address(_grandSumVerifier) != address(0),
             "Invalid grand sum verifier address"
@@ -216,7 +216,7 @@ contract Summa is Ownable {
 
     /**
      * @dev Submit commitment for a CEX
-     * @param snarkProof ZK proof of the valid polynomial encoding
+     * @param snarkProof ZK proof of the valid polynomial interpolation
      * @param grandSumProof kzg proof of the grand sum
      * @param totalBalances The array of total balances in the grand sum
      * @param timestamp The timestamp at which the CEX took the snapshot of its assets and liabilities
@@ -235,7 +235,7 @@ contract Summa is Ownable {
         uint[] memory args = new uint[](1);
         args[0] = 1; // Workaround to satisfy the verifier (TODO remove after https://github.com/summa-dev/halo2-solidity-verifier/issues/1 is resolved)
         require(
-            polynomialEncodingVerifier.verifyProof(verifyingKey, snarkProof, args),
+            polynomialInterpolationVerifier.verifyProof(verifyingKey, snarkProof, args),
             "Invalid snark proof"
         );
         require(

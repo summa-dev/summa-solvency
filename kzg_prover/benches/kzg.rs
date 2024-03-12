@@ -20,7 +20,7 @@ use summa_solvency::{
     },
     cryptocurrency::Cryptocurrency,
     entry::Entry,
-    utils::{big_uint_to_fp, parse_csv_to_entries},
+    utils::{big_uint_to_fp, generate_dummy_entries},
 };
 
 fn bench_kzg<
@@ -31,7 +31,6 @@ fn bench_kzg<
     CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
 >(
     name: &str,
-    csv_path: &str,
 ) where
     [(); N_CURRENCIES + 1]:,
 {
@@ -57,9 +56,7 @@ fn bench_kzg<
     let verifying_grand_sum_bench_name = format!("<{}> verifying grand sum", name);
     let verifying_user_bench_name = format!("<{}> verifying user inclusion", name);
 
-    let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
-    let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
-    parse_csv_to_entries::<&str, N_CURRENCIES>(csv_path, &mut entries, &mut cryptos).unwrap();
+    let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
 
     // Calculate total for all entry columns
     let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
@@ -261,75 +258,65 @@ fn bench_kzg<
 }
 
 fn criterion_benchmark(_c: &mut Criterion) {
-    const N_CURRENCIES: usize = 2;
-    const N_POINTS: usize = 3;
+    const N_CURRENCIES: usize = 1;
+    const N_POINTS: usize = N_CURRENCIES + 1;
 
     // Demonstrating that a higher value of K has a more significant impact on benchmark performance than the number of users
     #[cfg(not(feature = "no_range_check"))]
     {
-        const K: u32 = 18;
-        const N_USERS: usize = 16;
+        const K: u32 = 17;
+        const N_USERS: usize = 2usize.pow(K) + 2usize.pow(16) - 6; // Subtracting 2^16 (reserved for range checks) and 6 (reserved rows) from 2^K.
         bench_kzg::<
             K,
             N_USERS,
             N_CURRENCIES,
             N_POINTS,
             UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
-        >(
-            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
-        );
+        >(format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str());
     }
     #[cfg(not(feature = "no_range_check"))]
     {
-        const K: u32 = 17;
-        const N_USERS: usize = 64;
+        const K: u32 = 18;
+        const N_USERS: usize = 2usize.pow(K) - 2usize.pow(16) - 6; //  Subtracting 2^16 (reserved for range checks) and 6 (reserved rows) from 2^K.
         bench_kzg::<
             K,
             N_USERS,
             N_CURRENCIES,
             N_POINTS,
             UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
-        >(
-            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
-        );
+        >(format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str());
     }
     //Use the following benchmarks for quick evaluation/prototyping (no range check)
     #[cfg(feature = "no_range_check")]
     {
         const K: u32 = 9;
-        const N_USERS: usize = 64;
+        const N_USERS: usize = 2usize.pow(K) - 6;
         bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
         );
     }
     #[cfg(feature = "no_range_check")]
     {
         const K: u32 = 10;
-        const N_USERS: usize = 64;
+        const N_USERS: usize = 2usize.pow(K) - 6;
         bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
         );
     }
     #[cfg(feature = "no_range_check")]
     {
         const K: u32 = 11;
-        const N_USERS: usize = 64;
+        const N_USERS: usize = 2usize.pow(K) - 6;
         bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
         );
     }
     #[cfg(feature = "no_range_check")]
     {
         const K: u32 = 12;
-        const N_USERS: usize = 64;
+        const N_USERS: usize = 2usize.pow(K) - 6;
         bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-            format!("../csv/entry_{N_USERS}.csv").as_str(),
         );
     }
 }

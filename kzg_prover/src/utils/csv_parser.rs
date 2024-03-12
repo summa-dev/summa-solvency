@@ -7,9 +7,9 @@ use std::path::Path;
 use crate::cryptocurrency::Cryptocurrency;
 use crate::entry::Entry;
 
-pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
+pub fn parse_csv_to_entries<P: AsRef<Path>, const N_CURRENCIES: usize>(
     path: P,
-    entries: &mut [Entry<N_ASSETS>],
+    entries: &mut [Entry<N_CURRENCIES>],
     cryptocurrencies: &mut [Cryptocurrency],
 ) -> Result<(), Box<dyn Error>> {
     let file = File::open(path)?;
@@ -39,7 +39,7 @@ pub fn parse_csv_to_entries<P: AsRef<Path>, const N_ASSETS: usize>(
         }
     }
 
-    let mut balances_acc: Vec<BigUint> = vec![BigUint::from(0_usize); N_ASSETS];
+    let mut balances_acc: Vec<BigUint> = vec![BigUint::from(0_usize); N_CURRENCIES];
 
     for (i, result) in rdr.deserialize().enumerate() {
         let record: HashMap<String, String> = result?;

@@ -25,7 +25,7 @@ use summa_solvency::{
 
 const K: u32 = 17;
 const N_CURRENCIES: usize = 2;
-const N_POINTS: usize = 3;
+const N_POINTS: usize = N_CURRENCIES + 1;
 const N_USERS: usize = 16;
 const USER_INDEX: usize = 0;
 
@@ -128,7 +128,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // 4. Verify Inclusion Proof
     //
-    // The `snapshot_time` denotes the specific moment when entries were created for polynomal encoding.
+    // The `snapshot_time` denotes the specific moment when entries were created for polynomal interpolation.
     // This timestamp is established during the initialization of the Round instance.
     let snapshot_time = U256::from(timestamp);
 
