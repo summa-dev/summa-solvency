@@ -2,15 +2,15 @@
 pragma solidity ^0.8.18;
 
 /**
- * @dev Zero-knowledge proof verifier
+ * @dev Inclusion proof verifier
  */
 interface IInclusionVerifier {
     /**
      * @dev Verify a proof
      * @param vk The verification key
      * @param proof The proof
-     * @param challenges The pre-calculated g2 points with challenge 
-     * @param values The user data that includes userId, balance of currency 1
+     * @param challenges The pre-calculated g2 points with challenge
+     * @param values The user data that includes userId, balance of currency
      * @return true if the proof is valid, false otherwise
      */
         function verifyProof(

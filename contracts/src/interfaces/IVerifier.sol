@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 /**
- * @dev Zero-knowledge proof verifier
+ * @dev Zk-SNARK and grand sum proof proof verifier
  */
 interface IVerifier {
     /**

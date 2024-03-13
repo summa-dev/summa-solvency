@@ -47,7 +47,7 @@ describe("Verifier Contracts", () => {
 
     it("should verify snark proof", async () => {
       // The verifier contract checks the number of instances in the VerifyingKey contract at 0x00c0 with the given 'instances' input
-      expect(await snarkVerifier.verifyProof(verifyingKey.address, commitmentCalldata.range_check_snark_proof, [1])).to.be.true;
+      expect(await snarkVerifier.verifyProof(verifyingKey.address, commitmentCalldata.range_check_snark_proof, [0])).to.be.true;
     });
 
     it("should revert with invalid proof", async () => {
