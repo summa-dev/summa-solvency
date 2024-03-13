@@ -130,7 +130,13 @@ impl Circuit<Fp> for TestCircuit {
 
         let add_selector = meta.selector();
 
-        let range_check_config = RangeCheckU64Chip::configure(meta, c, zs, range_u16);
+        let instance = meta.instance_column();
+        meta.enable_equality(instance);
+
+        let z0 = meta.advice_column();
+        meta.enable_equality(z0);
+
+        let range_check_config = RangeCheckU64Chip::configure(meta, c, zs, z0, instance, range_u16);
 
         let addchip_config = AddChip::configure(meta, a, b, c, add_selector);
 
@@ -213,7 +219,7 @@ mod testing {
         let b = Fp::from(1);
 
         let circuit = TestCircuit { a, b };
-        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        let prover = MockProver::run(k, &circuit, vec![vec![Fp::zero()]]).unwrap();
         prover.assert_satisfied();
     }
 
@@ -231,16 +237,19 @@ mod testing {
         let b = Fp::from(2);
 
         let circuit = TestCircuit { a, b };
-        let invalid_prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        let invalid_prover = MockProver::run(k, &circuit, vec![vec![Fp::zero()]]).unwrap();
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
                 VerifyFailure::Permutation {
-                    column: (Any::Fixed, 1).into(),
-                    location: FailureLocation::OutsideRegion { row: 0 }
+                    column: (Any::advice(), 6).into(),
+                    location: FailureLocation::InRegion {
+                        region: (2, "Perform range check on c").into(),
+                        offset: 0
+                    }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 6).into(),
+                    column: (Any::advice(), 7).into(),
                     location: FailureLocation::InRegion {
                         region: (2, "Perform range check on c").into(),
                         offset: 0

@@ -84,6 +84,9 @@ where
         // Create an empty array of range check configs
         let mut range_check_configs = Vec::with_capacity(N_CURRENCIES);
 
+        let instance = meta.instance_column();
+        meta.enable_equality(instance);
+
         for item in balances.iter().take(N_CURRENCIES) {
             let z = *item;
             // Create 4 advice columns for each range check chip
@@ -93,13 +96,14 @@ where
                 meta.enable_equality(*column);
             }
 
-            let range_check_config = RangeCheckU64Chip::configure(meta, z, zs, range_u16);
+            let z0 = meta.advice_column();
+            meta.enable_equality(z0);
+
+            let range_check_config =
+                RangeCheckU64Chip::configure(meta, z, zs, z0, instance, range_u16);
 
             range_check_configs.push(range_check_config);
         }
-
-        let instance = meta.instance_column();
-        meta.enable_equality(instance);
 
         Self {
             username,
