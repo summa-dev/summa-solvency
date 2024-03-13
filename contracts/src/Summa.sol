@@ -12,8 +12,8 @@ import "./interfaces/IInclusionVerifier.sol";
 contract Summa is Ownable {
     /**
      * @dev Struct representing the configuration of the Summa instance
-     * @param cryptocurrencyNames The names of the cryptocurrencies whose balances are encoded in the polynomials
-     * @param cryptocurrencyChains The chains of the cryptocurrencies whose balances are encoded in the polynomials
+     * @param cryptocurrencyNames The names of the cryptocurrencies whose balances are interpolated in the polynomials
+     * @param cryptocurrencyChains The chains of the cryptocurrencies whose balances are interpolated in the polynomials
      * @param balanceByteRange The number of bytes used to represent the balance of a cryptocurrency in the polynomials
      */
     struct SummaConfig {
@@ -75,8 +75,8 @@ contract Summa is Ownable {
      * @param _polynomialInterpolationVerifier the address of the polynomial interpolation zkSNARK verifier
      * @param _grandSumVerifier the address of the grand sum KZG verifier
      * @param _inclusionVerifier the address of the inclusion KZG verifier
-     * @param cryptocurrencyNames the names of the cryptocurrencies whose balances are encoded in the polynomials
-     * @param cryptocurrencyChains the chain names of the cryptocurrencies whose balances are encoded in the polynomials
+     * @param cryptocurrencyNames the names of the cryptocurrencies whose balances are interpolated in the polynomials
+     * @param cryptocurrencyChains the chain names of the cryptocurrencies whose balances are interpolated in the polynomials
      * @param balanceByteRange maximum accepted byte range for the balance of a cryptocurrency
      */
     constructor(
@@ -145,7 +145,7 @@ contract Summa is Ownable {
         // The number of permutations is 2 + (balanceByteRange/2) * numberOfCurrencies because of the circuit structure:
         // 1 per instance column, 1 per constant column (range check) and balanceByteRange/2 per range check columns times the number of currencies
         uint256 numPermutations = 2 +
-            (balanceByteRange / 2) *
+            ((balanceByteRange / 2) + 1) *
             numberOfCurrencies;
 
         uint256 startOffsetForPermutations = 0x2e0; // The value can be observed in the VerificationKey contract, the offset is pointing after all the parameters and the fixed column commitment
@@ -167,8 +167,12 @@ contract Summa is Ownable {
             extcodecopy(vkContract, 0x00, readOffset, 0x20)
             // Load the read bytes from 0x00 into a variable
             let readBytes := mload(0x00)
+
+            let leftHalf  := shr(128, readBytes)                                // Shift right by 128 bits to get the left half
+            let rightHalf := and(readBytes, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) // Mask the right half
+
             // We expect the left 16 bytes to be nonzero and the right 16 bytes to be zero
-            valid := and(not(iszero(readBytes)), iszero(and(readBytes, 0x0f)))
+            valid := and(not(iszero(leftHalf)), iszero(rightHalf))
         }
         return valid;
     }
@@ -233,7 +237,9 @@ contract Summa is Ownable {
         require(snarkProof.length > grandSumProof.length, "Invalid snark proof length");
         
         uint[] memory args = new uint[](1);
-        args[0] = 1; // Workaround to satisfy the verifier (TODO remove after https://github.com/summa-dev/halo2-solidity-verifier/issues/1 is resolved)
+
+        // This is the instance value for checking zero value inside circuit
+        args[0] = 0; 
         require(
             polynomialInterpolationVerifier.verifyProof(verifyingKey, snarkProof, args),
             "Invalid snark proof"
