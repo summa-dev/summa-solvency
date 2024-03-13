@@ -7,16 +7,14 @@ pub use summa::*;
     clippy::upper_case_acronyms,
     clippy::type_complexity,
     dead_code,
-    non_camel_case_types
+    non_camel_case_types,
 )]
 pub mod summa {
     #[rustfmt::skip]
-    const __ABI: &str = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_verifyingKey\",\"type\":\"address\",\"components\":[]},{\"internalType\":\"contract IVerifier\",\"name\":\"_polynomialEncodingVerifier\",\"type\":\"address\",\"components\":[]},{\"internalType\":\"contract IVerifier\",\"name\":\"_grandSumVerifier\",\"type\":\"address\",\"components\":[]},{\"internalType\":\"contract IInclusionVerifier\",\"name\":\"_inclusionVerifier\",\"type\":\"address\",\"components\":[]},{\"internalType\":\"string[]\",\"name\":\"cryptocurrencyNames\",\"type\":\"string[]\",\"components\":[]},{\"internalType\":\"string[]\",\"name\":\"cryptocurrencyChains\",\"type\":\"string[]\",\"components\":[]},{\"internalType\":\"uint8\",\"name\":\"balanceByteRange\",\"type\":\"uint8\",\"components\":[]}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"struct Summa.AddressOwnershipProof[]\",\"name\":\"addressOwnershipProofs\",\"type\":\"tuple[]\",\"components\":[{\"internalType\":\"string\",\"name\":\"cexAddress\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"string\",\"name\":\"chain\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"message\",\"type\":\"bytes\",\"components\":[]}],\"indexed\":false}],\"type\":\"event\",\"name\":\"AddressOwnershipProofSubmitted\",\"outputs\":[],\"anonymous\":false},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\",\"components\":[],\"indexed\":true},{\"internalType\":\"uint256[]\",\"name\":\"totalBalances\",\"type\":\"uint256[]\",\"components\":[],\"indexed\":false},{\"internalType\":\"bytes\",\"name\":\"snarkProof\",\"type\":\"bytes\",\"components\":[],\"indexed\":false},{\"internalType\":\"bytes\",\"name\":\"grandSumProof\",\"type\":\"bytes\",\"components\":[],\"indexed\":false}],\"type\":\"event\",\"name\":\"LiabilitiesCommitmentSubmitted\",\"outputs\":[],\"anonymous\":false},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\",\"components\":[],\"indexed\":true},{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\",\"components\":[],\"indexed\":true}],\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"outputs\":[],\"anonymous\":false},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\",\"components\":[]}],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"addressOwnershipProofs\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"cexAddress\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"string\",\"name\":\"chain\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"message\",\"type\":\"bytes\",\"components\":[]}]},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\",\"components\":[]}],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"commitments\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\",\"components\":[]}]},{\"inputs\":[],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"config\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"balanceByteRange\",\"type\":\"uint8\",\"components\":[]}]},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"addressHash\",\"type\":\"bytes32\",\"components\":[]}],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"getAddressOwnershipProof\",\"outputs\":[{\"internalType\":\"struct Summa.AddressOwnershipProof\",\"name\":\"\",\"type\":\"tuple\",\"components\":[{\"internalType\":\"string\",\"name\":\"cexAddress\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"string\",\"name\":\"chain\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"message\",\"type\":\"bytes\",\"components\":[]}]}]},{\"inputs\":[],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\",\"components\":[]}]},{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"renounceOwnership\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"snarkProof\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"grandSumProof\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"uint256[]\",\"name\":\"totalBalances\",\"type\":\"uint256[]\",\"components\":[]},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\",\"components\":[]}],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"submitCommitment\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"struct Summa.AddressOwnershipProof[]\",\"name\":\"_addressOwnershipProofs\",\"type\":\"tuple[]\",\"components\":[{\"internalType\":\"string\",\"name\":\"cexAddress\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"string\",\"name\":\"chain\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"message\",\"type\":\"bytes\",\"components\":[]}]}],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"submitProofOfAddressOwnership\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\",\"components\":[]}],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"transferOwnership\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"inclusionProof\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"uint256[]\",\"name\":\"challenges\",\"type\":\"uint256[]\",\"components\":[]},{\"internalType\":\"uint256[]\",\"name\":\"values\",\"type\":\"uint256[]\",\"components\":[]}],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"verifyInclusionProof\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\",\"components\":[]}]},{\"inputs\":[],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"verifyingKey\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\",\"components\":[]}]}]";
+    const __ABI: &str = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_verifyingKey\",\"type\":\"address\",\"components\":[]},{\"internalType\":\"contract IVerifier\",\"name\":\"_polynomialInterpolationVerifier\",\"type\":\"address\",\"components\":[]},{\"internalType\":\"contract IVerifier\",\"name\":\"_grandSumVerifier\",\"type\":\"address\",\"components\":[]},{\"internalType\":\"contract IInclusionVerifier\",\"name\":\"_inclusionVerifier\",\"type\":\"address\",\"components\":[]},{\"internalType\":\"string[]\",\"name\":\"cryptocurrencyNames\",\"type\":\"string[]\",\"components\":[]},{\"internalType\":\"string[]\",\"name\":\"cryptocurrencyChains\",\"type\":\"string[]\",\"components\":[]},{\"internalType\":\"uint8\",\"name\":\"balanceByteRange\",\"type\":\"uint8\",\"components\":[]}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"struct Summa.AddressOwnershipProof[]\",\"name\":\"addressOwnershipProofs\",\"type\":\"tuple[]\",\"components\":[{\"internalType\":\"string\",\"name\":\"cexAddress\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"string\",\"name\":\"chain\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"message\",\"type\":\"bytes\",\"components\":[]}],\"indexed\":false}],\"type\":\"event\",\"name\":\"AddressOwnershipProofSubmitted\",\"outputs\":[],\"anonymous\":false},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\",\"components\":[],\"indexed\":true},{\"internalType\":\"uint256[]\",\"name\":\"totalBalances\",\"type\":\"uint256[]\",\"components\":[],\"indexed\":false},{\"internalType\":\"bytes\",\"name\":\"snarkProof\",\"type\":\"bytes\",\"components\":[],\"indexed\":false},{\"internalType\":\"bytes\",\"name\":\"grandSumProof\",\"type\":\"bytes\",\"components\":[],\"indexed\":false}],\"type\":\"event\",\"name\":\"LiabilitiesCommitmentSubmitted\",\"outputs\":[],\"anonymous\":false},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\",\"components\":[],\"indexed\":true},{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\",\"components\":[],\"indexed\":true}],\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"outputs\":[],\"anonymous\":false},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\",\"components\":[]}],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"addressOwnershipProofs\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"cexAddress\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"string\",\"name\":\"chain\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"message\",\"type\":\"bytes\",\"components\":[]}]},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\",\"components\":[]}],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"commitments\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\",\"components\":[]}]},{\"inputs\":[],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"config\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"balanceByteRange\",\"type\":\"uint8\",\"components\":[]}]},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"addressHash\",\"type\":\"bytes32\",\"components\":[]}],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"getAddressOwnershipProof\",\"outputs\":[{\"internalType\":\"struct Summa.AddressOwnershipProof\",\"name\":\"\",\"type\":\"tuple\",\"components\":[{\"internalType\":\"string\",\"name\":\"cexAddress\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"string\",\"name\":\"chain\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"message\",\"type\":\"bytes\",\"components\":[]}]}]},{\"inputs\":[],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\",\"components\":[]}]},{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"renounceOwnership\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"snarkProof\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"grandSumProof\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"uint256[]\",\"name\":\"totalBalances\",\"type\":\"uint256[]\",\"components\":[]},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\",\"components\":[]}],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"submitCommitment\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"struct Summa.AddressOwnershipProof[]\",\"name\":\"_addressOwnershipProofs\",\"type\":\"tuple[]\",\"components\":[{\"internalType\":\"string\",\"name\":\"cexAddress\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"string\",\"name\":\"chain\",\"type\":\"string\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"message\",\"type\":\"bytes\",\"components\":[]}]}],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"submitProofOfAddressOwnership\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\",\"components\":[]}],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"transferOwnership\",\"outputs\":[]},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"inclusionProof\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"uint256[]\",\"name\":\"challenges\",\"type\":\"uint256[]\",\"components\":[]},{\"internalType\":\"uint256[]\",\"name\":\"values\",\"type\":\"uint256[]\",\"components\":[]}],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"verifyInclusionProof\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\",\"components\":[]}]},{\"inputs\":[],\"stateMutability\":\"view\",\"type\":\"function\",\"name\":\"verifyingKey\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\",\"components\":[]}]}]";
     ///The parsed JSON ABI of the contract.
-    pub static SUMMA_ABI: ::ethers::contract::Lazy<::ethers::core::abi::Abi> =
-        ::ethers::contract::Lazy::new(|| {
-            ::ethers::core::utils::__serde_json::from_str(__ABI).expect("ABI is always valid")
-        });
+    pub static SUMMA_ABI: ::ethers::contract::Lazy<::ethers::core::abi::Abi> = ::ethers::contract::Lazy::new(||
+    ::ethers::core::utils::__serde_json::from_str(__ABI).expect("ABI is always valid"));
     #[rustfmt::skip]
     const __BYTECODE: &[u8] = &[
         97,
@@ -44,15 +42,15 @@ pub mod summa {
         81,
         98,
         0,
-        40,
-        240,
+        41,
+        41,
         56,
         3,
         128,
         98,
         0,
-        40,
-        240,
+        41,
+        41,
         131,
         57,
         129,
@@ -70,7 +68,7 @@ pub mod summa {
         98,
         0,
         7,
-        75,
+        104,
         86,
         91,
         98,
@@ -81,7 +79,7 @@ pub mod summa {
         98,
         0,
         4,
-        37,
+        42,
         86,
         91,
         96,
@@ -327,7 +325,7 @@ pub mod summa {
         98,
         0,
         8,
-        39,
+        68,
         86,
         91,
         96,
@@ -369,7 +367,7 @@ pub mod summa {
         98,
         0,
         8,
-        39,
+        68,
         86,
         91,
         96,
@@ -473,7 +471,7 @@ pub mod summa {
         98,
         0,
         8,
-        83,
+        112,
         86,
         91,
         145,
@@ -497,7 +495,7 @@ pub mod summa {
         98,
         0,
         4,
-        117,
+        122,
         96,
         32,
         27,
@@ -635,7 +633,7 @@ pub mod summa {
         98,
         0,
         2,
-        199,
+        204,
         87,
         96,
         64,
@@ -657,7 +655,7 @@ pub mod summa {
         1,
         82,
         96,
-        44,
+        49,
         96,
         36,
         130,
@@ -683,25 +681,30 @@ pub mod summa {
         97,
         108,
         32,
-        101,
-        110,
-        99,
-        111,
-        100,
         105,
         110,
-        103,
-        32,
-        118,
+        116,
         101,
         114,
+        112,
+        111,
+        108,
+        97,
+        116,
         105,
+        111,
+        110,
         96,
         68,
         130,
         1,
         82,
-        107,
+        112,
+        32,
+        118,
+        101,
+        114,
+        105,
         102,
         105,
         101,
@@ -715,7 +718,7 @@ pub mod summa {
         115,
         115,
         96,
-        160,
+        120,
         27,
         96,
         100,
@@ -750,7 +753,7 @@ pub mod summa {
         98,
         0,
         3,
-        48,
+        53,
         87,
         96,
         64,
@@ -855,7 +858,7 @@ pub mod summa {
         98,
         0,
         3,
-        153,
+        158,
         87,
         96,
         64,
@@ -996,7 +999,7 @@ pub mod summa {
         98,
         0,
         3,
-        222,
+        227,
         145,
         131,
         145,
@@ -1006,8 +1009,8 @@ pub mod summa {
         144,
         98,
         0,
-        4,
-        247,
+        5,
+        20,
         86,
         91,
         80,
@@ -1022,7 +1025,7 @@ pub mod summa {
         98,
         0,
         3,
-        249,
+        254,
         146,
         96,
         1,
@@ -1033,8 +1036,8 @@ pub mod summa {
         144,
         98,
         0,
-        4,
-        247,
+        5,
+        20,
         86,
         91,
         80,
@@ -1071,7 +1074,7 @@ pub mod summa {
         98,
         0,
         10,
-        71,
+        128,
         149,
         80,
         80,
@@ -1168,14 +1171,27 @@ pub mod summa {
         98,
         0,
         4,
-        134,
+        139,
         96,
         2,
         133,
         98,
         0,
         8,
-        111,
+        140,
+        86,
+        91,
+        98,
+        0,
+        4,
+        152,
+        144,
+        96,
+        1,
+        98,
+        0,
+        8,
+        189,
         86,
         91,
         96,
@@ -1184,26 +1200,26 @@ pub mod summa {
         98,
         0,
         4,
-        149,
+        167,
         145,
         144,
         98,
         0,
         8,
-        160,
+        223,
         86,
         91,
         98,
         0,
         4,
-        162,
+        180,
         144,
         96,
         2,
         98,
         0,
         8,
-        192,
+        249,
         86,
         91,
         144,
@@ -1216,26 +1232,26 @@ pub mod summa {
         98,
         0,
         4,
-        182,
+        200,
         131,
         96,
         64,
         98,
         0,
         8,
-        160,
+        223,
         86,
         91,
         98,
         0,
         4,
-        194,
+        212,
         144,
         131,
         98,
         0,
         8,
-        192,
+        249,
         86,
         91,
         144,
@@ -1245,14 +1261,14 @@ pub mod summa {
         98,
         0,
         4,
-        211,
+        229,
         96,
         16,
         131,
         98,
         0,
-        8,
-        214,
+        9,
+        15,
         86,
         91,
         144,
@@ -1272,11 +1288,22 @@ pub mod summa {
         0,
         81,
         96,
-        15,
+        1,
+        96,
+        1,
+        96,
+        128,
+        27,
+        3,
         129,
         22,
         21,
+        96,
+        128,
+        145,
         144,
+        145,
+        28,
         21,
         25,
         22,
@@ -1315,7 +1342,7 @@ pub mod summa {
         98,
         0,
         5,
-        66,
+        95,
         87,
         145,
         96,
@@ -1331,7 +1358,7 @@ pub mod summa {
         98,
         0,
         5,
-        66,
+        95,
         87,
         130,
         81,
@@ -1340,13 +1367,13 @@ pub mod summa {
         98,
         0,
         5,
-        49,
+        78,
         144,
         130,
         98,
         0,
         9,
-        123,
+        180,
         86,
         91,
         80,
@@ -1363,21 +1390,21 @@ pub mod summa {
         98,
         0,
         5,
-        24,
+        53,
         86,
         91,
         80,
         98,
         0,
         5,
-        80,
+        109,
         146,
         145,
         80,
         98,
         0,
         5,
-        84,
+        113,
         86,
         91,
         80,
@@ -1391,20 +1418,20 @@ pub mod summa {
         98,
         0,
         5,
-        80,
+        109,
         87,
         96,
         0,
         98,
         0,
         5,
-        107,
+        136,
         130,
         130,
         98,
         0,
         5,
-        117,
+        146,
         86,
         91,
         80,
@@ -1414,7 +1441,7 @@ pub mod summa {
         98,
         0,
         5,
-        84,
+        113,
         86,
         91,
         80,
@@ -1423,12 +1450,12 @@ pub mod summa {
         98,
         0,
         5,
-        131,
+        160,
         144,
         98,
         0,
-        8,
-        236,
+        9,
+        37,
         86,
         91,
         96,
@@ -1442,7 +1469,7 @@ pub mod summa {
         98,
         0,
         5,
-        148,
+        177,
         87,
         80,
         80,
@@ -1471,13 +1498,13 @@ pub mod summa {
         98,
         0,
         5,
-        180,
+        209,
         145,
         144,
         98,
         0,
         5,
-        183,
+        212,
         86,
         91,
         80,
@@ -1491,7 +1518,7 @@ pub mod summa {
         98,
         0,
         5,
-        80,
+        109,
         87,
         96,
         0,
@@ -1503,7 +1530,7 @@ pub mod summa {
         98,
         0,
         5,
-        184,
+        213,
         86,
         91,
         96,
@@ -1521,7 +1548,7 @@ pub mod summa {
         98,
         0,
         5,
-        180,
+        209,
         87,
         96,
         0,
@@ -1581,16 +1608,16 @@ pub mod summa {
         98,
         0,
         6,
-        37,
+        66,
         87,
         98,
         0,
         6,
-        37,
+        66,
         98,
         0,
-        5,
-        228,
+        6,
+        1,
         86,
         91,
         96,
@@ -1613,7 +1640,7 @@ pub mod summa {
         98,
         0,
         6,
-        64,
+        93,
         87,
         96,
         0,
@@ -1639,16 +1666,16 @@ pub mod summa {
         98,
         0,
         6,
-        95,
+        124,
         87,
         98,
         0,
         6,
-        95,
+        124,
         98,
         0,
-        5,
-        228,
+        6,
+        1,
         86,
         91,
         130,
@@ -1658,14 +1685,14 @@ pub mod summa {
         98,
         0,
         6,
-        112,
+        141,
         131,
         130,
         1,
         98,
         0,
-        5,
-        250,
+        6,
+        23,
         86,
         91,
         147,
@@ -1688,7 +1715,7 @@ pub mod summa {
         98,
         0,
         6,
-        139,
+        168,
         87,
         96,
         0,
@@ -1708,7 +1735,7 @@ pub mod summa {
         98,
         0,
         7,
-        62,
+        91,
         87,
         130,
         81,
@@ -1719,7 +1746,7 @@ pub mod summa {
         98,
         0,
         6,
-        171,
+        200,
         87,
         96,
         0,
@@ -1738,7 +1765,7 @@ pub mod summa {
         98,
         0,
         6,
-        190,
+        219,
         87,
         96,
         0,
@@ -1757,22 +1784,22 @@ pub mod summa {
         98,
         0,
         6,
-        213,
+        242,
         87,
         98,
         0,
         6,
-        213,
+        242,
         98,
         0,
-        5,
-        228,
+        6,
+        1,
         86,
         91,
         98,
         0,
-        6,
-        232,
+        7,
+        5,
         129,
         138,
         1,
@@ -1784,8 +1811,8 @@ pub mod summa {
         1,
         98,
         0,
-        5,
-        250,
+        6,
+        23,
         86,
         91,
         129,
@@ -1804,7 +1831,7 @@ pub mod summa {
         98,
         0,
         7,
-        0,
+        29,
         87,
         96,
         0,
@@ -1822,7 +1849,7 @@ pub mod summa {
         98,
         0,
         7,
-        32,
+        61,
         87,
         132,
         129,
@@ -1841,7 +1868,7 @@ pub mod summa {
         98,
         0,
         7,
-        3,
+        32,
         86,
         91,
         80,
@@ -1871,7 +1898,7 @@ pub mod summa {
         98,
         0,
         6,
-        145,
+        174,
         86,
         91,
         153,
@@ -1908,7 +1935,7 @@ pub mod summa {
         98,
         0,
         7,
-        103,
+        132,
         87,
         96,
         0,
@@ -1920,12 +1947,12 @@ pub mod summa {
         98,
         0,
         7,
-        116,
+        145,
         129,
         98,
         0,
         5,
-        206,
+        235,
         86,
         91,
         96,
@@ -1939,12 +1966,12 @@ pub mod summa {
         98,
         0,
         7,
-        135,
+        164,
         129,
         98,
         0,
         5,
-        206,
+        235,
         86,
         91,
         96,
@@ -1958,12 +1985,12 @@ pub mod summa {
         98,
         0,
         7,
-        154,
+        183,
         129,
         98,
         0,
         5,
-        206,
+        235,
         86,
         91,
         96,
@@ -1977,12 +2004,12 @@ pub mod summa {
         98,
         0,
         7,
-        173,
+        202,
         129,
         98,
         0,
         5,
-        206,
+        235,
         86,
         91,
         96,
@@ -2008,7 +2035,7 @@ pub mod summa {
         98,
         0,
         7,
-        203,
+        232,
         87,
         96,
         0,
@@ -2018,7 +2045,7 @@ pub mod summa {
         98,
         0,
         7,
-        217,
+        246,
         139,
         131,
         140,
@@ -2026,7 +2053,7 @@ pub mod summa {
         98,
         0,
         6,
-        45,
+        74,
         86,
         91,
         148,
@@ -2044,8 +2071,8 @@ pub mod summa {
         21,
         98,
         0,
-        7,
-        240,
+        8,
+        13,
         87,
         96,
         0,
@@ -2055,8 +2082,8 @@ pub mod summa {
         80,
         98,
         0,
-        7,
-        255,
+        8,
+        28,
         138,
         130,
         139,
@@ -2064,7 +2091,7 @@ pub mod summa {
         98,
         0,
         6,
-        45,
+        74,
         86,
         91,
         146,
@@ -2084,7 +2111,7 @@ pub mod summa {
         98,
         0,
         8,
-        23,
+        52,
         87,
         96,
         0,
@@ -2160,16 +2187,16 @@ pub mod summa {
         98,
         0,
         8,
-        104,
+        133,
         87,
         98,
         0,
         8,
-        104,
+        133,
         98,
         0,
         8,
-        61,
+        90,
         86,
         91,
         80,
@@ -2189,7 +2216,7 @@ pub mod summa {
         98,
         0,
         8,
-        145,
+        174,
         87,
         99,
         78,
@@ -2228,6 +2255,40 @@ pub mod summa {
         80,
         86,
         91,
+        96,
+        255,
+        129,
+        129,
+        22,
+        131,
+        130,
+        22,
+        1,
+        144,
+        129,
+        17,
+        21,
+        98,
+        0,
+        8,
+        217,
+        87,
+        98,
+        0,
+        8,
+        217,
+        98,
+        0,
+        8,
+        90,
+        86,
+        91,
+        146,
+        145,
+        80,
+        80,
+        86,
+        91,
         128,
         130,
         2,
@@ -2242,22 +2303,16 @@ pub mod summa {
         98,
         0,
         8,
-        186,
+        217,
         87,
         98,
         0,
         8,
-        186,
+        217,
         98,
         0,
         8,
-        61,
-        86,
-        91,
-        146,
-        145,
-        80,
-        80,
+        90,
         86,
         91,
         128,
@@ -2270,16 +2325,16 @@ pub mod summa {
         98,
         0,
         8,
-        186,
+        217,
         87,
         98,
         0,
         8,
-        186,
+        217,
         98,
         0,
         8,
-        61,
+        90,
         86,
         91,
         129,
@@ -2292,16 +2347,16 @@ pub mod summa {
         98,
         0,
         8,
-        186,
+        217,
         87,
         98,
         0,
         8,
-        186,
+        217,
         98,
         0,
         8,
-        61,
+        90,
         86,
         91,
         96,
@@ -2316,7 +2371,7 @@ pub mod summa {
         98,
         0,
         9,
-        1,
+        58,
         87,
         96,
         127,
@@ -2334,7 +2389,7 @@ pub mod summa {
         98,
         0,
         9,
-        34,
+        91,
         87,
         99,
         78,
@@ -2372,7 +2427,7 @@ pub mod summa {
         98,
         0,
         9,
-        118,
+        175,
         87,
         96,
         0,
@@ -2400,7 +2455,7 @@ pub mod summa {
         98,
         0,
         9,
-        81,
+        138,
         87,
         80,
         128,
@@ -2424,7 +2479,7 @@ pub mod summa {
         98,
         0,
         9,
-        114,
+        171,
         87,
         130,
         129,
@@ -2435,7 +2490,7 @@ pub mod summa {
         98,
         0,
         9,
-        93,
+        150,
         86,
         91,
         80,
@@ -2463,40 +2518,40 @@ pub mod summa {
         98,
         0,
         9,
-        151,
+        208,
         87,
         98,
         0,
         9,
-        151,
+        208,
         98,
         0,
-        5,
-        228,
+        6,
+        1,
         86,
         91,
         98,
         0,
         9,
-        175,
+        232,
         129,
         98,
         0,
         9,
-        168,
+        225,
         132,
         84,
         98,
         0,
-        8,
-        236,
+        9,
+        37,
         86,
         91,
         132,
         98,
         0,
         9,
-        40,
+        97,
         86,
         91,
         96,
@@ -2512,8 +2567,8 @@ pub mod summa {
         20,
         98,
         0,
-        9,
-        231,
+        10,
+        32,
         87,
         96,
         0,
@@ -2521,8 +2576,8 @@ pub mod summa {
         21,
         98,
         0,
-        9,
-        206,
+        10,
+        7,
         87,
         80,
         133,
@@ -2552,7 +2607,7 @@ pub mod summa {
         98,
         0,
         9,
-        114,
+        171,
         86,
         91,
         96,
@@ -2578,7 +2633,7 @@ pub mod summa {
         98,
         0,
         10,
-        24,
+        81,
         87,
         136,
         134,
@@ -2600,8 +2655,8 @@ pub mod summa {
         1,
         98,
         0,
-        9,
-        247,
+        10,
+        48,
         86,
         91,
         80,
@@ -2612,7 +2667,7 @@ pub mod summa {
         98,
         0,
         10,
-        55,
+        112,
         87,
         135,
         133,
@@ -2669,7 +2724,7 @@ pub mod summa {
         98,
         0,
         10,
-        150,
+        207,
         96,
         0,
         57,
@@ -3524,7 +3579,7 @@ pub mod summa {
         144,
         80,
         96,
-        1,
+        0,
         129,
         96,
         0,
@@ -10456,38 +10511,38 @@ pub mod summa {
         34,
         18,
         32,
-        134,
-        176,
-        92,
-        129,
-        176,
-        246,
-        11,
-        26,
-        49,
-        238,
-        104,
-        196,
-        221,
-        82,
-        171,
-        23,
-        219,
-        113,
-        171,
-        244,
-        157,
-        67,
-        134,
-        216,
-        115,
-        248,
-        142,
-        231,
-        228,
-        146,
-        232,
-        106,
+        118,
+        151,
+        210,
+        74,
+        210,
+        191,
+        163,
+        137,
+        173,
+        1,
+        239,
+        225,
+        138,
+        242,
+        103,
+        166,
+        17,
+        39,
+        50,
+        222,
+        241,
+        252,
+        98,
+        17,
+        201,
+        61,
+        63,
+        137,
+        64,
+        218,
+        81,
+        124,
         100,
         115,
         111,
@@ -10501,8 +10556,9 @@ pub mod summa {
         51,
     ];
     ///The bytecode of the contract.
-    pub static SUMMA_BYTECODE: ::ethers::core::types::Bytes =
-        ::ethers::core::types::Bytes::from_static(__BYTECODE);
+    pub static SUMMA_BYTECODE: ::ethers::core::types::Bytes = ::ethers::core::types::Bytes::from_static(
+        __BYTECODE,
+    );
     #[rustfmt::skip]
     const __DEPLOYED_BYTECODE: &[u8] = &[
         96,
@@ -11300,7 +11356,7 @@ pub mod summa {
         144,
         80,
         96,
-        1,
+        0,
         129,
         96,
         0,
@@ -18232,38 +18288,38 @@ pub mod summa {
         34,
         18,
         32,
-        134,
-        176,
-        92,
-        129,
-        176,
-        246,
-        11,
-        26,
-        49,
-        238,
-        104,
-        196,
-        221,
-        82,
-        171,
-        23,
-        219,
-        113,
-        171,
-        244,
-        157,
-        67,
-        134,
-        216,
-        115,
-        248,
-        142,
-        231,
-        228,
-        146,
-        232,
-        106,
+        118,
+        151,
+        210,
+        74,
+        210,
+        191,
+        163,
+        137,
+        173,
+        1,
+        239,
+        225,
+        138,
+        242,
+        103,
+        166,
+        17,
+        39,
+        50,
+        222,
+        241,
+        252,
+        98,
+        17,
+        201,
+        61,
+        63,
+        137,
+        64,
+        218,
+        81,
+        124,
         100,
         115,
         111,
@@ -18277,8 +18333,9 @@ pub mod summa {
         51,
     ];
     ///The deployed bytecode of the contract.
-    pub static SUMMA_DEPLOYED_BYTECODE: ::ethers::core::types::Bytes =
-        ::ethers::core::types::Bytes::from_static(__DEPLOYED_BYTECODE);
+    pub static SUMMA_DEPLOYED_BYTECODE: ::ethers::core::types::Bytes = ::ethers::core::types::Bytes::from_static(
+        __DEPLOYED_BYTECODE,
+    );
     pub struct Summa<M>(::ethers::contract::Contract<M>);
     impl<M> ::core::clone::Clone for Summa<M> {
         fn clone(&self) -> Self {
@@ -18298,9 +18355,7 @@ pub mod summa {
     }
     impl<M> ::core::fmt::Debug for Summa<M> {
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-            f.debug_tuple(stringify!(Summa))
-                .field(&self.address())
-                .finish()
+            f.debug_tuple(stringify!(Summa)).field(&self.address()).finish()
         }
     }
     impl<M: ::ethers::providers::Middleware> Summa<M> {
@@ -18310,11 +18365,13 @@ pub mod summa {
             address: T,
             client: ::std::sync::Arc<M>,
         ) -> Self {
-            Self(::ethers::contract::Contract::new(
-                address.into(),
-                SUMMA_ABI.clone(),
-                client,
-            ))
+            Self(
+                ::ethers::contract::Contract::new(
+                    address.into(),
+                    SUMMA_ABI.clone(),
+                    client,
+                ),
+            )
         }
         /// Constructs the general purpose `Deployer` instance based on the provided constructor arguments and sends it.
         /// Returns a new instance of a deployer that returns an instance of this contract after sending the transaction
@@ -18376,7 +18433,10 @@ pub mod summa {
         pub fn commitments(
             &self,
             p0: ::ethers::core::types::U256,
-        ) -> ::ethers::contract::builders::ContractCall<M, ::ethers::core::types::Bytes> {
+        ) -> ::ethers::contract::builders::ContractCall<
+            M,
+            ::ethers::core::types::Bytes,
+        > {
             self.0
                 .method_hash([73, 206, 137, 151], p0)
                 .expect("method not found (this should never happen)")
@@ -18399,13 +18459,18 @@ pub mod summa {
         ///Calls the contract's `owner` (0x8da5cb5b) function
         pub fn owner(
             &self,
-        ) -> ::ethers::contract::builders::ContractCall<M, ::ethers::core::types::Address> {
+        ) -> ::ethers::contract::builders::ContractCall<
+            M,
+            ::ethers::core::types::Address,
+        > {
             self.0
                 .method_hash([141, 165, 203, 91], ())
                 .expect("method not found (this should never happen)")
         }
         ///Calls the contract's `renounceOwnership` (0x715018a6) function
-        pub fn renounce_ownership(&self) -> ::ethers::contract::builders::ContractCall<M, ()> {
+        pub fn renounce_ownership(
+            &self,
+        ) -> ::ethers::contract::builders::ContractCall<M, ()> {
             self.0
                 .method_hash([113, 80, 24, 166], ())
                 .expect("method not found (this should never happen)")
@@ -18461,7 +18526,10 @@ pub mod summa {
         ///Calls the contract's `verifyingKey` (0x7950c5f8) function
         pub fn verifying_key(
             &self,
-        ) -> ::ethers::contract::builders::ContractCall<M, ::ethers::core::types::Address> {
+        ) -> ::ethers::contract::builders::ContractCall<
+            M,
+            ::ethers::core::types::Address,
+        > {
             self.0
                 .method_hash([121, 80, 197, 248], ())
                 .expect("method not found (this should never happen)")
@@ -18489,19 +18557,22 @@ pub mod summa {
         ///Gets the contract's `OwnershipTransferred` event
         pub fn ownership_transferred_filter(
             &self,
-        ) -> ::ethers::contract::builders::Event<::std::sync::Arc<M>, M, OwnershipTransferredFilter>
-        {
+        ) -> ::ethers::contract::builders::Event<
+            ::std::sync::Arc<M>,
+            M,
+            OwnershipTransferredFilter,
+        > {
             self.0.event()
         }
         /// Returns an `Event` builder for all the events of this contract.
         pub fn events(
             &self,
         ) -> ::ethers::contract::builders::Event<::std::sync::Arc<M>, M, SummaEvents> {
-            self.0
-                .event_with_filter(::core::default::Default::default())
+            self.0.event_with_filter(::core::default::Default::default())
         }
     }
-    impl<M: ::ethers::providers::Middleware> From<::ethers::contract::Contract<M>> for Summa<M> {
+    impl<M: ::ethers::providers::Middleware> From<::ethers::contract::Contract<M>>
+    for Summa<M> {
         fn from(contract: ::ethers::contract::Contract<M>) -> Self {
             Self::new(contract.address(), contract.client())
         }
@@ -18514,7 +18585,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethevent(
         name = "AddressOwnershipProofSubmitted",
@@ -18531,7 +18602,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethevent(
         name = "LiabilitiesCommitmentSubmitted",
@@ -18552,7 +18623,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethevent(
         name = "OwnershipTransferred",
@@ -18596,7 +18667,9 @@ pub mod summa {
                 Self::LiabilitiesCommitmentSubmittedFilter(element) => {
                     ::core::fmt::Display::fmt(element, f)
                 }
-                Self::OwnershipTransferredFilter(element) => ::core::fmt::Display::fmt(element, f),
+                Self::OwnershipTransferredFilter(element) => {
+                    ::core::fmt::Display::fmt(element, f)
+                }
             }
         }
     }
@@ -18624,12 +18697,9 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
-    #[ethcall(
-        name = "addressOwnershipProofs",
-        abi = "addressOwnershipProofs(uint256)"
-    )]
+    #[ethcall(name = "addressOwnershipProofs", abi = "addressOwnershipProofs(uint256)")]
     pub struct AddressOwnershipProofsCall(pub ::ethers::core::types::U256);
     ///Container type for all input parameters for the `commitments` function with signature `commitments(uint256)` and selector `0x49ce8997`
     #[derive(
@@ -18640,7 +18710,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethcall(name = "commitments", abi = "commitments(uint256)")]
     pub struct CommitmentsCall(pub ::ethers::core::types::U256);
@@ -18653,7 +18723,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethcall(name = "config", abi = "config()")]
     pub struct ConfigCall;
@@ -18666,7 +18736,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethcall(
         name = "getAddressOwnershipProof",
@@ -18684,7 +18754,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethcall(name = "owner", abi = "owner()")]
     pub struct OwnerCall;
@@ -18697,7 +18767,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethcall(name = "renounceOwnership", abi = "renounceOwnership()")]
     pub struct RenounceOwnershipCall;
@@ -18710,7 +18780,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethcall(
         name = "submitCommitment",
@@ -18731,7 +18801,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethcall(
         name = "submitProofOfAddressOwnership",
@@ -18749,7 +18819,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethcall(name = "transferOwnership", abi = "transferOwnership(address)")]
     pub struct TransferOwnershipCall {
@@ -18764,7 +18834,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethcall(
         name = "verifyInclusionProof",
@@ -18785,7 +18855,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethcall(name = "verifyingKey", abi = "verifyingKey()")]
     pub struct VerifyingKeyCall;
@@ -18809,52 +18879,62 @@ pub mod summa {
             data: impl AsRef<[u8]>,
         ) -> ::core::result::Result<Self, ::ethers::core::abi::AbiError> {
             let data = data.as_ref();
-            if let Ok(decoded) =
-                <AddressOwnershipProofsCall as ::ethers::core::abi::AbiDecode>::decode(data)
-            {
+            if let Ok(decoded)
+                = <AddressOwnershipProofsCall as ::ethers::core::abi::AbiDecode>::decode(
+                    data,
+                ) {
                 return Ok(Self::AddressOwnershipProofs(decoded));
             }
-            if let Ok(decoded) = <CommitmentsCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded)
+                = <CommitmentsCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::Commitments(decoded));
             }
-            if let Ok(decoded) = <ConfigCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded)
+                = <ConfigCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::Config(decoded));
             }
-            if let Ok(decoded) =
-                <GetAddressOwnershipProofCall as ::ethers::core::abi::AbiDecode>::decode(data)
-            {
+            if let Ok(decoded)
+                = <GetAddressOwnershipProofCall as ::ethers::core::abi::AbiDecode>::decode(
+                    data,
+                ) {
                 return Ok(Self::GetAddressOwnershipProof(decoded));
             }
-            if let Ok(decoded) = <OwnerCall as ::ethers::core::abi::AbiDecode>::decode(data) {
+            if let Ok(decoded)
+                = <OwnerCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::Owner(decoded));
             }
-            if let Ok(decoded) =
-                <RenounceOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(data)
-            {
+            if let Ok(decoded)
+                = <RenounceOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(
+                    data,
+                ) {
                 return Ok(Self::RenounceOwnership(decoded));
             }
-            if let Ok(decoded) =
-                <SubmitCommitmentCall as ::ethers::core::abi::AbiDecode>::decode(data)
-            {
+            if let Ok(decoded)
+                = <SubmitCommitmentCall as ::ethers::core::abi::AbiDecode>::decode(
+                    data,
+                ) {
                 return Ok(Self::SubmitCommitment(decoded));
             }
-            if let Ok(decoded) =
-                <SubmitProofOfAddressOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(data)
-            {
+            if let Ok(decoded)
+                = <SubmitProofOfAddressOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(
+                    data,
+                ) {
                 return Ok(Self::SubmitProofOfAddressOwnership(decoded));
             }
-            if let Ok(decoded) =
-                <TransferOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(data)
-            {
+            if let Ok(decoded)
+                = <TransferOwnershipCall as ::ethers::core::abi::AbiDecode>::decode(
+                    data,
+                ) {
                 return Ok(Self::TransferOwnership(decoded));
             }
-            if let Ok(decoded) =
-                <VerifyInclusionProofCall as ::ethers::core::abi::AbiDecode>::decode(data)
-            {
+            if let Ok(decoded)
+                = <VerifyInclusionProofCall as ::ethers::core::abi::AbiDecode>::decode(
+                    data,
+                ) {
                 return Ok(Self::VerifyInclusionProof(decoded));
             }
-            if let Ok(decoded) = <VerifyingKeyCall as ::ethers::core::abi::AbiDecode>::decode(data)
-            {
+            if let Ok(decoded)
+                = <VerifyingKeyCall as ::ethers::core::abi::AbiDecode>::decode(data) {
                 return Ok(Self::VerifyingKey(decoded));
             }
             Err(::ethers::core::abi::Error::InvalidData.into())
@@ -18866,32 +18946,46 @@ pub mod summa {
                 Self::AddressOwnershipProofs(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
-                Self::Commitments(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::Commitments(element) => {
+                    ::ethers::core::abi::AbiEncode::encode(element)
+                }
                 Self::Config(element) => ::ethers::core::abi::AbiEncode::encode(element),
                 Self::GetAddressOwnershipProof(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
                 Self::Owner(element) => ::ethers::core::abi::AbiEncode::encode(element),
-                Self::RenounceOwnership(element) => ::ethers::core::abi::AbiEncode::encode(element),
-                Self::SubmitCommitment(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::RenounceOwnership(element) => {
+                    ::ethers::core::abi::AbiEncode::encode(element)
+                }
+                Self::SubmitCommitment(element) => {
+                    ::ethers::core::abi::AbiEncode::encode(element)
+                }
                 Self::SubmitProofOfAddressOwnership(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
-                Self::TransferOwnership(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::TransferOwnership(element) => {
+                    ::ethers::core::abi::AbiEncode::encode(element)
+                }
                 Self::VerifyInclusionProof(element) => {
                     ::ethers::core::abi::AbiEncode::encode(element)
                 }
-                Self::VerifyingKey(element) => ::ethers::core::abi::AbiEncode::encode(element),
+                Self::VerifyingKey(element) => {
+                    ::ethers::core::abi::AbiEncode::encode(element)
+                }
             }
         }
     }
     impl ::core::fmt::Display for SummaCalls {
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             match self {
-                Self::AddressOwnershipProofs(element) => ::core::fmt::Display::fmt(element, f),
+                Self::AddressOwnershipProofs(element) => {
+                    ::core::fmt::Display::fmt(element, f)
+                }
                 Self::Commitments(element) => ::core::fmt::Display::fmt(element, f),
                 Self::Config(element) => ::core::fmt::Display::fmt(element, f),
-                Self::GetAddressOwnershipProof(element) => ::core::fmt::Display::fmt(element, f),
+                Self::GetAddressOwnershipProof(element) => {
+                    ::core::fmt::Display::fmt(element, f)
+                }
                 Self::Owner(element) => ::core::fmt::Display::fmt(element, f),
                 Self::RenounceOwnership(element) => ::core::fmt::Display::fmt(element, f),
                 Self::SubmitCommitment(element) => ::core::fmt::Display::fmt(element, f),
@@ -18899,7 +18993,9 @@ pub mod summa {
                     ::core::fmt::Display::fmt(element, f)
                 }
                 Self::TransferOwnership(element) => ::core::fmt::Display::fmt(element, f),
-                Self::VerifyInclusionProof(element) => ::core::fmt::Display::fmt(element, f),
+                Self::VerifyInclusionProof(element) => {
+                    ::core::fmt::Display::fmt(element, f)
+                }
                 Self::VerifyingKey(element) => ::core::fmt::Display::fmt(element, f),
             }
         }
@@ -18968,7 +19064,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     pub struct AddressOwnershipProofsReturn {
         pub cex_address: ::std::string::String,
@@ -18985,7 +19081,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     pub struct CommitmentsReturn(pub ::ethers::core::types::Bytes);
     ///Container type for all return fields from the `config` function with signature `config()` and selector `0x79502c55`
@@ -18997,7 +19093,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     pub struct ConfigReturn {
         pub balance_byte_range: u8,
@@ -19011,7 +19107,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     pub struct GetAddressOwnershipProofReturn(pub AddressOwnershipProof);
     ///Container type for all return fields from the `owner` function with signature `owner()` and selector `0x8da5cb5b`
@@ -19023,7 +19119,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     pub struct OwnerReturn(pub ::ethers::core::types::Address);
     ///Container type for all return fields from the `verifyInclusionProof` function with signature `verifyInclusionProof(uint256,bytes,uint256[],uint256[])` and selector `0x9c382559`
@@ -19035,7 +19131,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     pub struct VerifyInclusionProofReturn(pub bool);
     ///Container type for all return fields from the `verifyingKey` function with signature `verifyingKey()` and selector `0x7950c5f8`
@@ -19047,7 +19143,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     pub struct VerifyingKeyReturn(pub ::ethers::core::types::Address);
     ///`AddressOwnershipProof(string,string,bytes,bytes)`
@@ -19059,7 +19155,7 @@ pub mod summa {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     pub struct AddressOwnershipProof {
         pub cex_address: ::std::string::String,
