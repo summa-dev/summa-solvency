@@ -75,13 +75,14 @@ fn bench_kzg<
         b.iter_batched(
             || circuit.clone(), // Setup function: clone the circuit for each iteration
             |circuit| {
-                full_prover(&params, &pk, circuit, &[vec![]]);
+                full_prover(&params, &pk, circuit, &[vec![Fp::zero()]]);
             },
             criterion::BatchSize::SmallInput, // Choose an appropriate batch size
         );
     });
 
-    let (zk_snark_proof, advice_polys, omega) = full_prover(&params, &pk, circuit, &[vec![]]);
+    let (zk_snark_proof, advice_polys, omega) =
+        full_prover(&params, &pk, circuit, &[vec![Fp::zero()]]);
 
     let poly_length = 1 << u64::from(K);
 
@@ -267,7 +268,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     #[cfg(not(feature = "no_range_check"))]
     {
         const K: u32 = 18;
-        const N_USERS: usize = (1 << 17) + (1 << 16) - 6;
+        const N_USERS: usize = (1 << K) - 6;
         bench_kzg::<
             K,
             N_USERS,
@@ -279,7 +280,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     #[cfg(not(feature = "no_range_check"))]
     {
         const K: u32 = 17;
-        const N_USERS: usize = (1 << 16) - 6;
+        const N_USERS: usize = (1 << K) - 6;
         bench_kzg::<
             K,
             N_USERS,
