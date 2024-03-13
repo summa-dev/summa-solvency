@@ -35,7 +35,8 @@ mod test {
         let (entries, circuit, pk, _, params) =
             set_up::<9, N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(path);
 
-        let (_, advice_polys, omega) = full_prover(&params, &pk, circuit.clone(), &[vec![]]);
+        let (_, advice_polys, omega) =
+            full_prover(&params, &pk, circuit.clone(), &[vec![Fp::zero()]]);
 
         // Select the first user balance polynomial for the example
         let f_poly = advice_polys.advice_polys.get(1).unwrap();
@@ -138,9 +139,29 @@ mod test {
             UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
         >::init(entries.to_vec());
 
-        let valid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
+        let valid_prover = MockProver::run(K, &circuit, vec![vec![Fp::zero()]]).unwrap();
 
         assert_eq!(valid_prover.verify_par(), Ok(()))
+    }
+
+    #[test]
+    fn test_invalid_instance_value_univariate_grand_sum_prover() {
+        let path = "../csv/entry_16.csv";
+
+        let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
+        let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
+        parse_csv_to_entries::<&str, N_CURRENCIES>(path, &mut entries, &mut cryptos).unwrap();
+
+        let circuit = UnivariateGrandSum::<
+            N_USERS,
+            N_CURRENCIES,
+            UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
+        >::init(entries.to_vec());
+
+        let valid_prover = MockProver::run(K, &circuit, vec![vec![Fp::one()]]).unwrap();
+
+        let invalid_result = valid_prover.verify_par().unwrap_err()[0].to_string();
+        assert!(invalid_result.contains("Equality constraint not satisfied"));
     }
 
     #[test]
@@ -165,7 +186,7 @@ mod test {
         // The Custodian generates the ZK-SNARK Halo2 proof that commits to the user entry values in advice polynomials
         // and also range-checks the user balance values
         let (zk_snark_proof, advice_polys, omega) =
-            full_prover(&params, &pk, circuit.clone(), &[vec![]]);
+            full_prover(&params, &pk, circuit.clone(), &[vec![Fp::zero()]]);
 
         // Both the Custodian and the Verifier know what column range are the balance columns
         // (The first column is the user IDs)
@@ -211,7 +232,12 @@ mod test {
 
         // 2. Verification phase
         // The Verifier verifies the ZK proof
-        assert!(full_verifier(&params, &vk, &zk_snark_proof, &[vec![]]));
+        assert!(full_verifier(
+            &params,
+            &vk,
+            &zk_snark_proof,
+            &[vec![Fp::zero()]]
+        ));
 
         // The Verifier is able to independently extract the omega from the verification key
         let omega = pk.get_vk().get_domain().get_omega();
@@ -278,7 +304,7 @@ mod test {
         // 1. Proving phase
         // The Custodian generates the ZK proof
         let (zk_snark_proof, advice_polys, omega) =
-            full_prover(&params, &pk, circuit.clone(), &[vec![]]);
+            full_prover(&params, &pk, circuit.clone(), &[vec![Fp::zero()]]);
 
         // The Custodian creates a KZG batch proof of the 4th user ID & balances inclusion
         let user_index = 3_u16;
@@ -303,7 +329,12 @@ mod test {
 
         // 2. Verification phase
         // The Verifier verifies the ZK proof
-        assert!(full_verifier(&params, &vk, &zk_snark_proof, &[vec![]]));
+        assert!(full_verifier(
+            &params,
+            &vk,
+            &zk_snark_proof,
+            &[vec![Fp::zero()]]
+        ));
 
         // The Verifier is able to independently extract the omega from the verification key
         let omega = pk.get_vk().get_domain().get_omega();
@@ -349,7 +380,7 @@ mod test {
         // The Custodian generates the ZK-SNARK Halo2 proof that commits to the user entry values in advice polynomials
         // and also range-checks the user balance values
         let (zk_snark_proof, advice_polys, _) =
-            full_prover(&params, &pk, circuit.clone(), &[vec![]]);
+            full_prover(&params, &pk, circuit.clone(), &[vec![Fp::zero()]]);
 
         // Both the Custodian and the Verifier know what column range are the balance columns
         // (The first column is the user IDs)
@@ -373,7 +404,12 @@ mod test {
 
         // 2. Verification phase
         // The Verifier verifies the ZK proof
-        assert!(full_verifier(&params, &vk, &zk_snark_proof, &[vec![]]));
+        assert!(full_verifier(
+            &params,
+            &vk,
+            &zk_snark_proof,
+            &[vec![Fp::zero()]]
+        ));
 
         // The Custodian communicates the (invalid) polynomial length to the Verifier
         let invalid_poly_length = 2 ^ u64::from(K) - 1;
@@ -413,19 +449,11 @@ mod test {
             UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
         >::init(entries.to_vec());
 
-        let invalid_prover = MockProver::run(K, &circuit, vec![vec![]]).unwrap();
+        let invalid_prover = MockProver::run(K, &circuit, vec![vec![Fp::zero()]]).unwrap();
 
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
-                VerifyFailure::Permutation {
-                    column: (Any::Fixed, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 65536 }
-                },
-                VerifyFailure::Permutation {
-                    column: (Any::Fixed, 0).into(),
-                    location: FailureLocation::OutsideRegion { row: 65539 }
-                },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 6).into(),
                     location: FailureLocation::InRegion {
@@ -434,7 +462,21 @@ mod test {
                     }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 10).into(),
+                    column: (Any::advice(), 7).into(),
+                    location: FailureLocation::InRegion {
+                        region: (2, "Perform range check on balance 0 of user 0").into(),
+                        offset: 0
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 11).into(),
+                    location: FailureLocation::InRegion {
+                        region: (5, "Perform range check on balance 1 of user 1").into(),
+                        offset: 0
+                    }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::advice(), 12).into(),
                     location: FailureLocation::InRegion {
                         region: (5, "Perform range check on balance 1 of user 1").into(),
                         offset: 0
