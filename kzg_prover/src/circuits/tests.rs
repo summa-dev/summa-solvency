@@ -25,7 +25,6 @@ mod test {
 
     const K: u32 = 17;
     const N_CURRENCIES: usize = 2;
-    const N_POINTS: usize = N_CURRENCIES + 1;
     const N_USERS: usize = 16;
 
     #[test]
@@ -239,7 +238,7 @@ mod test {
 
         let column_range = 0..N_CURRENCIES + 1;
         // The Verifier verifies the inclusion of the 4th user entry
-        let (inclusion_verified, id_and_balance_values) = verify_user_inclusion::<N_POINTS>(
+        let (inclusion_verified, id_and_balance_values) = verify_user_inclusion(
             &params,
             &zk_snark_proof,
             &openings_batch_proof,
@@ -314,7 +313,7 @@ mod test {
         // Test failure case with the wrong group generator
         // Slightly modify the generator
         let bad_omega = omega.sub(&Fp::one());
-        let (balances_verified, _) = verify_user_inclusion::<N_CURRENCIES>(
+        let (balances_verified, _) = verify_user_inclusion(
             &params,
             &zk_snark_proof,
             &openings_batch_proof,
