@@ -265,20 +265,8 @@ fn criterion_benchmark(_c: &mut Criterion) {
     // Demonstrating that a higher value of K has a more significant impact on benchmark performance than the number of users
     #[cfg(not(feature = "no_range_check"))]
     {
-        const K: u32 = 18;
-        const N_USERS: usize = (1 << K) - 6;
-        bench_kzg::<
-            K,
-            N_USERS,
-            N_CURRENCIES,
-            N_POINTS,
-            UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
-        >(format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str());
-    }
-    #[cfg(not(feature = "no_range_check"))]
-    {
         const K: u32 = 17;
-        const N_USERS: usize = (1 << K) - 6;
+        const N_USERS: usize = 2usize.pow(K) - 6;
         bench_kzg::<
             K,
             N_USERS,

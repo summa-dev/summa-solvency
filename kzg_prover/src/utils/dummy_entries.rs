@@ -33,8 +33,6 @@ pub fn generate_dummy_entries<const N_USERS: usize, const N_CURRENCIES: usize>(/
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cryptocurrency::Cryptocurrency;
-    use crate::entry::Entry;
 
     #[test]
     fn test_generate_random_entries() {

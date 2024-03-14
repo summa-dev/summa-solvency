@@ -143,7 +143,7 @@ contract Summa is Ownable {
         uint8 balanceByteRange
     ) internal view returns (bool isValid) {
         // The number of permutations is 2 + (balanceByteRange/2) * numberOfCurrencies because of the circuit structure:
-        // 1 per instance column, 1 per constant column (range check) and balanceByteRange/2 per range check columns times the number of currencies
+        // 1 per instance column, 1 per constant column (range check) and (balanceByteRange/2) + 1 per range check columns times the number of currencies
         uint256 numPermutations = 2 +
             ((balanceByteRange / 2) + 1) *
             numberOfCurrencies;
