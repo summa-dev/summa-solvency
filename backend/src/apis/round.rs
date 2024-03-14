@@ -45,7 +45,6 @@ impl KZGProof {
 /// # Type Parameters
 ///
 /// * `N_CURRENCIES`: The number of currencies for which solvency is verified in this round.
-/// * `N_POINTS`: The number of points in the `UnivariateGrandSum` circuit, which is `N_CURRENCIES + 1`.
 /// * `N_USERS`: The number of users involved in this round of the protocol.
 ///
 /// These parameters are used for initializing the `UnivariateGrandSum` circuit within the `Snapshot` struct.
@@ -57,14 +56,13 @@ impl KZGProof {
 /// * `snapshot`: A `Snapshot` struct capturing the round's state, including user identities and balances.
 /// * `signer`: A reference to a `SummaSigner`, the entity responsible for signing transactions with the Summa contract in this round.
 ///
-pub struct Round<'a, const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize> {
+pub struct Round<'a, const N_CURRENCIES: usize, const N_USERS: usize> {
     timestamp: u64,
-    snapshot: Snapshot<N_CURRENCIES, N_POINTS, N_USERS>,
+    snapshot: Snapshot<N_CURRENCIES, N_USERS>,
     signer: &'a SummaSigner,
 }
 
-impl<const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize>
-    Round<'_, N_CURRENCIES, N_POINTS, N_USERS>
+impl<const N_CURRENCIES: usize, const N_USERS: usize> Round<'_, N_CURRENCIES, N_USERS>
 where
     [usize; N_CURRENCIES + 1]: Sized,
 {
@@ -75,10 +73,10 @@ where
         params: ParamsKZG<Bn256>,
         verifying_key: VerifyingKey<G1Affine>,
         timestamp: u64,
-    ) -> Round<'_, N_CURRENCIES, N_POINTS, N_USERS> {
+    ) -> Round<'_, N_CURRENCIES, N_USERS> {
         Round {
             timestamp,
-            snapshot: Snapshot::<N_CURRENCIES, N_POINTS, N_USERS>::new(
+            snapshot: Snapshot::<N_CURRENCIES, N_USERS>::new(
                 zk_snark_proof,
                 advice_polys,
                 params,
@@ -118,15 +116,14 @@ where
 /// * `params`: The parameters for the KZG commitment scheme.
 /// * `verifying_key`: The verifying key for getting domains, which is used for generating inclusion proofs.
 ///
-pub struct Snapshot<const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize> {
+pub struct Snapshot<const N_CURRENCIES: usize, const N_USERS: usize> {
     zk_snark_proof: Vec<u8>,
     advice_polys: AdviceSingle<G1Affine, Coeff>,
     params: ParamsKZG<Bn256>,
     verifying_key: VerifyingKey<G1Affine>,
 }
 
-impl<const N_CURRENCIES: usize, const N_POINTS: usize, const N_USERS: usize>
-    Snapshot<N_CURRENCIES, N_POINTS, N_USERS>
+impl<const N_CURRENCIES: usize, const N_USERS: usize> Snapshot<N_CURRENCIES, N_USERS>
 where
     [usize; N_CURRENCIES + 1]: Sized,
 {
