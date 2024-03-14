@@ -18,8 +18,6 @@ use summa_solvency::{
             verify_user_inclusion,
         },
     },
-    cryptocurrency::Cryptocurrency,
-    entry::Entry,
     utils::{big_uint_to_fp, generate_dummy_entries},
 };
 
@@ -27,7 +25,6 @@ fn bench_kzg<
     const K: u32,
     const N_USERS: usize,
     const N_CURRENCIES: usize,
-    const N_POINTS: usize,
     CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
 >(
     name: &str,
@@ -244,7 +241,7 @@ fn bench_kzg<
         b.iter_batched(
             || (column_range.clone(), omega, user_index),
             |(column_range, omega, user_index)| {
-                verify_user_inclusion::<N_POINTS>(
+                verify_user_inclusion(
                     &params,
                     &zk_snark_proof,
                     &openings_batch_proof,
@@ -260,27 +257,22 @@ fn bench_kzg<
 
 fn criterion_benchmark(_c: &mut Criterion) {
     const N_CURRENCIES: usize = 1;
-    const N_POINTS: usize = N_CURRENCIES + 1;
 
     // Demonstrating that a higher value of K has a more significant impact on benchmark performance than the number of users
     #[cfg(not(feature = "no_range_check"))]
     {
         const K: u32 = 17;
         const N_USERS: usize = 2usize.pow(K) - 6;
-        bench_kzg::<
-            K,
-            N_USERS,
-            N_CURRENCIES,
-            N_POINTS,
-            UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>,
-        >(format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str());
+        bench_kzg::<K, N_USERS, N_CURRENCIES, UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>>(
+            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
+        );
     }
     //Use the following benchmarks for quick evaluation/prototyping (no range check)
     #[cfg(feature = "no_range_check")]
     {
         const K: u32 = 9;
         const N_USERS: usize = 2usize.pow(K) - 6;
-        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+        bench_kzg::<K, N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
         );
     }
@@ -288,7 +280,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     {
         const K: u32 = 10;
         const N_USERS: usize = 2usize.pow(K) - 6;
-        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+        bench_kzg::<K, N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
         );
     }
@@ -296,7 +288,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     {
         const K: u32 = 11;
         const N_USERS: usize = 2usize.pow(K) - 6;
-        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+        bench_kzg::<K, N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
         );
     }
@@ -304,7 +296,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     {
         const K: u32 = 12;
         const N_USERS: usize = 2usize.pow(K) - 6;
-        bench_kzg::<K, N_USERS, N_CURRENCIES, N_POINTS, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
+        bench_kzg::<K, N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
         );
     }

@@ -150,7 +150,6 @@ mod test {
 
     const K: u32 = 17;
     const N_CURRENCIES: usize = 2;
-    const N_POINTS: usize = N_CURRENCIES + 1;
     const N_USERS: usize = 16;
     const PARAMS_PATH: &str = "../backend/ptau/hermez-raw-17";
 
@@ -210,7 +209,7 @@ mod test {
             &[instances.clone()],
         );
 
-        let mut round_one = Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(
+        let mut round_one = Round::<N_CURRENCIES, N_USERS>::new(
             &signer,
             zk_snark_proof.clone(),
             advice_polys.clone(),
@@ -218,7 +217,7 @@ mod test {
             vk.clone(),
             1,
         );
-        let mut round_two = Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(
+        let mut round_two = Round::<N_CURRENCIES, N_USERS>::new(
             &signer,
             zk_snark_proof,
             advice_polys,
@@ -331,7 +330,7 @@ mod test {
         ));
 
         let snapshot_time = 1u64;
-        let mut round = Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(
+        let mut round = Round::<N_CURRENCIES, N_USERS>::new(
             &signer,
             zk_snark_proof,
             advice_polys,

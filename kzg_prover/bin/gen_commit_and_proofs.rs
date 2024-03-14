@@ -104,7 +104,7 @@ fn main() {
     let poly_length = 1 << u64::from(K);
     let total_balances = csv_total
         .iter()
-        .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
+        .map(|x| big_uint_to_fp(x) * Fp::from(poly_length).invert().unwrap())
         .collect::<Vec<Fp>>();
 
     let mut grand_sums_kzg_proof = Vec::new();
@@ -165,8 +165,8 @@ fn main() {
     let user_values = &entries
         .get(user_index as usize)
         .map(|entry| {
-            std::iter::once(big_uint_to_fp(&(entry.username_as_big_uint())))
-                .chain(entry.balances().iter().map(|x| big_uint_to_fp(x)))
+            std::iter::once(big_uint_to_fp(entry.username_as_big_uint()))
+                .chain(entry.balances().iter().map(big_uint_to_fp))
                 .collect::<Vec<Fp>>()
         })
         .unwrap();

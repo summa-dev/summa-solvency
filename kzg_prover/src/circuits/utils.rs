@@ -365,8 +365,6 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
 /// Verifies the KZG batch proof of the polynomial openings being the evaluations
 /// of the advice polynomials at the point corresponding to the user index
 ///
-/// * `N_POINTS` - the size of the user entry being verified (e.g., 1 ID value + 4 balance values = 5)
-///
 /// # Arguments
 /// * `params` - the KZG parameters
 /// * `zk_snark_proof` - the ZK-SNARK proof of the circuit whose advice columns contain the user entry polynomials
@@ -378,7 +376,7 @@ pub fn verify_grand_sum_openings<const N_CURRENCIES: usize>(
 /// # Returns
 /// * `bool` - whether the user entry openings are verified correctly
 /// * `Vec<BigUint>` - the evaluations of the advice polynomials at the point corresponding to the user index
-pub fn verify_user_inclusion<const N_POINTS: usize>(
+pub fn verify_user_inclusion(
     params: &ParamsKZG<Bn256>,
     zk_snark_proof: &[u8],
     balance_opening_batch_proof: &[u8],

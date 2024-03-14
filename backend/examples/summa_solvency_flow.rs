@@ -25,7 +25,6 @@ use summa_solvency::{
 
 const K: u32 = 17;
 const N_CURRENCIES: usize = 2;
-const N_POINTS: usize = N_CURRENCIES + 1;
 const N_USERS: usize = 16;
 const USER_INDEX: usize = 0;
 
@@ -96,7 +95,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
-    let mut round = Round::<N_CURRENCIES, N_POINTS, N_USERS>::new(
+    let mut round = Round::<N_CURRENCIES, N_USERS>::new(
         &signer,
         zk_snark_proof,
         advice_polys,
@@ -143,7 +142,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let commitment = summa_contract.commitments(snapshot_time).call().await?;
 
     // Ensure the length of the commitment matches the expected size for the number of points.
-    assert_eq!(commitment.to_vec().len(), 0x40 * N_POINTS);
+    assert_eq!(commitment.to_vec().len(), 0x40 * (N_CURRENCIES + 1));
 
     // Validate the inclusion proof using the contract verifier.
     let mut verification_result = false;
