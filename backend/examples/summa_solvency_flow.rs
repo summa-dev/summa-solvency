@@ -142,7 +142,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let commitment = summa_contract.commitments(snapshot_time).call().await?;
 
     // Ensure the length of the commitment matches the expected size for the number of points.
-    assert_eq!(commitment.to_vec().len(), 0x40 * (N_CURRENCIES - 1));
+    assert_eq!(commitment.to_vec().len(), 0x40 * (N_CURRENCIES + 1));
 
     // Validate the inclusion proof using the contract verifier.
     let mut verification_result = false;
