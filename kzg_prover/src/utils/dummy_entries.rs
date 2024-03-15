@@ -6,8 +6,7 @@ use std::error::Error;
 use crate::entry::Entry;
 
 // This is for testing purposes with a large dataset instead of using a CSV file
-pub fn generate_dummy_entries<const N_USERS: usize, const N_CURRENCIES: usize>(// entries: &mut [Entry<N_CURRENCIES>],
-    // cryptocurrencies: &mut [Cryptocurrency],
+pub fn generate_dummy_entries<const N_USERS: usize, const N_CURRENCIES: usize>(
 ) -> Result<Vec<Entry<N_CURRENCIES>>, Box<dyn Error>> {
     // Ensure N_CURRENCIES is greater than 0.
     if N_CURRENCIES == 0 {

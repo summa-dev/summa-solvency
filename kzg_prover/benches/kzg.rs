@@ -56,11 +56,11 @@ fn bench_kzg<
     let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
 
     // Calculate total for all entry columns
-    let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
+    let mut total_balances: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
 
     for entry in &entries {
         for (i, balance) in entry.balances().iter().enumerate() {
-            csv_total[i] += balance;
+            total_balances[i] += balance;
         }
     }
 
@@ -90,7 +90,7 @@ fn bench_kzg<
                     &advice_polys.advice_blinds,
                     &params,
                     balance_column_range,
-                    csv_total
+                    total_balances
                         .iter()
                         .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
                         .collect::<Vec<Fp>>()
@@ -110,7 +110,7 @@ fn bench_kzg<
                     &advice_polys.advice_blinds,
                     &params,
                     balance_column_range,
-                    csv_total
+                    total_balances
                         .iter()
                         .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
                         .collect::<Vec<Fp>>()
@@ -187,7 +187,7 @@ fn bench_kzg<
         &advice_polys.advice_blinds,
         &params,
         balance_column_range.clone(),
-        csv_total
+        total_balances
             .iter()
             .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
             .collect::<Vec<Fp>>()
