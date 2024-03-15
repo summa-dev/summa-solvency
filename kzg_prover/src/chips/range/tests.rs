@@ -134,9 +134,6 @@ impl Circuit<Fp> for TestCircuit {
         let instance = meta.instance_column();
         meta.enable_equality(instance);
 
-        let z0 = meta.advice_column();
-        meta.enable_equality(z0);
-
         let range_check_config = RangeCheckU64Chip::configure(meta, c, zs, range_u16);
 
         let addchip_config = AddChip::configure(meta, a, b, c, add_selector);
