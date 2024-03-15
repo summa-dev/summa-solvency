@@ -2,7 +2,7 @@ use crate::chips::range::utils::decompose_fp_to_byte_pairs;
 use halo2_proofs::arithmetic::Field;
 use halo2_proofs::circuit::{AssignedCell, Region, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Instance};
+use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed};
 use halo2_proofs::poly::Rotation;
 use std::fmt::Debug;
 
@@ -23,8 +23,6 @@ use std::fmt::Debug;
 #[derive(Debug, Copy, Clone)]
 pub struct RangeCheckU64Config {
     zs: [Column<Advice>; 4],
-    z0: Column<Advice>,
-    instance: Column<Instance>,
 }
 
 /// Helper chip that verfiies that the element witnessed in a given cell lies within the u64 range.
@@ -73,8 +71,6 @@ impl RangeCheckU64Chip {
         meta: &mut ConstraintSystem<Fp>,
         z: Column<Advice>,
         zs: [Column<Advice>; 4],
-        z0: Column<Advice>,
-        instance: Column<Instance>,
         range_u16: Column<Fixed>,
     ) -> RangeCheckU64Config {
         // Constraint that the difference between the element to be checked and the 0-th truncated right-shifted value of the element to be within the range.
@@ -112,13 +108,14 @@ impl RangeCheckU64Chip {
             );
         }
 
-        RangeCheckU64Config { zs, z0, instance }
+        RangeCheckU64Config { zs }
     }
 
     /// Assign the truncated right-shifted values of the element to be checked to the corresponding columns zs at offset 0 starting from the element to be checked.
     pub fn assign(
         &self,
         region: &mut Region<'_, Fp>,
+        zs: &mut Vec<AssignedCell<Fp, Fp>>,
         element: &AssignedCell<Fp, Fp>,
     ) -> Result<(), Error> {
         // Decompose the element in 4 byte pairs.
@@ -129,7 +126,6 @@ impl RangeCheckU64Chip {
             .transpose_vec(4);
 
         // Initalize an empty vector of cells for the truncated right-shifted values of the element to be checked.
-        let mut zs = Vec::with_capacity(4);
         let mut z = element.clone();
 
         // Calculate 1 / 2^16
@@ -151,18 +147,6 @@ impl RangeCheckU64Chip {
             z = zs_next;
             zs.push(z.clone());
         }
-
-        // Assign zero to z0 from the instance
-        let z0 = region.assign_advice_from_instance(
-            || "assign zero to z0",
-            self.config.instance,
-            0,
-            self.config.z0,
-            0,
-        )?;
-
-        // Constrain the final running sum output to be zero.
-        region.constrain_equal(zs[3].cell(), z0.cell())?;
 
         Ok(())
     }

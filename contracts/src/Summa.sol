@@ -145,7 +145,7 @@ contract Summa is Ownable {
         // The number of permutations is 2 + (balanceByteRange/2) * numberOfCurrencies because of the circuit structure:
         // 1 per instance column, 1 per constant column (range check) and (balanceByteRange/2) + 1 per range check columns times the number of currencies
         uint256 numPermutations = 2 +
-            ((balanceByteRange / 2) + 1) *
+            (balanceByteRange / 2) *
             numberOfCurrencies;
 
         uint256 startOffsetForPermutations = 0x2e0; // The value can be observed in the VerificationKey contract, the offset is pointing after all the parameters and the fixed column commitment

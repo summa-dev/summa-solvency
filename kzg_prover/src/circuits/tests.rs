@@ -461,21 +461,21 @@ mod test {
                     }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 7).into(),
+                    column: (Any::advice(), 6).into(),
                     location: FailureLocation::InRegion {
-                        region: (2, "Perform range check on balance 0 of user 0").into(),
+                        region: (6, "Perform range check on balance 0 of user 2").into(),
                         offset: 0
                     }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 11).into(),
+                    column: (Any::advice(), 10).into(),
                     location: FailureLocation::InRegion {
-                        region: (5, "Perform range check on balance 1 of user 1").into(),
+                        region: (3, "Perform range check on balance 1 of user 0").into(),
                         offset: 0
                     }
                 },
                 VerifyFailure::Permutation {
-                    column: (Any::advice(), 12).into(),
+                    column: (Any::advice(), 10).into(),
                     location: FailureLocation::InRegion {
                         region: (5, "Perform range check on balance 1 of user 1").into(),
                         offset: 0

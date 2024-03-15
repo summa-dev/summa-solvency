@@ -5,7 +5,7 @@ use crate::entry::Entry;
 use crate::utils::big_uint_to_fp;
 use halo2_proofs::circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed};
+use halo2_proofs::plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Instance};
 
 #[derive(Clone)]
 pub struct UnivariateGrandSum<
@@ -63,6 +63,7 @@ where
     balances: [Column<Advice>; N_CURRENCIES],
     range_check_configs: [RangeCheckU64Config; N_CURRENCIES],
     range_u16: Column<Fixed>,
+    instance: Column<Instance>,
 }
 
 impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES, N_USERS>
@@ -96,11 +97,7 @@ where
                 meta.enable_equality(*column);
             }
 
-            let z0 = meta.advice_column();
-            meta.enable_equality(z0);
-
-            let range_check_config =
-                RangeCheckU64Chip::configure(meta, z, zs, z0, instance, range_u16);
+            let range_check_config = RangeCheckU64Chip::configure(meta, z, zs, range_u16);
 
             range_check_configs.push(range_check_config);
         }
@@ -110,6 +107,7 @@ where
             balances,
             range_check_configs: range_check_configs.try_into().unwrap(),
             range_u16,
+            instance,
         }
     }
 
@@ -150,13 +148,21 @@ where
         // Perform range check on the assigned balances
         for i in 0..N_USERS {
             for j in 0..N_CURRENCIES {
+                let mut zs = Vec::with_capacity(4);
+
                 layouter.assign_region(
                     || format!("Perform range check on balance {} of user {}", j, i),
                     |mut region| {
-                        range_check_chips[j].assign(&mut region, &assigned_balances[i][j])?;
+                        range_check_chips[j].assign(
+                            &mut region,
+                            &mut zs,
+                            &assigned_balances[i][j],
+                        )?;
                         Ok(())
                     },
                 )?;
+
+                layouter.constrain_instance(zs[3].cell(), self.instance, 0)?;
             }
         }
 
