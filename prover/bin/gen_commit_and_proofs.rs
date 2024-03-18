@@ -69,7 +69,7 @@ fn main() {
     .unwrap();
 
     // Create a proof
-    let instances = vec![Fp::one(); 1]; // This instance is necessary to verify proof on solidity verifier.
+    let instances = vec![Fp::zero(); 1]; // This instance is necessary to verify proof on solidity verifier.
     let (zk_snark_proof, advice_polys, omega) = full_prover(
         &params,
         &pk,

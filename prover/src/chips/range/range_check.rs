@@ -12,6 +12,8 @@ use std::fmt::Debug;
 /// # Fields
 ///
 /// * `zs`: Four advice columns - contain the truncated right-shifted values of the element to be checked
+/// * `z0`: An advice column - for storing the zero value from the instance column
+/// * `instance`: An instance column - zero value provided to the circuit
 ///
 /// # Assumptions
 ///
@@ -36,7 +38,7 @@ pub struct RangeCheckU64Config {
 ///
 ///  z                  | zs[0]            | zs[1]         | zs[2]        | zs[3]      |
 ///  ---------          | ----------       | ----------    | ----------   | ---------- |
-///  0x1f2f3f4f5f6f7f8f | 0x1f2f3f4f5f6f   | 0x1f2f3f4f     | 0x1f2f       | 0x00       |
+///  0x1f2f3f4f5f6f7f8f | 0x1f2f3f4f5f6f   | 0x1f2f3f4f    | 0x1f2f       | 0x00       |
 ///
 /// Column zs[0], at offset 0, contains the truncated right-shifted value z - ks[0] / 2^16 (shift right by 16 bits) where ks[0] is the 0-th decomposition big-endian of the element to be checked
 /// Column zs[1], at offset 0, contains the truncated right-shifted value zs[0] - ks[1] / 2^16 (shift right by 16 bits) where ks[1] is the 1-th decomposition big-endian of the element to be checked
@@ -52,7 +54,7 @@ pub struct RangeCheckU64Config {
 ///     zs[i] - 2^16⋅zs[i+1] = ks[i]  ∈ range_u16
 ///
 /// 3.
-/// zs[3] == 0
+/// zs[3] == z0
 #[derive(Debug, Clone)]
 pub struct RangeCheckU64Chip {
     config: RangeCheckU64Config,
@@ -113,6 +115,7 @@ impl RangeCheckU64Chip {
     pub fn assign(
         &self,
         region: &mut Region<'_, Fp>,
+        zs: &mut Vec<AssignedCell<Fp, Fp>>,
         element: &AssignedCell<Fp, Fp>,
     ) -> Result<(), Error> {
         // Decompose the element in 4 byte pairs.
@@ -123,7 +126,6 @@ impl RangeCheckU64Chip {
             .transpose_vec(4);
 
         // Initalize an empty vector of cells for the truncated right-shifted values of the element to be checked.
-        let mut zs = Vec::with_capacity(4);
         let mut z = element.clone();
 
         // Calculate 1 / 2^16
@@ -145,9 +147,6 @@ impl RangeCheckU64Chip {
             z = zs_next;
             zs.push(z.clone());
         }
-
-        // Constrain the final running sum output to be zero.
-        region.constrain_constant(zs[3].cell(), Fp::from(0))?;
 
         Ok(())
     }

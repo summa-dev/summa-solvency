@@ -56,11 +56,11 @@ fn bench_kzg<
     let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
 
     // Calculate total for all entry columns
-    let mut csv_total: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
+    let mut total_balances: Vec<BigUint> = vec![BigUint::from(0u32); N_CURRENCIES];
 
     for entry in &entries {
         for (i, balance) in entry.balances().iter().enumerate() {
-            csv_total[i] += balance;
+            total_balances[i] += balance;
         }
     }
 
@@ -70,13 +70,14 @@ fn bench_kzg<
         b.iter_batched(
             || circuit.clone(), // Setup function: clone the circuit for each iteration
             |circuit| {
-                full_prover(&params, &pk, circuit, &[vec![]]);
+                full_prover(&params, &pk, circuit, &[vec![Fp::zero()]]);
             },
             criterion::BatchSize::SmallInput, // Choose an appropriate batch size
         );
     });
 
-    let (zk_snark_proof, advice_polys, omega) = full_prover(&params, &pk, circuit, &[vec![]]);
+    let (zk_snark_proof, advice_polys, omega) =
+        full_prover(&params, &pk, circuit, &[vec![Fp::zero()]]);
 
     let poly_length = 1 << u64::from(K);
 
@@ -89,7 +90,7 @@ fn bench_kzg<
                     &advice_polys.advice_blinds,
                     &params,
                     balance_column_range,
-                    csv_total
+                    total_balances
                         .iter()
                         .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
                         .collect::<Vec<Fp>>()
@@ -109,7 +110,7 @@ fn bench_kzg<
                     &advice_polys.advice_blinds,
                     &params,
                     balance_column_range,
-                    csv_total
+                    total_balances
                         .iter()
                         .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
                         .collect::<Vec<Fp>>()
@@ -186,7 +187,7 @@ fn bench_kzg<
         &advice_polys.advice_blinds,
         &params,
         balance_column_range.clone(),
-        csv_total
+        total_balances
             .iter()
             .map(|x| big_uint_to_fp(&(x)) * Fp::from(poly_length).invert().unwrap())
             .collect::<Vec<Fp>>()
@@ -261,15 +262,7 @@ fn criterion_benchmark(_c: &mut Criterion) {
     #[cfg(not(feature = "no_range_check"))]
     {
         const K: u32 = 17;
-        const N_USERS: usize = 2usize.pow(K) + 2usize.pow(16) - 6; // Subtracting 2^16 (reserved for range checks) and 6 (reserved rows) from 2^K.
-        bench_kzg::<K, N_USERS, N_CURRENCIES, UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>>(
-            format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
-        );
-    }
-    #[cfg(not(feature = "no_range_check"))]
-    {
-        const K: u32 = 18;
-        const N_USERS: usize = 2usize.pow(K) - 2usize.pow(16) - 6; //  Subtracting 2^16 (reserved for range checks) and 6 (reserved rows) from 2^K.
+        const N_USERS: usize = 2usize.pow(K) - 6;
         bench_kzg::<K, N_USERS, N_CURRENCIES, UnivariateGrandSumConfig<N_CURRENCIES, N_USERS>>(
             format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}").as_str(),
         );

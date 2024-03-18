@@ -2,7 +2,6 @@
 use std::error::Error;
 
 use halo2_proofs::halo2curves::bn256::{Fr as Fp, G1Affine};
-use halo2_proofs::halo2curves::group::cofactor::CofactorCurveAffine;
 use halo2_proofs::halo2curves::group::Curve;
 use halo2_proofs::transcript::TranscriptRead;
 use halo2_proofs::{
