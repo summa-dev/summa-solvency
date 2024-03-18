@@ -2,7 +2,7 @@ use crate::chips::range::range_check::{RangeCheckU64Chip, RangeCheckU64Config};
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value},
     halo2curves::bn256::Fr as Fp,
-    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Selector},
+    plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Fixed, Instance, Selector},
     poly::Rotation,
 };
 
@@ -89,6 +89,7 @@ pub struct TestConfig {
     pub addchip_config: AddConfig,
     pub range_check_config: RangeCheckU64Config,
     pub range_u16: Column<Fixed>,
+    pub instance: Column<Instance>,
 }
 
 // The test circuit takes two inputs a and b.
@@ -130,6 +131,9 @@ impl Circuit<Fp> for TestCircuit {
 
         let add_selector = meta.selector();
 
+        let instance = meta.instance_column();
+        meta.enable_equality(instance);
+
         let range_check_config = RangeCheckU64Chip::configure(meta, c, zs, range_u16);
 
         let addchip_config = AddChip::configure(meta, a, b, c, add_selector);
@@ -139,6 +143,7 @@ impl Circuit<Fp> for TestCircuit {
                 addchip_config,
                 range_check_config,
                 range_u16,
+                instance,
             }
         }
     }
@@ -173,15 +178,17 @@ impl Circuit<Fp> for TestCircuit {
         let addchip = AddChip::construct(config.addchip_config);
         let (_, _, c) = addchip.assign(self.a, self.b, layouter.namespace(|| "add chip"))?;
 
+        let mut zs = Vec::with_capacity(4);
         // Perform the range check
         layouter.assign_region(
             || "Perform range check on c",
             |mut region| {
-                range_chip.assign(&mut region, &c)?;
+                range_chip.assign(&mut region, &mut zs, &c)?;
 
                 Ok(())
             },
         )?;
+        layouter.constrain_instance(zs[3].cell(), config.instance, 0)?;
 
         Ok(())
     }
@@ -213,7 +220,7 @@ mod testing {
         let b = Fp::from(1);
 
         let circuit = TestCircuit { a, b };
-        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        let prover = MockProver::run(k, &circuit, vec![vec![Fp::zero()]]).unwrap();
         prover.assert_satisfied();
     }
 
@@ -231,20 +238,20 @@ mod testing {
         let b = Fp::from(2);
 
         let circuit = TestCircuit { a, b };
-        let invalid_prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        let invalid_prover = MockProver::run(k, &circuit, vec![vec![Fp::zero()]]).unwrap();
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
-                VerifyFailure::Permutation {
-                    column: (Any::Fixed, 1).into(),
-                    location: FailureLocation::OutsideRegion { row: 0 }
-                },
                 VerifyFailure::Permutation {
                     column: (Any::advice(), 6).into(),
                     location: FailureLocation::InRegion {
                         region: (2, "Perform range check on c").into(),
                         offset: 0
                     }
+                },
+                VerifyFailure::Permutation {
+                    column: (Any::Instance, 0).into(),
+                    location: FailureLocation::OutsideRegion { row: 0 }
                 },
             ])
         );

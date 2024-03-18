@@ -7,16 +7,18 @@ pub use grand_sum_verifier::*;
     clippy::upper_case_acronyms,
     clippy::type_complexity,
     dead_code,
-    non_camel_case_types
+    non_camel_case_types,
 )]
 pub mod grand_sum_verifier {
     #[rustfmt::skip]
     const __ABI: &str = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"vk\",\"type\":\"address\",\"components\":[]},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\",\"components\":[]},{\"internalType\":\"uint256[]\",\"name\":\"values\",\"type\":\"uint256[]\",\"components\":[]}],\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"name\":\"verifyProof\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\",\"components\":[]}]}]";
     ///The parsed JSON ABI of the contract.
-    pub static GRANDSUMVERIFIER_ABI: ::ethers::contract::Lazy<::ethers::core::abi::Abi> =
-        ::ethers::contract::Lazy::new(|| {
-            ::ethers::core::utils::__serde_json::from_str(__ABI).expect("ABI is always valid")
-        });
+    pub static GRANDSUMVERIFIER_ABI: ::ethers::contract::Lazy<
+        ::ethers::core::abi::Abi,
+    > = ::ethers::contract::Lazy::new(|| {
+        ::ethers::core::utils::__serde_json::from_str(__ABI)
+            .expect("ABI is always valid")
+    });
     #[rustfmt::skip]
     const __BYTECODE: &[u8] = &[
         96,
@@ -1331,8 +1333,9 @@ pub mod grand_sum_verifier {
         51,
     ];
     ///The bytecode of the contract.
-    pub static GRANDSUMVERIFIER_BYTECODE: ::ethers::core::types::Bytes =
-        ::ethers::core::types::Bytes::from_static(__BYTECODE);
+    pub static GRANDSUMVERIFIER_BYTECODE: ::ethers::core::types::Bytes = ::ethers::core::types::Bytes::from_static(
+        __BYTECODE,
+    );
     #[rustfmt::skip]
     const __DEPLOYED_BYTECODE: &[u8] = &[
         96,
@@ -2615,8 +2618,9 @@ pub mod grand_sum_verifier {
         51,
     ];
     ///The deployed bytecode of the contract.
-    pub static GRANDSUMVERIFIER_DEPLOYED_BYTECODE: ::ethers::core::types::Bytes =
-        ::ethers::core::types::Bytes::from_static(__DEPLOYED_BYTECODE);
+    pub static GRANDSUMVERIFIER_DEPLOYED_BYTECODE: ::ethers::core::types::Bytes = ::ethers::core::types::Bytes::from_static(
+        __DEPLOYED_BYTECODE,
+    );
     pub struct GrandSumVerifier<M>(::ethers::contract::Contract<M>);
     impl<M> ::core::clone::Clone for GrandSumVerifier<M> {
         fn clone(&self) -> Self {
@@ -2636,9 +2640,7 @@ pub mod grand_sum_verifier {
     }
     impl<M> ::core::fmt::Debug for GrandSumVerifier<M> {
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-            f.debug_tuple(stringify!(GrandSumVerifier))
-                .field(&self.address())
-                .finish()
+            f.debug_tuple(stringify!(GrandSumVerifier)).field(&self.address()).finish()
         }
     }
     impl<M: ::ethers::providers::Middleware> GrandSumVerifier<M> {
@@ -2648,11 +2650,13 @@ pub mod grand_sum_verifier {
             address: T,
             client: ::std::sync::Arc<M>,
         ) -> Self {
-            Self(::ethers::contract::Contract::new(
-                address.into(),
-                GRANDSUMVERIFIER_ABI.clone(),
-                client,
-            ))
+            Self(
+                ::ethers::contract::Contract::new(
+                    address.into(),
+                    GRANDSUMVERIFIER_ABI.clone(),
+                    client,
+                ),
+            )
         }
         /// Constructs the general purpose `Deployer` instance based on the provided constructor arguments and sends it.
         /// Returns a new instance of a deployer that returns an instance of this contract after sending the transaction
@@ -2706,8 +2710,7 @@ pub mod grand_sum_verifier {
         }
     }
     impl<M: ::ethers::providers::Middleware> From<::ethers::contract::Contract<M>>
-        for GrandSumVerifier<M>
-    {
+    for GrandSumVerifier<M> {
         fn from(contract: ::ethers::contract::Contract<M>) -> Self {
             Self::new(contract.address(), contract.client())
         }
@@ -2721,7 +2724,7 @@ pub mod grand_sum_verifier {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     #[ethcall(name = "verifyProof", abi = "verifyProof(address,bytes,uint256[])")]
     pub struct VerifyProofCall {
@@ -2738,7 +2741,7 @@ pub mod grand_sum_verifier {
         Debug,
         PartialEq,
         Eq,
-        Hash,
+        Hash
     )]
     pub struct VerifyProofReturn(pub bool);
 }

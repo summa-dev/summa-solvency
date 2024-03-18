@@ -69,7 +69,7 @@ fn main() {
     // 2. Generate Snark Proof for range check
     //
     // the instance values has to be at least more than one due to verifier contract that generated from SolidityGenerator.
-    let instances: Vec<Fr> = vec![Fp::one(); 1];
+    let instances: Vec<Fr> = vec![Fp::zero(); 1];
     let mut transcript = Keccak256Transcript::new(Vec::new());
 
     let result = create_proof::<_, ProverSHPLONK<_>, _, _, _, _>(

@@ -201,7 +201,7 @@ mod test {
             generate_setup_artifacts(K, Some(PARAMS_PATH), &univariate_grand_sum_circuit).unwrap();
 
         // Create a proof
-        let instances = vec![Fp::one(); 1]; // This instance is necessary to verify proof on solidity verifier.
+        let instances = vec![Fp::zero(); 1]; // This instance is necessary to verify proof on solidity verifier.
         let (zk_snark_proof, advice_polys, _omega) = full_prover(
             &params,
             &pk,
@@ -313,7 +313,7 @@ mod test {
             generate_setup_artifacts(K, Some(PARAMS_PATH), &univariate_grand_sum_circuit).unwrap();
 
         // Create a SNARK proof
-        let instances = vec![Fp::one(); 1]; // This instance is necessary to verify proof on solidity verifier.
+        let instances = vec![Fp::zero(); 1]; // This instance is necessary to verify proof on solidity verifier.
         let (zk_snark_proof, advice_polys, _omega) = full_prover(
             &params,
             &pk,
