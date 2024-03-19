@@ -9,6 +9,21 @@ use std::fmt::Debug;
 /// Configuration for the Range Check u64 Chip
 /// Used to verify that an element lies in the u64 range.
 ///
+/// To prove that the 64-bit balance values would not cause the overflow of the grand sum,
+/// let's consider the case at the limit in which we have 2^28 users and all their
+/// balances are the maximum possible (namely, 2^64-1):
+///
+/// >>> 2**28 * (2**64-1)
+/// 4951760157141521099328061440
+/// >>> n = 4951760157141521099328061440
+/// >>> num_bits = n.bit_length()
+/// >>> print(num_bits)
+/// 92
+///
+/// The resulting grand sum is only 92 bits. Therefore, we can conclude that the
+/// range check of 64 bits on the 2^28 user balances safely removes the risk of overflow
+/// in the grand sum calculation.
+///
 /// # Fields
 ///
 /// * `zs`: Four advice columns - contain the truncated right-shifted values of the element to be checked
