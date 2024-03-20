@@ -53,8 +53,7 @@ mod test {
         let invalid_entry = Entry::new(
             "AtwIxZHo".to_string(),
             [35479.to_biguint().unwrap(), 35479.to_biguint().unwrap()],
-        )
-        .unwrap();
+        );
         let invalid_entry = invalid_entry;
         let mut proof_invalid_1 = proof.clone();
         proof_invalid_1.entry = invalid_entry;
