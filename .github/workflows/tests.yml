@@ -1,0 +1,70 @@
+name: Tests
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["*"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test-zk-prover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install solc
+        run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
+
+      - name: Test Zk Prover
+        run: |
+          cd zk_prover
+          cargo test --release --features dev-graph -- --nocapture
+
+  test-zk-prover-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install solc
+        run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
+
+      - name: Test Zk Prover examples
+        run: |
+          cd zk_prover
+          cargo run --release --example gen_inclusion_verifier
+          cargo run --release --example gen_commitment
+          cargo run --release --example gen_inclusion_proof
+          cargo run --release --example nova_incremental_verifier
+
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install solc
+        run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Test backend
+        run: |
+          cd backend
+          cargo test --release -- --nocapture
+
+  test-backend-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install solc
+        run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Test backend example
+        run: |
+          cd backend
+          cargo run --release --example summa_solvency_flow
