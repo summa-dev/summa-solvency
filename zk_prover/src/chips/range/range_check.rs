@@ -118,8 +118,6 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
                     .map(|x| decompose_fp_to_bytes(x, N_BYTES))
                     .transpose_vec(N_BYTES);
 
-                // Initialize empty vector to store running sum values [z_0, ..., z_W].
-                let mut zs: Vec<AssignedCell<Fp, Fp>> = vec![z_0.clone()];
                 let mut z = z_0;
 
                 // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^8) for i = 0..=N_BYTES - 1.
@@ -141,11 +139,10 @@ impl<const N_BYTES: usize> RangeCheckChip<N_BYTES> {
 
                     // Update `z`.
                     z = z_next;
-                    zs.push(z.clone());
                 }
 
                 // Constrain the final running sum output to be zero.
-                region.constrain_constant(zs[N_BYTES].cell(), Fp::from(0))?;
+                region.constrain_constant(z.cell(), Fp::from(0))?;
 
                 Ok(())
             },
