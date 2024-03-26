@@ -209,8 +209,8 @@ contract Summa is Ownable {
             require(
                 bytes(_addressOwnershipProofs[i].cexAddress).length != 0 &&
                     bytes(_addressOwnershipProofs[i].chain).length != 0 &&
-                    _addressOwnershipProofs[i].signature.length != 0 &&
-                    _addressOwnershipProofs[i].message.length != 0,
+                    isNotOnlyWhitespace(_addressOwnershipProofs[i].signature) &&
+                    isNotOnlyWhitespace(_addressOwnershipProofs[i].message),
                 "Invalid proof of address ownership"
             );
         }
@@ -281,5 +281,22 @@ contract Summa is Ownable {
         }
 
         return inclusionVerifier.verifyProof(verifyingKey, combinedProofs, challenges, values);
+    }
+
+    // Helper functions to check if a string is not only whitespace
+    function isNotOnlyWhitespace(bytes memory inputBytes) private pure returns (bool) {
+
+        if(inputBytes.length == 0) return false;
+
+        for (uint i = 0; i < inputBytes.length; i++) {
+            // check for non-whitespace characters
+            // ASCII: space = 0x20, tab = 0x09, newline = 0x0A, carriage return = 0x0D
+            if (inputBytes[i] != 0x20 && inputBytes[i] != 0x09 && inputBytes[i] != 0x0A && inputBytes[i] != 0x0D) {
+                return true;
+            }
+        }
+
+        // Only whitespace characters were found
+        return false;
     }
 }
