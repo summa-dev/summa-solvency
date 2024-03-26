@@ -14,7 +14,7 @@ use halo2_proofs::halo2curves::bn256::Fr as Fp;
 /// * `sibling_leaf_node_hash_preimage`: The hash preimage of the sibling leaf node. The hash preimage is equal to `[sibling_username, sibling.balance[0], sibling.balance[1], ... sibling.balance[N_CURRENCIES - 1]]`
 /// * `sibling_middle_node_hash_preimages`: The hash preimages of the sibling middle nodes. The hash preimage is equal to `[sibling_left_child.balance[0] + sibling_right_child.balance[0], sibling_left_child.balance[1] + sibling_right_child.balance[1], ..., sibling_left_child.balance[N_CURRENCIES - 1] + sibling_right_child.balance[N_CURRENCIES - 1], sibling_left_child.hash, sibling_right_child.hash]`
 #[derive(Clone, Debug)]
-pub struct MerkleProof<const N_CURRENCIES: usize, const N_BYTES: usize>
+pub struct MerkleProof<const N_CURRENCIES: usize>
 where
     [usize; N_CURRENCIES + 1]: Sized,
     [usize; N_CURRENCIES + 2]: Sized,

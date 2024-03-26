@@ -83,7 +83,7 @@ where
     }
 
     /// Initializes the circuit with the merkle proof and the entry of the user of which the inclusion is to be verified.
-    pub fn init(merkle_proof: MerkleProof<N_CURRENCIES, N_BYTES>) -> Self
+    pub fn init(merkle_proof: MerkleProof<N_CURRENCIES>) -> Self
     where
         [usize; N_CURRENCIES + 1]: Sized,
         [usize; N_CURRENCIES + 2]: Sized,

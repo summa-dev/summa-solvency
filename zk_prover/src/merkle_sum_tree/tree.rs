@@ -4,7 +4,7 @@ use crate::merkle_sum_tree::{Entry, MerkleProof, Node};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
 
 /// A trait representing the basic operations for a Merkle-Sum-like Tree.
-pub trait Tree<const N_CURRENCIES: usize, const N_BYTES: usize> {
+pub trait Tree<const N_CURRENCIES: usize> {
     /// Returns a reference to the root node.
     fn root(&self) -> &Node<N_CURRENCIES>;
 
@@ -85,7 +85,7 @@ pub trait Tree<const N_CURRENCIES: usize, const N_BYTES: usize> {
     fn generate_proof(
         &self,
         index: usize,
-    ) -> Result<MerkleProof<N_CURRENCIES, N_BYTES>, Box<dyn std::error::Error>>
+    ) -> Result<MerkleProof<N_CURRENCIES>, Box<dyn std::error::Error>>
     where
         [usize; N_CURRENCIES + 1]: Sized,
         [usize; N_CURRENCIES + 2]: Sized,
@@ -134,7 +134,7 @@ pub trait Tree<const N_CURRENCIES: usize, const N_BYTES: usize> {
     }
 
     /// Verifies a MerkleProof.
-    fn verify_proof(&self, proof: &MerkleProof<N_CURRENCIES, N_BYTES>) -> bool
+    fn verify_proof(&self, proof: &MerkleProof<N_CURRENCIES>) -> bool
     where
         [usize; N_CURRENCIES + 1]: Sized,
         [usize; N_CURRENCIES + 2]: Sized,

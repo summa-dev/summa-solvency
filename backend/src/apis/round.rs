@@ -39,7 +39,7 @@ impl MstInclusionProof {
 }
 
 pub struct Snapshot<const LEVELS: usize, const N_CURRENCIES: usize, const N_BYTES: usize> {
-    pub mst: Box<dyn Tree<N_CURRENCIES, N_BYTES>>,
+    pub mst: Box<dyn Tree<N_CURRENCIES>>,
     trusted_setup: SetupArtifacts,
 }
 
@@ -57,7 +57,7 @@ where
 {
     pub fn new<'a>(
         signer: &'a SummaSigner,
-        mst: Box<dyn Tree<N_CURRENCIES, N_BYTES>>,
+        mst: Box<dyn Tree<N_CURRENCIES>>,
         params_path: &str,
         timestamp: u64,
     ) -> Result<Round<'a, LEVELS, N_CURRENCIES, N_BYTES>, Box<dyn Error>>
@@ -130,7 +130,7 @@ where
     [usize; N_CURRENCIES + 2]: Sized,
 {
     pub fn new(
-        mst: Box<dyn Tree<N_CURRENCIES, N_BYTES>>,
+        mst: Box<dyn Tree<N_CURRENCIES>>,
         params_path: &str,
     ) -> Result<Snapshot<LEVELS, N_CURRENCIES, N_BYTES>, Box<dyn std::error::Error>> {
         let mst_inclusion_circuit =

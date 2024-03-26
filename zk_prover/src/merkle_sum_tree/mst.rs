@@ -27,7 +27,7 @@ pub struct MerkleSumTree<const N_CURRENCIES: usize, const N_BYTES: usize> {
     is_sorted: bool,
 }
 
-impl<const N_CURRENCIES: usize, const N_BYTES: usize> Tree<N_CURRENCIES, N_BYTES>
+impl<const N_CURRENCIES: usize, const N_BYTES: usize> Tree<N_CURRENCIES>
     for MerkleSumTree<N_CURRENCIES, N_BYTES>
 {
     fn root(&self) -> &Node<N_CURRENCIES> {

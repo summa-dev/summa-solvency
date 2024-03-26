@@ -16,6 +16,7 @@ use summa_backend::{
 use summa_solvency::merkle_sum_tree::MerkleSumTree;
 
 const N_CURRENCIES: usize = 2;
+const N_BYTES: usize = 8;
 const USER_INDEX: usize = 0;
 
 #[tokio::main]
@@ -59,11 +60,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Initialize the `Round` instance to submit the liability commitment.
     let params_path = "ptau/hermez-raw-11";
     let entry_csv = "../csv/entry_16.csv";
-    let mst = MerkleSumTree::from_csv(entry_csv).unwrap();
+    let mst = MerkleSumTree::<N_CURRENCIES, N_BYTES>::from_csv(entry_csv).unwrap();
 
     // Using the `round` instance, the commitment is dispatched to the Summa contract with the `dispatch_commitment` method.
     let timestamp = 1u64;
-    let mut round = Round::<4, 2, 8>::new(&signer, Box::new(mst), params_path, timestamp).unwrap();
+    let mut round =
+        Round::<4, N_CURRENCIES, N_BYTES>::new(&signer, Box::new(mst), params_path, timestamp)
+            .unwrap();
 
     // Sends the commitment, which should ideally complete without errors.
     round.dispatch_commitment().await?;
