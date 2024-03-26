@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-summa-solvency = { path = "../kzg_prover" }
+summa-solvency = { path = "../prover" }
 halo2_proofs = { git = "https://github.com/summa-dev/halo2"}
 csv = "1.2.2"
 futures = "0.3.28"

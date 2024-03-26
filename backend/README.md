@@ -50,7 +50,7 @@ cargo test --release -- --nocapture
 
 ### Generating and updating verifier contract for Backend
 
-The verifier contract in the backend were generated using a predefined set of parameters: `N_CURRENCIES = 2`, `N_USERS = 16` and `K = 17` as indicated [here](../kzg_prover/bin/gen_verifier.rs#L26-L28)
+The verifier contract in the backend were generated using a predefined set of parameters: `N_CURRENCIES = 2`, `N_USERS = 16` and `K = 17` as indicated [here](../prover/bin/gen_verifier.rs#L26-L28)
 If you intend to work with different parameters, you'll need to adjust these hard-coded values and then generate new verifier contract.
 
 The process described below assists in both generating the verifier and updating the Summa contract, which integrates the new verifier as constructors.

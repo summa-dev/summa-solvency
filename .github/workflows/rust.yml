@@ -48,7 +48,7 @@ jobs:
 
       - name: Test KZG Prover
         run: |
-          cd kzg_prover
+          cd prover
           cargo test --release -- --nocapture
 
       - name: Install Foundry

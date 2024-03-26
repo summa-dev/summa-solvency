@@ -384,7 +384,7 @@ describe("Summa Contract", () => {
       const commitmentCalldataJson = fs.readFileSync(
         path.resolve(
           __dirname,
-          "../../kzg_prover/bin/commitment_solidity_calldata.json"
+          "../../prover/bin/commitment_solidity_calldata.json"
         ),
         "utf-8"
       );
@@ -444,7 +444,7 @@ describe("Summa Contract", () => {
       const commitmentCalldataJson = fs.readFileSync(
         path.resolve(
           __dirname,
-          "../../kzg_prover/bin/commitment_solidity_calldata.json"
+          "../../prover/bin/commitment_solidity_calldata.json"
         ),
         "utf-8"
       );
@@ -457,7 +457,7 @@ describe("Summa Contract", () => {
       const inclusionCalldataJson = fs.readFileSync(
         path.resolve(
           __dirname,
-          "../../kzg_prover/bin/inclusion_proof_solidity_calldata.json"
+          "../../prover/bin/inclusion_proof_solidity_calldata.json"
         ),
         "utf-8"
       );

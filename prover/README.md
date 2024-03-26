@@ -25,7 +25,7 @@ Halo2 allows to efficiently implement the described algorithm for the following 
 
 The algorithm works as follows:
 
-1. Assign all the user balances to an unblinded advice column of the [circuit](../kzg_prover/src/circuits/univariate_grand_sum.rs). The unblinded advice column is a special kind of advice column without the random values (blinding factors) added at the bottom. The constant term of such polynomial correctly yields the grand total of user balances according to (1) because the polynomial only interpolates the user balances but not the blinding factors (as in the case with a normal advice column).
+1. Assign all the user balances to an unblinded advice column of the [circuit](../prover/src/circuits/univariate_grand_sum.rs). The unblinded advice column is a special kind of advice column without the random values (blinding factors) added at the bottom. The constant term of such polynomial correctly yields the grand total of user balances according to (1) because the polynomial only interpolates the user balances but not the blinding factors (as in the case with a normal advice column).
 2. Assign the user IDs (e.g., hashes of user emails) to another (normal) advice column.
 3. Generate the ZK-SNARK proof for the circuit, effectively interpolating the balance values into a polynomial and performing a KZG commitment to this polynomial.
 4. Perform a KZG opening proof of the polynomial at $x=0$ and publicly reveal the constant term $a_0$ of the polynomial. The public can then calculate the liabilities by multiplying the $a_0$ by $d + 1$ where $d$ is the polynomial degree.
@@ -54,7 +54,7 @@ To generate commitments and proofs with the sample data located in `entry_16.csv
 cargo run --bin generate_commitment_and_proofs
 ```
 
-This script will generate `commitment_solidity_calldata.json` and `inclusion_proof_solidity_calldata.json` in the `kzg_prover/bin`.<br>
+This script will generate `commitment_solidity_calldata.json` and `inclusion_proof_solidity_calldata.json` in the `prover/bin`.<br>
 These two JSON files will be used for testing in the `contracts`.
 
 ## Documentation
@@ -109,7 +109,7 @@ the following technique is proposed to further improve the performance of the un
 
 Step 4 of the algorithm establishes the relation between the chunks containing individual user liabilities and the grand sum of all user liabilities. The proof of inclusion generation in step 3 should be carried out using the amortized KZG approach in the similar fashion as in the non-chunked version of Summa.
 
-The proof of concept implementation of the suggested approach can be found in the [example file](kzg_prover/examples/chunked_univariate_grand_sum.rs). To execute the example, use the command:
+The proof of concept implementation of the suggested approach can be found in the [example file](prover/examples/chunked_univariate_grand_sum.rs). To execute the example, use the command:
 
 ```shell
 cargo run --release --example chunked_univariate_grand_sum

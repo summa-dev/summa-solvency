@@ -9,7 +9,7 @@ The [Summa smart contract](src/Summa.sol) serves as a registrar for Custodians t
 
 - **Liabilities Commitments**: Custodians can commit to their liabilities in the form of polynomial commitments and the corresponding total sums representing snapshots of the liabilities at a given timestamp through the `submitCommitment` function.
 
-- **Inclusion Verification**: Users can verify the polynomial commitment of their balances into the liabilities using the `verifyInclusionProof` function. This function calls the underlying smart contract [InclusionVerifier](src/InclusionVerifier.sol) module. refer to the module's [readme](./../kzg_prover/README.md) for details.
+- **Inclusion Verification**: Users can verify the polynomial commitment of their balances into the liabilities using the `verifyInclusionProof` function. This function calls the underlying smart contract [InclusionVerifier](src/InclusionVerifier.sol) module. refer to the module's [readme](./../prover/README.md) for details.
 
 
 ## Installation

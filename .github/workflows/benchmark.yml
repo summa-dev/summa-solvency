@@ -37,11 +37,11 @@ jobs:
 
       - name: Run Benchmark Tests
         run: |
-          cd kzg_prover
+          cd prover
           cargo bench
 
       - name: Upload Benchmark Results
         uses: actions/upload-artifact@v2
         with:
           name: benchmark-results
-          path: kzg_prover/target/criterion
+          path: prover/target/criterion
