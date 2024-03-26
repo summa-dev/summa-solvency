@@ -1,14 +1,16 @@
 # Summa Smart Contract
 
-The [Summa smart contract](src/Summa.sol) acts as a registrar for Centralized Exchanges (CEXs) to commit to their liabilities by submitting a Merkle sum tree (MST) root of all the CEX liabilities owed to its users. Users can then verify their inclusion into the liabilities commitment, and the public can compare the committed total sums with the assets owned by the CEX onchain.
+The [Summa smart contract](src/Summa.sol) serves as a registrar for Custodians to affirm their liabilities by submitting a polynomial commitment of all liabilities owed to their users. Users can verify their inclusion in the liabilities commitment, allowing public comparison of the committed total sums with the assets owned by the Custodian onchain.
+
 
 ## Features
 
-- **Address Ownership Proofs**: CEXs should submit the proof of address ownership for all addresses that hold the assets included into the commitment by using `submitProofOfAddressOwnership` function. The proofs are accepted optimistically and subject to off-chain verification.
+- **Address Ownership Proofs**: Custodians should submit proof of address ownership for all addresses holding assets included in the commitment using the `submitProofOfAddressOwnership` function. These proofs are accepted optimistically and subject to off-chain verification.
 
-- **Liabilities Commitments**: CEXs can submit commitments to its liabilities in the form of MST roots and the corresponding total sums that represent the snapshots of the liabilities at a given timestamp by using `submitCommitment` function.
+- **Liabilities Commitments**: Custodians can commit to their liabilities in the form of polynomial commitments and the corresponding total sums representing snapshots of the liabilities at a given timestamp through the `submitCommitment` function.
 
-- **Inclusion Verification**: Users are able to verify the zero-knowledge proof of inclusion of their balances into the MST using `verifyInclusionProof` function. The function is calling the underlying smart contract [Verifier](src/InclusionVerifier.sol). The verifier is generated from the [zk_prover](./../zk_prover/) module (see module's [readme](./../zk_prover/README.md)).
+- **Inclusion Verification**: Users can verify the polynomial commitment of their balances into the liabilities using the `verifyInclusionProof` function. This function calls the underlying smart contract [InclusionVerifier](src/InclusionVerifier.sol) module. refer to the module's [readme](./../kzg_prover/README.md) for details.
+
 
 ## Installation
 
@@ -36,14 +38,14 @@ npx hardhat coverage
 ## Deploying
 
 ```shell
-npx hardhat run scripts/deploy.ts --network localhost
+npx hardhat run scripts/deploy.ts
 ```
 
-The following Summa contract parameters are passed to its constructor inside the deployment script:
+The Summa contract deployment script is designed to streamline setup by automatically deploying three verifier contracts along with one verifying key contract. It then configures the deployment with specific parameters, which include:
 
-- verifier contract address (set automatically after the script deploys the verifier);
-- the number of levels of the Merkle sum tree;
-- the number of bytes used to represent the balance of a cryptocurrency in the Merkle sum tree.
+- The number of currencies;
+- the number of bytes used to represent the balance of a cryptocurrency in the polynomials;
 
-The deployment script writes the latest deployment address for the chain to the [deployments](./../backend/src/contracts/deployments.json) file in the backend project. This data can later be used by the backend module to connect to the deployed contract.
-The deployment script will copy the contract ABIs from the ./artifacts/src/ to the [backend](./../backend/src/contracts/abi/) module. The backend buildscript will then be able to generate the updated contract interfaces (see the backend [readme](./../backend/README.md)).
+The deployment script updates the latest deployment address for the chain in the  [deployments](./../backend/src/contracts/deployments.json) file in the backend. This allows the backend module to connect to the deployed contract seamlessly.
+
+Additionally, the script transfers the contract ABIs from `./artifacts/src/` to the [backend](./../backend/src/contracts/abi/) module. Subsequently, the backend build script generates the updated contract interfaces (for more details, see the backend [readme](./../backend/README.md)).
