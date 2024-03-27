@@ -46,20 +46,10 @@ jobs:
       - name: Install solc
         run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
 
-      - name: Test Zk Prover
-        run: |
-          cd zk_prover
-          cargo test --release --features dev-graph -- --nocapture
-      
       - name: Test KZG Prover
         run: |
-          cd kzg_prover
+          cd prover
           cargo test --release -- --nocapture
-
-      - name: Test Nova Prover
-        run: |
-          cd zk_prover
-          cargo run --release --example nova_incremental_verifier
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1

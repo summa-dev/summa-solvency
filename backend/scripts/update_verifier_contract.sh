@@ -3,12 +3,12 @@ set -e
 
 # Build the verifier contract
 echo "1. Building verifier contracts"
-cd ../kzg_prover
+cd ../prover
 cargo run --release --bin generate_verifier
 
 # Generate Commitment and Proofs for Encoded Polynomials
 echo "2. Generate Commitment and Proofs for Encoded Polynomials"
-cd ../kzg_prover
+cd ../prover
 cargo run --release --bin generate_commitment_and_proofs
 
 # Deploy contracts to local environment

@@ -14,7 +14,7 @@ describe("Verifier Contracts", () => {
       "src/VerifyingKey.sol:Halo2VerifyingKey",
     ) as Halo2VerifyingKey;
 
-    const commitmentJson = fs.readFileSync(path.resolve(__dirname, "../../kzg_prover/bin/commitment_solidity_calldata.json"), "utf-8");
+    const commitmentJson = fs.readFileSync(path.resolve(__dirname, "../../prover/bin/commitment_solidity_calldata.json"), "utf-8");
     const commitmentCalldata = JSON.parse(commitmentJson);
 
     return {
@@ -127,7 +127,7 @@ describe("Verifier Contracts", () => {
       const inclusionJson = fs.readFileSync(
         path.resolve(
           __dirname,
-          "../../kzg_prover/bin/inclusion_proof_solidity_calldata.json"
+          "../../prover/bin/inclusion_proof_solidity_calldata.json"
         ),
         "utf-8"
       );
