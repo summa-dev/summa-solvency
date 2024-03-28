@@ -38,20 +38,6 @@ contract InclusionVerifier {
                 ret := and(ret, eq(mulmod(y, y, q), addmod(mulmod(x, mulmod(x, x, q), q), 3, q)))
             }
 
-            // Add (x, y) into point at (0x00, 0x20).
-            // Return updated (success).
-            function ec_add_acc(success, x, y) -> ret {
-                mstore(0x40, x)
-                mstore(0x60, y)
-                ret := and(success, staticcall(gas(), 0x06, 0x00, 0x80, 0x00, 0x40))
-            }
-
-            // Scale point at (0x00, 0x20) by scalar.
-            function ec_mul_acc(success, scalar) -> ret {
-                mstore(0x40, scalar)
-                ret := and(success, staticcall(gas(), 0x07, 0x00, 0x60, 0x00, 0x40))
-            }
-
             // Add (x, y) into point at (0x80, 0xa0).
             // Return updated (success).
             function ec_add_tmp(success, x, y) -> ret {
@@ -67,19 +53,6 @@ contract InclusionVerifier {
                 ret := and(success, staticcall(gas(), 0x07, 0x80, 0x60, 0x80, 0x40))
             }
             
-            // Perform pairing check for lhs.
-            // Return updated (success).
-            function ec_pairing_lhs(success, lhs_x, lhs_y) -> ret {
-                mstore(0x00, lhs_x)
-                mstore(0x20, lhs_y)
-                mstore(0x40, mload(G2_X_1_MPTR))
-                mstore(0x60, mload(G2_X_2_MPTR))
-                mstore(0x80, mload(G2_Y_1_MPTR))
-                mstore(0xa0, mload(G2_Y_2_MPTR))
-                ret := and(success, staticcall(gas(), 0x08, 0x00, 0xc0, 0x00, 0x20))
-                ret := and(ret, mload(0x00))
-            }
-
             // Perform pairing check.
             function ec_pairing(success, lhs_x, lhs_y, rhs_x, rhs_y) -> ret {
                 mstore(0x00, lhs_x)
@@ -157,9 +130,6 @@ contract InclusionVerifier {
                 mstore(0xa0, mload(G1_Y_MPTR))
                 mstore(0xc0, minus_z)
                 success := and(success, ec_mul_tmp(success, minus_z))
-                if iszero(success) {
-                    revert(0, 0)
-                }
 
                 // Performaing like `c_g_to_minus_z = c + g_to_minus_z` in `verify_kzg_proof` function that is located in `amortized_kzg.rs`. 
                 // 
@@ -167,9 +137,6 @@ contract InclusionVerifier {
                 // The values of 'g_to_minus_z` is already located at 0x80 and 0xa0 in the previous step 
                 let commitment_proof_pos := add(add(PROOF_CPTR, div(proof_length, 2)), double_shift_pos)
                 success := check_ec_point(success, commitment_proof_pos, q)
-                if iszero(success) {
-                    revert(0, 0)
-                }
 
                 let lhs_x := calldataload(commitment_proof_pos)            // C_X
                 let lhs_y := calldataload(add(commitment_proof_pos, 0x20)) // C_Y
@@ -184,16 +151,10 @@ contract InclusionVerifier {
                 // Checking from calldata
                 let proof_pos := add(PROOF_CPTR, double_shift_pos)
                 success := check_ec_point(success, proof_pos, q)
-                if iszero(success) {
-                    revert(0, 0)
-                }
+
                 let rhs_x := calldataload(proof_pos) // PI_X
                 let rhs_y := calldataload(add(proof_pos, 0x20)) // PI_Y
-
                 success := and(success, ec_pairing(success, mload(LHS_X_MPTR), mload(LHS_Y_MPTR), rhs_x, rhs_y))
-                if iszero(success) {
-                    revert(0, 0)
-                }
             }
 
             // Return 1 as result if everything succeeds

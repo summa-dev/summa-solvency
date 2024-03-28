@@ -41,20 +41,6 @@ contract GrandSumVerifier {
                 ret := and(ret, eq(mulmod(y, y, q), addmod(mulmod(x, mulmod(x, x, q), q), 3, q)))
             }
 
-            // Add (x, y) into point at (0x00, 0x20).
-            // Return updated (success).
-            function ec_add_acc(success, x, y) -> ret {
-                mstore(0x40, x)
-                mstore(0x60, y)
-                ret := and(success, staticcall(gas(), 0x06, 0x00, 0x80, 0x00, 0x40))
-            }
-
-            // Scale point at (0x00, 0x20) by scalar.
-            function ec_mul_acc(success, scalar) -> ret {
-                mstore(0x40, scalar)
-                ret := and(success, staticcall(gas(), 0x07, 0x00, 0x60, 0x00, 0x40))
-            }
-
             // Add (x, y) into point at (0x80, 0xa0).
             // Return updated (success).
             function ec_add_tmp(success, x, y) -> ret {
@@ -145,29 +131,16 @@ contract GrandSumVerifier {
                 mstore(0x80, mload(G1_X_MPTR))
                 mstore(0xa0, mload(G1_Y_MPTR))
                 success := and(success, ec_mul_tmp(success, minus_z))
-                if iszero(success) {
-                    mstore(0, "Failed to multiply G1 by minus_z")
-                    revert(0, 0x20)
-                }
-
+                
                 // Performaing `c_g_to_minus_z := c + g_to_minus_z`
                 // `c` is equivalent to `commitment` as input on the `open_grand_sums` function.
                 // the values of 'g_to_minus_z` is already located at 0x80 and 0xa0 in the previous step 
                 let commitment_proof_pos := add(add(PROOF_CPTR, div(proof_length, 2)), double_shift_pos)
                 success := check_ec_point(success, commitment_proof_pos, q)
-                if iszero(success) {
-                    mstore(0, shift_pos)
-                    mstore(0x20, "Commitment point is not EC point")
-                    mstore(0x40, commitment_proof_pos)
-                    revert(0, 0x60)
-                }
+
                 let lhs_x := calldataload(commitment_proof_pos)            // C_X
                 let lhs_y := calldataload(add(commitment_proof_pos, 0x20)) // C_Y
                 success := ec_add_tmp(success, lhs_x, lhs_y)
-                if iszero(success) {
-                    mstore(0, "Failed to add C and g_to_minus_z")
-                    revert(0, 0x20)
-                }
 
                 // Store LHS_X and LHS_Y to memory
                 mstore(LHS_X_MPTR, mload(0x80))
@@ -176,17 +149,10 @@ contract GrandSumVerifier {
                 // Checking from calldata for grand sum proof
                 let proof_pos := add(PROOF_CPTR, double_shift_pos)
                 success := check_ec_point(success, proof_pos, q)
-                if iszero(success) {
-                    mstore(0, "Opening point is not EC point")
-                    revert(0, 0x20)
-                }
+
                 let rhs_x := calldataload(proof_pos) // PI_X
                 let rhs_y := calldataload(add(proof_pos, 0x20)) // PI_Y
                 success := and(success, ec_pairing(success, mload(LHS_X_MPTR), mload(LHS_Y_MPTR), rhs_x, rhs_y))
-                if iszero(success) {
-                    mstore(0, "Failed to perform pairing check")
-                    revert(0, 0x20)
-                }
             }
 
             // Return 1 as result if everything succeeds
