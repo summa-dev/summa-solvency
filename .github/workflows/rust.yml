@@ -15,6 +15,7 @@ env:
 
 jobs:
   wakeup:
+    if: github.event.pull_request.head.repo.full_name == 'summa-dev/summa-solvency'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -31,9 +32,10 @@ jobs:
           aws-region: us-west-2
 
       - name: Wakeup runner
-        run: .github/scripts/wakeup.sh 
+        run: .github/scripts/wakeup.sh
 
   build:
+    if: github.event.pull_request.head.repo.full_name == 'summa-dev/summa-solvency'
     runs-on: [summa-solvency-runner]
     needs: [wakeup]
 
@@ -71,4 +73,3 @@ jobs:
         run: |
           cd backend
           cargo run --release --example summa_solvency_flow
-  
