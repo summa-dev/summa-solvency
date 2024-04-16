@@ -153,14 +153,14 @@ impl Circuit<Fp> for TestCircuit {
         config: Self::Config,
         mut layouter: impl Layouter<Fp>,
     ) -> Result<(), Error> {
-        // Initiate the range check chip
+        // Initialize the range check chip
         let range_chip = RangeCheckU64Chip::construct(config.range_check_config);
 
         // Load the lookup table
         let range = 1 << 16;
 
         layouter.assign_region(
-            || format!("load range check table of 64 bits"),
+            || "load range check table of 64 bits".to_string(),
             |mut region| {
                 for i in 0..range {
                     region.assign_fixed(
@@ -174,7 +174,7 @@ impl Circuit<Fp> for TestCircuit {
             },
         )?;
 
-        // Initiate the add chip
+        // Initialize the add chip
         let addchip = AddChip::construct(config.addchip_config);
         let (_, _, c) = addchip.assign(self.a, self.b, layouter.namespace(|| "add chip"))?;
 
@@ -220,7 +220,8 @@ mod testing {
         let b = Fp::from(1);
 
         let circuit = TestCircuit { a, b };
-        let prover = MockProver::run(k, &circuit, vec![vec![Fp::zero()]]).unwrap();
+        let prover =
+            MockProver::run::<TestCircuit, false>(k, &circuit, vec![vec![Fp::zero()]]).unwrap();
         prover.assert_satisfied();
     }
 
@@ -238,7 +239,8 @@ mod testing {
         let b = Fp::from(2);
 
         let circuit = TestCircuit { a, b };
-        let invalid_prover = MockProver::run(k, &circuit, vec![vec![Fp::zero()]]).unwrap();
+        let invalid_prover =
+            MockProver::run::<TestCircuit, false>(k, &circuit, vec![vec![Fp::zero()]]).unwrap();
         assert_eq!(
             invalid_prover.verify(),
             Err(vec![
@@ -274,7 +276,7 @@ mod testing {
             b: Fp::from(1),
         };
         halo2_proofs::dev::CircuitLayout::default()
-            .render(9, &circuit, &root)
+            .render::<Fp, TestCircuit, _, true>(9, &circuit, &root)
             .unwrap();
     }
 }

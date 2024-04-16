@@ -66,11 +66,10 @@ checksum = "e999941b234f3131b00bc13c22d06e8c5ff726d1b6318ac7eb276997bbb4fef0"
 
 [[package]]
 name = "ark-std"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1df2c09229cbc5a028b1d70e00fdb2acee28b1055dfb5ca73eea49c5a25c4e7c"
+checksum = "94893f1e0c6eeab764ade8dc4c0db24caf4fe7cbbaafc0eba0a9030f447b5185"
 dependencies = [
- "colored",
  "num-traits",
  "rand",
 ]
@@ -479,17 +478,6 @@ dependencies = [
  "sha2 0.10.7",
  "sha3 0.10.8",
  "thiserror",
-]
-
-[[package]]
-name = "colored"
-version = "2.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2674ec482fbc38012cf31e6c42ba0177b431a0cb6f15fe40efa5aab1bda516f6"
-dependencies = [
- "is-terminal",
- "lazy_static",
- "windows-sys",
 ]
 
 [[package]]
@@ -1336,6 +1324,7 @@ version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
+ "serde",
  "typenum",
  "version_check",
  "zeroize",
@@ -1411,12 +1400,29 @@ dependencies = [
 [[package]]
 name = "halo2_proofs"
 version = "0.2.0"
+source = "git+https://github.com/han0110/halo2.git?branch=feature/for-benchmark#4981b8d5bdaab04af9b56a5d2c482b6eec9f7fa4"
+dependencies = [
+ "ark-std",
+ "blake2b_simd",
+ "ff",
+ "group",
+ "halo2curves 0.3.3",
+ "rand_chacha",
+ "rand_core",
+ "rayon",
+ "sha3 0.9.1",
+ "tracing",
+]
+
+[[package]]
+name = "halo2_proofs"
+version = "0.2.0"
 source = "git+https://github.com/summa-dev/halo2#8386d6e64fc33baccf626869123185890b8284dc"
 dependencies = [
  "blake2b_simd",
  "ff",
  "group",
- "halo2curves",
+ "halo2curves 0.1.0",
  "maybe-rayon",
  "rand_chacha",
  "rand_core",
@@ -1431,7 +1437,7 @@ source = "git+https://github.com/summa-dev/halo2-solidity-verifier#d33972567f83f
 dependencies = [
  "askama",
  "blake2b_simd",
- "halo2_proofs",
+ "halo2_proofs 0.2.0 (git+https://github.com/summa-dev/halo2)",
  "hex",
  "itertools 0.11.0",
  "revm",
@@ -1455,6 +1461,43 @@ dependencies = [
  "paste",
  "rand",
  "rand_core",
+ "static_assertions",
+ "subtle",
+]
+
+[[package]]
+name = "halo2curves"
+version = "0.3.2"
+source = "git+https://github.com/privacy-scaling-explorations/halo2curves.git?tag=0.3.2#9f5c50810bbefe779ee5cf1d852b2fe85dc35d5e"
+dependencies = [
+ "ff",
+ "group",
+ "lazy_static",
+ "num-bigint",
+ "num-traits",
+ "pasta_curves",
+ "paste",
+ "rand",
+ "rand_core",
+ "static_assertions",
+ "subtle",
+]
+
+[[package]]
+name = "halo2curves"
+version = "0.3.3"
+source = "git+https://github.com/privacy-scaling-explorations/halo2curves?tag=0.3.3#8e4cb9f0c66c864e8ca25da07f50ae95f664a5b7"
+dependencies = [
+ "ff",
+ "group",
+ "lazy_static",
+ "num-bigint",
+ "num-traits",
+ "pasta_curves",
+ "paste",
+ "rand",
+ "rand_core",
+ "serde",
  "static_assertions",
  "subtle",
 ]
@@ -1506,6 +1549,9 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "hex-literal"
@@ -2214,8 +2260,10 @@ dependencies = [
  "blake2b_simd",
  "ff",
  "group",
+ "hex",
  "lazy_static",
  "rand",
+ "serde",
  "static_assertions",
  "subtle",
 ]
@@ -2375,6 +2423,36 @@ name = "pkg-config"
 version = "0.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
+
+[[package]]
+name = "plonkish_backend"
+version = "0.1.0"
+source = "git+https://github.com/han0110/plonkish#303cf244803ea56d1ac8c24829ec4c67e4e798ab"
+dependencies = [
+ "bincode",
+ "bitvec 1.0.1",
+ "generic-array",
+ "halo2_proofs 0.2.0 (git+https://github.com/han0110/halo2.git?branch=feature/for-benchmark)",
+ "halo2curves 0.3.3",
+ "itertools 0.10.5",
+ "num-bigint",
+ "num-integer",
+ "pasta_curves",
+ "poseidon",
+ "rand",
+ "rayon",
+ "serde",
+ "sha3 0.10.8",
+]
+
+[[package]]
+name = "poseidon"
+version = "0.2.0"
+source = "git+https://github.com/han0110/poseidon?branch=feature/with-spec#fa4c2544ed38666f1f72d1c4fd0956756a7112b3"
+dependencies = [
+ "halo2curves 0.3.2",
+ "subtle",
+]
 
 [[package]]
 name = "ppv-lite86"
@@ -3201,7 +3279,7 @@ dependencies = [
  "csv",
  "ethers",
  "futures",
- "halo2_proofs",
+ "halo2_proofs 0.2.0 (git+https://github.com/han0110/halo2.git?branch=feature/for-benchmark)",
  "halo2_solidity_verifier",
  "num-bigint",
  "num-traits",
@@ -3209,29 +3287,20 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "summa-solvency",
+ "summa-hyperplonk",
  "tokio",
 ]
 
 [[package]]
-name = "summa-solvency"
-version = "0.2.0"
+name = "summa-hyperplonk"
+version = "0.3.0"
 dependencies = [
- "ark-std",
  "csv",
- "ethers",
- "halo2_proofs",
- "halo2_solidity_verifier",
- "hex",
- "itertools 0.10.5",
+ "halo2_proofs 0.2.0 (git+https://github.com/han0110/halo2.git?branch=feature/for-benchmark)",
  "num-bigint",
- "num-traits",
- "num_cpus",
+ "plonkish_backend",
  "rand",
  "rayon",
- "regex",
- "serde",
- "serde_json",
 ]
 
 [[package]]

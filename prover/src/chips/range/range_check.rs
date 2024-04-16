@@ -40,7 +40,7 @@ pub struct RangeCheckU64Config {
     zs: [Column<Advice>; 4],
 }
 
-/// Helper chip that verfiies that the element witnessed in a given cell lies within the u64 range.
+/// Helper chip that verifies that the element witnessed in a given cell lies within the u64 range.
 /// For example, Let's say we want to constraint 0x1f2f3f4f5f6f7f8f to be a u64.
 /// Note that the lookup table `range` is by default loaded with values from 0 to 2^16 - 1.
 /// `z` is the advice column that contains the element to be checked.
@@ -140,7 +140,7 @@ impl RangeCheckU64Chip {
             .map(|x| decompose_fp_to_byte_pairs(x, 4))
             .transpose_vec(4);
 
-        // Initalize an empty vector of cells for the truncated right-shifted values of the element to be checked.
+        // Initialize an empty vector of cells for the truncated right-shifted values of the element to be checked.
         let mut z = element.clone();
 
         // Calculate 1 / 2^16

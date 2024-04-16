@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-summa-solvency = { path = "../prover" }
-halo2_proofs = { git = "https://github.com/summa-dev/halo2"}
+summa-hyperplonk = { path = "../prover" }
+halo2_proofs = { git = "https://github.com/han0110/halo2.git", branch = "feature/for-benchmark", optional = true }
 csv = "1.2.2"
 futures = "0.3.28"
 num-bigint = "0.4.3"
