@@ -339,17 +339,17 @@ mod test {
                     cell_values: vec![
                         (
                             ((Any::advice(), 0).into(), 0).into(),
-                            "0xe113acd03b98f0bab0ef6f577245d5d008cbcc19ef2dab3608aa4f37f72a407"
+                            "0x167505f45c4ef4a0b051c30e881d2e8f881f26f5edb231396198a2cc1712f5ad"
                                 .to_string()
                         ),
                         (
                             ((Any::advice(), 0).into(), 1).into(),
-                            "0x17ef9d8ee0e2c8470814651413b71009a607a020214f749687384a7b7a7eb67a"
+                            "0x2c688f624d2bca741a1c2ad1ad2880721fbfd1613bbc5fe3d2ba66eb672e3aab"
                                 .to_string()
                         ),
                         (
                             ((Any::advice(), 1).into(), 0).into(),
-                            "0x17ef9d8ee0e2c8470814651413b71009a607a020214f749687384a7b7a7eb67a"
+                            "0x2c688f624d2bca741a1c2ad1ad2880721fbfd1613bbc5fe3d2ba66eb672e3aab"
                                 .to_string()
                         ),
                         (((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),
@@ -364,17 +364,17 @@ mod test {
                     cell_values: vec![
                         (
                             ((Any::advice(), 0).into(), 0).into(),
-                            "0xe113acd03b98f0bab0ef6f577245d5d008cbcc19ef2dab3608aa4f37f72a407"
+                            "0x167505f45c4ef4a0b051c30e881d2e8f881f26f5edb231396198a2cc1712f5ad"
                                 .to_string()
                         ),
                         (
                             ((Any::advice(), 1).into(), 0).into(),
-                            "0x17ef9d8ee0e2c8470814651413b71009a607a020214f749687384a7b7a7eb67a"
+                            "0x2c688f624d2bca741a1c2ad1ad2880721fbfd1613bbc5fe3d2ba66eb672e3aab"
                                 .to_string()
                         ),
                         (
                             ((Any::advice(), 1).into(), 1).into(),
-                            "0xe113acd03b98f0bab0ef6f577245d5d008cbcc19ef2dab3608aa4f37f72a407"
+                            "0x167505f45c4ef4a0b051c30e881d2e8f881f26f5edb231396198a2cc1712f5ad"
                                 .to_string()
                         ),
                         (((Any::advice(), 2).into(), 0).into(), "0x2".to_string()),
