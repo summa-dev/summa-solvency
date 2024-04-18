@@ -262,7 +262,7 @@ mod test {
             liability_commitment_logs[0],
             LiabilitiesCommitmentSubmittedFilter {
                 timestamp: U256::from(1),
-                mst_root: "0x18d6ab953235a811edffa4cead74ea045e7cd2085771a2269d59dca054c955b1"
+                mst_root: "0x177bf452ad139f067a64fe09fdc30aae46144d60abfa2ad9f0c70928e29a26d1"
                     .parse()
                     .unwrap(),
                 root_balances: vec![U256::from(556862), U256::from(556862)],
