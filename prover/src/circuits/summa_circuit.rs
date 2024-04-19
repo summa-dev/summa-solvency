@@ -125,7 +125,6 @@ pub mod summa_hyperplonk {
         }
 
         fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
-            //TODO what's the meaning of this?
             meta.set_minimum_degree(4);
             let running_sum_selector = &meta.complex_selector();
             SummaConfig::configure(meta, running_sum_selector)
