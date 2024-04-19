@@ -28,7 +28,7 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
     let halo2_circuit = SummaHyperplonk::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
 
     let circuit = Halo2Circuit::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES>>::new::<Pb>(
-        17,
+        K as usize,
         halo2_circuit.clone(),
     );
 
@@ -54,7 +54,7 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
         b.iter_batched(
             || {
                 Halo2Circuit::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES>>::new::<Pb>(
-                    17,
+                    K as usize,
                     halo2_circuit.clone(),
                 )
             },

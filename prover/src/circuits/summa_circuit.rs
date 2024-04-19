@@ -202,7 +202,7 @@ pub mod summa_hyperplonk {
                             assigned_balances.push(assigned_balances_row);
                         }
 
-                        Ok((assigned_balances, last_assigned_running_sums.clone()))
+                        Ok((assigned_balances, last_assigned_running_sums))
                     },
                 )
                 .unwrap();
