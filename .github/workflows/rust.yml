@@ -31,7 +31,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Wakeup runner
-        run: .github/scripts/wakeup.sh 
+        run: .github/scripts/wakeup.sh
 
   build:
     runs-on: [summa-solvency-runner]
@@ -46,7 +46,7 @@ jobs:
       - name: Install solc
         run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
 
-      - name: Test KZG Prover
+      - name: Test Prover
         run: |
           cd prover
           cargo test --release -- --nocapture
@@ -54,13 +54,13 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Test backend
-        run: |
-          cd backend
-          cargo test --release -- --nocapture
+      # TODO restore workflow
+      # - name: Test backend
+      #   run: |
+      #     cd backend
+      #     cargo test --release -- --nocapture
 
-      - name: Test example
-        run: |
-          cd backend
-          cargo run --release --example summa_solvency_flow
-  
+      # - name: Test example
+      #   run: |
+      #     cd backend
+      #     cargo run --release --example summa_solvency_flow

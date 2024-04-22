@@ -1,3 +1,3 @@
+pub mod summa_circuit;
+#[cfg(test)]
 mod tests;
-pub mod univariate_grand_sum;
-pub mod utils;
