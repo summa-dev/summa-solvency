@@ -11,7 +11,7 @@ use crate::utils::{big_uint_to_fp, fp_to_big_uint};
 /// Example:
 /// decompose_fp_to_bytes(0x1f2f3f, 2) -> [0x3f, 0x2f]
 pub fn decompose_fp_to_bytes(value: Fp, n: usize) -> Vec<u8> {
-    let value_biguint = fp_to_big_uint(value);
+    let value_biguint = fp_to_big_uint(&value);
 
     let mut bytes = value_biguint.to_bytes_le();
 
@@ -33,7 +33,7 @@ pub fn decompose_fp_to_bytes(value: Fp, n: usize) -> Vec<u8> {
 /// If value is decomposed in #byte pairs which are less than n, then the returned byte pairs are padded with 0s at the most significant byte pairs.
 /// If value is decomposed in #byte pairs which are greater than n, then the most significant byte pairs are truncated. A warning is printed.
 pub fn decompose_fp_to_byte_pairs(value: Fp, n: usize) -> Vec<u16> {
-    let value_biguint = fp_to_big_uint(value);
+    let value_biguint = fp_to_big_uint(&value);
     let mut bytes = value_biguint.to_bytes_le();
 
     // Ensure the bytes vector has an even length for pairs of bytes.
@@ -80,7 +80,7 @@ mod testing {
     #[test]
     fn test_fp_to_big_uint() {
         let f = Fp::from(5);
-        let big_uint = fp_to_big_uint(f);
+        let big_uint = fp_to_big_uint(&f);
         assert_eq!(big_uint, BigUint::from(5u8));
     }
 

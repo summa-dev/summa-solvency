@@ -150,11 +150,11 @@ pub mod summa_hyperplonk {
                             running_sum_values.push(vec![]);
 
                             region.assign_advice(
-                                || "username",
+                                || format!("username {}", i),
                                 config.username,
                                 i,
                                 || {
-                                    Value::known(big_uint_to_fp(
+                                    Value::known(big_uint_to_fp::<Fp>(
                                         self.entries[i].username_as_big_uint(),
                                     ))
                                 },
@@ -163,7 +163,8 @@ pub mod summa_hyperplonk {
                             let mut assigned_balances_row = vec![];
 
                             for (j, balance) in self.entries[i].balances().iter().enumerate() {
-                                let balance_value = Value::known(big_uint_to_fp(balance));
+                                let balance_value: Value<Fp> =
+                                    Value::known(big_uint_to_fp(balance));
 
                                 let assigned_balance = region.assign_advice(
                                     || format!("balance {}", j),
@@ -266,7 +267,7 @@ pub mod summa_hyperplonk {
         fn instances(&self) -> Vec<Vec<Fp>> {
             // The last decomposition of each range check chip should be zero
             let mut instances = vec![Fp::ZERO];
-            instances.extend(self.grand_total.iter().map(big_uint_to_fp));
+            instances.extend(self.grand_total.iter().map(big_uint_to_fp::<Fp>));
             vec![instances]
         }
     }
