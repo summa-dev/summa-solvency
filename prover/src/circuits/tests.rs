@@ -3,9 +3,12 @@ use plonkish_backend::{
     backend::{hyperplonk::HyperPlonk, PlonkishBackend, PlonkishCircuit},
     frontend::halo2::Halo2Circuit,
     halo2_curves::bn256::{Bn256, Fr as Fp},
-    pcs::{multilinear::MultilinearKzg, PolynomialCommitmentScheme},
-    util::transcript::{
-        FieldTranscriptRead, FieldTranscriptWrite, InMemoryTranscript, Keccak256Transcript,
+    pcs::{multilinear::MultilinearKzg, Evaluation, PolynomialCommitmentScheme},
+    util::{
+        transcript::{
+            FieldTranscriptRead, FieldTranscriptWrite, InMemoryTranscript, Keccak256Transcript,
+        },
+        Itertools,
     },
     Error::InvalidSumcheck,
 };
@@ -89,7 +92,7 @@ fn test_summa_hyperplonk() {
         let mut transcript = Keccak256Transcript::from_proof((), proof.as_slice());
         ProvingBackend::verify(
             &verifier_parameters,
-            &vec![wrong_instances],
+            &[wrong_instances],
             &mut transcript,
             seeded_std_rng(),
         )
@@ -115,7 +118,7 @@ fn test_summa_hyperplonk() {
     );
 
     // Convert challenge into a multivariate form
-    let multivariate_challenge =
+    let multivariate_challenge: Vec<Fp> =
         uni_to_multivar_binary_index(&random_user_index, num_vars as usize);
 
     let mut kzg_transcript = Keccak256Transcript::new(());
@@ -135,12 +138,20 @@ fn test_summa_hyperplonk() {
         kzg_transcript.write_field_element(binary_var).unwrap();
     }
 
-    MultilinearKzg::<Bn256>::open(
+    let evals = user_entry_polynomials
+        .iter()
+        .enumerate()
+        .map(|(poly_idx, poly)| {
+            Evaluation::new(poly_idx, 0, poly.evaluate(&multivariate_challenge))
+        })
+        .collect_vec();
+
+    MultilinearKzg::<Bn256>::batch_open(
         &prover_parameters.pcs,
-        user_entry_polynomials[0],
-        &user_entry_commitments[0],
-        &multivariate_challenge,
-        &user_entry_polynomials[0].evaluate(&multivariate_challenge),
+        user_entry_polynomials,
+        &user_entry_commitments,
+        &[multivariate_challenge],
+        &evals,
         &mut kzg_transcript,
     )
     .unwrap();
@@ -160,17 +171,35 @@ fn test_summa_hyperplonk() {
     .unwrap();
 
     //The verifier doesn't know the mapping of their "user index" to the multi-variable index, reads it from the transcript
-    let mut multivariate_challenge = Vec::new();
+    let mut multivariate_challenge: Vec<Fp> = Vec::new();
     for _ in 0..num_vars {
         multivariate_challenge.push(kzg_transcript.read_field_element().unwrap());
     }
 
-    MultilinearKzg::<Bn256>::verify(
+    //The user knows their evaluation at the challenge point
+    let evals: Vec<Evaluation<Fp>> = (0..N_CURRENCIES + 1)
+        .map(|i| {
+            if i == 0 {
+                Evaluation::new(
+                    i,
+                    0,
+                    big_uint_to_fp::<Fp>(entries[random_user_index].username_as_big_uint()),
+                )
+            } else {
+                Evaluation::new(
+                    i,
+                    0,
+                    big_uint_to_fp::<Fp>(&entries[random_user_index].balances()[i - 1]),
+                )
+            }
+        })
+        .collect();
+
+    MultilinearKzg::<Bn256>::batch_verify(
         &verifier_parameters.pcs,
-        &user_entry_commitments[0],
-        &multivariate_challenge,
-        //The user knows their evaluation at the challenge point
-        &big_uint_to_fp(entries[random_user_index].username_as_big_uint()),
+        &user_entry_commitments,
+        &[multivariate_challenge],
+        &evals,
         &mut kzg_transcript,
     )
     .unwrap();
