@@ -20,7 +20,7 @@ where
         .map(|balance| BigUint::from_str_radix(balance, 10).unwrap())
         .collect();
 
-    let entry: Entry<N_CURRENCIES> = Entry::new(username, balances.try_into().unwrap()).unwrap();
+    let entry: Entry<N_CURRENCIES> = Entry::new(username, balances.try_into().unwrap());
 
     // Convert Fp to U256
     let hash_str = format!("{:?}", entry.compute_leaf().hash);
