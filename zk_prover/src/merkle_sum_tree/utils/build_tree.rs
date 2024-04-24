@@ -12,7 +12,7 @@ where
 {
     let mut tree: Vec<Vec<Node<N_CURRENCIES>>> = Vec::with_capacity(depth + 1);
 
-    // base layer must be a power of 2
+    // the size of a leaf layer must be a power of 2
     // if not, the `leaves` Vec should be completed with "zero entries" until a power of 2
     assert_eq!(leaves.len(), 2usize.pow(depth as u32));
 
