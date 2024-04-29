@@ -68,7 +68,7 @@ fn test_summa_hyperplonk() {
         (witness_polys, proof_transcript)
     };
 
-    let num_points = 3;
+    let num_points = N_CURRENCIES + 1;
 
     let proof = proof_transcript.into_proof();
 
