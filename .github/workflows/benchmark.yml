@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       run_benchmark:
-        description: 'Run benchmark tests (yes/no)'
+        description: "Please confirm running the benchmarks by typing 'yes' in the input box."
         required: true
-        default: 'no'
+        default: "no"
 
 jobs:
   wakeup:
@@ -26,7 +26,7 @@ jobs:
           aws-region: us-west-2
 
       - name: Wakeup runner
-        run: .github/scripts/wakeup.sh 
+        run: .github/scripts/wakeup.sh
 
   benchmark:
     runs-on: [summa-solvency-runner]
