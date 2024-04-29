@@ -188,10 +188,10 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
 }
 
 fn criterion_benchmark(_c: &mut Criterion) {
-    const N_CURRENCIES: usize = 1;
+    const N_CURRENCIES: usize = 100;
 
     {
-        const K: u32 = 17;
+        const K: u32 = 18;
         const N_USERS: usize = (1 << K as usize) - 6;
         bench_summa::<K, N_USERS, N_CURRENCIES>();
     }
