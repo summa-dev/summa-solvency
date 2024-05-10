@@ -43,12 +43,6 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
 
     let (pp, vp) = ProvingBackend::preprocess(&param, &circuit_info).unwrap();
 
-    let mut transcript = Keccak256Transcript::default();
-    let proof = {
-        ProvingBackend::prove(&pp, &circuit, &mut transcript, std_rng()).unwrap();
-        transcript.into_proof()
-    };
-
     c.bench_function(&grand_sum_proof_bench_name, |b| {
         b.iter_batched(
             || {
@@ -63,7 +57,7 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
                 ProvingBackend::prove(&pp, &circuit, &mut transcript, std_rng()).unwrap();
                 transcript.into_proof();
             },
-            criterion::BatchSize::SmallInput,
+            criterion::BatchSize::LargeInput,
         )
     });
 
@@ -84,6 +78,13 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
     };
     let num_points = N_CURRENCIES + 1;
     let user_entry_polynomials = witness_polys.iter().take(num_points).collect::<Vec<_>>();
+
+    let mut transcript = Keccak256Transcript::default();
+    let proof = {
+        ProvingBackend::prove(&pp, &circuit, &mut transcript, std_rng()).unwrap();
+        transcript.into_proof()
+    };
+
     let mut transcript = Keccak256Transcript::from_proof((), proof.as_slice());
 
     let user_entry_commitments = MultilinearKzg::<Bn256>::read_commitments(
@@ -140,7 +141,7 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
                 )
                 .unwrap();
             },
-            criterion::BatchSize::SmallInput,
+            criterion::BatchSize::LargeInput,
         )
     });
 
@@ -152,7 +153,7 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
                     { ProvingBackend::verify(&vp, instances, &mut transcript, std_rng()).is_ok() };
                 assert!(accept);
             },
-            criterion::BatchSize::SmallInput,
+            criterion::BatchSize::LargeInput,
         )
     });
 
@@ -182,7 +183,7 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
                 )
                 .unwrap();
             },
-            criterion::BatchSize::SmallInput,
+            criterion::BatchSize::LargeInput,
         )
     });
 }

@@ -137,7 +137,7 @@ impl RangeCheckU64Chip {
         let ks = element
             .value()
             .copied()
-            .map(|x| decompose_fp_to_byte_pairs(x, 4))
+            .map(|x| decompose_fp_to_byte_pairs(&x, 4))
             .transpose_vec(4);
 
         // Initialize an empty vector of cells for the truncated right-shifted values of the element to be checked.
