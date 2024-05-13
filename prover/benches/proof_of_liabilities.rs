@@ -14,7 +14,7 @@ use rand::{
     CryptoRng, Rng, RngCore, SeedableRng,
 };
 use summa_hyperplonk::{
-    circuits::summa_circuit::summa_hyperplonk::SummaHyperplonk,
+    circuits::{config::range_check_config::RangeCheckConfig, summa_circuit::SummaHyperplonk},
     utils::{big_uint_to_fp, generate_dummy_entries, uni_to_multivar_binary_index},
 };
 
@@ -30,12 +30,15 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
 
     type ProvingBackend = HyperPlonk<MultilinearKzg<Bn256>>;
     let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
-    let halo2_circuit = SummaHyperplonk::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+    let halo2_circuit =
+        SummaHyperplonk::<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>::init(
+            entries.to_vec(),
+        );
 
-    let circuit = Halo2Circuit::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES>>::new::<ProvingBackend>(
-        K as usize,
-        halo2_circuit.clone(),
-    );
+    let circuit = Halo2Circuit::<
+        Fp,
+        SummaHyperplonk<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>,
+    >::new::<ProvingBackend>(K as usize, halo2_circuit.clone());
 
     let circuit_info: PlonkishCircuitInfo<_> = circuit.circuit_info().unwrap();
     let instances = circuit.instances();
@@ -46,10 +49,10 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
     c.bench_function(&grand_sum_proof_bench_name, |b| {
         b.iter_batched(
             || {
-                Halo2Circuit::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES>>::new::<ProvingBackend>(
-                    K as usize,
-                    halo2_circuit.clone(),
-                )
+                Halo2Circuit::<
+                    Fp,
+                    SummaHyperplonk<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>,
+                >::new::<ProvingBackend>(K as usize, halo2_circuit.clone())
             },
             |circuit| {
                 let mut transcript = Keccak256Transcript::default();
@@ -189,7 +192,7 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
 }
 
 fn criterion_benchmark(_c: &mut Criterion) {
-    const N_CURRENCIES: usize = 1;
+    const N_CURRENCIES: usize = 100;
 
     {
         const K: u32 = 17;

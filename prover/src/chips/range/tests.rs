@@ -1,4 +1,4 @@
-use crate::chips::range::range_check::{RangeCheckU64Chip, RangeCheckU64Config};
+use crate::chips::range::range_check::{RangeCheckChipConfig, RangeCheckU64Chip};
 use halo2_proofs::{
     circuit::{AssignedCell, Layouter, SimpleFloorPlanner, Value},
     halo2curves::bn256::Fr as Fp,
@@ -87,7 +87,7 @@ impl AddChip {
 #[derive(Debug, Clone)]
 pub struct TestConfig {
     pub addchip_config: AddConfig,
-    pub range_check_config: RangeCheckU64Config,
+    pub range_check_config: RangeCheckChipConfig,
     pub range_u16: Column<Fixed>,
     pub instance: Column<Instance>,
 }
@@ -134,7 +134,10 @@ impl Circuit<Fp> for TestCircuit {
         let instance = meta.instance_column();
         meta.enable_equality(instance);
 
-        let range_check_config = RangeCheckU64Chip::configure(meta, c, zs, range_u16);
+        let range_check_selector = meta.complex_selector();
+
+        let range_check_config =
+            RangeCheckU64Chip::configure(meta, c, zs, range_u16, range_check_selector);
 
         let addchip_config = AddChip::configure(meta, a, b, c, add_selector);
 
