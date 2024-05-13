@@ -1,7 +1,8 @@
 use halo2_proofs::arithmetic::Field;
+use plonkish_backend::Error::InvalidSnark;
 use plonkish_backend::{
     backend::{hyperplonk::HyperPlonk, PlonkishBackend, PlonkishCircuit},
-    frontend::halo2::Halo2Circuit,
+    frontend::halo2::{CircuitExt, Halo2Circuit},
     halo2_curves::bn256::{Bn256, Fr as Fp},
     pcs::{multilinear::MultilinearKzg, Evaluation, PolynomialCommitmentScheme},
     util::{
@@ -12,14 +13,16 @@ use plonkish_backend::{
     },
     Error::InvalidSumcheck,
 };
-
 use rand::{
     rngs::{OsRng, StdRng},
     CryptoRng, Rng, RngCore, SeedableRng,
 };
 
 use crate::{
-    circuits::summa_circuit::summa_hyperplonk::SummaHyperplonk,
+    circuits::{
+        config::{no_range_check_config::NoRangeCheckConfig, range_check_config::RangeCheckConfig},
+        summa_circuit::SummaHyperplonk,
+    },
     utils::{
         big_uint_to_fp, fp_to_big_uint, generate_dummy_entries, uni_to_multivar_binary_index,
         MultilinearAsUnivariate,
@@ -27,23 +30,47 @@ use crate::{
 };
 const K: u32 = 17;
 const N_CURRENCIES: usize = 2;
-const N_USERS: usize = 1 << 16;
+// One row is reserved for the grand total.
+// TODO find out what occupies one extra row
+const N_USERS: usize = (1 << K) - 2;
 
 pub fn seeded_std_rng() -> impl RngCore + CryptoRng {
     StdRng::seed_from_u64(OsRng.next_u64())
 }
 
 #[test]
-fn test_summa_hyperplonk() {
+fn test_summa_hyperplonk_e2e() {
     type ProvingBackend = HyperPlonk<MultilinearKzg<Bn256>>;
     let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
-    let circuit = SummaHyperplonk::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+
+    let halo2_circuit =
+        SummaHyperplonk::<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>::init(
+            entries.to_vec(),
+        );
+
+    let neg_grand_total = halo2_circuit
+        .grand_total
+        .iter()
+        .fold(Fp::ZERO, |acc, f| acc + f)
+        .neg();
+
+    // We're putting the negated grand total at the end of each balance column,
+    // so the sumcheck over such balance column would yield zero (given the special gate,
+    // see the circuit).
+    assert!(
+        neg_grand_total
+            == halo2_circuit.instances()[0]
+                .iter()
+                .fold(Fp::ZERO, |acc, instance| { acc + instance })
+    );
+
     let num_vars = K;
 
     let circuit_fn = |num_vars| {
-        let circuit = Halo2Circuit::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES>>::new::<
-            ProvingBackend,
-        >(num_vars, circuit.clone());
+        let circuit = Halo2Circuit::<
+            Fp,
+            SummaHyperplonk<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>,
+        >::new::<ProvingBackend>(num_vars, halo2_circuit.clone());
         (circuit.circuit_info().unwrap(), circuit)
     };
 
@@ -239,6 +266,71 @@ fn test_summa_hyperplonk() {
         &mut kzg_transcript,
     )
     .unwrap();
+}
+
+/// Test the sumcheck failure case
+/// The grand total is set to a random value, which will cause the sumcheck to fail
+/// because the sum of all valid balances is not equal to the negated random grand total
+#[test]
+fn test_sumcheck_fail() {
+    type ProvingBackend = HyperPlonk<MultilinearKzg<Bn256>>;
+    let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
+
+    let halo2_circuit = SummaHyperplonk::<
+        N_USERS,
+        N_CURRENCIES,
+        NoRangeCheckConfig<N_CURRENCIES, N_USERS>,
+    >::init_invalid_grand_total(entries.to_vec());
+
+    let num_vars = K;
+
+    let circuit_fn = |num_vars| {
+        let circuit = Halo2Circuit::<
+            Fp,
+            SummaHyperplonk<N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>,
+        >::new::<ProvingBackend>(num_vars, halo2_circuit.clone());
+        (circuit.circuit_info().unwrap(), circuit)
+    };
+
+    let (circuit_info, circuit) = circuit_fn(num_vars as usize);
+    let instances = circuit.instances();
+
+    let param = ProvingBackend::setup(&circuit_info, seeded_std_rng()).unwrap();
+
+    let (prover_parameters, verifier_parameters) =
+        ProvingBackend::preprocess(&param, &circuit_info).unwrap();
+
+    let (_, proof_transcript) = {
+        let mut proof_transcript = Keccak256Transcript::new(());
+
+        let witness_polys = ProvingBackend::prove(
+            &prover_parameters,
+            &circuit,
+            &mut proof_transcript,
+            seeded_std_rng(),
+        )
+        .unwrap();
+        (witness_polys, proof_transcript)
+    };
+
+    let proof = proof_transcript.into_proof();
+
+    let mut transcript;
+    let result: Result<(), plonkish_backend::Error> = {
+        transcript = Keccak256Transcript::from_proof((), proof.as_slice());
+        ProvingBackend::verify(
+            &verifier_parameters,
+            instances,
+            &mut transcript,
+            seeded_std_rng(),
+        )
+    };
+    assert_eq!(
+        result,
+        Err(InvalidSnark(
+            "Unmatched between sum_check output and query evaluation".to_string()
+        ))
+    );
 }
 
 #[cfg(feature = "dev-graph")]
