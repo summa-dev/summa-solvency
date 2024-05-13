@@ -84,21 +84,57 @@ fn test_summa_hyperplonk() {
     };
     assert_eq!(result, Ok(()));
 
-    let wrong_instances = instances[0]
+    let invalid_grand_total_instances = instances[0]
         .iter()
-        .map(|instance| *instance + Fp::ONE)
+        .enumerate()
+        .map(|(i, element)| {
+            if i == 0 {
+                *element
+            } else {
+                Fp::random(seeded_std_rng())
+            }
+        })
         .collect::<Vec<_>>();
-    let wrong_result = {
+
+    let invalid_result = {
         let mut transcript = Keccak256Transcript::from_proof((), proof.as_slice());
         ProvingBackend::verify(
             &verifier_parameters,
-            &[wrong_instances],
+            &[invalid_grand_total_instances],
             &mut transcript,
             seeded_std_rng(),
         )
     };
     assert_eq!(
-        wrong_result,
+        invalid_result,
+        Err(InvalidSumcheck(
+            "Consistency failure at round 1".to_string()
+        ))
+    );
+
+    let invalid_range_check_instances = instances[0]
+        .iter()
+        .enumerate()
+        .map(|(i, element)| {
+            if i == 0 {
+                Fp::random(seeded_std_rng())
+            } else {
+                *element
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let invalid_result = {
+        let mut transcript = Keccak256Transcript::from_proof((), proof.as_slice());
+        ProvingBackend::verify(
+            &verifier_parameters,
+            &[invalid_range_check_instances],
+            &mut transcript,
+            seeded_std_rng(),
+        )
+    };
+    assert_eq!(
+        invalid_result,
         Err(InvalidSumcheck(
             "Consistency failure at round 1".to_string()
         ))
