@@ -18,11 +18,14 @@ pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone 
     fn configure(
         meta: &mut ConstraintSystem<Fp>,
         username: Column<Advice>,
+        concatenated_balance: Column<Advice>,
         balances: [Column<Advice>; N_CURRENCIES],
         instance: Column<Instance>,
     ) -> Self;
 
     fn get_username(&self) -> Column<Advice>;
+
+    fn get_concatenated_balance(&self) -> Column<Advice>;
 
     fn get_balances(&self) -> [Column<Advice>; N_CURRENCIES];
 
@@ -49,7 +52,15 @@ pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone 
                         || Value::known(big_uint_to_fp::<Fp>(entry.username_as_big_uint())),
                     )?;
 
-                    let mut last_decompositions = vec![];
+                    region.assign_advice(
+                        || "concatenated balance",
+                        self.get_concatenated_balance(),
+                        0,
+                        || Value::known(big_uint_to_fp::<Fp>(&entry.concatenated_balance())),
+                    )?;
+
+                    // Decompose the balances
+                    let mut assigned_balances = Vec::new();
 
                     for (j, balance) in entry.balances().iter().enumerate() {
                         let assigned_balance = region.assign_advice(
@@ -59,10 +70,16 @@ pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone 
                             || Value::known(big_uint_to_fp(balance)),
                         )?;
 
+                        assigned_balances.push(assigned_balance);
+                    }
+
+                    let mut last_decompositions = vec![];
+
+                    for (j, assigned_balance) in assigned_balances.iter().enumerate() {
                         let mut zs = Vec::with_capacity(4);
 
                         if !range_check_chips.is_empty() {
-                            range_check_chips[j].assign(&mut region, &mut zs, &assigned_balance)?;
+                            range_check_chips[j].assign(&mut region, &mut zs, assigned_balance)?;
 
                             last_decompositions.push(zs[3].clone());
                         }

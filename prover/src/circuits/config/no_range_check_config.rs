@@ -19,10 +19,13 @@ use super::circuit_config::CircuitConfig;
 /// # Fields
 ///
 /// * `username`: Advice column used to store the usernames of the users
+/// * `concentrations`: Advice columns used to store the concentrations of the users
 /// * `balances`: Advice columns used to store the balances of the users
+/// * `instance`: Instance column used to constrain the last balance decomposition
 #[derive(Clone)]
 pub struct NoRangeCheckConfig<const N_CURRENCIES: usize, const N_USERS: usize> {
     username: Column<Advice>,
+    concatenated_balance: Column<Advice>,
     balances: [Column<Advice>; N_CURRENCIES],
     instance: Column<Instance>,
 }
@@ -33,11 +36,13 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
     fn configure(
         _: &mut ConstraintSystem<Fp>,
         username: Column<Advice>,
+        concatenated_balance: Column<Advice>,
         balances: [Column<Advice>; N_CURRENCIES],
         instance: Column<Instance>,
     ) -> NoRangeCheckConfig<N_CURRENCIES, N_USERS> {
         Self {
             username,
+            concatenated_balance,
             balances,
             instance,
         }
@@ -45,6 +50,10 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
 
     fn get_username(&self) -> Column<Advice> {
         self.username
+    }
+
+    fn get_concatenated_balance(&self) -> Column<Advice> {
+        self.concatenated_balance
     }
 
     fn get_balances(&self) -> [Column<Advice>; N_CURRENCIES] {

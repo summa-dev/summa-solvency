@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner},
-    plonk::{Circuit, ConstraintSystem, Error},
+    plonk::{Circuit, ConstraintSystem, Error, Expression},
     poly::Rotation,
 };
 
@@ -84,24 +84,52 @@ impl<
 
         let username = meta.advice_column();
 
+        let concatenated_balance = meta.advice_column();
+        meta.enable_equality(concatenated_balance);
+
+        let q_enable = meta.complex_selector();
+
         let balances = [(); N_CURRENCIES].map(|_| meta.advice_column());
         for column in &balances {
             meta.enable_equality(*column);
         }
 
-        meta.create_gate("Balance sumcheck gate", |meta| {
-            let mut nonzero_constraint = vec![];
-            for balance in balances {
-                let current_balance = meta.query_advice(balance, Rotation::cur());
-                nonzero_constraint.push(current_balance.clone());
+        meta.create_gate("Concatenated balance sumcheck gate", |meta| {
+            vec![meta.query_advice(concatenated_balance, Rotation::cur())]
+        });
+
+        meta.create_gate("Concatenated balance validation check gate", |meta| {
+            let q_enable = meta.query_selector(q_enable);
+
+            let concatenated_balance = meta.query_advice(concatenated_balance, Rotation::cur());
+            let mut expr = Expression::Constant(Fp::zero()); // start with a zero expression if needed
+
+            // Base shift value for 84 bits.
+            let base_shift = Fp::from(1 << 63).mul(&Fp::from(1 << 21));
+
+            // We will multiply this base_shift for each balance iteratively.
+            let mut current_shift = Expression::Constant(Fp::one()); // Start with no shift for the first element.
+
+            for (i, balance_col) in balances.iter().enumerate() {
+                let balance = meta.query_advice(*balance_col, Rotation::cur());
+                let shifted_balance = balance * current_shift.clone(); // Apply the current shift
+                expr = expr + shifted_balance; // Add to the expression
+
+                // Update the shift for the next iteration
+                if i < balances.len() - 1 {
+                    // Prevent updating shift unnecessarily on the last element
+                    current_shift = current_shift * Expression::Constant(base_shift);
+                }
             }
-            nonzero_constraint
+
+            // Ensure that the whole expression equals to the concatenated_balance
+            vec![q_enable * (concatenated_balance - expr)]
         });
 
         let instance = meta.instance_column();
         meta.enable_equality(instance);
 
-        CONFIG::configure(meta, username, balances, instance)
+        CONFIG::configure(meta, username, concatenated_balance, balances, instance)
     }
 
     fn synthesize(&self, config: Self::Config, layouter: impl Layouter<Fp>) -> Result<(), Error> {

@@ -177,7 +177,7 @@ fn test_summa_hyperplonk_e2e() {
     );
     assert_eq!(
         fp_to_big_uint(&witness_polys[1].evaluate_as_univariate(&random_user_index)),
-        entries[random_user_index].balances()[0]
+        entries[random_user_index].concatenated_balance()
     );
 
     // Convert challenge into a multivariate form
