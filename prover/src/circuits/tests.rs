@@ -31,7 +31,6 @@ use crate::{
 const K: u32 = 17;
 const N_CURRENCIES: usize = 2;
 // One row is reserved for the grand total.
-// TODO find out what occupies one extra row
 const N_USERS: usize = (1 << K) - 2;
 
 pub fn seeded_std_rng() -> impl RngCore + CryptoRng {
@@ -48,21 +47,12 @@ fn test_summa_hyperplonk_e2e() {
             entries.to_vec(),
         );
 
-    let neg_grand_total = halo2_circuit
-        .grand_total
-        .iter()
-        .fold(Fp::ZERO, |acc, f| acc + f)
-        .neg();
+    let neg_grand_total = halo2_circuit.concatenated_grand_total.neg();
 
     // We're putting the negated grand total at the end of each balance column,
     // so the sumcheck over such balance column would yield zero (given the special gate,
     // see the circuit).
-    assert!(
-        neg_grand_total
-            == halo2_circuit.instances()[0]
-                .iter()
-                .fold(Fp::ZERO, |acc, instance| { acc + instance })
-    );
+    assert!(neg_grand_total == halo2_circuit.instances()[0][1]);
 
     let num_vars = K;
 
@@ -95,7 +85,7 @@ fn test_summa_hyperplonk_e2e() {
         (witness_polys, proof_transcript)
     };
 
-    let num_points = N_CURRENCIES + 1;
+    let num_points = 2;
 
     let proof = proof_transcript.into_proof();
 
@@ -239,24 +229,18 @@ fn test_summa_hyperplonk_e2e() {
         multivariate_challenge.push(kzg_transcript.read_field_element().unwrap());
     }
 
-    //The user knows their evaluation at the challenge point
-    let evals: Vec<Evaluation<Fp>> = (0..N_CURRENCIES + 1)
-        .map(|i| {
-            if i == 0 {
-                Evaluation::new(
-                    i,
-                    0,
-                    big_uint_to_fp::<Fp>(entries[random_user_index].username_as_big_uint()),
-                )
-            } else {
-                Evaluation::new(
-                    i,
-                    0,
-                    big_uint_to_fp::<Fp>(&entries[random_user_index].balances()[i - 1]),
-                )
-            }
-        })
-        .collect();
+    let evals = vec![
+        Evaluation::new(
+            0,
+            0,
+            big_uint_to_fp::<Fp>(entries[random_user_index].username_as_big_uint()),
+        ),
+        Evaluation::new(
+            1,
+            0,
+            big_uint_to_fp::<Fp>(&entries[random_user_index].concatenated_balance()),
+        ),
+    ];
 
     MultilinearKzg::<Bn256>::batch_verify(
         &verifier_parameters.pcs,
@@ -340,7 +324,10 @@ fn print_univariate_grand_sum_circuit() {
 
     let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
 
-    let circuit = SummaHyperplonk::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+    let circuit =
+        SummaHyperplonk::<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>::init(
+            entries.to_vec(),
+        );
 
     let root =
         BitMapBackend::new("prints/summa-hyperplonk-layout.png", (2048, 32768)).into_drawing_area();
@@ -349,7 +336,7 @@ fn print_univariate_grand_sum_circuit() {
         .titled("Summa Hyperplonk Layout", ("sans-serif", 60))
         .unwrap();
 
-    halo2_proofs::dev::CircuitLayout::default()
-        .render::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES>, _, true>(K, &circuit, &root)
+    halo2_proofs::dev::Cir::default()
+        .render::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES,  RangeCheckConfig<N_CURRENCIES, N_USERS>>, _, true>(K, &circuit, &root)
         .unwrap();
 }

@@ -21,7 +21,8 @@ pub fn generate_dummy_entries<const N_USERS: usize, const N_CURRENCIES: usize>(
         let username: String = (0..10).map(|_| rng.sample(Alphanumeric) as char).collect();
 
         let balances: [BigUint; N_CURRENCIES] =
-            std::array::from_fn(|_| BigUint::from(rng.gen_range(1000..90000) as u32));
+            // std::array::from_fn(|_| BigUint::from(rng.gen_range(16777215..16777216) as u32));
+            std::array::from_fn(|_| BigUint::from(rng.gen_range(10000..90000) as u32));
 
         *entry = Entry::new(username, balances).expect("Failed to create entry");
     });

@@ -5,6 +5,7 @@ use halo2_proofs::{
     plonk::{Circuit, ConstraintSystem, Error, Expression},
     poly::Rotation,
 };
+use num_bigint::BigUint;
 
 use crate::{entry::Entry, utils::big_uint_to_fp};
 
@@ -22,7 +23,7 @@ pub struct SummaHyperplonk<
     CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
 > {
     pub entries: Vec<Entry<N_CURRENCIES>>,
-    pub grand_total: Vec<Fp>,
+    pub concatenated_grand_total: Fp,
     _marker: PhantomData<CONFIG>,
 }
 
@@ -33,16 +34,15 @@ impl<
     > SummaHyperplonk<N_USERS, N_CURRENCIES, CONFIG>
 {
     pub fn init(user_entries: Vec<Entry<N_CURRENCIES>>) -> Self {
-        let mut grand_total = vec![Fp::ZERO; N_CURRENCIES];
+        let mut concatenated_grand_total = Fp::ZERO;
+
         for entry in user_entries.iter() {
-            for (i, balance) in entry.balances().iter().enumerate() {
-                grand_total[i] += big_uint_to_fp::<Fp>(balance);
-            }
+            concatenated_grand_total += big_uint_to_fp::<Fp>(&entry.concatenated_balance());
         }
 
         Self {
             entries: user_entries,
-            grand_total,
+            concatenated_grand_total,
             _marker: PhantomData,
         }
     }
@@ -53,14 +53,11 @@ impl<
     pub fn init_invalid_grand_total(user_entries: Vec<Entry<N_CURRENCIES>>) -> Self {
         use plonkish_backend::util::test::seeded_std_rng;
 
-        let mut grand_total = vec![Fp::ZERO; N_CURRENCIES];
-        for i in 0..N_CURRENCIES {
-            grand_total[i] = Fp::random(seeded_std_rng());
-        }
+        let concatenated_grand_total = Fp::random(seeded_std_rng());
 
         Self {
             entries: user_entries,
-            grand_total,
+            concatenated_grand_total,
             _marker: PhantomData,
         }
     }
@@ -87,6 +84,11 @@ impl<
         let concatenated_balance = meta.advice_column();
         meta.enable_equality(concatenated_balance);
 
+        meta.create_gate("Concatenated balance sumcheck gate", |meta| {
+            let current_balance = meta.query_advice(concatenated_balance, Rotation::cur());
+            vec![current_balance.clone()]
+        });
+
         let q_enable = meta.complex_selector();
 
         let balances = [(); N_CURRENCIES].map(|_| meta.advice_column());
@@ -94,23 +96,18 @@ impl<
             meta.enable_equality(*column);
         }
 
-        meta.create_gate("Concatenated balance sumcheck gate", |meta| {
-            vec![meta.query_advice(concatenated_balance, Rotation::cur())]
-        });
-
         meta.create_gate("Concatenated balance validation check gate", |meta| {
             let q_enable = meta.query_selector(q_enable);
 
             let concatenated_balance = meta.query_advice(concatenated_balance, Rotation::cur());
-            let mut expr = Expression::Constant(Fp::zero()); // start with a zero expression if needed
-
+            let mut expr = Expression::Constant(Fp::zero());
             // Base shift value for 84 bits.
             let base_shift = Fp::from(1 << 63).mul(&Fp::from(1 << 21));
 
-            // We will multiply this base_shift for each balance iteratively.
-            let mut current_shift = Expression::Constant(Fp::one()); // Start with no shift for the first element.
+            let mut current_shift = Expression::Constant(Fp::one());
 
-            for (i, balance_col) in balances.iter().enumerate() {
+            // Right-most balance column is for the least significant balance in concatenated balance.
+            for (i, balance_col) in balances.iter().rev().enumerate() {
                 let balance = meta.query_advice(*balance_col, Rotation::cur());
                 let shifted_balance = balance * current_shift.clone(); // Apply the current shift
                 expr = expr + shifted_balance; // Add to the expression
@@ -133,7 +130,12 @@ impl<
     }
 
     fn synthesize(&self, config: Self::Config, layouter: impl Layouter<Fp>) -> Result<(), Error> {
-        CONFIG::synthesize(&config, layouter, &self.entries, &self.grand_total)
+        CONFIG::synthesize(
+            &config,
+            layouter,
+            &self.entries,
+            &self.concatenated_grand_total,
+        )
     }
 }
 
@@ -149,9 +151,6 @@ impl<
 
     fn instances(&self) -> Vec<Vec<Fp>> {
         // The 1st element is zero because the last decomposition of each range check chip should be zero
-        vec![vec![Fp::ZERO]
-            .into_iter()
-            .chain(self.grand_total.iter().map(|x| x.neg()))
-            .collect::<Vec<Fp>>()]
+        vec![vec![Fp::ZERO, self.concatenated_grand_total.neg()]]
     }
 }
