@@ -336,7 +336,7 @@ fn print_univariate_grand_sum_circuit() {
         .titled("Summa Hyperplonk Layout", ("sans-serif", 60))
         .unwrap();
 
-    halo2_proofs::dev::Cir::default()
+    halo2_proofs::dev::CircuitLayout::default()
         .render::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES,  RangeCheckConfig<N_CURRENCIES, N_USERS>>, _, true>(K, &circuit, &root)
         .unwrap();
 }
