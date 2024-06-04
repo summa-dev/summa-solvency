@@ -5,33 +5,31 @@ use crate::utils::big_intify_username;
 /// An entry in the Merkle Sum Tree from the database of the CEX.
 /// It contains the username and the balances of the user.
 #[derive(Clone, Debug)]
-pub struct Entry<const N_CURRENCIES: usize> {
+pub struct Entry {
     username_as_big_uint: BigUint,
-    balances: [BigUint; N_CURRENCIES],
+    balance: BigUint,
     username: String,
 }
 
-impl<const N_CURRENCIES: usize> Entry<N_CURRENCIES> {
-    pub fn new(username: String, balances: [BigUint; N_CURRENCIES]) -> Result<Self, &'static str> {
+impl Entry {
+    pub fn new(username: String, balance: BigUint) -> Result<Self, &'static str> {
         Ok(Entry {
             username_as_big_uint: big_intify_username(&username),
-            balances,
+            balance,
             username,
         })
     }
 
     pub fn init_empty() -> Self {
-        let empty_balances: [BigUint; N_CURRENCIES] = std::array::from_fn(|_| BigUint::from(0u32));
-
         Entry {
             username_as_big_uint: BigUint::from(0u32),
-            balances: empty_balances,
+            balance: BigUint::from(0u32),
             username: String::new(),
         }
     }
 
-    pub fn balances(&self) -> &[BigUint; N_CURRENCIES] {
-        &self.balances
+    pub fn balance(&self) -> &BigUint {
+        &self.balance
     }
 
     pub fn username_as_big_uint(&self) -> &BigUint {

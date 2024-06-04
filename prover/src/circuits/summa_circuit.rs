@@ -16,28 +16,17 @@ use rand::RngCore;
 use super::config::circuit_config::CircuitConfig;
 
 #[derive(Clone, Default)]
-pub struct SummaHyperplonk<
-    const N_USERS: usize,
-    const N_CURRENCIES: usize,
-    CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
-> {
-    pub entries: Vec<Entry<N_CURRENCIES>>,
-    pub grand_total: Vec<Fp>,
+pub struct SummaHyperplonk<const N_USERS: usize, CONFIG: CircuitConfig<N_USERS>> {
+    pub entries: Vec<Entry>,
+    pub grand_total: Fp,
     _marker: PhantomData<CONFIG>,
 }
 
-impl<
-        const N_USERS: usize,
-        const N_CURRENCIES: usize,
-        CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
-    > SummaHyperplonk<N_USERS, N_CURRENCIES, CONFIG>
-{
-    pub fn init(user_entries: Vec<Entry<N_CURRENCIES>>) -> Self {
-        let mut grand_total = vec![Fp::ZERO; N_CURRENCIES];
+impl<const N_USERS: usize, CONFIG: CircuitConfig<N_USERS>> SummaHyperplonk<N_USERS, CONFIG> {
+    pub fn init(user_entries: Vec<Entry>) -> Self {
+        let mut grand_total = Fp::zero();
         for entry in user_entries.iter() {
-            for (i, balance) in entry.balances().iter().enumerate() {
-                grand_total[i] += big_uint_to_fp::<Fp>(balance);
-            }
+            grand_total += big_uint_to_fp::<Fp>(entry.balance());
         }
 
         Self {
@@ -50,13 +39,10 @@ impl<
     /// Initialize the circuit with an invalid grand total
     /// (for testing purposes only).
     #[cfg(test)]
-    pub fn init_invalid_grand_total(user_entries: Vec<Entry<N_CURRENCIES>>) -> Self {
+    pub fn init_invalid_grand_total(user_entries: Vec<Entry>) -> Self {
         use plonkish_backend::util::test::seeded_std_rng;
 
-        let mut grand_total = vec![Fp::ZERO; N_CURRENCIES];
-        for i in 0..N_CURRENCIES {
-            grand_total[i] = Fp::random(seeded_std_rng());
-        }
+        let grand_total = Fp::random(seeded_std_rng());
 
         Self {
             entries: user_entries,
@@ -66,11 +52,8 @@ impl<
     }
 }
 
-impl<
-        const N_USERS: usize,
-        const N_CURRENCIES: usize,
-        CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
-    > Circuit<Fp> for SummaHyperplonk<N_USERS, N_CURRENCIES, CONFIG>
+impl<const N_USERS: usize, CONFIG: CircuitConfig<N_USERS>> Circuit<Fp>
+    for SummaHyperplonk<N_USERS, CONFIG>
 {
     type Config = CONFIG;
     type FloorPlanner = SimpleFloorPlanner;
@@ -84,24 +67,17 @@ impl<
 
         let username = meta.advice_column();
 
-        let balances = [(); N_CURRENCIES].map(|_| meta.advice_column());
-        for column in &balances {
-            meta.enable_equality(*column);
-        }
+        let balance = meta.advice_column();
+        meta.enable_equality(balance);
 
         meta.create_gate("Balance sumcheck gate", |meta| {
-            let mut nonzero_constraint = vec![];
-            for balance in balances {
-                let current_balance = meta.query_advice(balance, Rotation::cur());
-                nonzero_constraint.push(current_balance.clone());
-            }
-            nonzero_constraint
+            vec![meta.query_advice(balance, Rotation::cur())]
         });
 
         let instance = meta.instance_column();
         meta.enable_equality(instance);
 
-        CONFIG::configure(meta, username, balances, instance)
+        CONFIG::configure(meta, username, balance, instance)
     }
 
     fn synthesize(&self, config: Self::Config, layouter: impl Layouter<Fp>) -> Result<(), Error> {
@@ -109,11 +85,8 @@ impl<
     }
 }
 
-impl<
-        const N_USERS: usize,
-        const N_CURRENCIES: usize,
-        CONFIG: CircuitConfig<N_CURRENCIES, N_USERS>,
-    > CircuitExt<Fp> for SummaHyperplonk<N_USERS, N_CURRENCIES, CONFIG>
+impl<const N_USERS: usize, CONFIG: CircuitConfig<N_USERS>> CircuitExt<Fp>
+    for SummaHyperplonk<N_USERS, CONFIG>
 {
     fn rand(_: usize, _: impl RngCore) -> Self {
         unimplemented!()
@@ -121,9 +94,6 @@ impl<
 
     fn instances(&self) -> Vec<Vec<Fp>> {
         // The 1st element is zero because the last decomposition of each range check chip should be zero
-        vec![vec![Fp::ZERO]
-            .into_iter()
-            .chain(self.grand_total.iter().map(|x| x.neg()))
-            .collect::<Vec<Fp>>()]
+        vec![vec![Fp::ZERO, self.grand_total.neg()]]
     }
 }

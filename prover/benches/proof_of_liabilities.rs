@@ -18,8 +18,9 @@ use summa_hyperplonk::{
     utils::{big_uint_to_fp, generate_dummy_entries, uni_to_multivar_binary_index},
 };
 
-fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() {
-    let name = format!("K = {K}, N_USERS = {N_USERS}, N_CURRENCIES = {N_CURRENCIES}");
+// There is only one currency in V3c
+fn bench_summa<const K: u32, const N_USERS: usize>() {
+    let name = format!("K = {K}, N_USERS = {N_USERS}");
     let mut c = Criterion::default().sample_size(10);
 
     let grand_sum_proof_bench_name = format!("<{}> grand sum proof", name);
@@ -29,16 +30,13 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
     let inclusion_verification_bench_name = format!("<{}> user inclusion verification", name);
 
     type ProvingBackend = HyperPlonk<MultilinearKzg<Bn256>>;
-    let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
+    let entries = generate_dummy_entries::<N_USERS>().unwrap();
     let halo2_circuit =
-        SummaHyperplonk::<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>::init(
-            entries.to_vec(),
-        );
+        SummaHyperplonk::<N_USERS, RangeCheckConfig<N_USERS>>::init(entries.to_vec());
 
-    let circuit = Halo2Circuit::<
-        Fp,
-        SummaHyperplonk<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>,
-    >::new::<ProvingBackend>(K as usize, halo2_circuit.clone());
+    let circuit = Halo2Circuit::<Fp, SummaHyperplonk<N_USERS, RangeCheckConfig<N_USERS>>>::new::<
+        ProvingBackend,
+    >(K as usize, halo2_circuit.clone());
 
     let circuit_info: PlonkishCircuitInfo<_> = circuit.circuit_info().unwrap();
     let instances = circuit.instances();
@@ -49,10 +47,9 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
     c.bench_function(&grand_sum_proof_bench_name, |b| {
         b.iter_batched(
             || {
-                Halo2Circuit::<
-                    Fp,
-                    SummaHyperplonk<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>,
-                >::new::<ProvingBackend>(K as usize, halo2_circuit.clone())
+                Halo2Circuit::<Fp, SummaHyperplonk<N_USERS, RangeCheckConfig<N_USERS>>>::new::<
+                    ProvingBackend,
+                >(K as usize, halo2_circuit.clone())
             },
             |circuit| {
                 let mut transcript = Keccak256Transcript::default();
@@ -79,7 +76,7 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
         .unwrap();
         (witness_polys, proof_transcript)
     };
-    let num_points = N_CURRENCIES + 1;
+    let num_points = 2;
     let user_entry_polynomials = witness_polys.iter().take(num_points).collect::<Vec<_>>();
 
     let mut transcript = Keccak256Transcript::default();
@@ -106,23 +103,18 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
     let multivariate_challenge =
         uni_to_multivar_binary_index(&random_user_index, num_vars as usize);
 
-    let mut evals = vec![];
-
-    for i in 0..N_CURRENCIES + 1 {
-        if i == 0 {
-            evals.push(Evaluation::new(
-                i,
-                0,
-                big_uint_to_fp::<Fp>(entries[random_user_index].username_as_big_uint()),
-            ));
-        } else {
-            evals.push(Evaluation::new(
-                i,
-                0,
-                big_uint_to_fp::<Fp>(&entries[random_user_index].balances()[i - 1]),
-            ));
-        }
-    }
+    let evals: Vec<Evaluation<Fp>> = vec![
+        Evaluation::new(
+            0,
+            0,
+            big_uint_to_fp::<Fp>(entries[random_user_index].username_as_big_uint()),
+        ),
+        Evaluation::new(
+            1,
+            0,
+            big_uint_to_fp::<Fp>(&entries[random_user_index].balance()),
+        ),
+    ];
 
     c.bench_function(&inclusion_proof_bench_name, |b| {
         b.iter_batched(
@@ -192,12 +184,11 @@ fn bench_summa<const K: u32, const N_USERS: usize, const N_CURRENCIES: usize>() 
 }
 
 fn criterion_benchmark(_c: &mut Criterion) {
-    const N_CURRENCIES: usize = 100;
-
+    // Only one currency will be handled in V3c
     {
         const K: u32 = 17;
         const N_USERS: usize = (1 << K as usize) - 6;
-        bench_summa::<K, N_USERS, N_CURRENCIES>();
+        bench_summa::<K, N_USERS>();
     }
 }
 

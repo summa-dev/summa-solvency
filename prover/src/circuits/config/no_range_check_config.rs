@@ -13,32 +13,29 @@ use super::circuit_config::CircuitConfig;
 ///
 /// # Type Parameters
 ///
-/// * `N_CURRENCIES`: The number of currencies for which the solvency is verified.
 /// * `N_USERS`: The number of users for which the solvency is verified.
 ///
 /// # Fields
 ///
 /// * `username`: Advice column used to store the usernames of the users
-/// * `balances`: Advice columns used to store the balances of the users
+/// * `balance`: Advice columns used to store the balance of the users
 #[derive(Clone)]
-pub struct NoRangeCheckConfig<const N_CURRENCIES: usize, const N_USERS: usize> {
+pub struct NoRangeCheckConfig<const N_USERS: usize> {
     username: Column<Advice>,
-    balances: [Column<Advice>; N_CURRENCIES],
+    balance: Column<Advice>,
     instance: Column<Instance>,
 }
 
-impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES, N_USERS>
-    for NoRangeCheckConfig<N_CURRENCIES, N_USERS>
-{
+impl<const N_USERS: usize> CircuitConfig<N_USERS> for NoRangeCheckConfig<N_USERS> {
     fn configure(
         _: &mut ConstraintSystem<Fp>,
         username: Column<Advice>,
-        balances: [Column<Advice>; N_CURRENCIES],
+        balance: Column<Advice>,
         instance: Column<Instance>,
-    ) -> NoRangeCheckConfig<N_CURRENCIES, N_USERS> {
+    ) -> NoRangeCheckConfig<N_USERS> {
         Self {
             username,
-            balances,
+            balance,
             instance,
         }
     }
@@ -47,8 +44,8 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
         self.username
     }
 
-    fn get_balances(&self) -> [Column<Advice>; N_CURRENCIES] {
-        self.balances
+    fn get_balance(&self) -> Column<Advice> {
+        self.balance
     }
 
     fn get_instance(&self) -> Column<Instance> {
@@ -57,7 +54,7 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
 
     // The following methods are not implemented for NoRangeCheckConfig
 
-    fn initialize_range_check_chips(&self) -> Vec<RangeCheckU64Chip> {
+    fn initialize_range_check_chip(&self) -> Vec<RangeCheckU64Chip> {
         vec![]
     }
 
@@ -67,7 +64,7 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
 
     fn constrain_decompositions(
         &self,
-        _: Vec<halo2_proofs::circuit::AssignedCell<Fp, Fp>>,
+        _: halo2_proofs::circuit::AssignedCell<Fp, Fp>,
         _: &mut impl Layouter<Fp>,
     ) -> Result<(), Error> {
         Ok(())
