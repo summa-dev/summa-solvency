@@ -2427,7 +2427,7 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "plonkish_backend"
 version = "0.1.0"
-source = "git+https://github.com/summa-dev/plonkish?branch=nonzero-constraints#e37ba53dcc8f8bd6e7add4e479d0e3295ee80661"
+source = "git+https://github.com/summa-dev/plonkish?branch=nonzero-constraints#c9dc12571d4a9aa06a419598ff2422b42770ae91"
 dependencies = [
  "bincode",
  "bitvec 1.0.1",

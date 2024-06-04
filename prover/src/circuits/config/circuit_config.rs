@@ -1,6 +1,6 @@
 use halo2_proofs::{
     circuit::{Layouter, Value},
-    plonk::{Advice, Column, ConstraintSystem, Error, Instance},
+    plonk::{Advice, Column, ConstraintSystem, Error, Instance, Selector},
 };
 
 use crate::{entry::Entry, utils::big_uint_to_fp};
@@ -19,6 +19,7 @@ pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone 
         meta: &mut ConstraintSystem<Fp>,
         username: Column<Advice>,
         concatenated_balance: Column<Advice>,
+        selector: Selector,
         balances: [Column<Advice>; N_CURRENCIES],
         instance: Column<Instance>,
     ) -> Self;
@@ -104,7 +105,7 @@ pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone 
                     || format!("concateneated total({} currencies)", N_CURRENCIES),
                     self.get_concatenated_balance(),
                     0,
-                    || Value::known(concatenated_grand_total.nag()),
+                    || Value::known(concatenated_grand_total.neg()),
                 )?;
 
                 Ok(balance_total)

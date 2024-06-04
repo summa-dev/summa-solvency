@@ -29,7 +29,7 @@ use crate::{
     },
 };
 const K: u32 = 17;
-const N_CURRENCIES: usize = 2;
+const N_CURRENCIES: usize = 3;
 // One row is reserved for the grand total.
 const N_USERS: usize = (1 << K) - 2;
 
@@ -84,8 +84,6 @@ fn test_summa_hyperplonk_e2e() {
         .unwrap();
         (witness_polys, proof_transcript)
     };
-
-    let num_points = 2;
 
     let proof = proof_transcript.into_proof();
 
@@ -177,6 +175,9 @@ fn test_summa_hyperplonk_e2e() {
     let mut kzg_transcript = Keccak256Transcript::new(());
 
     let mut transcript = Keccak256Transcript::from_proof((), proof.as_slice());
+
+    // Username and Concatenated balance
+    let num_points = 2;
 
     let user_entry_commitments = MultilinearKzg::<Bn256>::read_commitments(
         &verifier_parameters.pcs,

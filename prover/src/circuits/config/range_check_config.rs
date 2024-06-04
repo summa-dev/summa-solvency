@@ -1,6 +1,6 @@
 use halo2_proofs::{
     circuit::{Layouter, Value},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Instance},
+    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Instance, Selector},
 };
 
 use crate::chips::range::range_check::{RangeCheckChipConfig, RangeCheckU64Chip};
@@ -40,6 +40,7 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
         meta: &mut ConstraintSystem<Fp>,
         username: Column<Advice>,
         concatenated_balance: Column<Advice>,
+        selector: Selector,
         balances: [Column<Advice>; N_CURRENCIES],
         instance: Column<Instance>,
     ) -> Self {
@@ -48,8 +49,6 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
         meta.enable_constant(range_u16);
 
         meta.annotate_lookup_any_column(range_u16, || "LOOKUP_MAXBITS_RANGE");
-
-        let range_check_selector = meta.complex_selector();
 
         // Create an empty array of range check configs
         let mut range_check_configs = Vec::with_capacity(N_CURRENCIES);
@@ -63,8 +62,7 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
                 meta.enable_equality(*column);
             }
 
-            let range_check_config =
-                RangeCheckU64Chip::configure(meta, z, zs, range_u16, range_check_selector);
+            let range_check_config = RangeCheckU64Chip::configure(meta, z, zs, range_u16, selector);
 
             range_check_configs.push(range_check_config);
         }

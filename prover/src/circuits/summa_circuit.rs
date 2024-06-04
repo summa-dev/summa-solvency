@@ -5,7 +5,6 @@ use halo2_proofs::{
     plonk::{Circuit, ConstraintSystem, Error, Expression},
     poly::Rotation,
 };
-use num_bigint::BigUint;
 
 use crate::{entry::Entry, utils::big_uint_to_fp};
 
@@ -97,36 +96,43 @@ impl<
         }
 
         meta.create_gate("Concatenated balance validation check gate", |meta| {
-            let q_enable = meta.query_selector(q_enable);
+            let s = meta.query_selector(q_enable);
 
             let concatenated_balance = meta.query_advice(concatenated_balance, Rotation::cur());
-            let mut expr = Expression::Constant(Fp::zero());
+
+            // Right-most balance column is for the least significant balance in concatenated balance.
+            let mut balances_expr = meta.query_advice(balances[N_CURRENCIES - 1], Rotation::cur());
+
             // Base shift value for 84 bits.
             let base_shift = Fp::from(1 << 63).mul(&Fp::from(1 << 21));
 
-            let mut current_shift = Expression::Constant(Fp::one());
+            let mut current_shift = Expression::Constant(base_shift);
 
-            // Right-most balance column is for the least significant balance in concatenated balance.
-            for (i, balance_col) in balances.iter().rev().enumerate() {
-                let balance = meta.query_advice(*balance_col, Rotation::cur());
-                let shifted_balance = balance * current_shift.clone(); // Apply the current shift
-                expr = expr + shifted_balance; // Add to the expression
+            for i in (0..N_CURRENCIES - 1).rev() {
+                let balance = meta.query_advice(balances[i], Rotation::cur());
+                let shifted_balance = balance * current_shift.clone();
+                balances_expr = balances_expr + shifted_balance;
 
-                // Update the shift for the next iteration
-                if i < balances.len() - 1 {
-                    // Prevent updating shift unnecessarily on the last element
+                if i != 0 {
                     current_shift = current_shift * Expression::Constant(base_shift);
                 }
             }
 
             // Ensure that the whole expression equals to the concatenated_balance
-            vec![q_enable * (concatenated_balance - expr)]
+            vec![s * (concatenated_balance - balances_expr)]
         });
 
         let instance = meta.instance_column();
         meta.enable_equality(instance);
 
-        CONFIG::configure(meta, username, concatenated_balance, balances, instance)
+        CONFIG::configure(
+            meta,
+            username,
+            concatenated_balance,
+            q_enable,
+            balances,
+            instance,
+        )
     }
 
     fn synthesize(&self, config: Self::Config, layouter: impl Layouter<Fp>) -> Result<(), Error> {

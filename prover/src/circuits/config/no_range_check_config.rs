@@ -1,6 +1,6 @@
 use halo2_proofs::{
     circuit::Layouter,
-    plonk::{Advice, Column, ConstraintSystem, Error, Instance},
+    plonk::{Advice, Column, ConstraintSystem, Error, Instance, Selector},
 };
 
 use crate::chips::range::range_check::RangeCheckU64Chip;
@@ -37,6 +37,7 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
         _: &mut ConstraintSystem<Fp>,
         username: Column<Advice>,
         concatenated_balance: Column<Advice>,
+        _selector: Selector,
         balances: [Column<Advice>; N_CURRENCIES],
         instance: Column<Instance>,
     ) -> NoRangeCheckConfig<N_CURRENCIES, N_USERS> {
