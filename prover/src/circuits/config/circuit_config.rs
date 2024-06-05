@@ -1,6 +1,6 @@
 use halo2_proofs::{
     circuit::{Layouter, Value},
-    plonk::{Advice, Column, ConstraintSystem, Error, Instance},
+    plonk::{Advice, Column, ConstraintSystem, Error, Instance, Selector},
 };
 
 use crate::{entry::Entry, utils::big_uint_to_fp};
@@ -18,11 +18,15 @@ pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone 
     fn configure(
         meta: &mut ConstraintSystem<Fp>,
         username: Column<Advice>,
+        concatenated_balance: Column<Advice>,
+        selector: Selector,
         balances: [Column<Advice>; N_CURRENCIES],
         instance: Column<Instance>,
     ) -> Self;
 
     fn get_username(&self) -> Column<Advice>;
+
+    fn get_concatenated_balance(&self) -> Column<Advice>;
 
     fn get_balances(&self) -> [Column<Advice>; N_CURRENCIES];
 
@@ -33,71 +37,82 @@ pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone 
         &self,
         mut layouter: impl Layouter<Fp>,
         entries: &[Entry<N_CURRENCIES>],
-        grand_total: &[Fp],
+        concatenated_grand_total: &Fp,
     ) -> Result<(), Error> {
         // Initiate the range check chips
         let range_check_chips = self.initialize_range_check_chips();
 
         for (i, entry) in entries.iter().enumerate() {
-            let last_decompositions = layouter.assign_region(
-                || format!("assign entry {} to the table", i),
-                |mut region| {
-                    region.assign_advice(
-                        || "username",
-                        self.get_username(),
-                        0,
-                        || Value::known(big_uint_to_fp::<Fp>(entry.username_as_big_uint())),
-                    )?;
-
-                    let mut last_decompositions = vec![];
-
-                    for (j, balance) in entry.balances().iter().enumerate() {
-                        let assigned_balance = region.assign_advice(
-                            || format!("balance {}", j),
-                            self.get_balances()[j],
+            let last_decompositions: Vec<halo2_proofs::circuit::AssignedCell<Fp, Fp>> = layouter
+                .assign_region(
+                    || format!("assign entry {} to the table", i),
+                    |mut region| {
+                        region.assign_advice(
+                            || "username",
+                            self.get_username(),
                             0,
-                            || Value::known(big_uint_to_fp(balance)),
+                            || Value::known(big_uint_to_fp::<Fp>(entry.username_as_big_uint())),
                         )?;
 
-                        let mut zs = Vec::with_capacity(4);
+                        region.assign_advice(
+                            || "concatenated balance",
+                            self.get_concatenated_balance(),
+                            0,
+                            || Value::known(big_uint_to_fp::<Fp>(&entry.concatenated_balance())),
+                        )?;
 
-                        if !range_check_chips.is_empty() {
-                            range_check_chips[j].assign(&mut region, &mut zs, &assigned_balance)?;
+                        // Decompose the balances
+                        let mut assigned_balances = Vec::new();
 
-                            last_decompositions.push(zs[3].clone());
+                        for (j, balance) in entry.balances().iter().enumerate() {
+                            let assigned_balance = region.assign_advice(
+                                || format!("balance {}", j),
+                                self.get_balances()[j],
+                                0,
+                                || Value::known(big_uint_to_fp(balance)),
+                            )?;
+
+                            assigned_balances.push(assigned_balance);
                         }
-                    }
 
-                    Ok(last_decompositions)
-                },
-            )?;
+                        let mut last_decompositions = vec![];
+
+                        for (j, assigned_balance) in assigned_balances.iter().enumerate() {
+                            let mut zs = Vec::with_capacity(4);
+
+                            if !range_check_chips.is_empty() {
+                                range_check_chips[j].assign(
+                                    &mut region,
+                                    &mut zs,
+                                    assigned_balance,
+                                )?;
+
+                                last_decompositions.push(zs[3].clone());
+                            }
+                        }
+
+                        Ok(last_decompositions)
+                    },
+                )?;
 
             self.constrain_decompositions(last_decompositions, &mut layouter)?;
         }
 
         let assigned_total = layouter.assign_region(
-            || "assign total".to_string(),
+            || "assign concatenated total".to_string(),
             |mut region| {
-                let mut assigned_total = vec![];
+                let balance_total = region.assign_advice(
+                    || format!("concateneated total({} currencies)", N_CURRENCIES),
+                    self.get_concatenated_balance(),
+                    0,
+                    || Value::known(concatenated_grand_total.neg()),
+                )?;
 
-                for (j, total) in grand_total.iter().enumerate() {
-                    let balance_total = region.assign_advice(
-                        || format!("total {}", j),
-                        self.get_balances()[j],
-                        0,
-                        || Value::known(total.neg()),
-                    )?;
-
-                    assigned_total.push(balance_total);
-                }
-
-                Ok(assigned_total)
+                Ok(balance_total)
             },
         )?;
 
-        for (j, total) in assigned_total.iter().enumerate() {
-            layouter.constrain_instance(total.cell(), self.get_instance(), 1 + j)?;
-        }
+        layouter.constrain_instance(assigned_total.cell(), self.get_instance(), 1)?;
 
         self.load_lookup_table(layouter)?;
 

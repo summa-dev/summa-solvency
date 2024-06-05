@@ -1,6 +1,6 @@
 use halo2_proofs::{
     circuit::{Layouter, Value},
-    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Instance},
+    plonk::{Advice, Column, ConstraintSystem, Error, Fixed, Instance, Selector},
 };
 
 use crate::chips::range::range_check::{RangeCheckChipConfig, RangeCheckU64Chip};
@@ -18,6 +18,7 @@ use super::circuit_config::CircuitConfig;
 /// # Fields
 ///
 /// * `username`: Advice column used to store the usernames of the users
+/// * `concatenated_balance`: Advice column used to store the concatenated balances of the users
 /// * `balances`: Advice columns used to store the balances of the users
 /// * `range_check_configs`: Range check chip configurations
 /// * `range_u16`: Fixed column used to store the lookup table
@@ -25,6 +26,7 @@ use super::circuit_config::CircuitConfig;
 #[derive(Clone)]
 pub struct RangeCheckConfig<const N_CURRENCIES: usize, const N_USERS: usize> {
     username: Column<Advice>,
+    concatenated_balance: Column<Advice>,
     balances: [Column<Advice>; N_CURRENCIES],
     range_check_configs: [RangeCheckChipConfig; N_CURRENCIES],
     range_u16: Column<Fixed>,
@@ -37,6 +39,8 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
     fn configure(
         meta: &mut ConstraintSystem<Fp>,
         username: Column<Advice>,
+        concatenated_balance: Column<Advice>,
+        selector: Selector,
         balances: [Column<Advice>; N_CURRENCIES],
         instance: Column<Instance>,
     ) -> Self {
@@ -45,8 +49,6 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
         meta.enable_constant(range_u16);
 
         meta.annotate_lookup_any_column(range_u16, || "LOOKUP_MAXBITS_RANGE");
-
-        let range_check_selector = meta.complex_selector();
 
         // Create an empty array of range check configs
         let mut range_check_configs = Vec::with_capacity(N_CURRENCIES);
@@ -60,14 +62,14 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
                 meta.enable_equality(*column);
             }
 
-            let range_check_config =
-                RangeCheckU64Chip::configure(meta, z, zs, range_u16, range_check_selector);
+            let range_check_config = RangeCheckU64Chip::configure(meta, z, zs, range_u16, selector);
 
             range_check_configs.push(range_check_config);
         }
 
         Self {
             username,
+            concatenated_balance,
             balances,
             range_check_configs: range_check_configs.try_into().unwrap(),
             range_u16,
@@ -77,6 +79,10 @@ impl<const N_CURRENCIES: usize, const N_USERS: usize> CircuitConfig<N_CURRENCIES
 
     fn get_username(&self) -> Column<Advice> {
         self.username
+    }
+
+    fn get_concatenated_balance(&self) -> Column<Advice> {
+        self.concatenated_balance
     }
 
     fn get_balances(&self) -> [Column<Advice>; N_CURRENCIES] {
