@@ -19,7 +19,7 @@ use super::circuit_config::CircuitConfig;
 /// # Fields
 ///
 /// * `username`: Advice column used to store the usernames of the users
-/// * `concentrations`: Advice columns used to store the concentrations of the users
+/// * `concatenated_balance`: Advice column used to store the concatenated balances of the users
 /// * `balances`: Advice columns used to store the balances of the users
 /// * `instance`: Instance column used to constrain the last balance decomposition
 #[derive(Clone)]
