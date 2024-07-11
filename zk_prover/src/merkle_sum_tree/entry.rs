@@ -12,18 +12,18 @@ pub struct Entry<const N_CURRENCIES: usize> {
 }
 
 impl<const N_CURRENCIES: usize> Entry<N_CURRENCIES> {
-    pub fn new(username: String, balances: [BigUint; N_CURRENCIES]) -> Result<Self, &'static str> {
+    pub fn new(username: String, balances: [BigUint; N_CURRENCIES]) -> Self {
         // Security Assumptions:
         // Using `keccak256` for `hashed_username` ensures high collision resistance,
         // appropriate for the assumed userbase of $2^{30}$.
         // The `hashed_username` utilizes the full 256 bits produced by `keccak256`,
         // but is adjusted to the field size through the Poseidon hash function's modulo operation.
         let hashed_username: BigUint = BigUint::from_bytes_be(&keccak256(username.as_bytes()));
-        Ok(Entry {
+        Entry {
             hashed_username,
             balances,
             username,
-        })
+        }
     }
 
     /// Returns a zero entry where the username is 0 and the balances are all 0

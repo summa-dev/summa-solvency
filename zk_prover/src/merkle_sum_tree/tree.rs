@@ -71,7 +71,7 @@ pub trait Tree<const N_CURRENCIES: usize> {
         let mut preimage = [Fp::zero(); N_CURRENCIES + 1];
 
         // Add username to preimage
-        preimage[0] = big_uint_to_fp(entry.username_as_big_uint());
+        preimage[0] = big_uint_to_fp(&entry.username_as_big_uint());
 
         // Add balances to preimage
         for (i, balance) in preimage.iter_mut().enumerate().skip(1).take(N_CURRENCIES) {
@@ -97,6 +97,7 @@ pub trait Tree<const N_CURRENCIES: usize> {
         if index >= nodes[0].len() {
             return Err(Box::from("Index out of bounds"));
         }
+        assert_eq!(nodes[0].len(), 2usize.pow(depth as u32));
 
         let mut sibling_middle_node_hash_preimages = Vec::with_capacity(depth - 1);
 
@@ -111,7 +112,9 @@ pub trait Tree<const N_CURRENCIES: usize> {
             let position = current_index % 2;
             let sibling_index = current_index - position + (1 - position);
 
-            if sibling_index < nodes[level].len() && level != 0 {
+            // we asserted that the leaves vec length is a power of 2
+            // so the index shouldn't overflow the level's length
+            if level > 0 {
                 // Fetch hash preimage for sibling middle nodes
                 let sibling_node_preimage =
                     self.get_middle_node_hash_preimage(level, sibling_index)?;
@@ -152,14 +155,13 @@ pub trait Tree<const N_CURRENCIES: usize> {
         if proof.path_indices[0] == 0.into() {
             hash_preimage[N_CURRENCIES] = node.hash;
             hash_preimage[N_CURRENCIES + 1] = sibling_leaf_node.hash;
-            node = Node::middle_node_from_preimage(&hash_preimage);
         } else {
             hash_preimage[N_CURRENCIES] = sibling_leaf_node.hash;
             hash_preimage[N_CURRENCIES + 1] = node.hash;
-            node = Node::middle_node_from_preimage(&hash_preimage);
         }
+        node = Node::middle_node_from_preimage(&hash_preimage);
 
-        for i in 1..proof.path_indices.len() {
+        for (i, path_index) in proof.path_indices.iter().enumerate().skip(1) {
             let sibling_node = Node::<N_CURRENCIES>::middle_node_from_preimage(
                 &proof.sibling_middle_node_hash_preimages[i - 1],
             );
@@ -169,15 +171,14 @@ pub trait Tree<const N_CURRENCIES: usize> {
                 *balance = node.balances[i] + sibling_node.balances[i];
             }
 
-            if proof.path_indices[i] == 0.into() {
+            if *path_index == 0.into() {
                 hash_preimage[N_CURRENCIES] = node.hash;
                 hash_preimage[N_CURRENCIES + 1] = sibling_node.hash;
-                node = Node::middle_node_from_preimage(&hash_preimage);
             } else {
                 hash_preimage[N_CURRENCIES] = sibling_node.hash;
                 hash_preimage[N_CURRENCIES + 1] = node.hash;
-                node = Node::middle_node_from_preimage(&hash_preimage);
             }
+            node = Node::middle_node_from_preimage(&hash_preimage);
         }
 
         proof.root.hash == node.hash && proof.root.balances == node.balances

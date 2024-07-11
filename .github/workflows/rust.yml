@@ -15,6 +15,7 @@ env:
 
 jobs:
   wakeup:
+    if: github.event.pull_request.head.repo.full_name == 'summa-dev/summa-solvency'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -31,9 +32,10 @@ jobs:
           aws-region: us-west-2
 
       - name: Wakeup runner
-        run: .github/scripts/wakeup.sh 
+        run: .github/scripts/wakeup.sh
 
   build:
+    if: github.event.pull_request.head.repo.full_name == 'summa-dev/summa-solvency'
     runs-on: [summa-solvency-runner]
     needs: [wakeup]
 
@@ -71,4 +73,56 @@ jobs:
         run: |
           cd backend
           cargo run --release --example summa_solvency_flow
-  
+
+  test-zk-prover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Test Zk Prover
+        run: |
+          cd zk_prover
+          cargo test --release --features dev-graph -- --nocapture
+
+  test-zk-prover-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install solc
+        run: (hash svm 2>/dev/null || cargo install --version 0.2.23 svm-rs) && svm install 0.8.20 && solc --version
+      - name: Test Zk Prover examples
+        run: |
+          cd zk_prover
+          cargo run --release --example gen_inclusion_verifier
+          cargo run --release --example gen_commitment
+          cargo run --release --example gen_inclusion_proof
+
+  test-zk-prover-examples-nova:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Test Zk Prover examples
+        run: |
+          cd zk_prover
+          cargo run --release --example nova_incremental_verifier
+
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      - name: Test backend
+        run: |
+          cd backend
+          cargo test --release -- --nocapture
+
+  test-backend-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      - name: Test backend example
+        run: |
+          cd backend
+          cargo run --release --example summa_solvency_flow

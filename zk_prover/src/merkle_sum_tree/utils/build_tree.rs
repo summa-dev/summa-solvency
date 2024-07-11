@@ -5,48 +5,25 @@ use rayon::prelude::*;
 pub fn build_merkle_tree_from_leaves<const N_CURRENCIES: usize>(
     leaves: &[Node<N_CURRENCIES>],
     depth: usize,
-    nodes: &mut Vec<Vec<Node<N_CURRENCIES>>>,
-) -> Result<Node<N_CURRENCIES>, Box<dyn std::error::Error>>
+) -> Result<(Node<N_CURRENCIES>, Vec<Vec<Node<N_CURRENCIES>>>), Box<dyn std::error::Error>>
 where
     [usize; N_CURRENCIES + 1]: Sized,
     [usize; N_CURRENCIES + 2]: Sized,
 {
-    let n = leaves.len();
-
     let mut tree: Vec<Vec<Node<N_CURRENCIES>>> = Vec::with_capacity(depth + 1);
 
-    tree.push(vec![
-        Node {
-            hash: Fp::from(0),
-            balances: [Fp::from(0); N_CURRENCIES]
-        };
-        n
-    ]);
+    // the size of a leaf layer must be a power of 2
+    // if not, the `leaves` Vec should be completed with "zero entries" until a power of 2
+    assert_eq!(leaves.len(), 2usize.pow(depth as u32));
 
-    for _ in 1..=depth {
-        let previous_level = tree.last().unwrap();
-        let nodes_in_level = (previous_level.len() + 1) / 2;
-
-        tree.push(vec![
-            Node {
-                hash: Fp::from(0),
-                balances: [Fp::from(0); N_CURRENCIES]
-            };
-            nodes_in_level
-        ]);
-    }
-
-    for (index, leaf) in leaves.iter().enumerate() {
-        tree[0][index] = leaf.clone();
-    }
+    tree.push(leaves.to_vec());
 
     for level in 1..=depth {
         build_middle_level(level, &mut tree)
     }
 
     let root = tree[depth][0].clone();
-    *nodes = tree;
-    Ok(root)
+    Ok((root, tree))
 }
 
 pub fn build_leaves_from_entries<const N_CURRENCIES: usize>(
@@ -74,8 +51,10 @@ where
     leaves
 }
 
-fn build_middle_level<const N_CURRENCIES: usize>(level: usize, tree: &mut [Vec<Node<N_CURRENCIES>>])
-where
+fn build_middle_level<const N_CURRENCIES: usize>(
+    level: usize,
+    tree: &mut Vec<Vec<Node<N_CURRENCIES>>>,
+) where
     [usize; N_CURRENCIES + 2]: Sized,
 {
     let results: Vec<Node<N_CURRENCIES>> = (0..tree[level - 1].len())
@@ -95,7 +74,5 @@ where
         })
         .collect();
 
-    for (index, new_node) in results.into_iter().enumerate() {
-        tree[level][index] = new_node;
-    }
+    tree.push(results);
 }
