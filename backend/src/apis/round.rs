@@ -1,42 +1,36 @@
-use ethers::types::{Bytes, U256};
-use halo2_proofs::{
-    arithmetic::{best_fft, Field},
-    halo2curves::{
-        bn256::{Bn256, Fr as Fp, G1Affine, G2Affine},
-        group::{cofactor::CofactorCurveAffine, Curve},
+use plonkish_backend::{
+    backend::hyperplonk::{HyperPlonkProverParam, HyperPlonkVerifierParam},
+    halo2_curves::bn256::{Bn256, Fr as Fp},
+    pcs::{multilinear::MultilinearKzg, Evaluation, PolynomialCommitmentScheme},
+    poly::multilinear::MultilinearPolynomial,
+    util::{
+        transcript::{FieldTranscriptWrite, InMemoryTranscript, Keccak256Transcript},
+        Itertools,
     },
-    plonk::{AdviceSingle, VerifyingKey},
-    poly::{
-        kzg::commitment::{KZGCommitmentScheme, ParamsKZG},
-        Coeff,
-    },
-    transcript::TranscriptRead,
 };
-use halo2_solidity_verifier::Keccak256Transcript;
+
 use serde::{Deserialize, Serialize};
 use std::error::Error;
+use summa_hyperplonk::utils::uni_to_multivar_binary_index;
 
-use crate::contracts::signer::SummaSigner;
-use summa_solvency::utils::amortized_kzg::{create_naive_kzg_proof, verify_kzg_proof};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct KZGProof {
-    proof_calldata: Bytes,
-    input_values: Vec<U256>,
-    challenge_s_g2: Option<Vec<U256>>,
+    proof: Vec<u8>,
+    input_values: Vec<Fp>,
+    challenge: Option<Vec<Fp>>,
 }
 
 impl KZGProof {
-    pub fn get_input_values(&self) -> &Vec<U256> {
+    pub fn get_input_values(&self) -> &Vec<Fp> {
         &self.input_values
     }
 
-    pub fn get_proof(&self) -> &Bytes {
-        &self.proof_calldata
+    pub fn get_proof(&self) -> &Vec<u8> {
+        &self.proof
     }
 
-    pub fn get_challenge(&self) -> &Option<Vec<U256>> {
-        &self.challenge_s_g2
+    pub fn get_challenge(&self) -> &Option<Vec<Fp>> {
+        &self.challenge
     }
 }
 
@@ -54,35 +48,31 @@ impl KZGProof {
 /// * `timestamp`: A Unix timestamp marking the initiation of this round. It serves as a temporal reference point
 ///   for the operations carried out in this phase of the protocol.
 /// * `snapshot`: A `Snapshot` struct capturing the round's state, including user identities and balances.
-/// * `signer`: A reference to a `SummaSigner`, the entity responsible for signing transactions with the Summa contract in this round.
 ///
-pub struct Round<'a, const N_CURRENCIES: usize, const N_USERS: usize> {
+pub struct Round<const N_CURRENCIES: usize, const N_USERS: usize> {
     timestamp: u64,
     snapshot: Snapshot<N_CURRENCIES, N_USERS>,
-    signer: &'a SummaSigner,
 }
 
-impl<const N_CURRENCIES: usize, const N_USERS: usize> Round<'_, N_CURRENCIES, N_USERS>
+impl<const N_CURRENCIES: usize, const N_USERS: usize> Round<N_CURRENCIES, N_USERS>
 where
     [usize; N_CURRENCIES + 1]: Sized,
 {
     pub fn new(
-        signer: &SummaSigner,
         zk_snark_proof: Vec<u8>,
-        advice_polys: AdviceSingle<G1Affine, Coeff>,
-        params: ParamsKZG<Bn256>,
-        verifying_key: VerifyingKey<G1Affine>,
+        advice_polys: Vec<MultilinearPolynomial<Fp>>,
+        prover_params: HyperPlonkProverParam<Fp, MultilinearKzg<Bn256>>,
+        verifier_params: HyperPlonkVerifierParam<Fp, MultilinearKzg<Bn256>>,
         timestamp: u64,
-    ) -> Round<'_, N_CURRENCIES, N_USERS> {
+    ) -> Round<N_CURRENCIES, N_USERS> {
         Round {
             timestamp,
             snapshot: Snapshot::<N_CURRENCIES, N_USERS>::new(
                 zk_snark_proof,
                 advice_polys,
-                params,
-                verifying_key,
+                prover_params,
+                verifier_params,
             ),
-            signer,
         }
     }
 
@@ -90,16 +80,15 @@ where
         self.timestamp
     }
 
-    pub async fn dispatch_commitment(&mut self) -> Result<(), Box<dyn Error>> {
+    /// This method returns the commitment proof and verification parameters for verifying proofs.
+    /// Both the commitment and verification parameters should be posted publicly.
+    #[allow(clippy::complexity)]
+    pub fn gen_commitment_and_vp(
+        &mut self,
+    ) -> Result<(KZGProof, HyperPlonkVerifierParam<Fp, MultilinearKzg<Bn256>>), Box<dyn Error>>
+    {
         let grand_sum_proof = self.snapshot.generate_grand_sum_proof().unwrap();
-        let submit_tx = self.signer.submit_commitment(
-            Bytes::from(self.snapshot.zk_snark_proof.clone()),
-            grand_sum_proof.proof_calldata,
-            grand_sum_proof.input_values,
-            self.timestamp.into(),
-        );
-
-        submit_tx.await
+        Ok((grand_sum_proof, self.snapshot.verifier_params.clone()))
     }
 
     pub fn get_proof_of_inclusion(&self, user_index: usize) -> Result<KZGProof, &'static str> {
@@ -111,16 +100,16 @@ where
 ///
 /// # Fields
 ///
-/// * `zk_snark_proof`: The zk-SNARK proof for the round, which is used to verify the validity of the round's commitments.
+/// * `zk_snark_proof`: The zk-SNARK proof for the round, which is used to verify the validity of the round's commitment.
 /// * `advice_polys`: Composed of the unblinded advice polynomial, `advice_poly`, and the polynomials of blind factors, `advice_blind`.
-/// * `params`: The parameters for the KZG commitment scheme.
-/// * `verifying_key`: The verifying key for getting domains, which is used for generating inclusion proofs.
+/// * `prover_params`: The parameters for generating KZG proofs, which are commitment and inclusions.
+/// * `verifier_params`: The verifying params for verifying inclusion proofs.
 ///
 pub struct Snapshot<const N_CURRENCIES: usize, const N_USERS: usize> {
     zk_snark_proof: Vec<u8>,
-    advice_polys: AdviceSingle<G1Affine, Coeff>,
-    params: ParamsKZG<Bn256>,
-    verifying_key: VerifyingKey<G1Affine>,
+    advice_polys: Vec<MultilinearPolynomial<Fp>>,
+    prover_params: HyperPlonkProverParam<Fp, MultilinearKzg<Bn256>>,
+    verifier_params: HyperPlonkVerifierParam<Fp, MultilinearKzg<Bn256>>,
 }
 
 impl<const N_CURRENCIES: usize, const N_USERS: usize> Snapshot<N_CURRENCIES, N_USERS>
@@ -129,121 +118,85 @@ where
 {
     pub fn new(
         zk_snark_proof: Vec<u8>,
-        advice_polys: AdviceSingle<G1Affine, Coeff>,
-        params: ParamsKZG<Bn256>,
-        verifying_key: VerifyingKey<G1Affine>,
+        advice_polys: Vec<MultilinearPolynomial<Fp>>,
+        prover_params: HyperPlonkProverParam<Fp, MultilinearKzg<Bn256>>,
+        verifier_params: HyperPlonkVerifierParam<Fp, MultilinearKzg<Bn256>>,
     ) -> Self {
         Snapshot {
             zk_snark_proof,
             advice_polys,
-            params,
-            verifying_key,
+            prover_params,
+            verifier_params,
         }
     }
 
     pub fn generate_grand_sum_proof(&self) -> Result<KZGProof, &'static str> {
-        let challenge = Fp::zero();
-        let (proof_calldata, input_values) = self.generate_kzg_proof(None, challenge).unwrap();
+        let mut input_values = vec![Fp::zero(); N_CURRENCIES + 1];
+
+        // First input values as instance would be zero like Summa V2
+        for i in 1..N_CURRENCIES + 1 {
+            let poly = self.advice_polys.get(i).unwrap();
+            input_values[i] = poly.evals().iter().fold(Fp::zero(), |acc, x| acc + x);
+        }
 
         Ok(KZGProof {
-            proof_calldata,
+            proof: self.zk_snark_proof.clone(),
             input_values,
-            challenge_s_g2: None,
+            challenge: None,
         })
     }
 
     pub fn generate_proof_of_inclusion(&self, user_index: usize) -> Result<KZGProof, &'static str> {
-        let omega = self.verifying_key.get_domain().get_omega();
-        let challenge = omega.pow_vartime([user_index as u64]);
-        let (proof_calldata, input_values) = self
-            .generate_kzg_proof(Some(user_index), challenge)
-            .unwrap();
+        let num_vars = self.prover_params.pcs.num_vars();
+        let multivariate_challenge: Vec<Fp> = uni_to_multivar_binary_index(&user_index, num_vars);
 
-        // Prepare S_G2 points with the challenge for proof verification on the KZG Solidity verifier.
-        let s_g2 = -self.params.s_g2() + (G2Affine::generator() * challenge);
-        let s_g2_affine = s_g2.to_affine();
+        let mut kzg_transcript = Keccak256Transcript::new(());
 
-        let s_g2_point = vec![
-            U256::from_little_endian(s_g2_affine.x.c1.to_bytes().as_slice()),
-            U256::from_little_endian(s_g2_affine.x.c0.to_bytes().as_slice()),
-            U256::from_little_endian(s_g2_affine.y.c1.to_bytes().as_slice()),
-            U256::from_little_endian(s_g2_affine.y.c0.to_bytes().as_slice()),
-        ];
+        let mut transcript = Keccak256Transcript::from_proof((), self.zk_snark_proof.as_slice());
+
+        let num_points = N_CURRENCIES + 1;
+        let user_entry_commitments = MultilinearKzg::<Bn256>::read_commitments(
+            &self.verifier_params.pcs,
+            num_points,
+            &mut transcript,
+        )
+        .unwrap();
+
+        let user_entry_polynomials = self
+            .advice_polys
+            .iter()
+            .take(num_points)
+            .collect::<Vec<_>>();
+
+        for binary_var in multivariate_challenge.iter() {
+            kzg_transcript.write_field_element(binary_var).unwrap();
+        }
+
+        let evals = user_entry_polynomials
+            .iter()
+            .enumerate()
+            .map(|(poly_idx, poly)| {
+                Evaluation::new(poly_idx, 0, poly.evaluate(&multivariate_challenge))
+            })
+            .collect_vec();
+
+        MultilinearKzg::<Bn256>::batch_open(
+            &self.prover_params.pcs,
+            user_entry_polynomials,
+            &user_entry_commitments,
+            &[multivariate_challenge.clone()],
+            &evals,
+            &mut kzg_transcript,
+        )
+        .unwrap();
+
+        let proof = kzg_transcript.into_proof();
+        let input_values = evals.iter().map(|eval| *eval.value()).collect::<Vec<Fp>>();
 
         Ok(KZGProof {
-            proof_calldata,
+            proof,
             input_values,
-            challenge_s_g2: Some(s_g2_point),
+            challenge: Some(multivariate_challenge),
         })
-    }
-
-    fn generate_kzg_proof(
-        &self,
-        user_index: Option<usize>,
-        challenge: Fp,
-    ) -> Result<(Bytes, Vec<U256>), &'static str> {
-        let domain = self.verifying_key.get_domain();
-        let omega = domain.get_omega();
-
-        let mut opening_proofs = Vec::new();
-        let mut input_values = Vec::new();
-
-        // Evaluate the commitments from the SNARK proof
-        let mut kzg_commitments = Vec::with_capacity(N_CURRENCIES);
-        let mut transcript = Keccak256Transcript::new(self.zk_snark_proof.as_slice());
-        for _ in 0..(N_CURRENCIES + 1) {
-            let point: G1Affine = transcript.read_point().unwrap();
-            kzg_commitments.push(point);
-        }
-
-        // If the user index is None, assign 1 or else 0, for skipping the usename polynomial.
-        let start_index = user_index.map_or(1, |_| 0);
-
-        for column_index in start_index..N_CURRENCIES + 1 {
-            let f_poly = self.advice_polys.advice_polys.get(column_index).unwrap();
-
-            // Perform iDFT to obtain the actual value that is encoded in the polynomial.
-            let mut vec_f_poly = f_poly.to_vec();
-            best_fft(&mut vec_f_poly, omega, f_poly.len().trailing_zeros());
-
-            let z = if let Some(user_index) = user_index {
-                let _z = vec_f_poly[user_index];
-                input_values.push(U256::from_little_endian(&_z.to_bytes()));
-                _z
-            } else {
-                let total_balance: Fp = vec_f_poly.iter().sum();
-                input_values.push(U256::from_little_endian(&total_balance.to_bytes()));
-                total_balance * Fp::from(f_poly.len() as u64).invert().unwrap()
-            };
-
-            let kzg_proof = create_naive_kzg_proof::<KZGCommitmentScheme<Bn256>>(
-                &self.params,
-                domain,
-                f_poly,
-                challenge,
-                z,
-            );
-
-            if !verify_kzg_proof(
-                &self.params,
-                kzg_commitments[column_index].to_curve(),
-                kzg_proof,
-                &challenge,
-                &z,
-            ) {
-                return Err("KZG proof verification failed");
-            }
-
-            // Convert the KZG proof to an affine point and serialize it to bytes.
-            let kzg_proof_affine = kzg_proof.to_affine();
-            let mut kzg_proof_affine_x = kzg_proof_affine.x.to_bytes();
-            let mut kzg_proof_affine_y = kzg_proof_affine.y.to_bytes();
-            kzg_proof_affine_x.reverse();
-            kzg_proof_affine_y.reverse();
-
-            opening_proofs.push([kzg_proof_affine_x, kzg_proof_affine_y].concat());
-        }
-
-        Ok((Bytes::from(opening_proofs.concat()), input_values))
     }
 }
