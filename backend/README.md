@@ -18,13 +18,32 @@ Key Features:
 
 ## Prerequisites
 
-Before testing or running the Summa backend, you must download the ptau file, which contains the Powers of Tau trusted setup parameters essential for building the ZK circuits. Specifically, the `hermez-raw-hyperplonk-17` file is required for the [Summa flow](./examples/summa_solvency_flow.rs) example and its associated test case.
+Before testing or running the Summa backend, you must download the ptau file, which contains the Powers of Tau trusted setup parameters essential for building the Summa circuits. Specifically, the `hyperplonk-srs-17` file is required for the [Summa flow](./examples/summa_solvency_flow.rs) example and its associated test case.
 
-You can find this and other necessary files at https://github.com/sifnoc/halo2-kzg-srs. To download `hermez-raw-hyperplonk-17`, use the following command:
+You can generate this through `hyperplonk-srs-generator` in [summa-dev/plonkish](https://github.com/summa-dev/plonkish). Also, It can be downloaded `hyperplonk-srs-17`, use the following command:
 
+```bash
+wget https://summa-solvency.s3.eu-central-1.amazonaws.com/trusted-setup-hyperplonk2kzg/hyperplonk-srs-17
 ```
-wget https://trusted-setup-halo2kzg.s3.eu-central-1.amazonaws.com/hermez-raw-plonkish-17
-```
+
+<details>
+<summary>Additional hermez files are available here</summary>
+
+| Curve   | Source  | K    | File in raw format                                                                                                   |
+| ------- | ------- | ---- | -------------------------------------------------------------------------------------------------------------------- |
+| `bn254` | `hermez`| `17` | [hyperplonk-srs-17](https://summa-solvency.s3.eu-central-1.amazonaws.com/trusted-setup-hyperplonk2kzg/hyperplonk-srs-17)           |
+| `bn254` | `hermez`| `18` | [hyperplonk-srs-18](https://summa-solvency.s3.eu-central-1.amazonaws.com/trusted-setup-hyperplonk2kzg/hyperplonk-srs-18)           |
+| `bn254` | `hermez`| `19` | [hyperplonk-srs-19](https://summa-solvency.s3.eu-central-1.amazonaws.com/trusted-setup-hyperplonk2kzg/hyperplonk-srs-19)           |
+| `bn254` | `hermez`| `20` | [hyperplonk-srs-20](https://summa-solvency.s3.eu-central-1.amazonaws.com/trusted-setup-hyperplonk2kzg/hyperplonk-srs-20)           |
+| `bn254` | `hermez`| `21` | [hyperplonk-srs-21](https://summa-solvency.s3.eu-central-1.amazonaws.com/trusted-setup-hyperplonk2kzg/hyperplonk-srs-21)           |
+| `bn254` | `hermez`| `22` | [hyperplonk-srs-22](https://summa-solvency.s3.eu-central-1.amazonaws.com/trusted-setup-hyperplonk2kzg/hyperplonk-srs-22)           |
+| `bn254` | `hermez`| `23` | [hyperplonk-srs-23](https://summa-solvency.s3.eu-central-1.amazonaws.com/trusted-setup-hyperplonk2kzg/hyperplonk-srs-23)           |
+| `bn254` | `hermez`| `24` | [hyperplonk-srs-24](https://summa-solvency.s3.eu-central-1.amazonaws.com/trusted-setup-hyperplonk2kzg/hyperplonk-srs-24)           |
+| `bn254` | `hermez`| `25` | [hyperplonk-srs-25](https://summa-solvency.s3.eu-central-1.amazonaws.com/trusted-setup-hyperplonk2kzg/hyperplonk-srs-25)           |
+
+Note that these files are generated for testing purposes only. They are created temporarily and are not produced through a formal ceremony process.
+
+</details><br>
 
 Ensure this file is downloaded before proceeding with the example or test case.
 
@@ -32,7 +51,7 @@ Ensure this file is downloaded before proceeding with the example or test case.
 
 To build the binary executable and test it, use the following commands:
 
-```
+```bash
 cargo build
 cargo test --release -- --nocapture
 ```
@@ -43,7 +62,7 @@ This example illustrates how Summa can generate commitment proofs and verifier p
 
 To execute this example, use the command:
 
-```
+```bash
 cargo run --release --example summa_solvency_flow
 ```
 
@@ -56,14 +75,14 @@ Without the CEX publishing the commitment, users cannot verify their inclusion p
 In this step, we'll guide you through the process of generating a commitment using the `Round` component.
 The `Round` serves as the core of the backend in Summa, and we have briefly described it in the Components section.
 
-To initialize the `Round` instance, you'll need the paths to the liabilities CSV file (`entry_16.csv`) and the `ptau/hermez-raw-plonkish-17` file. These files serve the following purposes:
+To initialize the `Round` instance, you'll need the paths to the liabilities CSV file (`entry_16.csv`) and the SRS (`hyperplonk-srs-17`) file. These files serve the following purposes:
 
 - `entry_16.csv`: contains the username and liabilities entries for each CEX user (necessary to build the commitment). Liabilities column names have the following format: `balance_<CRYPTOCURRENCY>_<CHAIN>`, where <CRYPTOCURRENCY> and <CHAIN> are the names of the cryptocurrencies and their corresponding blockchains.
-- `ptau/hermez-raw-plonkish-17`: contains parameters for constructing the zk circuits.
+- `ptau/hyperplonk-srs-17`: contains parameters for constructing the zk circuits.
 
 If this step runs successfully, you will see the following message:
 
-```
+```bash
 1. Commitment and Verifier Parameters successfully Exported!
 ```
 
@@ -75,7 +94,7 @@ After generating the inclusion proof, it is transformed into a JSON format for e
 
 Upon successful execution, you'll find a file named `user_0_proof.json` and see the following message:
 
-```
+```bash
 2. Exported proof to user #0, as `user_0_proof.json`, with verifier params `verifier_params.json`
 ```
 
@@ -94,6 +113,6 @@ In this step, the user has to:
 
 The result will be displayed as:
 
-```
+```bash
 3. Verified the proof with veirifer parameters for User #0: true
 ```

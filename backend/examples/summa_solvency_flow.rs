@@ -55,7 +55,7 @@ fn main() {
     let (circuit_info, circuit) = circuit_fn(num_vars as usize);
     let instances = circuit.instances();
 
-    let param = ProvingBackend::setup_custom("../backend/ptau/hermez-raw-plonkish-17").unwrap();
+    let param = ProvingBackend::setup_custom("../backend/ptau/hyperplonk-srs-17").unwrap();
     let (pp, vp) = ProvingBackend::preprocess(&param, &circuit_info).unwrap();
 
     let (advice_polys, proof_transcript) = {

@@ -4,8 +4,8 @@ A monorepo for Summa, zk proof of solvency protocol
 
 ### Subdirectories
 
-- `prover`: Halo2 based zk prover and KZG polynomial interpolation for Summa
-- `backend` : Rust API to interact with Summa
+- `prover`: HyperPlonk based ZK prover and Multilinear KZG for Summa
+- `backend` : Rust API to interact with Summa prover and verifier
 
 ## License
 

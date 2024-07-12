@@ -22,7 +22,7 @@ mod test {
     const K: u32 = 17;
     const N_CURRENCIES: usize = 2;
     const N_USERS: usize = 16;
-    const PARAMS_PATH: &str = "../backend/ptau/hermez-raw-plonkish-17";
+    const PARAMS_PATH: &str = "../backend/ptau/hyperplonk-srs-17";
 
     #[test]
     fn test_round_features() {
