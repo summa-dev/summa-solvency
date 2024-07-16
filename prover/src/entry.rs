@@ -1,17 +1,17 @@
 use num_bigint::BigUint;
 
-use crate::utils::big_intify_username;
+use crate::utils::{big_intify_username, calculate_shift_bits};
 
 /// An entry in the Merkle Sum Tree from the database of the CEX.
 /// It contains the username and the balances of the user.
 #[derive(Clone, Debug)]
-pub struct Entry<const N_CURRENCIES: usize> {
+pub struct Entry<const N_USERS: usize, const N_CURRENCIES: usize> {
     username_as_big_uint: BigUint,
     balances: [BigUint; N_CURRENCIES],
     username: String,
 }
 
-impl<const N_CURRENCIES: usize> Entry<N_CURRENCIES> {
+impl<const N_USERS: usize, const N_CURRENCIES: usize> Entry<N_USERS, N_CURRENCIES> {
     pub fn new(username: String, balances: [BigUint; N_CURRENCIES]) -> Result<Self, &'static str> {
         Ok(Entry {
             username_as_big_uint: big_intify_username(&username),
@@ -34,16 +34,17 @@ impl<const N_CURRENCIES: usize> Entry<N_CURRENCIES> {
         &self.balances
     }
 
-    pub fn concatenated_balance(&self) -> BigUint {
+    pub fn concatenated_balance(&self) -> Result<BigUint, String> {
+        let shift_bits = calculate_shift_bits::<N_USERS, N_CURRENCIES>().unwrap();
+
         let mut concatenated_balance = BigUint::from(0u32);
 
-        // To arragne the balances in the correct order, we need to reverse the array
+        // Reverse the array to correctly order the balances
         for (i, balance) in self.balances.iter().rev().enumerate() {
-            // Shift bits: 1 for buffer; 19 is highest bit for two power of userbase; 64 is for the maximum range check limit
-            concatenated_balance += balance << ((1 + 19 + 64) * i);
+            concatenated_balance += balance << (shift_bits * i);
         }
 
-        concatenated_balance
+        Ok(concatenated_balance)
     }
 
     pub fn username_as_big_uint(&self) -> &BigUint {

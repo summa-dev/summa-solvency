@@ -36,7 +36,7 @@ pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone 
     fn synthesize(
         &self,
         mut layouter: impl Layouter<Fp>,
-        entries: &[Entry<N_CURRENCIES>],
+        entries: &[Entry<N_USERS, N_CURRENCIES>],
         concatenated_grand_total: &Fp,
     ) -> Result<(), Error> {
         // Initiate the range check chips
@@ -58,7 +58,11 @@ pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone 
                             || "concatenated balance",
                             self.get_concatenated_balance(),
                             0,
-                            || Value::known(big_uint_to_fp::<Fp>(&entry.concatenated_balance())),
+                            || {
+                                Value::known(big_uint_to_fp::<Fp>(
+                                    &entry.concatenated_balance().unwrap(),
+                                ))
+                            },
                         )?;
 
                         // Decompose the balances
