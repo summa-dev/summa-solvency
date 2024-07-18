@@ -111,17 +111,13 @@ impl<
 
             let mut current_shift = Expression::Constant(base_shift);
 
-            // The number of currencies is limited to 3 because the range check bits are 64 for each currency.
+            // The number of currencies is limited 1 or 3 because the range check chip logic.
             // In other words, more than 3 currencies would exceed the maximum bit count of 254, which is number of bits in Bn254.
             match N_CURRENCIES {
                 1 => {
                     // No need to add any shift for the only balance
-                }
-                2 => {
-                    let balance = meta.query_advice(balances[0], Rotation::cur());
-                    let shifted_balance = balance * current_shift.clone();
-                    balances_expr = balances_expr + shifted_balance;
-                }
+                    println!("For a better performance for single currency, check out V3c. More details at: https://github.com/summa-dev/summa-solvency/tree/v3c");
+                },
                 3 => {
                     for i in (0..N_CURRENCIES - 1).rev() {
                         let balance = meta.query_advice(balances[i], Rotation::cur());
@@ -134,7 +130,7 @@ impl<
                     }
                 }
                 _ => panic!(
-                    "Unsupported number of currencies, Only 1, 2, and 3 currencies are supported"
+                    "Unsupported number of currencies, Only 1 and 3 currencies are supported"
                 ),
             }
 

@@ -43,61 +43,56 @@ pub trait CircuitConfig<const N_CURRENCIES: usize, const N_USERS: usize>: Clone 
         let range_check_chips = self.initialize_range_check_chips();
 
         for (i, entry) in entries.iter().enumerate() {
-            let last_decompositions: Vec<halo2_proofs::circuit::AssignedCell<Fp, Fp>> = layouter
-                .assign_region(
-                    || format!("assign entry {} to the table", i),
-                    |mut region| {
-                        region.assign_advice(
-                            || "username",
-                            self.get_username(),
+            let last_decompositions = layouter.assign_region(
+                || format!("assign entry {} to the table", i),
+                |mut region| {
+                    region.assign_advice(
+                        || "username",
+                        self.get_username(),
+                        0,
+                        || Value::known(big_uint_to_fp::<Fp>(entry.username_as_big_uint())),
+                    )?;
+
+                    region.assign_advice(
+                        || "concatenated balance",
+                        self.get_concatenated_balance(),
+                        0,
+                        || {
+                            Value::known(big_uint_to_fp::<Fp>(
+                                &entry.concatenated_balance().unwrap(),
+                            ))
+                        },
+                    )?;
+
+                    // Decompose the balances
+                    let mut assigned_balances = Vec::new();
+
+                    for (j, balance) in entry.balances().iter().enumerate() {
+                        let assigned_balance = region.assign_advice(
+                            || format!("balance {}", j),
+                            self.get_balances()[j],
                             0,
-                            || Value::known(big_uint_to_fp::<Fp>(entry.username_as_big_uint())),
+                            || Value::known(big_uint_to_fp(balance)),
                         )?;
 
-                        region.assign_advice(
-                            || "concatenated balance",
-                            self.get_concatenated_balance(),
-                            0,
-                            || {
-                                Value::known(big_uint_to_fp::<Fp>(
-                                    &entry.concatenated_balance().unwrap(),
-                                ))
-                            },
-                        )?;
+                        assigned_balances.push(assigned_balance);
+                    }
 
-                        // Decompose the balances
-                        let mut assigned_balances = Vec::new();
+                    let mut last_decompositions = vec![];
 
-                        for (j, balance) in entry.balances().iter().enumerate() {
-                            let assigned_balance = region.assign_advice(
-                                || format!("balance {}", j),
-                                self.get_balances()[j],
-                                0,
-                                || Value::known(big_uint_to_fp(balance)),
-                            )?;
+                    for (j, assigned_balance) in assigned_balances.iter().enumerate() {
+                        let mut zs = Vec::with_capacity(4);
 
-                            assigned_balances.push(assigned_balance);
+                        if !range_check_chips.is_empty() {
+                            range_check_chips[j].assign(&mut region, &mut zs, assigned_balance)?;
+
+                            last_decompositions.push(zs[3].clone());
                         }
+                    }
 
-                        let mut last_decompositions = vec![];
-
-                        for (j, assigned_balance) in assigned_balances.iter().enumerate() {
-                            let mut zs = Vec::with_capacity(4);
-
-                            if !range_check_chips.is_empty() {
-                                range_check_chips[j].assign(
-                                    &mut region,
-                                    &mut zs,
-                                    assigned_balance,
-                                )?;
-
-                                last_decompositions.push(zs[3].clone());
-                            }
-                        }
-
-                        Ok(last_decompositions)
-                    },
-                )?;
+                    Ok(last_decompositions)
+                },
+            )?;
 
             self.constrain_decompositions(last_decompositions, &mut layouter)?;
         }
