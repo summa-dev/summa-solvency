@@ -2,7 +2,7 @@ use crate::chips::range::utils::decompose_fp_to_byte_pairs;
 use halo2_proofs::arithmetic::Field;
 use halo2_proofs::circuit::{AssignedCell, Region, Value};
 use halo2_proofs::halo2curves::bn256::Fr as Fp;
-use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed};
+use halo2_proofs::plonk::{Advice, Column, ConstraintSystem, Error, Expression, Fixed, Selector};
 use halo2_proofs::poly::Rotation;
 use std::fmt::Debug;
 
@@ -27,8 +27,7 @@ use std::fmt::Debug;
 /// # Fields
 ///
 /// * `zs`: Four advice columns - contain the truncated right-shifted values of the element to be checked
-/// * `z0`: An advice column - for storing the zero value from the instance column
-/// * `instance`: An instance column - zero value provided to the circuit
+/// * `selector`: Selector used to enable the range check
 ///
 /// # Assumptions
 ///
@@ -36,8 +35,9 @@ use std::fmt::Debug;
 ///
 /// Patterned after [halo2_gadgets](https://github.com/privacy-scaling-explorations/halo2/blob/main/halo2_gadgets/src/utilities/decompose_running_sum.rs)
 #[derive(Debug, Copy, Clone)]
-pub struct RangeCheckU64Config {
+pub struct RangeCheckChipConfig {
     zs: [Column<Advice>; 4],
+    selector: Selector,
 }
 
 /// Helper chip that verifies that the element witnessed in a given cell lies within the u64 range.
@@ -72,22 +72,23 @@ pub struct RangeCheckU64Config {
 /// zs[3] == z0
 #[derive(Debug, Clone)]
 pub struct RangeCheckU64Chip {
-    config: RangeCheckU64Config,
+    config: RangeCheckChipConfig,
 }
 
 impl RangeCheckU64Chip {
-    pub fn construct(config: RangeCheckU64Config) -> Self {
+    pub fn construct(config: RangeCheckChipConfig) -> Self {
         Self { config }
     }
 
     /// Configures the Range Chip
-    /// Note: the lookup table should be loaded with values from `0` to `2^16 - 1` otherwise the range check will fail.
+    /// Note: the lookup table should be loaded with values from `0` to `2^16 - 1`, otherwise the range check will fail.
     pub fn configure(
         meta: &mut ConstraintSystem<Fp>,
         z: Column<Advice>,
         zs: [Column<Advice>; 4],
         range_u16: Column<Fixed>,
-    ) -> RangeCheckU64Config {
+        range_check_enabled: Selector,
+    ) -> RangeCheckChipConfig {
         // Constraint that the difference between the element to be checked and the 0-th truncated right-shifted value of the element to be within the range.
         // z - 2^16⋅zs[0] = ks[0] ∈ range_u16
         meta.lookup_any(
@@ -99,7 +100,9 @@ impl RangeCheckU64Chip {
 
                 let range_u16 = meta.query_fixed(range_u16, Rotation::cur());
 
-                let diff = element - zero_truncation * Expression::Constant(Fp::from(1 << 16));
+                let s = meta.query_selector(range_check_enabled);
+
+                let diff = s * (element - zero_truncation * Expression::Constant(Fp::from(1 << 16)));
 
                 vec![(diff, range_u16)]
             },
@@ -123,7 +126,10 @@ impl RangeCheckU64Chip {
             );
         }
 
-        RangeCheckU64Config { zs }
+        RangeCheckChipConfig {
+            zs,
+            selector: range_check_enabled,
+        }
     }
 
     /// Assign the truncated right-shifted values of the element to be checked to the corresponding columns zs at offset 0 starting from the element to be checked.
@@ -162,6 +168,8 @@ impl RangeCheckU64Chip {
             z = zs_next;
             zs.push(z.clone());
         }
+
+        self.config.selector.enable(region, 0)?;
 
         Ok(())
     }

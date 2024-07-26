@@ -1,7 +1,8 @@
 use halo2_proofs::arithmetic::Field;
+use plonkish_backend::Error::InvalidSnark;
 use plonkish_backend::{
     backend::{hyperplonk::HyperPlonk, PlonkishBackend, PlonkishCircuit},
-    frontend::halo2::Halo2Circuit,
+    frontend::halo2::{CircuitExt, Halo2Circuit},
     halo2_curves::bn256::{Bn256, Fr as Fp},
     pcs::{multilinear::MultilinearKzg, Evaluation, PolynomialCommitmentScheme},
     util::{
@@ -12,38 +13,54 @@ use plonkish_backend::{
     },
     Error::InvalidSumcheck,
 };
-
 use rand::{
     rngs::{OsRng, StdRng},
     CryptoRng, Rng, RngCore, SeedableRng,
 };
 
 use crate::{
-    circuits::summa_circuit::summa_hyperplonk::SummaHyperplonk,
+    circuits::{
+        config::{no_range_check_config::NoRangeCheckConfig, range_check_config::RangeCheckConfig},
+        summa_circuit::SummaHyperplonk,
+    },
     utils::{
         big_uint_to_fp, fp_to_big_uint, generate_dummy_entries, uni_to_multivar_binary_index,
         MultilinearAsUnivariate,
     },
 };
 const K: u32 = 17;
-const N_CURRENCIES: usize = 2;
-const N_USERS: usize = 1 << 16;
+const N_CURRENCIES: usize = 3;
+// One row is reserved for the grand total.
+const N_USERS: usize = (1 << K) - 2;
 
 pub fn seeded_std_rng() -> impl RngCore + CryptoRng {
     StdRng::seed_from_u64(OsRng.next_u64())
 }
 
 #[test]
-fn test_summa_hyperplonk() {
+fn test_summa_hyperplonk_e2e() {
     type ProvingBackend = HyperPlonk<MultilinearKzg<Bn256>>;
     let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
-    let circuit = SummaHyperplonk::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+
+    let halo2_circuit =
+        SummaHyperplonk::<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>::init(
+            entries.to_vec(),
+        );
+
+    let neg_grand_total = halo2_circuit.concatenated_grand_total.neg();
+
+    // We're putting the negated grand total at the end of each balance column,
+    // so the sumcheck over such balance column would yield zero (given the special gate,
+    // see the circuit).
+    assert!(neg_grand_total == halo2_circuit.instances()[0][1]);
+
     let num_vars = K;
 
     let circuit_fn = |num_vars| {
-        let circuit = Halo2Circuit::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES>>::new::<
-            ProvingBackend,
-        >(num_vars, circuit.clone());
+        let circuit = Halo2Circuit::<
+            Fp,
+            SummaHyperplonk<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>,
+        >::new::<ProvingBackend>(num_vars, halo2_circuit.clone());
         (circuit.circuit_info().unwrap(), circuit)
     };
 
@@ -67,8 +84,6 @@ fn test_summa_hyperplonk() {
         .unwrap();
         (witness_polys, proof_transcript)
     };
-
-    let num_points = N_CURRENCIES + 1;
 
     let proof = proof_transcript.into_proof();
 
@@ -150,7 +165,7 @@ fn test_summa_hyperplonk() {
     );
     assert_eq!(
         fp_to_big_uint(&witness_polys[1].evaluate_as_univariate(&random_user_index)),
-        entries[random_user_index].balances()[0]
+        entries[random_user_index].concatenated_balance().unwrap()
     );
 
     // Convert challenge into a multivariate form
@@ -160,6 +175,9 @@ fn test_summa_hyperplonk() {
     let mut kzg_transcript = Keccak256Transcript::new(());
 
     let mut transcript = Keccak256Transcript::from_proof((), proof.as_slice());
+
+    // Username and Concatenated balance
+    let num_points = 2;
 
     let user_entry_commitments = MultilinearKzg::<Bn256>::read_commitments(
         &verifier_parameters.pcs,
@@ -212,24 +230,18 @@ fn test_summa_hyperplonk() {
         multivariate_challenge.push(kzg_transcript.read_field_element().unwrap());
     }
 
-    //The user knows their evaluation at the challenge point
-    let evals: Vec<Evaluation<Fp>> = (0..N_CURRENCIES + 1)
-        .map(|i| {
-            if i == 0 {
-                Evaluation::new(
-                    i,
-                    0,
-                    big_uint_to_fp::<Fp>(entries[random_user_index].username_as_big_uint()),
-                )
-            } else {
-                Evaluation::new(
-                    i,
-                    0,
-                    big_uint_to_fp::<Fp>(&entries[random_user_index].balances()[i - 1]),
-                )
-            }
-        })
-        .collect();
+    let evals = vec![
+        Evaluation::new(
+            0,
+            0,
+            big_uint_to_fp::<Fp>(entries[random_user_index].username_as_big_uint()),
+        ),
+        Evaluation::new(
+            1,
+            0,
+            big_uint_to_fp::<Fp>(&entries[random_user_index].concatenated_balance().unwrap()),
+        ),
+    ];
 
     MultilinearKzg::<Bn256>::batch_verify(
         &verifier_parameters.pcs,
@@ -241,6 +253,71 @@ fn test_summa_hyperplonk() {
     .unwrap();
 }
 
+/// Test the sumcheck failure case
+/// The grand total is set to a random value, which will cause the sumcheck to fail
+/// because the sum of all valid balances is not equal to the negated random grand total
+#[test]
+fn test_sumcheck_fail() {
+    type ProvingBackend = HyperPlonk<MultilinearKzg<Bn256>>;
+    let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
+
+    let halo2_circuit = SummaHyperplonk::<
+        N_USERS,
+        N_CURRENCIES,
+        NoRangeCheckConfig<N_CURRENCIES, N_USERS>,
+    >::init_invalid_grand_total(entries.to_vec());
+
+    let num_vars = K;
+
+    let circuit_fn = |num_vars| {
+        let circuit = Halo2Circuit::<
+            Fp,
+            SummaHyperplonk<N_USERS, N_CURRENCIES, NoRangeCheckConfig<N_CURRENCIES, N_USERS>>,
+        >::new::<ProvingBackend>(num_vars, halo2_circuit.clone());
+        (circuit.circuit_info().unwrap(), circuit)
+    };
+
+    let (circuit_info, circuit) = circuit_fn(num_vars as usize);
+    let instances = circuit.instances();
+
+    let param = ProvingBackend::setup(&circuit_info, seeded_std_rng()).unwrap();
+
+    let (prover_parameters, verifier_parameters) =
+        ProvingBackend::preprocess(&param, &circuit_info).unwrap();
+
+    let (_, proof_transcript) = {
+        let mut proof_transcript = Keccak256Transcript::new(());
+
+        let witness_polys = ProvingBackend::prove(
+            &prover_parameters,
+            &circuit,
+            &mut proof_transcript,
+            seeded_std_rng(),
+        )
+        .unwrap();
+        (witness_polys, proof_transcript)
+    };
+
+    let proof = proof_transcript.into_proof();
+
+    let mut transcript;
+    let result: Result<(), plonkish_backend::Error> = {
+        transcript = Keccak256Transcript::from_proof((), proof.as_slice());
+        ProvingBackend::verify(
+            &verifier_parameters,
+            instances,
+            &mut transcript,
+            seeded_std_rng(),
+        )
+    };
+    assert_eq!(
+        result,
+        Err(InvalidSnark(
+            "Unmatched between sum_check output and query evaluation".to_string()
+        ))
+    );
+}
+
 #[cfg(feature = "dev-graph")]
 #[test]
 fn print_univariate_grand_sum_circuit() {
@@ -248,7 +325,10 @@ fn print_univariate_grand_sum_circuit() {
 
     let entries = generate_dummy_entries::<N_USERS, N_CURRENCIES>().unwrap();
 
-    let circuit = SummaHyperplonk::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
+    let circuit =
+        SummaHyperplonk::<N_USERS, N_CURRENCIES, RangeCheckConfig<N_CURRENCIES, N_USERS>>::init(
+            entries.to_vec(),
+        );
 
     let root =
         BitMapBackend::new("prints/summa-hyperplonk-layout.png", (2048, 32768)).into_drawing_area();
@@ -258,6 +338,6 @@ fn print_univariate_grand_sum_circuit() {
         .unwrap();
 
     halo2_proofs::dev::CircuitLayout::default()
-        .render::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES>, _, true>(K, &circuit, &root)
+        .render::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES,  RangeCheckConfig<N_CURRENCIES, N_USERS>>, _, true>(K, &circuit, &root)
         .unwrap();
 }

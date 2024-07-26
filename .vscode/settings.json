@@ -4,4 +4,5 @@
     "editor.formatOnSave": true,
     "editor.formatOnSaveMode": "file"
   },
+  "cSpell.words": ["hyperplonk", "plonkish", "layouter", "sumcheck"]
 }

@@ -59,3 +59,87 @@ pub fn uni_to_multivar_binary_index<F: Field + PrimeField>(x: &usize, num_vars: 
 
     result
 }
+
+pub fn calculate_shift_bits<const N_USERS: usize, const N_CURRENCIES: usize>(
+) -> Result<usize, String> {
+    // Define the maximum number of bits that can be used, based on the modulus in bn254.
+    const MAX_ALLOWANCE_BITS: usize = 253;
+
+    // Calculate the maximum number of bits that can be allocated to the user base,
+    // taking into account the number of currencies and the bits needed for the balances range check and buffer.
+    let maximum_allowance_user_base_bits = (MAX_ALLOWANCE_BITS / N_CURRENCIES) - 64 - 1;
+
+    // Determine the number of bits needed to represent the user base.
+    // For example, if `N_USERS` is 1025, the user base bit count would be 11.
+    let user_base_bits = N_USERS.next_power_of_two().ilog2() as usize;
+
+    if user_base_bits > maximum_allowance_user_base_bits {
+        return Err(format!(
+            "The bit count for the user base exceeds the maximum limit of {}",
+            maximum_allowance_user_base_bits
+        ));
+    }
+
+    // Define shift bits: 1 for buffer, bits for user base that not exceed 19, and 64 bits for the balances range check
+    let shift_bits: usize = (1 + user_base_bits + 64).try_into().unwrap();
+
+    Ok(shift_bits)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_shift_bits() {
+        {
+            // Practical Nnumber of users cases
+            const N_USERS: usize = 1 << 28;
+            const N_CURRENCIES: usize = 1;
+
+            let result = calculate_shift_bits::<N_USERS, N_CURRENCIES>();
+            assert_eq!(result.unwrap(), 93);
+            assert_eq!(93 * N_CURRENCIES < 253, true);
+        }
+        {
+            const N_USERS: usize = 1 << 28;
+            const N_CURRENCIES: usize = 2;
+
+            let result = calculate_shift_bits::<N_USERS, N_CURRENCIES>();
+            assert_eq!(result.unwrap(), 93);
+            assert_eq!(93 * N_CURRENCIES < 253, true);
+        }
+        {
+            // Maximum number of user when N_CURRENCIES = 3
+            const N_USERS: usize = 1 << 19;
+            const N_CURRENCIES: usize = 3;
+
+            let result = calculate_shift_bits::<N_USERS, N_CURRENCIES>();
+            assert_eq!(result.unwrap(), 84);
+            assert_eq!(84 * N_CURRENCIES < 253, true);
+        }
+        {
+            // Error case in N_CURRENCIES = 2 with infeasible N_USERS
+            const N_USERS: usize = 1 << 63;
+            const N_CURRENCIES: usize = 2;
+
+            let result = calculate_shift_bits::<N_USERS, N_CURRENCIES>();
+            assert!(result.is_err());
+            assert_eq!(
+                result.unwrap_err(),
+                "The bit count for the user base exceeds the maximum limit of 61"
+            );
+        }
+        {
+            const N_USERS: usize = 1 << 63;
+            const N_CURRENCIES: usize = 3;
+
+            let result = calculate_shift_bits::<N_USERS, N_CURRENCIES>();
+            assert!(result.is_err());
+            assert_eq!(
+                result.unwrap_err(),
+                "The bit count for the user base exceeds the maximum limit of 19"
+            );
+        }
+    }
+}
