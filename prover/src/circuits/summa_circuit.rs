@@ -112,6 +112,13 @@ pub mod summa_hyperplonk {
                 grand_total,
             }
         }
+
+        pub fn init_empty() -> Self {
+            Self {
+                entries: vec![Entry::init_empty(); N_USERS],
+                grand_total: vec![BigUint::from(0u64); N_CURRENCIES],
+            }
+        }
     }
 
     impl<const N_USERS: usize, const N_CURRENCIES: usize> Circuit<Fp>

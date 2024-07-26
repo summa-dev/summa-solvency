@@ -50,7 +50,7 @@ fn test_summa_hyperplonk() {
     let (circuit_info, circuit) = circuit_fn(num_vars as usize);
     let instances = circuit.instances();
 
-    let param = ProvingBackend::setup(&circuit_info, seeded_std_rng()).unwrap();
+    let param = ProvingBackend::setup_custom("../backend/ptau/hyperplonk-srs-17").unwrap();
 
     let (prover_parameters, verifier_parameters) =
         ProvingBackend::preprocess(&param, &circuit_info).unwrap();
@@ -102,7 +102,7 @@ fn test_summa_hyperplonk() {
             &verifier_parameters,
             &[invalid_grand_total_instances],
             &mut transcript,
-            seeded_std_rng(),
+            seeded_std_rng(), // This is not being used in the HyperPlonk implementation
         )
     };
     assert_eq!(
@@ -169,7 +169,7 @@ fn test_summa_hyperplonk() {
     .unwrap();
     let user_entry_polynomials = witness_polys.iter().take(num_points).collect::<Vec<_>>();
 
-    //Store the user index multi-variable in the transcript for the verifier
+    // Store the user index multi-variable in the transcript for the verifier
     for binary_var in multivariate_challenge.iter() {
         kzg_transcript.write_field_element(binary_var).unwrap();
     }
