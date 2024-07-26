@@ -994,10 +994,11 @@ checksum = "d231b230927b5e4ad203db57bbcbee2802f6bce620b1e4a9024a07d94e2907ec"
 [[package]]
 name = "plonkish_backend"
 version = "0.1.0"
-source = "git+https://github.com/summa-dev/plonkish?branch=nonzero-constraints#c9dc12571d4a9aa06a419598ff2422b42770ae91"
+source = "git+https://github.com/summa-dev/plonkish?branch=summa#57916a9f1afe4a8d2f2fa31f4e11da453f14bc5b"
 dependencies = [
  "bincode",
  "bitvec",
+ "byteorder",
  "generic-array",
  "halo2_proofs",
  "halo2curves 0.3.3",

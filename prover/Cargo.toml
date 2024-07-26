@@ -13,7 +13,7 @@ parallel = ["dep:rayon"]
 frontend-halo2 = ["dep:halo2_proofs"]
 
 [dependencies]
-plonkish_backend = { git = "https://github.com/summa-dev/plonkish", branch="nonzero-constraints", package = "plonkish_backend", features= ["frontend-halo2", "benchmark"] }
+plonkish_backend = { git = "https://github.com/summa-dev/plonkish", branch="summa", package = "plonkish_backend", features= ["frontend-halo2", "benchmark"] }
 plotters = { version = "0.3.4", optional = true }
 rand = "0.8"
 csv = "1.1"
