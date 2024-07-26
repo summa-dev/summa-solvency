@@ -104,7 +104,7 @@ Note that the `verifier_params.json` file can be used in any other round unless 
 
 This is the final step in the Summa process and the only part that occurs on the user side.
 
-Users receive the proof and commitment for a specific round along with the verifier parameters. Unlike the commitment and proof, the verifier parameters are independent of the round.
+Users receive the proof and commitment for a specific round along with the verifier parameters. Unlike the commitment and proof, the verifier parameters are independent of the round. Moreover, users have the option to generate the verifier parameters themselves, instead of fetching them from the CEX.
 
 In this step, the user has to:
 

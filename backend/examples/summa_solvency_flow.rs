@@ -45,14 +45,14 @@ fn main() {
     let circuit = SummaHyperplonk::<N_USERS, N_CURRENCIES>::init(entries.to_vec());
     let num_vars = K;
 
-    let circuit_fn = |num_vars| {
+    let circuit_fn = |num_vars, initialized_circuit| {
         let circuit = Halo2Circuit::<Fp, SummaHyperplonk<N_USERS, N_CURRENCIES>>::new::<
             ProvingBackend,
-        >(num_vars, circuit.clone());
+        >(num_vars, initialized_circuit);
         (circuit.circuit_info().unwrap(), circuit)
     };
 
-    let (circuit_info, circuit) = circuit_fn(num_vars as usize);
+    let (circuit_info, circuit) = circuit_fn(num_vars as usize, circuit);
     let instances = circuit.instances();
 
     let param = ProvingBackend::setup_custom("../backend/ptau/hyperplonk-srs-17").unwrap();
@@ -117,10 +117,19 @@ fn main() {
 
     // 3. Verify Inclusion Proof
     //
-    // Load the commitment and verifier parameters from the files
-    let commitment: KZGProof = load_from_file(commitment_proof_filename).unwrap();
-    let verifier_params: HyperPlonkVerifierParam<Fp, MultilinearKzg<Bn256>> =
+    // Users can generate verifier parameters using only the configurations for "N_CURRENCIES" and "N_USERS", along with the SRS.
+    let dummy_circuit = SummaHyperplonk::<N_USERS, N_CURRENCIES>::init_empty();
+
+    let (circuit_info, _) = circuit_fn(num_vars as usize, dummy_circuit);
+
+    let param = ProvingBackend::setup_custom("../backend/ptau/hyperplonk-srs-17").unwrap();
+    let (_, verifier_params) = ProvingBackend::preprocess(&param, &circuit_info).unwrap();
+
+    let loaded_verifier_params: HyperPlonkVerifierParam<Fp, MultilinearKzg<Bn256>> =
         load_from_file(vp_filename).unwrap();
+
+    // Load the commitment from the files
+    let commitment: KZGProof = load_from_file(commitment_proof_filename).unwrap();
 
     // When verifying the inclusion proof from the user's perspective, the user have to fetch `proof`.
     // Assume that the `proof` file has been downloaded from the CEX along with commitment and verifier parameters.
