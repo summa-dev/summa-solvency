@@ -187,7 +187,7 @@ mod test {
         .await?;
 
         let entry_csv = "../csv/entry_16.csv";
-        let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
+        let mut entries: Vec<Entry<N_USERS, N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
         parse_csv_to_entries::<&str, N_CURRENCIES>(entry_csv, &mut entries, &mut cryptos).unwrap();
 
@@ -299,7 +299,7 @@ mod test {
 
         // Initialize Round.
         let entry_csv = "../csv/entry_16.csv";
-        let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
+        let mut entries: Vec<Entry<N_USERS, N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
         let mut cryptos = vec![Cryptocurrency::init_empty(); N_CURRENCIES];
         parse_csv_to_entries::<&str, N_CURRENCIES>(entry_csv, &mut entries, &mut cryptos).unwrap();
 

@@ -7,13 +7,13 @@ use crate::entry::Entry;
 
 // This is for testing purposes with a large dataset instead of using a CSV file
 pub fn generate_dummy_entries<const N_USERS: usize, const N_CURRENCIES: usize>(
-) -> Result<Vec<Entry<N_CURRENCIES>>, Box<dyn Error>> {
+) -> Result<Vec<Entry<N_USERS, N_CURRENCIES>>, Box<dyn Error>> {
     // Ensure N_CURRENCIES is greater than 0.
     if N_CURRENCIES == 0 {
         return Err("N_CURRENCIES must be greater than 0".into());
     }
 
-    let mut entries: Vec<Entry<N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
+    let mut entries: Vec<Entry<N_USERS, N_CURRENCIES>> = vec![Entry::init_empty(); N_USERS];
 
     entries.par_iter_mut().for_each(|entry| {
         let mut rng = rand::thread_rng();
@@ -21,7 +21,7 @@ pub fn generate_dummy_entries<const N_USERS: usize, const N_CURRENCIES: usize>(
         let username: String = (0..10).map(|_| rng.sample(Alphanumeric) as char).collect();
 
         let balances: [BigUint; N_CURRENCIES] =
-            std::array::from_fn(|_| BigUint::from(rng.gen_range(1000..90000) as u32));
+            std::array::from_fn(|_| BigUint::from(rng.gen_range(10000..90000) as u32));
 
         *entry = Entry::new(username, balances).expect("Failed to create entry");
     });
